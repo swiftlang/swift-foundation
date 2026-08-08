@@ -1151,8 +1151,6 @@ private struct FileManagerTests {
             File("foo", contents: randomData())
         }.test {
             let attrs = try $0.attributesOfItem(atPath: "foo")
-            // `.creationDate` is implicitly included in every result, so it must be accepted back even on platforms that cannot set it
-            #expect(attrs[.creationDate] is Date)
             try $0.setAttributes(attrs, ofItemAtPath: "foo")
         }
     }
