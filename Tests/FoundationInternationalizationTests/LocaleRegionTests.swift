@@ -19,7 +19,7 @@ import FoundationEssentials
 import FoundationInternationalization
 #endif
 
-@Suite("Locale.Region Tests")
+@Suite("Locale.Region Tests", .tags(.locale))
 struct LocaleRegionTests {
     @Test func regionCategory() async throws {
         #expect(Locale.Region.unknown.category == nil)

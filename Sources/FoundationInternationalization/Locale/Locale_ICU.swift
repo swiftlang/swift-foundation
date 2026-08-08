@@ -1158,19 +1158,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
                 let calendarId = calendarIdentifier
                 let rootHourCycle = Locale.HourCycle.zeroToTwentyThree
-                if let regionOverride = _lockedRegion(&state)?.identifier {
-                    // Use the "rg" override in the identifier if there's one
-                    // ICU isn't handling `rg` keyword yet (93783223), so we do this manually: create a fake locale with the `rg` override as the language region.
-                    // Use "und" as the language code as it is irrelevant for regional preferences
-                    let tmpLocaleIdentifier = "und_\(regionOverride)"
-                    guard let icuPatternGenerator = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: tmpLocaleIdentifier, calendarIdentifier: calendarId) else {
-                        state.hourCycle = rootHourCycle
-                        return rootHourCycle
-                    }
-                    let hc = icuPatternGenerator.defaultHourCycle
-                    state.hourCycle = hc
-                    return hc
-                }
 
                 guard let icuPatternGenerator = ICUPatternGenerator.cachedPatternGenerator(localeIdentifier: identifier, calendarIdentifier: calendarId) else {
                     state.hourCycle = rootHourCycle
