@@ -383,7 +383,8 @@ extension DateComponents {
                 try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing space after weekday")
             }
 
-            dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
+            // The spec does not define a range for days, but it uses the gregorian calendar so we limit to 1...31
+            dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 1..<32, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
             // month-name (Jan, Feb, ... Dec)
@@ -422,33 +423,23 @@ extension DateComponents {
 
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
-            dc.year = try it.digits(minDigits: 4, maxDigits: 4, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            dc.year = try it.digits(minDigits: 4, maxDigits: 4, input: inputString, range: nil, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            // From the spec: The year is any numeric year 1900 or later.
+            if let y = dc.year, y < 1900 {
+                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Year out of range")
+            }
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
-            let hour = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            if hour < 0 || hour > 23 {
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Hour \(hour) is out of bounds")
-            }
-            dc.hour = hour
+            dc.hour = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 0..<24, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Hour is out of bounds")
             
             try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            let minute = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            if minute < 0 || minute > 59 {
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Minute \(minute) is out of bounds")
-            }
-            dc.minute = minute
+            dc.minute = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 0..<60, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Minute is out of bounds")
             
             try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            let second = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            dc.second = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 0..<61, onFailure: Date.HTTPFormatStyle().format(Date.now))
             // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 59.
-            if second < 0 || second > 60 {
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Second \(second) is out of bounds")
-            }
-            // Foundation does not support leap seconds. We convert 60 seconds into 59 seconds.
-            if second == 60 {
+            if dc.second == 60 {
                 dc.second = 59
-            } else {
-                dc.second = second
             }
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
