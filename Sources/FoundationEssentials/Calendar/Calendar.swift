@@ -1249,6 +1249,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// Determines which result to use when a time is repeated on a day in a calendar (for example, during a daylight saving transition when the times between 2:00am and 3:00am may happen twice).
+    ///
+    /// The policy is applied in the order the search encounters the repeated times. When searching with `SearchDirection.backward`, the "first" occurrence is therefore the later of the two in absolute time, and the "last" is the earlier.
     public enum RepeatedTimePolicy : Sendable {
         /// If there are two or more matching times (all the components are the same, including isLeapMonth) before the end of the next instance of the next higher component to the highest specified component, then the algorithm will return the first occurrence.
         case first
