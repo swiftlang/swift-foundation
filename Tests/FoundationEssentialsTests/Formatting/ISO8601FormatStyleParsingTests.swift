@@ -144,7 +144,31 @@ private struct ISO8601FormatStyleParsingTests {
         let parsedY = try iso8601.year().month().day().parse(date.1)
         #expect(parsedWoY == parsedY)
     }
-    
+
+    /// The ISO 8601 day of week (1 is Monday ... 7 is Sunday) is converted to the `DateComponents` weekday (1 is Sunday ... 7 is Saturday).
+    /// The resulting `Date` can hide a mistake in that conversion, because `Calendar` resolves an out of range weekday relative to the rest of the week, so the components are checked as well.
+    @Test(arguments: [
+        ("2022-W01-01", 2, "2022-01-03"), // Monday
+        ("2022-W01-02", 3, "2022-01-04"), // Tuesday
+        ("2022-W01-03", 4, "2022-01-05"), // Wednesday
+        ("2022-W01-04", 5, "2022-01-06"), // Thursday
+        ("2022-W01-05", 6, "2022-01-07"), // Friday
+        ("2022-W01-06", 7, "2022-01-08"), // Saturday
+        ("2022-W01-07", 1, "2022-01-09"), // Sunday
+    ])
+    func weekdayOfWeekOfYear(test: (String, Int, String)) throws {
+        let (parseMe, expectedWeekday, equivalentDate) = test
+
+        let components = try DateComponents.ISO8601FormatStyle().year().weekOfYear().day().parse(parseMe)
+        #expect(components.weekday == expectedWeekday)
+        #expect(components.weekOfYear == 1)
+        #expect(components.yearForWeekOfYear == 2022)
+
+        let parsedWoY = try Date.ISO8601FormatStyle().year().weekOfYear().day().parse(parseMe)
+        let parsedY = try Date.ISO8601FormatStyle().year().month().day().parse(equivalentDate)
+        #expect(parsedWoY == parsedY)
+    }
+
     @Test func zeroLeadingDigits() throws {
         // The parser allows for an arbitrary number of 0 pads in digits, including none.
         let iso8601 = Date.ISO8601FormatStyle()

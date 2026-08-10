@@ -475,12 +475,11 @@ extension DateComponents.ISO8601FormatStyle {
             
             if fields.contains(.weekOfYear) {
                 // parse day of week ('ee')
-                // ISO8601 "1" is Monday and "7" is Sunday. For our date components, 2 is Monday and 1 is Sunday. Convert below.
-                // The range is validated here and not with `maximumRange(of: .weekday)`, because the modulo below would map any value into that range.
                 let max = dateSeparator == .omitted ? 2 : nil
-                let value = try it.digits(maxDigits: max, input: inputString, range: 1..<8, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                // Validate that we are in a weekday range (1..<8 for ISO8601/Gregorian)...
+                let value = try it.digits(maxDigits: max, input: inputString, calendar: _calendar, component: .weekday, onFailure: Date.ISO8601FormatStyle(self).format(Date.now))
+                // ... however, ISO8601 "1" is Monday and "7" is Sunday. For our date components, 2 is Monday and 1 is Sunday. Convert here.
                 weekday = (value % 7) + 1
-
             } else if fields.contains(.month) {
                 // parse day of month ('dd')
                 let max = dateSeparator == .omitted ? 2 : nil
