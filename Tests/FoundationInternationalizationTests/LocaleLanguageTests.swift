@@ -19,7 +19,7 @@ import Testing
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-@Suite("Locale.Language.Components")
+@Suite("Locale.Language.Components", .tags(.locale))
 private struct LocaleLanguageComponentsTests {
 
     func verifyComponents(_ identifier: String,
@@ -57,7 +57,7 @@ private struct LocaleLanguageComponentsTests {
     }
 }
 
-@Suite("Locale.Language")
+@Suite("Locale.Language", .tags(.locale))
 private struct LocaleLanguageTests {
 
     func verify(_ identifier: String, expectedParent: Locale.Language, minBCP47: String, maxBCP47: String, langCode: Locale.LanguageCode?, script: Locale.Script?, region: Locale.Region?, lineDirection: Locale.LanguageDirection, characterDirection: Locale.LanguageDirection, sourceLocation: SourceLocation = #_sourceLocation) {

@@ -19,7 +19,11 @@ import Testing
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-@Suite("Locale")
+extension Testing.Tag {
+    @Tag static var locale: Self
+}
+
+@Suite("Locale", .tags(.locale))
 private struct LocaleTests {
 
     @Test func equality() {
@@ -511,7 +515,7 @@ private struct LocaleTests {
     }
 }
 
-@Suite("Locale Properties")
+@Suite("Locale Properties", .tags(.locale))
 private struct LocalePropertiesTests {
 
     func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -722,12 +726,24 @@ private struct LocalePropertiesTests {
         let x = Locale.keywordValue(identifier: "ar_EG@vt=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", key: "vt")
         #expect(x == "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
     }
+
+    @Test func hourCycle() {
+        let frHourCycle = Locale(identifier: "fr_FR").hourCycle
+        #expect(frHourCycle == .zeroToTwentyThree)
+
+        // special case where fr_CA differs from CA
+        let frCAHourCycle = Locale(identifier: "fr_CA").hourCycle
+        #expect(frCAHourCycle == .zeroToTwentyThree)
+
+        let enCAHourCycle = Locale(identifier: "en_CA").hourCycle
+        #expect(enCAHourCycle == .oneToTwelve)
+    }
 }
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
 
-@Suite("Locale Bridging")
+@Suite("Locale Bridging", .tags(.locale))
 private struct LocaleBridgingTests {
     
     @available(macOS, deprecated: 13)
