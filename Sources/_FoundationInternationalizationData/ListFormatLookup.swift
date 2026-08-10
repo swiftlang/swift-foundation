@@ -103,11 +103,19 @@ private func _walkSlot(locale: String, type: ListFormatType, width: ListFormatWi
     return nil
 }
 
-/// Mirror of the generator's parent walk: explicit parent-map override first,
-/// then truncation, then root (with root terminating the walk).
+/// The next locale to consult in the fallback walk: an explicit redirect (a
+/// CLDR <parentLocales> override or a locale alias) if one exists, else the
+/// truncation parent (strip the trailing subtag), else root — with root
+/// terminating the walk.
+///
+/// Aliases ride the same path as parent-overrides: an aliased identifier (e.g.
+/// zh_HK) has no slot data of its own, so its own-locale lookup always misses
+/// and the redirect fires, sending the walk to the canonical target
+/// (zh_HK → zh_Hant_HK → zh_Hant). Chained aliases (sr_CS → sr_RS → sr_Cyrl_RS)
+/// resolve one hop per step.
 package func _listFormatParent(of locale: String) -> String? {
     if locale == "root" { return nil }
-    if let p = _parentLookup(child: locale) { return p }
+    if let redirect = _redirectLookup(locale) { return redirect }
     if let underscore = locale.lastIndex(of: "_") {
         return String(locale[..<underscore])
     }
@@ -133,14 +141,16 @@ private func _searchSlot(locale: String, type: ListFormatType, width: ListFormat
     }
 }
 
-/// Look up a child locale's parent in the explicit override map.
-private func _parentLookup(child: String) -> String? {
-    var child = child
-    let parentIndex: UInt16? = child.withUTF8 { target in
-        _searchLocaleTable(target, _ListFormatData.parents.span, key: { $0.child }, value: { $0.parent })
+/// Look up a locale's explicit redirect (a CLDR parent-override or a locale
+/// alias) in the redirect map. Returns the target locale, or nil if there's no
+/// entry for `locale`.
+private func _redirectLookup(_ locale: String) -> String? {
+    var locale = locale
+    let targetIndex: UInt16? = locale.withUTF8 { target in
+        _searchLocaleTable(target, _ListFormatData.redirects.span, key: { $0.from }, value: { $0.to })
     }
-    guard let parentIndex else { return nil }
-    return _locale(at: parentIndex)
+    guard let targetIndex else { return nil }
+    return _locale(at: targetIndex)
 }
 
 /// Binary search a sorted table of locale-keyed entries, shared by the slot and

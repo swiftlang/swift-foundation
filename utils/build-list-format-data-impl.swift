@@ -70,7 +70,12 @@ struct PackedData {
     let localePool: [String]
     let localeID: [String: Int]
     let slots: [(swiftName: String, map: [String: Int])]
-    let parents: [String: String]
+    // Explicit locale redirects consulted during the fallback walk: CLDR
+    // <parentLocales> overrides merged with the locale aliases. Both are "when
+    // you see this locale, go to that one instead" — an alias fires because the
+    // source has no data of its own, a parent-override because CLDR routes the
+    // fallback somewhere other than the truncated locale.
+    let redirects: [String: String]
     let cldrVersion: String
     let keepAll: Bool
     let keptLocalesSorted: [String] // for the banner; empty when keepAll
@@ -139,6 +144,17 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
     }
     func isKept(_ locale: String) -> Bool { keepAll || kept.contains(locale) }
 
+    // Locale aliases redirect a requested identifier to a canonical one
+    // (zh_HK → zh_Hant_HK). Keep an alias when its source survives the subset,
+    // and pull the target into the kept set so the redirect lands on a locale
+    // whose slot data is retained. Under keepAll both are already present, so
+    // this only matters on the --locales subset path.
+    var keptAliases: [String: String] = [:]
+    for (source, target) in data.aliases where isKept(source) {
+        keptAliases[source] = target
+        kept.insert(target)
+    }
+
     var filteredSlots: [String: [String: Int]] = [:]
     for (name, map) in data.slots {
         var filtered: [String: Int] = [:]
@@ -153,9 +169,22 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
         filteredParents[child] = parent
     }
 
+    // Merge parent-overrides and aliases into one redirect map: they share the
+    // same shape and are consulted at the same point in the fallback walk. A key
+    // can't legitimately be both (an alias has no data, a parent-override is a
+    // real fallback node), so a clash means the inputs disagree.
+    var redirects = filteredParents
+    for (source, target) in keptAliases {
+        if let existing = redirects[source], existing != target {
+            fatalError("redirect conflict for \(source): parent \(existing) vs alias \(target)")
+        }
+        redirects[source] = target
+    }
+
     print("  patterns: \(data.patterns.count), rows: \(data.rows.count)", to: &standardError)
     print("  slot entries kept: \(filteredSlots.values.reduce(0) { $0 + $1.count })", to: &standardError)
-    print("  parent entries kept: \(filteredParents.count)", to: &standardError)
+    print("  parent overrides kept: \(filteredParents.count), aliases kept: \(keptAliases.count)", to: &standardError)
+    print("  redirect entries: \(redirects.count)", to: &standardError)
 
     // Walk the kept slot entries to find which rows are actually reachable, then
     // walk those rows to find which patterns are actually referenced. Drop the
@@ -204,16 +233,18 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
     print("  patterns reachable: \(filteredPatterns.count)", to: &standardError)
     print("  rows reachable: \(filteredRows.count)", to: &standardError)
 
-    // Every locale string referenced by a slot or parent entry lives in a single
-    // pool; slot/parent rows reference it by index. The pool is sorted
-    // alphabetically so it's easy to diff across builds.
+    // Every locale string referenced by a slot or redirect entry lives in a
+    // single pool; entries reference it by index. The pool is sorted
+    // alphabetically so it's easy to diff across builds. Both ends of every
+    // redirect go in, including alias sources (which have no slot data of their
+    // own but are still indexed by a redirect entry).
     var localeSet = Set<String>()
     for (_, map) in filteredSlots {
         for locale in map.keys { localeSet.insert(locale) }
     }
-    for (child, parent) in filteredParents {
-        localeSet.insert(child)
-        localeSet.insert(parent)
+    for (from, to) in redirects {
+        localeSet.insert(from)
+        localeSet.insert(to)
     }
     let localePool = localeSet.sorted()
     let localeID: [String: Int] = Dictionary(uniqueKeysWithValues: localePool.enumerated().map { ($1, $0) })
@@ -232,7 +263,7 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
         localePool: localePool,
         localeID: localeID,
         slots: slots,
-        parents: filteredParents,
+        redirects: redirects,
         cldrVersion: data.cldrVersion,
         keepAll: keepAll,
         keptLocalesSorted: keepAll ? [] : kept.sorted(),
@@ -301,13 +332,16 @@ func renderSwift(_ p: PackedData) -> String {
     out += "    }\n"
     out += "}\n\n"
 
-    out += "// Parent-locale entry: child and parent are indexes into the `locales` pool.\n"
-    out += "internal struct _ListFormatParentEntry: Sendable {\n"
-    out += "    internal let child: UInt16\n"
-    out += "    internal let parent: UInt16\n"
-    out += "    internal init(_ child: UInt16, _ parent: UInt16) {\n"
-    out += "        self.child = child\n"
-    out += "        self.parent = parent\n"
+    out += "// A directed pair of locales, both indexes into the `locales` pool. Backs\n"
+    out += "// the `redirects` table: a parent-locale override (child → CLDR parent) or\n"
+    out += "// an alias (deprecated/under-specified id → canonical target). Sorted by\n"
+    out += "// `from` for binary search.\n"
+    out += "internal struct _ListFormatLocalePair: Sendable {\n"
+    out += "    internal let from: UInt16\n"
+    out += "    internal let to: UInt16\n"
+    out += "    internal init(_ from: UInt16, _ to: UInt16) {\n"
+    out += "        self.from = from\n"
+    out += "        self.to = to\n"
     out += "    }\n"
     out += "}\n\n"
 
@@ -357,12 +391,14 @@ func renderSwift(_ p: PackedData) -> String {
         out += "    ]\n\n"
     }
 
-    // Parent map — sorted by child for binary search. Both child and parent pull
-    // their string from `locales`.
-    out += "    // Parent-locale map (explicit CLDR <parentLocales> overrides), sorted by child.\n"
-    out += "    internal static let parents: InlineArray<\(p.parents.count), _ListFormatParentEntry> = [\n"
-    for child in p.parents.keys.sorted() {
-        out += "        _ListFormatParentEntry(\(p.localeID[child]!), \(p.localeID[p.parents[child]!]!)),\n"
+    // Redirect map — sorted by source locale for binary search. Both ends pull
+    // their string from `locales`. Holds CLDR <parentLocales> overrides and
+    // locale aliases; the runtime treats them uniformly (consult before
+    // truncating in the fallback walk).
+    out += "    // Locale redirect map (CLDR <parentLocales> overrides + aliases), sorted by source.\n"
+    out += "    internal static let redirects: InlineArray<\(p.redirects.count), _ListFormatLocalePair> = [\n"
+    for from in p.redirects.keys.sorted() {
+        out += "        _ListFormatLocalePair(\(p.localeID[from]!), \(p.localeID[p.redirects[from]!]!)),\n"
     }
     out += "    ]\n"
 

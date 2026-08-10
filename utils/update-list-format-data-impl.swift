@@ -63,6 +63,95 @@ let slots: [(cldrType: String, type: String, width: String)] = [
     ("or-narrow",       "or",   "narrow"),
 ]
 
+// Locale aliases: deprecated or under-specified identifiers → the canonical
+// identifier whose list patterns they should resolve to. This mirrors the
+// per-locale %%ALIAS redirects ICU ships in icu4c/source/data/locales/*.txt so
+// the runtime resolves the same patterns ICU would. It matters because the
+// requested Locale.identifier can arrive minimized (e.g. zh_Hant_HK canonicalizes
+// to zh_HK) or as a deprecated code (iw, in, sh), which the plain parent-chain
+// walk would otherwise fall back to the wrong data for (zh_HK → zh → "和" instead
+// of zh_Hant → "及").
+//
+// This is a curated snapshot rather than a value computed from the CLDR XML: the
+// set of aliased identifiers is ICU's, not CLDR's. ICU derives it in
+// tools/cldr-to-icu LdmlConverter.getAliasMap(config.getTargetLocaleIds(dir)),
+// which enumerates the curated <localeIds> list in cldr-to-icu/config.xml and,
+// per id, emits an alias when either:
+//   1. replaceDeprecatedTags changes the id (deprecated language/territory
+//      subtags from common/supplemental/supplementalMetadata.xml, e.g. iw→he,
+//      sh→sr_Latn, CS→RS), or
+//   2. the id has no data of its own and maximize adds a likely script
+//      (common/supplemental/likelySubtags.xml, e.g. az_AZ→az_Latn_AZ,
+//      zh_HK→zh_Hant_HK).
+// Three entries below (ars, no_NO, no_NO_NY) are ICU <forcedAlias> config
+// entries with no CLDR derivation. These mappings have been stable across CLDR
+// releases; the <localeIds> list grows by only a handful of ids per release.
+//
+// To refresh at a CLDR/ICU upgrade: re-extract the %%ALIAS values from a matching
+// icu4c/source/data/locales/*.txt checkout (each aliased locale's .txt file is a
+// single line `xx{ "%%ALIAS"{"yy"} }`), or re-run ICU's LdmlConverter over the
+// config's <localeIds>. Only the sources reachable through the public
+// ListFormatStyle surface (list patterns) need to appear here.
+//
+// This is the full curated record. The generator emits only the subset that the
+// current CLDR data doesn't already resolve correctly by plain truncation (see
+// trimRedundantAliases), so the shipped JSON is smaller.
+let localeAliases: [String: String] = [
+    "ars": "ar_SA",
+    "az_AZ": "az_Latn_AZ",
+    "bs_BA": "bs_Latn_BA",
+    "en_NH": "en_VU",
+    "en_RH": "en_ZW",
+    "ff_CM": "ff_Latn_CM",
+    "ff_GN": "ff_Latn_GN",
+    "ff_MR": "ff_Latn_MR",
+    "ff_SN": "ff_Latn_SN",
+    "in": "id",
+    "in_ID": "id_ID",
+    "iw": "he",
+    "iw_IL": "he_IL",
+    "ks_IN": "ks_Arab_IN",
+    "ku_SY": "ku_Latn_SY",
+    "kxv_IN": "kxv_Latn_IN",
+    "mni_IN": "mni_Beng_IN",
+    "mo": "ro",
+    "no_NO": "no",
+    "no_NO_NY": "nn_NO",
+    "pa_IN": "pa_Guru_IN",
+    "pa_PK": "pa_Arab_PK",
+    "sat_IN": "sat_Olck_IN",
+    "sd_IN": "sd_Deva_IN",
+    "sd_PK": "sd_Arab_PK",
+    "sh": "sr_Latn",
+    "sh_BA": "sr_Latn_BA",
+    "sh_CS": "sr_Latn_RS",
+    "sh_YU": "sr_Latn_RS",
+    "shi_MA": "shi_Tfng_MA",
+    "sr_BA": "sr_Cyrl_BA",
+    "sr_CS": "sr_RS",
+    "sr_Cyrl_CS": "sr_Cyrl_RS",
+    "sr_Cyrl_YU": "sr_Cyrl_RS",
+    "sr_Latn_CS": "sr_Latn_RS",
+    "sr_Latn_YU": "sr_Latn_RS",
+    "sr_ME": "sr_Latn_ME",
+    "sr_RS": "sr_Cyrl_RS",
+    "sr_XK": "sr_Cyrl_XK",
+    "sr_YU": "sr_RS",
+    "su_ID": "su_Latn_ID",
+    "tl": "fil",
+    "tl_PH": "fil_PH",
+    "uz_AF": "uz_Arab_AF",
+    "uz_UZ": "uz_Latn_UZ",
+    "vai_LR": "vai_Vaii_LR",
+    "yue_CN": "yue_Hans_CN",
+    "yue_HK": "yue_Hant_HK",
+    "zh_CN": "zh_Hans_CN",
+    "zh_HK": "zh_Hant_HK",
+    "zh_MO": "zh_Hant_MO",
+    "zh_SG": "zh_Hans_SG",
+    "zh_TW": "zh_Hant_TW",
+]
+
 // MARK: - Errors
 
 enum GenerationError: Error, CustomStringConvertible {
@@ -301,9 +390,12 @@ func generate() throws -> String {
     print("  emitting JSON…", to: &standardError)
     var simplifiedParentMap = parentMap
     simplifyParentMap(&simplifiedParentMap, slotTables: slotTables)
+    let neededAliases = trimRedundantAliases(localeAliases, slotTables: slotTables, parentMap: simplifiedParentMap)
+    print("  aliases: \(localeAliases.count) → \(neededAliases.count) entries (dropped redundant)", to: &standardError)
     return emit(
         slotTables: slotTables,
         parentMap: simplifiedParentMap,
+        aliases: neededAliases,
         cldrVersion: detectCLDRVersion(cldrURL: cldrURL)
     )
 }
@@ -489,9 +581,54 @@ func simplifyParentMap(
     _ = emissions // silenced; emit() recomputes from the simplified parentMap
 }
 
+// Drop aliases that the plain fallback walk (truncation only, no alias redirect)
+// already resolves to the same patterns the alias would. Such an alias is
+// redundant *for list formatting*: e.g. zh_TW → zh_Hant_TW changes nothing,
+// because zh_Hant's list patterns match zh's (only zh_HK/zh_MO carry a distinct
+// connector), and az_AZ → az_Latn_AZ changes nothing because Latin is az's
+// default script.
+//
+// Redundancy is a property of the current CLDR data, so this is recomputed on
+// every regeneration: if a future CLDR gives an aliased script its own list
+// patterns, the alias stops being redundant and is kept automatically. Dropping
+// a redundant alias is safe for alias chains too — by definition it doesn't
+// change its own source's resolution, so it can't change any alias that
+// redirects through it.
+func trimRedundantAliases(
+    _ aliases: [String: String],
+    slotTables: [(type: String, width: String, table: [String: Row])],
+    parentMap: [String: String]
+) -> [String: String] {
+    // Resolve a locale to its row in one slot table by walking the fallback
+    // chain (explicit redirect first, then truncation, then root), mirroring the
+    // runtime. root is present in every table, so this always terminates in a row.
+    func resolveRow(_ locale: String, _ table: [String: Row], _ explicit: [String: String]) -> Row? {
+        var current: String? = locale
+        while let l = current {
+            if let r = table[l] { return r }
+            current = parent(of: l, explicit: explicit)
+        }
+        return nil
+    }
+    let withAliases = parentMap.merging(aliases) { _, alias in alias }
+    var needed: [String: String] = [:]
+    for (source, target) in aliases {
+        for slot in slotTables {
+            let aliased = resolveRow(source, slot.table, withAliases)
+            let plain = resolveRow(source, slot.table, parentMap)
+            if aliased != plain {
+                needed[source] = target
+                break
+            }
+        }
+    }
+    return needed
+}
+
 func emit(
     slotTables: [(type: String, width: String, table: [String: Row])],
     parentMap: [String: String],
+    aliases: [String: String],
     cldrVersion: String
 ) -> String {
     let emissions = buildSlotEmissions(slotTables, parentMap: parentMap)
@@ -563,7 +700,8 @@ func emit(
         patterns: patterns,
         rows: rowTable,
         slots: slots,
-        parents: parentMap
+        parents: parentMap,
+        aliases: aliases
     )
 
     let encoder = JSONEncoder()

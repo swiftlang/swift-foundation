@@ -55,6 +55,13 @@ internal struct ListFormatDataSchema: Codable {
     /// locale string itself; only non-truncation overrides ship.
     let parents: [String: String]
 
+    /// Locale aliases: a deprecated or region-only identifier → the canonical
+    /// identifier whose list patterns it should resolve to (e.g. zh_HK →
+    /// zh_Hant_HK, iw → he). Mirrors ICU's per-locale %%ALIAS redirect so the
+    /// runtime resolves the same patterns ICU would. Curated in stage 1; see
+    /// the derivation comment there.
+    let aliases: [String: String]
+
     /// One row of resolved patterns, indexed into the global `patterns` pool.
     internal struct Row: Codable, Hashable {
         let start: Int

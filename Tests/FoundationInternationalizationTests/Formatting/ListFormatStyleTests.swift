@@ -160,6 +160,39 @@ private struct ListFormatStyleTests {
         #expect(["Alice", "Bob"].formatted(style("sr-Latn")) == ["Alice", "Bob"].formatted(style("sr_Latn")))
     }
 
+    // ICU locale aliases from `icu4c/source/data/locales/*.txt` (`%%ALIAS`),
+    // derived by deprecated-subtag replacement and likely-subtags expansion. Each
+    // source identifier must resolve its list patterns to the same output as its
+    // target.
+    private static let localeAliases: [(source: String, target: String)] = [
+        ("ars", "ar_SA"), ("az_AZ", "az_Latn_AZ"), ("bs_BA", "bs_Latn_BA"),
+        ("en_NH", "en_VU"), ("en_RH", "en_ZW"),
+        ("ff_CM", "ff_Latn_CM"), ("ff_GN", "ff_Latn_GN"), ("ff_MR", "ff_Latn_MR"),
+        ("ff_SN", "ff_Latn_SN"),
+        ("in", "id"), ("in_ID", "id_ID"), ("iw", "he"), ("iw_IL", "he_IL"),
+        ("ks_IN", "ks_Arab_IN"), ("ku_SY", "ku_Latn_SY"), ("kxv_IN", "kxv_Latn_IN"),
+        ("mni_IN", "mni_Beng_IN"), ("mo", "ro"), ("no_NO", "no"), ("no_NO_NY", "nn_NO"),
+        ("pa_IN", "pa_Guru_IN"), ("pa_PK", "pa_Arab_PK"), ("sat_IN", "sat_Olck_IN"),
+        ("sd_IN", "sd_Deva_IN"), ("sd_PK", "sd_Arab_PK"),
+        ("sh", "sr_Latn"), ("sh_BA", "sr_Latn_BA"), ("sh_CS", "sr_Latn_RS"),
+        ("sh_YU", "sr_Latn_RS"), ("shi_MA", "shi_Tfng_MA"),
+        ("sr_BA", "sr_Cyrl_BA"), ("sr_CS", "sr_RS"), ("sr_Cyrl_CS", "sr_Cyrl_RS"),
+        ("sr_Cyrl_YU", "sr_Cyrl_RS"), ("sr_Latn_CS", "sr_Latn_RS"),
+        ("sr_Latn_YU", "sr_Latn_RS"), ("sr_ME", "sr_Latn_ME"), ("sr_RS", "sr_Cyrl_RS"),
+        ("sr_XK", "sr_Cyrl_XK"), ("sr_YU", "sr_RS"),
+        ("su_ID", "su_Latn_ID"), ("tl", "fil"), ("tl_PH", "fil_PH"),
+        ("uz_AF", "uz_Arab_AF"), ("uz_UZ", "uz_Latn_UZ"), ("vai_LR", "vai_Vaii_LR"),
+        ("yue_CN", "yue_Hans_CN"), ("yue_HK", "yue_Hant_HK"),
+        ("zh_CN", "zh_Hans_CN"), ("zh_HK", "zh_Hant_HK"), ("zh_MO", "zh_Hant_MO"),
+        ("zh_SG", "zh_Hans_SG"), ("zh_TW", "zh_Hant_TW"),
+    ]
+
+    @Test(arguments: Self.localeAliases)
+    func localeAlias(_ alias: (source: String, target: String)) {
+        let items = ["Alice", "Bob"]
+        #expect(items.formatted(style(alias.source)) == items.formatted(style(alias.target)))
+    }
+
     /// Ported from ICU `TestRussian`. и = и
     @Test func russian() {
         let s = style("ru")
