@@ -35,19 +35,19 @@
 
 ## Writing Style
 
-Write comments, DocC, commit messages, and PR descriptions in plain English. Aim for prose that is clear and concise, written with the reader in mind.
+Write in-line and PR comments, DocC, commit messages, and PR descriptions in [simple English](https://simple.wikipedia.org/wiki/Wikipedia:How_to_write_Simple_English_pages). Use a small, plain vocabulary instead of rare or abstract words.
 
-**Keep sentences short.** Aim for an average of 15 to 20 words and one main idea per sentence. Break a long sentence up rather than forcing everything into one.
+**Keep sentences short.** One idea per sentence. Break a long sentence into two.
 
-**Prefer active verbs.** Write "the parser reads the header", not "the header is read by the parser". Reserve the passive for when the doer is unknown or genuinely does not matter.
+**Prefer active verbs.** Write "the parser reads the header", not "the header is read by the parser". 
 
 **Avoid nominalizations.** Use the verb, not the noun spun from it: "we discussed the design", not "we had a discussion about the design"; "the team implemented it", not "implementation was done by the team".
 
-**Use everyday words.** Pick the simplest word that fits: "extra" over "additional", "start" over "commence", "before" over "prior to", "about" over "regarding", "use" over "utilize", "so" over "consequently". Explain any domain term the reader may not know.
+**Use everyday words.** Pick the simplest word that fits: "start" over "commence", "use" over "utilize", "so" over "consequently". Explain any domain term the reader may not know. Do not switch between synonyms for the same thing.
 
 **Give direct instructions.** In steps and guidance, use the imperative: "call `reset()` first", not "you should call `reset()` first".
 
-**Use lists to break up dense information.** A few bullets read faster than one long, comma-heavy sentence.
+**Use lists and tables when they help.** Use lists and tables when they are clearer than a paragraph.
 
 ---
 
