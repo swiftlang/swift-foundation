@@ -110,8 +110,8 @@ private struct HebrewCalendarTests {
         }
     }
 
-    // A date can be named by yearForWeekOfYear + weekOfYear + weekday instead of year + month + day, and `date(from:)` has to accept that form. It used to require `.year` and returned nil for anything else, which made `NSCalendar dateWithEra:yearForWeekOfYear:weekOfYear:weekday:...` return nil. Expected values below were checked against the ICU-backed calendar and agree with it exactly.
-    @Test func dateFromWeekYearComponents() {
+    // Expected values taken from the ICU-backed calendar.
+    @Test func dateFromWeekYearComponents() throws {
         let cal = makeCalendar()
         // (yearForWeekOfYear, weekOfYear, weekday, expected year, month, day)
         let cases: [(Int, Int, Int, Int, Int, Int)] = [
@@ -131,10 +131,7 @@ private struct HebrewCalendarTests {
             dc.hour = 12
             dc.timeZone = .gmt
 
-            guard let date = cal.date(from: dc) else {
-                Issue.record("date(from:) returned nil for yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday)")
-                continue
-            }
+            let date = try #require(cal.date(from: dc), "date(from:) returned nil for yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday)")
             let back = cal.dateComponents([.year, .month, .day, .weekday, .hour], from: date, in: .gmt)
             let label = "yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday)"
             #expect(back.year == wantYear, "\(label): year \(String(describing: back.year)), wanted \(wantYear)")
@@ -145,13 +142,11 @@ private struct HebrewCalendarTests {
         }
     }
 
-    // The invariant behind those pins: whatever week fields we report for a date, handing them back has to return that same date. Runs over 20 years of consecutive days, and over non-default firstWeekday and minimumDaysInFirstWeek, because the week-year anchor depends on both.
+    // Week fields read from a date must return that date when passed back. `firstWeekday` and `minimumDaysInFirstWeek` are varied because the first week of a year depends on both.
     @Test func weekYearComponentsRoundTrip() {
         var failures: [String] = []
         for (firstWeekday, minimumDays) in [(nil, nil), (2, 4), (7, 1), (4, 7)] as [(Int?, Int?)] {
-            let cal = _CalendarHebrew(identifier: .hebrew, timeZone: .gmt, locale: nil,
-                                      firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDays,
-                                      gregorianStartDate: nil)
+            let cal = _CalendarHebrew(identifier: .hebrew, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDays, gregorianStartDate: nil)
             let config = "fw \(firstWeekday.map(String.init) ?? "default")/md \(minimumDays.map(String.init) ?? "default")"
             // Midday on 2001-01-01 GMT, then one step per day.
             let start = Date(timeIntervalSinceReferenceDate: 43_200)

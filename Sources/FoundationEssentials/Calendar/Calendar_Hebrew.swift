@@ -594,22 +594,17 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         if let second = components.second { secondsInDay += Double(second) }
         if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
 
-        let tz = components.timeZone ?? timeZone
+        let resolvedTimeZone = components.timeZone ?? timeZone
 
-        // A request carrying yearForWeekOfYear instead of year resolves through the
-        // week-year, the way the Gregorian calendar does, so the week fields we report
-        // in dateComponents can be handed back to us. `firstDayOfWeekYear` already
-        // applies firstWeekday and minimumDaysInFirstWeek. The week number is not
-        // clipped to the week-year: as in the Gregorian calendar, a week past the end
-        // simply runs on into the next year.
+        // `.yearForWeekOfYear` plus `.weekOfYear` plus `.weekday` names a date too. `firstDayOfWeekYear` already accounts for `firstWeekday` and `minimumDaysInFirstWeek`. A `.weekOfYear` past the end of the year runs on into the next, as in the Gregorian calendar.
         if components.year == nil, let weekYearValue = components.yearForWeekOfYear {
+            // The Hebrew arithmetic works in Int32 years, same check as the `.year` path.
             guard weekYearValue >= Int(Int32.min) && weekYearValue <= Int(Int32.max) else { return nil }
             let weekOfYear = components.weekOfYear ?? 1
             let weekday = components.weekday ?? firstWeekday
             let dayWithinWeek = ((weekday - firstWeekday) % 7 + 7) % 7
-            let rd = firstDayOfWeekYear(Int32(weekYearValue)) &+ Int64((weekOfYear - 1) * 7 + dayWithinWeek)
-            return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
-                          repeatedTimePolicy: .former, skippedTimePolicy: .former)
+            let rataDie = firstDayOfWeekYear(Int32(weekYearValue)) &+ Int64((weekOfYear - 1) * 7 + dayWithinWeek)
+            return utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: resolvedTimeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
         }
 
         guard let yearValue = components.year else { return nil }
@@ -631,8 +626,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let rd = HebrewArithmetic.fixedFromHebrew(year: year, month: biblical, day: UInt8(day))
 
         // Matches _CalendarGregorian's DST policy: skipped and repeated both resolve to .former.
-        return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
-                      repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: resolvedTimeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
