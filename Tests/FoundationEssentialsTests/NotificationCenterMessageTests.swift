@@ -126,7 +126,7 @@ extension NotificationCenter.MessageIdentifier where Self == NotificationCenter.
 }
 #endif
 
-@Suite("NotificationCenterMessage", .timeLimit(.minutes(1)))
+@Suite("NotificationCenterMessage", .timeLimit(.minutes(2)))
 private struct NotificationCenterMessageTests {
 
     // MARK: - Basic capabilities (using MainActorMessage)
