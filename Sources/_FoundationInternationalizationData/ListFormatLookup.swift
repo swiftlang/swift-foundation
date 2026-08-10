@@ -59,6 +59,9 @@ package enum ListFormatWidth: Hashable {
 /// Resolve `(locale, type, width)` to a `ListFormatPatterns` row by walking the
 /// parent chain across the packed Swift data tables.
 package func _listFormatPatterns(locale: String, type: ListFormatType, width: ListFormatWidth) -> ListFormatPatterns {
+    // Reconcile the runtime identifier with the underscore-keyed CLDR data
+    // before walking the parent chain (see `_lookupLocale`).
+    let locale = _lookupLocale(from: locale)
     // Walk the parent chain looking for the first ancestor that has data for
     // this slot. If the walk exhausts without a match, retry from the
     // configured fallback locale.
@@ -72,6 +75,17 @@ package func _listFormatPatterns(locale: String, type: ListFormatType, width: Li
     // Genuinely no data — return an empty placeholder. In practice this only
     // happens if root itself is missing from the data set, which is invalid.
     return ListFormatPatterns(start: "{0}, {1}", middle: "{0}, {1}", end: "{0}, {1}", pair: "{0}, {1}")
+}
+
+/// Normalize the incoming `Locale.identifier` to the underscore separators the
+/// data tables are keyed on. On the `FOUNDATION_FRAMEWORK` build,
+/// `Locale.identifier` canonicalization (CoreFoundation) writes a script subtag
+/// with a `-` separator while a region keeps `_` (so `sr_Latn` arrives as
+/// `sr-Latn`), whereas the CLDR-derived tables use `_` throughout.
+private func _lookupLocale(from locale: String) -> String {
+    guard locale.utf8.contains(UInt8(ascii: "-")) else { return locale }
+    let bytes = locale.utf8.map { $0 == UInt8(ascii: "-") ? UInt8(ascii: "_") : $0 }
+    return String(decoding: bytes, as: UTF8.self)
 }
 
 /// Walk the parent chain for `locale`, returning the row index of the first

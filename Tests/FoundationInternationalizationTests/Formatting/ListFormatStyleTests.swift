@@ -151,6 +151,15 @@ private struct ListFormatStyleTests {
         #expect(["Alice", "Bob", "Charlie", "Delta"].formatted(s) == "Alice\u{3001}Bob\u{3001}Charlie\u{53CA}Delta")
     }
 
+    /// A `language+script` identifier is rendered by `Locale.identifier`
+    /// canonicalization with a `-` separator on the framework build (e.g.
+    /// `sr_Latn` -> `sr-Latn`), while the data tables are keyed with `_`. The
+    /// lookup must treat the two separators alike.
+    @Test func hyphenatedScriptSeparator() {
+        #expect(["Alice", "Bob"].formatted(style("sr-Latn")) == "Alice i Bob")
+        #expect(["Alice", "Bob"].formatted(style("sr-Latn")) == ["Alice", "Bob"].formatted(style("sr_Latn")))
+    }
+
     /// Ported from ICU `TestRussian`. и = и
     @Test func russian() {
         let s = style("ru")
