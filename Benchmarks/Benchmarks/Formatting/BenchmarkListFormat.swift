@@ -21,9 +21,10 @@ import Foundation
 #endif
 
 // Benchmarks for `ListFormatStyle`. These call the public API, so swapping
-// between the ICU bridge and the native implementation is a build-flag
-// concern: build the benchmarks package with and without
-// `FOUNDATION_LIST_FORMAT_NATIVE` and diff the runs.
+// between the Swift implementation and the ICU bridge is a build-flag concern:
+// the default build uses the Swift implementation; pass
+// `FOUNDATION_LIST_FORMAT_ICU` (both `-Xswiftc` and `-Xcc`) to build the ICU
+// bridge instead, and diff the runs.
 func listFormatBenchmarks() {
     typealias Style = ListFormatStyle<StringStyle, [String]>
 
@@ -104,7 +105,7 @@ func listFormatBenchmarks() {
         }
     }
 
-    // MARK: Contextual rules unique to the native implementation
+    // MARK: Contextual substitution rules (Spanish, Hebrew, Thai)
 
     Benchmark("list-format-es-contextual", configuration: scaling) { benchmark in
         for _ in benchmark.scaledIterations {
