@@ -156,10 +156,7 @@ enum Base64 {}
 
 /// A base64 encoding lookup table.
 ///
-/// The table holds exactly 256 bytes and is only indexable by `UInt8`. Every possible index is
-/// therefore in bounds, which is why the subscript can forward to the span's unchecked subscript:
-/// a buffer overflow is impossible by construction and no bounds check is emitted in the hot
-/// encoding loops.
+/// The table holds exactly 256 bytes and is only indexable by `UInt8`. Every possible index is therefore in bounds, which is why the subscript can forward to the span's unchecked subscript: a buffer overflow is impossible by construction and no bounds check is emitted in the hot encoding loops.
 private struct Base64EncodingTable: ~Escapable {
     private let table: Span<UInt8>
 
@@ -176,10 +173,7 @@ private struct Base64EncodingTable: ~Escapable {
 
 /// A base64 decoding lookup table.
 ///
-/// The table holds exactly 256 elements and is only indexable by `UInt8`. Every possible index is
-/// therefore in bounds, which is why the subscript can forward to the span's unchecked subscript:
-/// a buffer overflow is impossible by construction and no bounds check is emitted in the hot
-/// decoding loops.
+/// The table holds exactly 256 elements and is only indexable by `UInt8`. Every possible index is therefore in bounds, which is why the subscript can forward to the span's unchecked subscript: a buffer overflow is impossible by construction and no bounds check is emitted in the hot decoding loops.
 private struct Base64DecodingTable: ~Escapable {
     private let table: Span<UInt32>
 
