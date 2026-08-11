@@ -2815,6 +2815,89 @@ extension DataTests {
         #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG    ", options: .ignoreUnknownCharacters))
     }
 
+    @Test func base64Decode_testOmittingPaddingCharacters() {
+        #expect(Data(base64Encoded: "AQIDBA==", options: [.omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "AQIDBAU=", options: [.omitPaddingCharacter]) == nil)
+
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: .omitPaddingCharacter))
+
+        #expect(Data(base64Encoded: "AQIDBA") == nil)
+        #expect(Data(base64Encoded: "AQIDBAU") == nil)
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG"))
+
+        #expect(Data([1, 2, 3, 4]) == Data(base64Encoded: "AQIDBA", options: .omitPaddingCharacter))
+        #expect(Data([1, 2, 3, 4, 5]) == Data(base64Encoded: "AQIDBAU", options: .omitPaddingCharacter))
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: .omitPaddingCharacter))
+
+        // `omitPaddingCharacter` is ignored, if `ignoreUnknownCharacters` is set at the same time
+        #expect(Data([1, 2, 3, 4]) == Data(base64Encoded: "AQIDBA==", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        #expect(Data([1, 2, 3, 4, 5]) == Data(base64Encoded: "AQIDBAU=", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+    }
+
+    @Test func base64Decode_base64URLAlphabet() {
+        // `-` and `_` replace `+` and `/`. Bytes chosen so that the encoded form uses them.
+        #expect(Data([251, 255]) == Data(base64Encoded: "-_8=", options: .base64URLAlphabet))
+        #expect(Data([251, 255, 254]) == Data(base64Encoded: "-__-", options: .base64URLAlphabet))
+        #expect(Data([255, 255, 255, 251, 255]) == Data(base64Encoded: "____-_8=", options: .base64URLAlphabet))
+
+        // The standard alphabet decodes the same payloads spelled with `+` and `/`.
+        #expect(Data([251, 255]) == Data(base64Encoded: "+/8="))
+        #expect(Data([251, 255, 254]) == Data(base64Encoded: "+//+"))
+        #expect(Data([255, 255, 255, 251, 255]) == Data(base64Encoded: "////+/8="))
+
+        // The alphabets are mutually exclusive: each rejects the other's characters.
+        #expect(Data(base64Encoded: "-_8=") == nil)
+        #expect(Data(base64Encoded: "-__-") == nil)
+        #expect(Data(base64Encoded: "+/8=", options: .base64URLAlphabet) == nil)
+        #expect(Data(base64Encoded: "+//+", options: .base64URLAlphabet) == nil)
+
+        // Characters shared by both alphabets decode identically.
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: .base64URLAlphabet))
+        #expect(Data([1, 2, 3, 4]) == Data(base64Encoded: "AQIDBA==", options: .base64URLAlphabet))
+        #expect(Data([1, 2, 3, 4, 5]) == Data(base64Encoded: "AQIDBAU=", options: .base64URLAlphabet))
+    }
+
+    @Test func base64Decode_base64URLAlphabetOmittingPaddingCharacters() {
+        #expect(Data([251, 255]) == Data(base64Encoded: "-_8", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+        #expect(Data([251, 255, 254]) == Data(base64Encoded: "-__-", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+        #expect(Data([255, 255, 255, 251, 255]) == Data(base64Encoded: "____-_8", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+        #expect(Data([251]) == Data(base64Encoded: "-w", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+
+        // Padding is rejected when `omitPaddingCharacter` is set.
+        #expect(Data(base64Encoded: "-_8=", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "-w==", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "____-_8=", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+
+        // ... and required when it is not.
+        #expect(Data(base64Encoded: "-_8", options: .base64URLAlphabet) == nil)
+        #expect(Data(base64Encoded: "____-_8", options: .base64URLAlphabet) == nil)
+
+        // A single trailing character can never be a valid encoding.
+        #expect(Data(base64Encoded: "-", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "-__--", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+
+        // Standard alphabet characters remain invalid.
+        #expect(Data(base64Encoded: "+/8", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+    }
+
+    @Test func base64Encode_base64URLAlphabetRoundTrip() {
+        for count in 0 ..< 32 {
+            let data = Data((0 ..< count).map { UInt8(($0 &* 37 &+ 211) % 256) })
+
+            let urlEncoded = data.base64EncodedString(options: .base64URLAlphabet)
+            #expect(!urlEncoded.contains("+"))
+            #expect(!urlEncoded.contains("/"))
+            #expect(Data(base64Encoded: urlEncoded, options: .base64URLAlphabet) == data)
+
+            let urlEncodedUnpadded = data.base64EncodedString(options: [.base64URLAlphabet, .omitPaddingCharacter])
+            #expect(!urlEncodedUnpadded.contains("="))
+            #expect(
+                Data(base64Encoded: urlEncodedUnpadded, options: [.base64URLAlphabet, .omitPaddingCharacter]) == data
+            )
+        }
+    }
+
     @Test func base64Decode_test1MBDataGoing0to255OverAndOver() {
         let oneMBTestData = createTestData(count: 1000 * 1024)
         func createTestData(count: Int) -> Data {
