@@ -570,6 +570,17 @@ private struct CalendarTests {
         #expect(first != last)
     }
 
+    /// Pins which occurrence each `RepeatedTimePolicy` selects in each search direction. The policy is applied in the order the search encounters the repeated times, so the two cases swap meaning in absolute time under `.backward`.
+    @Test func repeatedTimePolicyIsAppliedInSearchOrder() throws {
+        let earlier = Date(timeIntervalSince1970: 1730622000.0) // 2024-11-03T01:20:00-0700
+        let later = Date(timeIntervalSince1970: 1730625600.0)   // 2024-11-03T01:20:00-0800
+
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .forward) == earlier)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .forward) == later)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .backward) == later)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .backward) == earlier)
+    }
+
     @Test func dayInWeekOfMonth() {
         let cal = Calendar(identifier: .chinese)
         // A very specific date for which we know a call into ICU produces an unusual result
