@@ -133,7 +133,7 @@ extension Data {
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded string.
     public func base64EncodedString(options: Base64EncodingOptions = []) -> String {
-        Base64.encodeToString(bytes: self, options: options)
+        Base64.encodeToString(bytes: self.span, options: options)
     }
 
     /// Returns Base-64 encoded data.
@@ -141,7 +141,7 @@ extension Data {
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded data.
     public func base64EncodedData(options: Base64EncodingOptions = []) -> Data {
-        Base64.encodeToData(bytes: self, options: options)
+        Base64.encodeToData(bytes: self.span, options: options)
     }
 }
 
@@ -309,79 +309,58 @@ extension Base64 {
         UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"),
     ]
 
-    static func encodeToBytes<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions)
-        -> [UInt8] where Buffer.Element == UInt8
-    {
+    static func encodeToBytes(bytes: Span<UInt8>, options: Data.Base64EncodingOptions) -> [UInt8] {
         let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
 
-        if let result = bytes.withContiguousStorageIfAvailable({ input -> [UInt8] in
-            [UInt8](unsafeUninitializedCapacity: newCapacity) { buffer, length in
-                Self._encode(input: input, buffer: buffer, length: &length, options: options)
-            }
-        }) {
-            return result
+        return [UInt8](unsafeUninitializedCapacity: newCapacity) { buffer, length in
+            var outputSpan = OutputRawSpan(buffer: UnsafeMutableRawBufferPointer(buffer), initializedCount: 0)
+            Self._encode(input: bytes, buffer: &outputSpan, options: options)
         }
-
-        return self.encodeToBytes(bytes: Array(bytes), options: options)
     }
 
-    static func encodeToString<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions = [])
-        -> String where Buffer.Element == UInt8
-    {
+    static func encodeToString(bytes: Span<UInt8>, options: Data.Base64EncodingOptions = []) -> String {
         let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
 
         if #available(OSX 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
-            if let result = bytes.withContiguousStorageIfAvailable({ input -> String in
-                String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
-                    var length = newCapacity
-                    Self._encode(input: input, buffer: buffer, length: &length, options: options)
-                    return length
-                }
-            }) {
-                return result
+            return String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
+                var outputSpan = OutputRawSpan(buffer: UnsafeMutableRawBufferPointer(buffer), initializedCount: 0)
+                Self._encode(input: bytes, buffer: &outputSpan, options: options)
+                return outputSpan.byteCount
             }
-
-            return self.encodeToString(bytes: Array(bytes), options: options)
         } else {
             let bytes: [UInt8] = self.encodeToBytes(bytes: bytes, options: options)
             return String(decoding: bytes, as: Unicode.UTF8.self)
         }
     }
 
-    static func encodeToData<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions = [])
-        -> Data where Buffer.Element == UInt8
-    {
+    static func encodeToData(bytes: Span<UInt8>, options: Data.Base64EncodingOptions = []) -> Data {
         let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
 
-        if let result = bytes.withContiguousStorageIfAvailable({ input -> Data in
-            var data = Data(count: newCapacity) // initialized with zeroed buffer
-            _ = data.withUnsafeMutableBytes { rawBuffer in
-                rawBuffer.withMemoryRebound(to: UInt8.self) { buffer in
-                    var length = newCapacity
-                    Self._encode(input: input, buffer: buffer, length: &length, options: options)
-                    return length
-                }
-            }
-            return data
-        }) {
-            return result
+        return Data(capacity: newCapacity) { (buffer: inout OutputBuffer<UInt8>) in
+            var length = 0
+            var outputSpan = OutputRawSpan(
+                buffer: UnsafeMutableRawBufferPointer(
+                    start: UnsafeMutableRawPointer(buffer.start),
+                    count: buffer.capacity
+                ),
+                initializedCount: 0
+            )
+            Self._encode(input: bytes, buffer: &outputSpan, options: options)
+            buffer.initialized = outputSpan.byteCount
         }
-
-        return self.encodeToData(bytes: Array(bytes), options: options)
     }
 
-    static func _encode(input: UnsafeBufferPointer<UInt8>, buffer: UnsafeMutableBufferPointer<UInt8>, length: inout Int, options: Data.Base64EncodingOptions) {
+    static func _encode(input: Span<UInt8>, buffer: inout OutputRawSpan, options: Data.Base64EncodingOptions) {
         if options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters) {
-            return self._encodeWithLineBreaks(input: input, buffer: buffer, length: &length, options: options)
+            return self._encodeWithLineBreaks(input: input, buffer: &buffer, options: options)
         }
 
         let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
         Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
             let to = input.count / 3 * 3
-            var outIndex = 0
 
-            self.loopEncode(e0, e1, input: input, from: 0, to: to, output: buffer, outIndex: &outIndex)
+            self.loopEncode(e0, e1, input: input.extracting(0..<to), output: &buffer)
 
             if to < input.count {
                 let index = to
@@ -390,41 +369,33 @@ extension Base64 {
                 let i2 = index &+ 1 < input.count ? input[index &+ 1] : nil
                 let i3 = index &+ 2 < input.count ? input[index &+ 2] : nil
 
-                buffer[outIndex] = e0[i1]
+                buffer.append(e0[i1])
 
                 if let i2 = i2 {
-                    buffer[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
+                    buffer.append(e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)])
                     if let i3 = i3 {
-                        buffer[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
-                        buffer[outIndex &+ 3] = e1[i3]
-                        outIndex += 4
+                        buffer.append(e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)])
+                        buffer.append(e1[i3])
                     } else {
-                        buffer[outIndex &+ 2] = e1[(i2 & 0x0F) &<< 2]
-                        outIndex += 3
+                        buffer.append(e1[(i2 & 0x0F) &<< 2])
                         if !omitPaddingCharacter {
-                            buffer[outIndex] = Self.encodePaddingCharacter
-                            outIndex &+= 1
+                            buffer.append(Self.encodePaddingCharacter)
                         }
                     }
                 } else {
-                    buffer[outIndex &+ 1] = e1[(i1 & 0x03) << 4]
-                    outIndex &+= 2
+                    buffer.append(e1[(i1 & 0x03) << 4])
                     if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        buffer[outIndex &+ 1] = Self.encodePaddingCharacter
-                        outIndex &+= 2
+                        buffer.append(Self.encodePaddingCharacter)
+                        buffer.append(Self.encodePaddingCharacter)
                     }
                 }
             }
-
-            length = outIndex
         }
     }
 
     static func _encodeWithLineBreaks(
-        input: UnsafeBufferPointer<UInt8>,
-        buffer: UnsafeMutableBufferPointer<UInt8>,
-        length: inout Int,
+        input: borrowing Span<UInt8>,
+        buffer: inout OutputRawSpan,
         options: Data.Base64EncodingOptions
     ) {
         let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
@@ -455,42 +426,36 @@ extension Base64 {
         }
 
         Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
-            var outIndex = 0
-
             // Note: It's safe to use overflowing math here, as input and output are valid pointers
             //       with a length that is smaller than Int here. For this reason index and outIndex
             //       can never wrap.
 
             // first full line
             if input.count >= lineLength {
-                self.loopEncode(e0, e1, input: input, from: 0, to: lineLength, output: buffer, outIndex: &outIndex)
+                self.loopEncode(e0, e1, input: input.extracting(0..<lineLength), output: &buffer)
             }
 
             // following full lines
             var lineInputIndex = lineLength
             while lineInputIndex < lines * lineLength {
-                buffer[outIndex] = separatorByte1
-                outIndex &+= 1
+                buffer.append(separatorByte1)
                 if let separatorByte2 {
-                    buffer[outIndex] = separatorByte2
-                    outIndex &+= 1
+                    buffer.append(separatorByte2)
                 }
 
-                self.loopEncode(e0, e1, input: input, from: lineInputIndex, to: lineInputIndex + lineLength, output: buffer, outIndex: &outIndex)
+                self.loopEncode(e0, e1, input: input.extracting(lineInputIndex..<lineInputIndex + lineLength), output: &buffer)
                 lineInputIndex &+= lineLength
             }
 
             // last line beginning
             if lines > 0 && lines * lineLength < input.count {
-                buffer[outIndex] = separatorByte1
-                outIndex += 1
+                buffer.append(separatorByte1)
                 if let separatorByte2 {
-                    buffer[outIndex] = separatorByte2
-                    outIndex += 1
+                    buffer.append(separatorByte2)
                 }
             }
             let to = input.count / 3 * 3
-            self.loopEncode(e0, e1, input: input, from: lines * lineLength, to: to, output: buffer, outIndex: &outIndex)
+            self.loopEncode(e0, e1, input: input.extracting((lines * lineLength)..<to), output: &buffer)
 
             // last 2-4 bytes
             if to < input.count {
@@ -500,59 +465,55 @@ extension Base64 {
                 let i2 = index + 1 < input.count ? input[index + 1] : nil
                 let i3 = index + 2 < input.count ? input[index + 2] : nil
 
-                buffer[outIndex] = e0[i1]
+                buffer.append(e0[i1])
 
                 if let i2 = i2, let i3 = i3 {
-                    buffer[outIndex + 1] = e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)]
-                    buffer[outIndex + 2] = e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)]
-                    buffer[outIndex + 3] = e1[i3]
-                    outIndex += 4
+                    buffer.append(e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)])
+                    buffer.append(e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)])
+                    buffer.append(e1[i3])
                 } else if let i2 = i2 {
-                    buffer[outIndex + 1] = e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)]
-                    buffer[outIndex + 2] = e1[(i2 & 0x0F) << 2]
-                    outIndex += 3
+                    buffer.append(e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)])
+                    buffer.append(e1[(i2 & 0x0F) << 2])
                     if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        outIndex += 1
+                        buffer.append(Self.encodePaddingCharacter)
                     }
                 } else {
-                    buffer[outIndex + 1] = e1[(i1 & 0x03) << 4]
-                    outIndex += 2
+                    buffer.append(e1[(i1 & 0x03) << 4])
                     if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        buffer[outIndex + 1] = Self.encodePaddingCharacter
-                        outIndex += 2
+                        buffer.append(Self.encodePaddingCharacter)
+                        buffer.append(Self.encodePaddingCharacter)
                     }
                 }
             }
-
-            length = outIndex
         }
     }
 
     private static func loopEncode(
         _ e0: Base64EncodingTable,
         _ e1: Base64EncodingTable,
-        input: UnsafeBufferPointer<UInt8>,
-        from: Int,
-        to: Int,
-        output: UnsafeMutableBufferPointer<UInt8>,
-        outIndex: inout Int
+        input: borrowing Span<UInt8>,
+        output: inout OutputRawSpan
     ) {
+        assert(input.count.isMultiple(of: 3))
+        assert(output.freeCapacity >= 4 * (input.count / 3))
         // Note: It's safe to use overflowing math here, as input and output are valid pointers
         //       with a length that is smaller than Int here. For this reason index and outIndex
         //       can never wrap.
-        var index = from
-        while index < to {
-            let i1 = input[index]
-            let i2 = input[index &+ 1]
-            let i3 = input[index &+ 2]
-            output[outIndex] = e0[i1]
-            output[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
-            output[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
-            output[outIndex &+ 3] = e1[i3]
-            outIndex &+= 4
-            index &+= 3
+        output.withUnsafeMutableBytes { outPtr, initializedCount in
+            var index = 0
+            var outIndex = initializedCount
+            while index < input.count {
+                let i1 = input[unchecked: index]
+                let i2 = input[unchecked: index &+ 1]
+                let i3 = input[unchecked: index &+ 2]
+                outPtr[outIndex] = e0[i1]
+                outPtr[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
+                outPtr[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
+                outPtr[outIndex &+ 3] = e1[i3]
+                index &+= 3
+                outIndex &+= 4
+            }
+            initializedCount = outIndex
         }
     }
 
