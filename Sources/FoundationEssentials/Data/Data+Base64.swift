@@ -154,6 +154,46 @@ extension Data {
 
 enum Base64 {}
 
+/// A base64 encoding lookup table.
+///
+/// The table holds exactly 256 bytes and is only indexable by `UInt8`. Every possible index is
+/// therefore in bounds, which is why the subscript can forward to the span's unchecked subscript:
+/// a buffer overflow is impossible by construction and no bounds check is emitted in the hot
+/// encoding loops.
+private struct Base64EncodingTable: ~Escapable {
+    private let table: Span<UInt8>
+
+    @_lifetime(copy table)
+    init(_ table: Span<UInt8>) {
+        assert(table.count == 256)
+        self.table = table
+    }
+
+    subscript(index: UInt8) -> UInt8 {
+        unsafe self.table[unchecked: Int(index)]
+    }
+}
+
+/// A base64 decoding lookup table.
+///
+/// The table holds exactly 256 elements and is only indexable by `UInt8`. Every possible index is
+/// therefore in bounds, which is why the subscript can forward to the span's unchecked subscript:
+/// a buffer overflow is impossible by construction and no bounds check is emitted in the hot
+/// decoding loops.
+private struct Base64DecodingTable: ~Escapable {
+    private let table: Span<UInt32>
+
+    @_lifetime(copy table)
+    init(_ table: Span<UInt32>) {
+        assert(table.count == 256)
+        self.table = table
+    }
+
+    subscript(index: UInt8) -> UInt32 {
+        unsafe self.table[unchecked: Int(index)]
+    }
+}
+
 // MARK: - Encoding -
 
 extension Base64 {
@@ -343,7 +383,7 @@ extension Base64 {
 
         let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
-        Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { (e0, e1) throws(Never) -> Void in
+        Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
             let to = input.count / 3 * 3
             var outIndex = 0
 
@@ -356,16 +396,16 @@ extension Base64 {
                 let i2 = index &+ 1 < input.count ? input[index &+ 1] : nil
                 let i3 = index &+ 2 < input.count ? input[index &+ 2] : nil
 
-                buffer[outIndex] = e0[Int(i1)]
+                buffer[outIndex] = e0[i1]
 
                 if let i2 = i2 {
-                    buffer[outIndex &+ 1] = e1[Int(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F))]
+                    buffer[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
                     if let i3 = i3 {
-                        buffer[outIndex &+ 2] = e1[Int(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03))]
-                        buffer[outIndex &+ 3] = e1[Int(i3)]
+                        buffer[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
+                        buffer[outIndex &+ 3] = e1[i3]
                         outIndex += 4
                     } else {
-                        buffer[outIndex &+ 2] = e1[Int((i2 & 0x0F) &<< 2)]
+                        buffer[outIndex &+ 2] = e1[(i2 & 0x0F) &<< 2]
                         outIndex += 3
                         if !omitPaddingCharacter {
                             buffer[outIndex] = Self.encodePaddingCharacter
@@ -373,7 +413,7 @@ extension Base64 {
                         }
                     }
                 } else {
-                    buffer[outIndex &+ 1] = e1[Int((i1 & 0x03) << 4)]
+                    buffer[outIndex &+ 1] = e1[(i1 & 0x03) << 4]
                     outIndex &+= 2
                     if !omitPaddingCharacter {
                         buffer[outIndex] = Self.encodePaddingCharacter
@@ -420,7 +460,7 @@ extension Base64 {
             separatorByte2 = nil
         }
 
-        Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { e0, e1 in
+        Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
             var outIndex = 0
 
             // first full line
@@ -459,23 +499,23 @@ extension Base64 {
                 let i2 = index + 1 < input.count ? input[index + 1] : nil
                 let i3 = index + 2 < input.count ? input[index + 2] : nil
 
-                buffer[outIndex] = e0[Int(i1)]
+                buffer[outIndex] = e0[i1]
 
                 if let i2 = i2, let i3 = i3 {
-                    buffer[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-                    buffer[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
-                    buffer[outIndex + 3] = e1[Int(i3)]
+                    buffer[outIndex + 1] = e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)]
+                    buffer[outIndex + 2] = e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)]
+                    buffer[outIndex + 3] = e1[i3]
                     outIndex += 4
                 } else if let i2 = i2 {
-                    buffer[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-                    buffer[outIndex + 2] = e1[Int((i2 & 0x0F) << 2)]
+                    buffer[outIndex + 1] = e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)]
+                    buffer[outIndex + 2] = e1[(i2 & 0x0F) << 2]
                     outIndex += 3
                     if !omitPaddingCharacter {
                         buffer[outIndex] = Self.encodePaddingCharacter
                         outIndex += 1
                     }
                 } else {
-                    buffer[outIndex + 1] = e1[Int((i1 & 0x03) << 4)]
+                    buffer[outIndex + 1] = e1[(i1 & 0x03) << 4]
                     outIndex += 2
                     if !omitPaddingCharacter {
                         buffer[outIndex] = Self.encodePaddingCharacter
@@ -490,8 +530,8 @@ extension Base64 {
     }
 
     private static func loopEncode(
-        _ e0: UnsafeBufferPointer<UInt8>,
-        _ e1: UnsafeBufferPointer<UInt8>,
+        _ e0: Base64EncodingTable,
+        _ e1: Base64EncodingTable,
         input: UnsafeBufferPointer<UInt8>,
         from: Int,
         to: Int,
@@ -502,10 +542,10 @@ extension Base64 {
             let i1 = input[index]
             let i2 = input[index + 1]
             let i3 = input[index + 2]
-            output[outIndex] = e0[Int(i1)]
-            output[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-            output[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
-            output[outIndex + 3] = e1[Int(i3)]
+            output[outIndex] = e0[i1]
+            output[outIndex + 1] = e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)]
+            output[outIndex + 2] = e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)]
+            output[outIndex + 3] = e1[i3]
             outIndex += 4
         }
     }
@@ -542,18 +582,17 @@ extension Base64 {
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
-    static func withUnsafeEncodingTablesAsBufferPointers<R>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) -> R) -> R {
-        let encoding0 = options.contains(.base64URLAlphabet) ? Self.encoding0url : Self.encoding0
-        let encoding1 = options.contains(.base64URLAlphabet) ? Self.encoding1url : Self.encoding1
-
-        assert(encoding0.count == 256)
-        assert(encoding1.count == 256)
-
-        return encoding0.withUnsafeBufferPointer { e0 in
-            encoding1.withUnsafeBufferPointer { e1 in
-                body(e0, e1)
-            }
+    private static func withEncodingTables<R, E: Swift.Error>(
+        options: Data.Base64EncodingOptions,
+        _ body: (Base64EncodingTable, Base64EncodingTable) throws(E) -> R
+    ) throws(E) -> R {
+        let (encoding0, encoding1) = if options.contains(.base64URLAlphabet) {
+            (Self.encoding0url, Self.encoding1url)
+        } else {
+            (Self.encoding0, Self.encoding1)
         }
+
+        return try body(Base64EncodingTable(encoding0.span), Base64EncodingTable(encoding1.span))
     }
 }
 
@@ -697,7 +736,7 @@ extension Base64 {
             preconditionFailure("Expected the out buffer to be at least as long as outputLength")
         }
 
-        try Self.withUnsafeDecodingTablesAsBufferPointers(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
+        try Self.withDecodingTables(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
             if fullchunks > 0 {
                 for chunk in 0 ..< fullchunks {
@@ -706,7 +745,7 @@ extension Base64 {
                     let a1 = inBuffer[inIndex + 1]
                     let a2 = inBuffer[inIndex + 2]
                     let a3 = inBuffer[inIndex + 3]
-                    var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
+                    var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
 
                     if x >= Self.badCharacter {
                         // TODO: Inspect characters here better
@@ -737,7 +776,7 @@ extension Base64 {
                 a3 = inBuffer[inIndex + 3]
             }
 
-            var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2 ?? 65)] | d3[Int(a3 ?? 65)]
+            var x: UInt32 = d0[a0] | d1[a1] | d2[a2 ?? 65] | d3[a3 ?? 65]
             if x >= Self.badCharacter {
                 // TODO: Inspect characters here better
                 throw DecodingError.invalidCharacter(inBuffer[inIndex])
@@ -775,7 +814,7 @@ extension Base64 {
             preconditionFailure("Expected the out buffer to be at least as long as outputLength")
         }
 
-        try Self.withUnsafeDecodingTablesAsBufferPointers(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
+        try Self.withDecodingTables(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
             var inIndex = 0
 
@@ -784,7 +823,7 @@ extension Base64 {
                 let a1 = inBuffer[inIndex &+ 1]
                 let a2 = inBuffer[inIndex &+ 2]
                 let a3 = inBuffer[inIndex &+ 3]
-                var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
+                var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
 
                 if x >= Self.badCharacter {
                     if a3 == Self.encodePaddingCharacter || a2 == Self.encodePaddingCharacter || a1 == Self.encodePaddingCharacter || a0 == Self.encodePaddingCharacter {
@@ -846,7 +885,7 @@ extension Base64 {
                         throw DecodingError.invalidLength
                     }
 
-                    x = d0[Int(b0)] | d1[Int(b1)] | d2[Int(b2)] | d3[Int(b3)]
+                    x = d0[b0] | d1[b1] | d2[b2] | d3[b3]
 
                 } else {
                     inIndex &+= 4
@@ -897,7 +936,7 @@ extension Base64 {
                 a3 = inBuffer[inIndex + 3]
             }
 
-            var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
+            var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
             if x >= Self.badCharacter {
                 var b0: UInt8? = nil
                 var b1: UInt8? = nil
@@ -946,7 +985,7 @@ extension Base64 {
                     throw DecodingError.invalidLength
                 }
 
-                x = d0[Int(b0)] | d1[Int(b1)] | d2[Int(b2)] | d3[Int(b3)]
+                x = d0[b0] | d1[b1] | d2[b2] | d3[b3]
                 assert(x < Self.badCharacter)
             }
 
@@ -985,46 +1024,27 @@ extension Base64 {
         }
     }
 
-    static func withUnsafeDecodingTablesAsBufferPointers<R, E: Swift.Error>(
+    private static func withDecodingTables<R, E: Swift.Error>(
         options: Data.Base64DecodingOptions,
-        _ body: (UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>) throws(E) -> R
+        _ body: (
+            Base64DecodingTable,
+            Base64DecodingTable,
+            Base64DecodingTable,
+            Base64DecodingTable
+        ) throws(E) -> R
     ) throws(E) -> R {
-        let decoding0: [UInt32]
-        let decoding1: [UInt32]
-        let decoding2: [UInt32]
-        let decoding3: [UInt32]
-
-        if options.contains(.base64URLAlphabet) {
-            decoding0 = Self.decoding0url
-            decoding1 = Self.decoding1url
-            decoding2 = Self.decoding2url
-            decoding3 = Self.decoding3url
+        let (decoding0, decoding1, decoding2, decoding3) = if options.contains(.base64URLAlphabet) {
+            (Self.decoding0url, Self.decoding1url, Self.decoding2url, Self.decoding3url)
         } else {
-            decoding0 = Self.decoding0
-            decoding1 = Self.decoding1
-            decoding2 = Self.decoding2
-            decoding3 = Self.decoding3
+            (Self.decoding0, Self.decoding1, Self.decoding2, Self.decoding3)
         }
 
-        assert(decoding0.count == 256)
-        assert(decoding1.count == 256)
-        assert(decoding2.count == 256)
-        assert(decoding3.count == 256)
-
-        // Workaround that `withUnsafeBufferPointer` started to support typed throws in Swift 6.1
-        let result = decoding0.withUnsafeBufferPointer { d0 -> Result<R, E> in
-            decoding1.withUnsafeBufferPointer { d1 -> Result<R, E> in
-                decoding2.withUnsafeBufferPointer { d2 -> Result<R, E> in
-                    decoding3.withUnsafeBufferPointer { d3 -> Result<R, E> in
-                        Result { () throws(E) -> R in
-                            try body(d0, d1, d2, d3)
-                        }
-                    }
-                }
-            }
-        }
-
-        return try result.get()
+        return try body(
+            Base64DecodingTable(decoding0.span),
+            Base64DecodingTable(decoding1.span),
+            Base64DecodingTable(decoding2.span),
+            Base64DecodingTable(decoding3.span)
+        )
     }
 
     static func isValidBase64Byte(_ byte: UInt8, options: Data.Base64DecodingOptions) -> Bool {
