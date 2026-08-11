@@ -337,7 +337,6 @@ extension Base64 {
         let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
 
         return Data(capacity: newCapacity) { (buffer: inout OutputBuffer<UInt8>) in
-            var length = 0
             var outputSpan = OutputRawSpan(
                 buffer: UnsafeMutableRawBufferPointer(
                     start: UnsafeMutableRawPointer(buffer.start),
@@ -365,9 +364,9 @@ extension Base64 {
             if to < input.count {
                 let index = to
 
-                let i1 = input[index]
-                let i2 = index &+ 1 < input.count ? input[index &+ 1] : nil
-                let i3 = index &+ 2 < input.count ? input[index &+ 2] : nil
+                let i1 = input[unchecked: index] // fine, since index = to and to < input.count
+                let i2 = index &+ 1 < input.count ? input[unchecked: index &+ 1] : nil // range check in the same line
+                let i3 = index &+ 2 < input.count ? input[unchecked: index &+ 2] : nil // range check in the same line
 
                 buffer.append(e0[i1])
 
