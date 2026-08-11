@@ -457,21 +457,27 @@ extension Base64 {
         Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
             var outIndex = 0
 
+            // Note: It's safe to use overflowing math here, as input and output are valid pointers
+            //       with a length that is smaller than Int here. For this reason index and outIndex
+            //       can never wrap.
+
             // first full line
             if input.count >= lineLength {
                 self.loopEncode(e0, e1, input: input, from: 0, to: lineLength, output: buffer, outIndex: &outIndex)
             }
 
             // following full lines
-            for lineInputIndex in stride(from: lineLength, to: lines * lineLength, by: lineLength) {
+            var lineInputIndex = lineLength
+            while lineInputIndex < lines * lineLength {
                 buffer[outIndex] = separatorByte1
-                outIndex += 1
+                outIndex &+= 1
                 if let separatorByte2 {
                     buffer[outIndex] = separatorByte2
-                    outIndex += 1
+                    outIndex &+= 1
                 }
 
                 self.loopEncode(e0, e1, input: input, from: lineInputIndex, to: lineInputIndex + lineLength, output: buffer, outIndex: &outIndex)
+                lineInputIndex &+= lineLength
             }
 
             // last line beginning
@@ -486,6 +492,7 @@ extension Base64 {
             let to = input.count / 3 * 3
             self.loopEncode(e0, e1, input: input, from: lines * lineLength, to: to, output: buffer, outIndex: &outIndex)
 
+            // last 2-4 bytes
             if to < input.count {
                 let index = to
 
@@ -532,15 +539,20 @@ extension Base64 {
         output: UnsafeMutableBufferPointer<UInt8>,
         outIndex: inout Int
     ) {
-        for index in stride(from: from, to: to, by: 3) {
+        // Note: It's safe to use overflowing math here, as input and output are valid pointers
+        //       with a length that is smaller than Int here. For this reason index and outIndex
+        //       can never wrap.
+        var index = from
+        while index < to {
             let i1 = input[index]
-            let i2 = input[index + 1]
-            let i3 = input[index + 2]
+            let i2 = input[index &+ 1]
+            let i3 = input[index &+ 2]
             output[outIndex] = e0[i1]
-            output[outIndex + 1] = e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)]
-            output[outIndex + 2] = e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)]
-            output[outIndex + 3] = e1[i3]
-            outIndex += 4
+            output[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
+            output[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
+            output[outIndex &+ 3] = e1[i3]
+            outIndex &+= 4
+            index &+= 3
         }
     }
 
