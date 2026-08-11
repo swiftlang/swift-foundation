@@ -73,10 +73,11 @@ extension CocoaError.Code {
 
 extension POSIXError {
     internal init?(errno: Int32) {
-        // (130280235) POSIXError.Code does not have a case for EOPNOTSUPP
-        guard errno != EOPNOTSUPP else { return nil }
         guard let code = POSIXError.Code(rawValue: errno) else {
-            fatalError("Invalid posix errno \(errno)")
+            // Assert in debug mode to catch cases in Foundation unit tests where we create a POSIXError with invalid error information (for example when the errno has already been set back to 0 after a subsequent successful API call)
+            // Avoid asserting in production because invalid errnos can be produced by arbitrary code run by the kernel and Foundation should be resilient if that code misbehaves. Unfortunately we don't have a way to form a POSIXError in Swift with the invalid code, so we instead just drop the underlying error
+            assertionFailure("Unable to form POSIXError from invalid errno \(errno)")
+            return nil
         }
         self.init(code)
     }
