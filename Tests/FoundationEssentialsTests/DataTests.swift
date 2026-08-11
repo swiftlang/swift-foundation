@@ -2704,7 +2704,7 @@ extension DataTests {
         )
     }
 
-    func test_base64Encode_arrayOfNulls() {
+    @Test func test_base64Encode_arrayOfNulls() {
         let input = Data(repeating: 0, count: 10)
         #expect(input.base64EncodedString() == "AAAAAAAAAAAAAA==")
         #expect(input.base64EncodedData() == Data("AAAAAAAAAAAAAA==".utf8))
