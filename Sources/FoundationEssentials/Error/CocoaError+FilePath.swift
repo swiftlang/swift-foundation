@@ -71,6 +71,7 @@ extension CocoaError.Code {
     }
 }
 
+#if !$Embedded
 extension POSIXError {
     internal init?(errno: Int32) {
         // (130280235) POSIXError.Code does not have a case for EOPNOTSUPP
@@ -91,6 +92,7 @@ extension CocoaError {
         }
     }
 }
+#endif
 
 // MARK: - Windows Errors
 

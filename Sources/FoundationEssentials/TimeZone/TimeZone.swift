@@ -294,7 +294,19 @@ extension TimeZone {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        return _tz.debugDescription
+    }
+
+    public var debugDescription : String {
+        return _tz.debugDescription
+    }
+}
+
+#if !$Embedded
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension TimeZone : CustomReflectable {
     public var customMirror : Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
@@ -305,16 +317,10 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
         ]
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
-
-    public var description: String {
-        return _tz.debugDescription
-    }
-
-    public var debugDescription : String {
-        return _tz.debugDescription
-    }
 }
+#endif
 
+#if !$Embedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -343,7 +349,7 @@ extension TimeZone : Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         // Even if we are autoupdatingCurrent, encode the identifier for backward compatibility
         try container.encode(self.identifier, forKey: .identifier)
-        
+
         // Autoupdating current timezones are treated as sentinel values, but the current TimeZone is encoded as a fixed TimeZone
         // This is the same behavior as Locale/Calendar except it did not previously encode as a sentinel value before FoundationPreview 6.3, so no extra key is encoded for the current time zone
         if _tz.isAutoupdating {
@@ -351,6 +357,7 @@ extension TimeZone : Codable {
         }
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
@@ -409,9 +416,14 @@ extension TimeZone {
         return Data()
 #else
         let path = TZDIR + "/" + name
-        guard !path.contains("..") else {
-            // No good reason for .. to be present anywhere in the path
-            return Data()
+        // No good reason for ".." (two consecutive dots) to be present anywhere in the path.
+        var previousWasDot = false
+        for byte in path.utf8 {
+            let isDot = (byte == UInt8(ascii: "."))
+            if isDot && previousWasDot {
+                return Data()
+            }
+            previousWasDot = isDot
         }
         return (try? Data(contentsOfFile: path)) ?? Data()
 #endif

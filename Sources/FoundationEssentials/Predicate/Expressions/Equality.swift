@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Equal<
@@ -67,3 +69,5 @@ extension PredicateExpressions.Equal : Codable where LHS : Codable, RHS : Codabl
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Equal : Sendable where LHS : Sendable, RHS : Sendable {}
+
+#endif // !$Embedded

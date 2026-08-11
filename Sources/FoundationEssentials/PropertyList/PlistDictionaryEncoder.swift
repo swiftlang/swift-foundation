@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // Relies on NS types
 #if FOUNDATION_FRAMEWORK
 
@@ -602,3 +604,5 @@ internal class __PlistDictionaryReferencingEncoder : __PlistDictionaryEncoder {
 internal nonisolated(unsafe) let _plistNullNSString = NSString(string: _plistNullString)
 
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !$Embedded

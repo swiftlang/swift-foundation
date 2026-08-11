@@ -17,7 +17,7 @@ internal import _ForSwiftFoundation
 
 /// Holds user preferences about `Locale`, retrieved from user defaults. It is only used when creating the `current` Locale. Fixed-identifier locales never have preferences.
 package struct LocalePreferences: Hashable, Sendable {
-    package enum MeasurementUnit: Int, Codable {
+    package enum MeasurementUnit: Int {
         case centimeters
         case inches
 
@@ -38,7 +38,7 @@ package struct LocalePreferences: Hashable, Sendable {
         }
     }
 
-    package enum TemperatureUnit: Int, Codable {
+    package enum TemperatureUnit: Int {
         case fahrenheit
         case celsius
 
@@ -336,6 +336,11 @@ package struct LocalePreferences: Hashable, Sendable {
     }
 }
 
+#if !$Embedded
+// Codable conformances are unavailable in Embedded Swift.
+extension LocalePreferences.MeasurementUnit : Codable {}
+extension LocalePreferences.TemperatureUnit : Codable {}
+
 extension LocalePreferences: Codable {
     private enum CodingKeys: String, CodingKey {
         case metricUnits = "metric"
@@ -491,6 +496,7 @@ extension LocalePreferences: Codable {
         #endif
     }
 }
+#endif
 
 #if FOUNDATION_FRAMEWORK
 extension LocalePreferences.ICUSymbolsAndStrings: Codable {

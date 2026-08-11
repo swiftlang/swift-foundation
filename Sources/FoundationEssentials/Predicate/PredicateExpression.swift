@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal import Synchronization
 
 /// A component expression that makes up part of a predicate.
@@ -347,3 +349,5 @@ extension PredicateExpressions.KeyPath {
         }
     }
 }
+
+#endif // !$Embedded

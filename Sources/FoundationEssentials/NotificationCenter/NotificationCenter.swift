@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(os)
 internal import os.log
 
@@ -177,3 +179,5 @@ extension NotificationCenter {
 }
 
 #endif
+
+#endif // !$Embedded

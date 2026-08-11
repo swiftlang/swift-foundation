@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -1319,3 +1321,5 @@ enum _FileOperations {
         try Self.linkOrCopyFile(src, dst: dst, with: fileManager, delegate: LinkFileDelegate(fileManager))
     }
 }
+
+#endif // !$Embedded

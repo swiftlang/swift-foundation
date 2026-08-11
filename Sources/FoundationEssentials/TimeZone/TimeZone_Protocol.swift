@@ -11,7 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 // Required to be `AnyObject` because it optimizes the call sites in the `struct` wrapper for efficient function dispatch.
-package protocol _TimeZoneProtocol : AnyObject, Sendable, CustomDebugStringConvertible {
+//
+// The `CustomDebugStringConvertible` refinement is dropped in Embedded Swift (via the typealias below):
+// values of the `any CustomDebugStringConvertible` existential cannot be formed there, which would make
+// `any _TimeZoneProtocol` (the storage of `TimeZone`) unusable. The explicit `var debugDescription`
+// requirement remains, and callers already use `.debugDescription` directly.
+#if $Embedded
+package typealias _TimeZoneStringConvertibleRefinement = Sendable
+#else
+package typealias _TimeZoneStringConvertibleRefinement = CustomDebugStringConvertible
+#endif
+
+package protocol _TimeZoneProtocol : AnyObject, Sendable, _TimeZoneStringConvertibleRefinement {
     init?(secondsFromGMT: Int)
     init?(identifier: String)
     

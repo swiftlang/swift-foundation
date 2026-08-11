@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
@@ -566,3 +568,5 @@ internal struct OpenStepPlistError: Swift.Error, Equatable {
         ])
     }
 }
+
+#endif // !$Embedded

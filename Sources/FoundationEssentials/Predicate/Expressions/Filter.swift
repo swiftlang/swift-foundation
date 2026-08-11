@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions {
     public struct Filter<
@@ -76,3 +78,5 @@ extension PredicateExpressions.Filter : Codable where LHS : Codable, RHS : Codab
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension PredicateExpressions.Filter : Sendable where LHS : Sendable, RHS : Sendable {}
+
+#endif // !$Embedded

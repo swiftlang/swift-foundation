@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import Synchronization
@@ -364,3 +366,5 @@ extension ProgressManager {
     }
 }
 #endif
+
+#endif // !$Embedded

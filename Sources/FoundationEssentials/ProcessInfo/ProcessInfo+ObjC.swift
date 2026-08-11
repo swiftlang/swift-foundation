@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK && !NO_PROCESS
 internal import _ForSwiftFoundation
 internal import MachO_Private.dyld
@@ -157,3 +159,5 @@ internal extension OperatingSystemVersion {
 }
 
 #endif // FOUNDATION_FRAMEWORK && !NO_PROCESS
+
+#endif // !$Embedded

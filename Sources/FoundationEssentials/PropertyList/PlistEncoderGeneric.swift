@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 protocol PlistEncodingReference {
     static var emptyArray : Self { get }
     static var emptyDictionary : Self { get }
@@ -60,3 +62,5 @@ protocol PlistEncodingFormat {
 extension PlistEncodingFormat {
     func bool(_ b: Bool) -> Reference { b ? self.true : self.false }
 }
+
+#endif // !$Embedded

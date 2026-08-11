@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // MARK: - _XMLPlistDecodingFormat
 
 internal struct _XMLPlistDecodingFormat : PlistDecodingFormat {
@@ -89,3 +91,5 @@ internal struct _XMLPlistDecodingFormat : PlistDecodingFormat {
         try mapValue.integerValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
 }
+
+#endif // !$Embedded

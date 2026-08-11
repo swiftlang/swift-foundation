@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(os)
+#if $Embedded && canImport(Darwin)
+import Darwin
+#elseif canImport(os)
 internal import os
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
@@ -35,7 +37,7 @@ internal import Synchronization
 /// `ucal_set` / `add` / `roll` eager recalculation semantics.
 internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
-#if canImport(os)
+#if canImport(os) && !$Embedded
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "hebrew_calendar")
     }()

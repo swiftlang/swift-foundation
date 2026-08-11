@@ -600,7 +600,7 @@ extension Substring {
     }
 
     func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
-        #if !NO_REGEX
+        #if !NO_REGEX && !$Embedded
         if options.contains(.regularExpression) {
             guard let regex = try RegexPatternCache.cache.regex(for: String(strToFind), caseInsensitive: options.contains(.caseInsensitive)) else {
                 return nil

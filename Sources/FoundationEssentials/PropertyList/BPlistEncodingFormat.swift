@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 // IMPORTANT: Any changes to __PlistEncoderBPlist and its related types should be repeated for __PlistEncoderXML.
 // This code is duplicate for performance reasons, as use of `@_specialize` has not been able to completely replicate the benefits of manual duplication.
 
@@ -1251,3 +1253,5 @@ extension FixedWidthInteger {
         return UInt8(self.bitWidth/8 - leadingZeroBytes)
     }
 }
+
+#endif // !$Embedded

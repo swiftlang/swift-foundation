@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSFileManager
 internal import DarwinPrivate.sys.content_protection
@@ -1014,3 +1016,5 @@ extension _FileManagerImpl {
 #endif
     }
 }
+
+#endif // !$Embedded

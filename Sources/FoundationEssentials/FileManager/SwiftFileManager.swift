@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if !FOUNDATION_FRAMEWORK
 
 internal import Synchronization
@@ -421,3 +423,5 @@ open class FileManager : @unchecked Sendable {
 }
 
 #endif
+
+#endif // !$Embedded

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 /// Subprogress is used to establish parent-child relationship between two instances of `ProgressManager`.
 ///
 /// Subprogress is returned from a call to `subprogress(assigningCount:)` by a parent ProgressManager.
@@ -81,3 +83,5 @@ public struct Subprogress: ~Copyable, Sendable {
         }
     }
 }
+
+#endif // !$Embedded

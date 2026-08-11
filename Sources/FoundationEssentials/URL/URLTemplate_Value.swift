@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -113,3 +115,5 @@ extension URL.Template.Value {
         case associativeList(OrderedDictionary<String, String>)
     }
 }
+
+#endif

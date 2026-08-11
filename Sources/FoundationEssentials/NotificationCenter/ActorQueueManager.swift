@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 internal class _NotificationCenterActorQueueManagerNSObjectWrapper: NSObject, @unchecked Sendable {}
 #else
@@ -99,3 +101,5 @@ internal final class _NotificationCenterActorQueueManager: _NotificationCenterAc
     }
 #endif
 }
+
+#endif // !$Embedded

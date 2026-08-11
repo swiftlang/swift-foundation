@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal import _FoundationCShims
 internal import Synchronization
 
@@ -823,3 +825,5 @@ extension BufferView<UInt8> {
         uncheckedSlice(from: region.startOffset, count: region.count)
     }
 }
+
+#endif // !$Embedded

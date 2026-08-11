@@ -231,7 +231,7 @@ extension _URLInfo {
             }
             return base
         }
-        #if !NO_FILESYSTEM
+        #if !NO_FILESYSTEM && !$Embedded
         if let cwd = URL.currentDirectoryOrNil() {
             flags.insert(.isFileURL)
             return cwd

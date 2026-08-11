@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSNotification
 internal import _ForSwiftFoundation
@@ -144,3 +146,5 @@ extension NotificationCenter {
 #endif
     }
 }
+
+#endif // !$Embedded

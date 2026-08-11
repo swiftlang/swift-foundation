@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 extension UInt32 {
     private static var KEYPATH_HEADER_BUFFER_SIZE_MASK: UInt32 { 0x00FF_FFFF }
     
@@ -86,3 +88,5 @@ extension AnyKeyPath {
         }
     }
 }
+
+#endif // !$Embedded

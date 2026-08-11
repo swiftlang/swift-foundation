@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -333,3 +335,5 @@ extension AttributedString.UnicodeScalarView: RangeReplaceableCollection {
     // (Letting everything go through `replaceSubrange` can be extremely costly -- e.g.,
     // `append(contentsOf:)` calls `replaceSubrange` once for each character!)
 }
+
+#endif // !$Embedded

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !$Embedded
+
 internal import _FoundationCShims
 internal import Synchronization
 
@@ -383,3 +385,5 @@ open class PropertyListDecoder {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension PropertyListDecoder : @unchecked Sendable {}
+
+#endif // !$Embedded
