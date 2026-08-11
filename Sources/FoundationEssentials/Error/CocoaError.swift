@@ -276,4 +276,5 @@ internal let NSURLErrorKey = "NSURL"
 internal let NSSourceFilePathErrorKey = "NSSourceFilePathErrorKey"
 internal let NSDestinationFilePathErrorKey = "NSDestinationFilePath"
 package let NSDebugDescriptionErrorKey = "NSDebugDescription"
+internal let _NSUnknownErrnoKey = "NSUnknownErrno"
 #endif

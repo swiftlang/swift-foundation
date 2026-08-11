@@ -72,7 +72,7 @@ extension CocoaError.Code {
 }
 
 extension POSIXError {
-    internal init?(errno: Int32) {
+    fileprivate init?(errno: Int32) {
         guard let code = POSIXError.Code(rawValue: errno) else {
             // Assert in debug mode to catch cases in Foundation unit tests where we create a POSIXError with invalid error information (for example when the errno has already been set back to 0 after a subsequent successful API call)
             // Avoid asserting in production because invalid errnos can be produced by arbitrary code run by the kernel and Foundation should be resilient if that code misbehaves. Unfortunately we don't have a way to form a POSIXError in Swift with the invalid code, so we instead just drop the underlying error
@@ -85,10 +85,12 @@ extension POSIXError {
 
 extension CocoaError {
     static func errorWithFilePath(_ path: borrowing some FileSystemRepresentable & ~Copyable, errno: Int32, reading: Bool, variant: String? = nil, source: String? = nil, destination: String? = nil, debugDescription: String? = nil) -> CocoaError {
+        let underlying = POSIXError(errno: errno)
+        let unknownErrno = underlying != nil ? nil : errno
         if let url = path.urlForError {
-            return CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
+            return CocoaError(Code(fileErrno: errno, reading: reading), url: url, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription, unknownErrno: unknownErrno)
         } else {
-            return CocoaError(Code(fileErrno: errno, reading: reading), path: path.path, underlying: POSIXError(errno: errno), variant: variant, source: source, destination: destination, debugDescription: debugDescription)
+            return CocoaError(Code(fileErrno: errno, reading: reading), path: path.path, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription, unknownErrno: unknownErrno)
         }
     }
 }
@@ -179,7 +181,8 @@ extension CocoaError {
         variant: String? = nil,
         source: String? = nil,
         destination: String? = nil,
-        debugDescription: String? = nil
+        debugDescription: String? = nil,
+        unknownErrno: Int32? = nil
     ) {
         self.init(
             code,
@@ -189,7 +192,8 @@ extension CocoaError {
             variant: variant,
             source: source,
             destination: destination,
-            debugDescription: debugDescription
+            debugDescription: debugDescription,
+            unknownErrno: unknownErrno
         )
     }
     
@@ -200,7 +204,8 @@ extension CocoaError {
         variant: String? = nil,
         source: String? = nil,
         destination: String? = nil,
-        debugDescription: String? = nil
+        debugDescription: String? = nil,
+        unknownErrno: Int32? = nil
     ) {
         self.init(
             code,
@@ -210,7 +215,8 @@ extension CocoaError {
             variant: variant,
             source: source,
             destination: destination,
-            debugDescription: debugDescription
+            debugDescription: debugDescription,
+            unknownErrno: unknownErrno
         )
     }
     
@@ -222,10 +228,11 @@ extension CocoaError {
         variant: String? = nil,
         source: String? = nil,
         destination: String? = nil,
-        debugDescription: String? = nil
+        debugDescription: String? = nil,
+        unknownErrno: Int32? = nil
     ) {
         #if FOUNDATION_FRAMEWORK
-        self.init(_uncheckedNSError: NSError._cocoaError(withCode: code.rawValue, path: path, url: url, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription) as NSError)
+        self.init(_uncheckedNSError: NSError._cocoaError(withCode: code.rawValue, path: path, url: url, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription, unknownErrno: unknownErrno) as NSError)
         #else
         var userInfo: [String : Any] = [:]
         if let path {
@@ -249,7 +256,10 @@ extension CocoaError {
         if let debugDescription {
             userInfo[NSDebugDescriptionErrorKey] = debugDescription
         }
-        
+        if let unknownErrno {
+            userInfo[_NSUnknownErrnoKey] = unknownErrno
+        }
+
         self.init(code, userInfo: userInfo)
         #endif
     }
