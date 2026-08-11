@@ -25,7 +25,7 @@ import WinSDK
 import WASILibc
 #elseif os(Emscripten)
 import EmscriptenLibc
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
@@ -393,7 +393,7 @@ extension Base64 {
         length: inout Int,
         options: Data.Base64EncodingOptions
     ) {
-        let omitPaddingCharacter = false
+        let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
         assert(options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters))
 

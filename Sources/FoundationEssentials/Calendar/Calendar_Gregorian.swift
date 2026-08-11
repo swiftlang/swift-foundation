@@ -350,7 +350,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .quarter: 1..<5
         case .weekOfMonth: 1..<5
         case .weekOfYear: 1..<53
-        case .yearForWeekOfYear: 140742..<140743
+        case .yearForWeekOfYear: -140742..<140743
         case .nanosecond: 0..<1000000000
         // There is no leap month or repeated day in Gregorian calendar
         case .isLeapMonth: 0..<1
@@ -382,7 +382,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             let upperBound = (daysInMonthLimit + 6 + (7 - minimumDaysInFirstWeek)) / 7;
             return lowerBound ..< (upperBound + 1)
         case .weekOfYear: return 1..<54
-        case .yearForWeekOfYear: return 140742..<144684
+        case .yearForWeekOfYear: return -140742..<144684
         case .nanosecond: return 0..<1000000000
         case .isLeapMonth: return 0..<1
         case .isRepeatedDay: return 0..<1
