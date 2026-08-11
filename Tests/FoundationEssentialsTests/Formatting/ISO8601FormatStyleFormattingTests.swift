@@ -207,19 +207,14 @@ private struct ISO8601FormatStyleFormattingTests {
     }
     
     @Test func rounding() {
-        // Date is: "1970-01-01 15:35:45.9999". Rounding to the nearest millisecond is clamped so it
-        // never carries into the next second, so a fraction this close to a full second still
-        // formats as .999 rather than advancing to 15:35:46.000.
+        // Date is: "1970-01-01 15:35:45.9999". Rounding to the nearest millisecond is clamped so it never carries into the next second, so a fraction this close to a full second still formats as .999 rather than advancing to 15:35:46.000.
         let date = Date(timeIntervalSinceReferenceDate: -978251054.0 - 0.0001)
         let str = Date.ISO8601FormatStyle().timeZone(separator: .colon).time(includingFractionalSeconds: true).timeSeparator(.colon).format(date)
         #expect(str == "15:35:45.999Z")
     }
 
     @Test func fractionalSecondsRoundToNearestMillisecond() throws {
-        // A `Date` built from a fractional `TimeInterval` at a present-day magnitude cannot represent
-        // the value exactly, so the extracted nanosecond lands just below the intended value (e.g.
-        // 122999906 for .123). The milliseconds field must round to the nearest millisecond rather
-        // than truncating toward zero, otherwise it is reported one millisecond too low.
+        // A `Date` built from a fractional `TimeInterval` at a present-day magnitude cannot represent the value exactly, so the extracted nanosecond lands just below the intended value (e.g. 122999906 for .123). The milliseconds field must round to the nearest millisecond rather than truncating toward zero, otherwise it is reported one millisecond too low.
         let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
 
         // 1674036251.123 -> "2023-01-18T10:04:11.123" (previously ".122")
@@ -234,15 +229,12 @@ private struct ISO8601FormatStyleFormattingTests {
             #expect(formatted.hasSuffix(suffix), "ms=\(ms) formatted as \(formatted)")
         }
 
-        // A sub-millisecond remainder close enough to a full second is clamped rather than carried,
-        // so .9996 at second 11 still reads as second 11 with the largest representable fraction.
+        // A sub-millisecond remainder close enough to a full second is clamped rather than carried, so .9996 at second 11 still reads as second 11 with the largest representable fraction.
         #expect(style.format(Date(timeIntervalSince1970: base + 0.9996)) == "2023-01-18T10:04:11.999")
     }
 
     @Test func fractionalSecondsDoNotCarryAtSecondBoundary() throws {
-        // Rounding here exists to undo binary representation error, not to advance the instant. A
-        // time like HH:MM:59.9996 must stay in that second and format as HH:MM:59.999 rather than
-        // rolling the second, the minute, and potentially the day forward.
+        // Rounding here exists to undo binary representation error, not to advance the instant. A time like HH:MM:59.9996 must stay in that second and format as HH:MM:59.999 rather than rolling the second, the minute, and potentially the day forward.
         let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
 
         // 1674036299.0 is 2023-01-18T10:04:59, so the .9996 remainder must not reach 10:05:00.000.
