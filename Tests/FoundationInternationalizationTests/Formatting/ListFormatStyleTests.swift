@@ -160,6 +160,16 @@ private struct ListFormatStyleTests {
         #expect(["Alice", "Bob"].formatted(style("sr-Latn")) == ["Alice", "Bob"].formatted(style("sr_Latn")))
     }
 
+    // sh_CS and sh_YU are deprecated. The framework build canonicalizes them via
+    // Locale.identifier to sr_RS (Cyrillic и), while this Swift package leaves them
+    // to resolve through %%ALIAS to sr_Latn_RS (Latin i). Each target matches what
+    // we'd get with the original ICU-based list formatter for that build.
+#if FOUNDATION_FRAMEWORK
+    private static let shDeprecatedTarget = "sr_RS"
+#else
+    private static let shDeprecatedTarget = "sr_Latn_RS"
+#endif
+
     // ICU locale aliases from `icu4c/source/data/locales/*.txt` (`%%ALIAS`),
     // derived by deprecated-subtag replacement and likely-subtags expansion. Each
     // source identifier must resolve its list patterns to the same output as its
@@ -174,8 +184,8 @@ private struct ListFormatStyleTests {
         ("mni_IN", "mni_Beng_IN"), ("mo", "ro"), ("no_NO", "no"), ("no_NO_NY", "nn_NO"),
         ("pa_IN", "pa_Guru_IN"), ("pa_PK", "pa_Arab_PK"), ("sat_IN", "sat_Olck_IN"),
         ("sd_IN", "sd_Deva_IN"), ("sd_PK", "sd_Arab_PK"),
-        ("sh", "sr_Latn"), ("sh_BA", "sr_Latn_BA"), ("sh_CS", "sr_Latn_RS"),
-        ("sh_YU", "sr_Latn_RS"), ("shi_MA", "shi_Tfng_MA"),
+        ("sh", "sr_Latn"), ("sh_BA", "sr_Latn_BA"), ("sh_CS", shDeprecatedTarget),
+        ("sh_YU", shDeprecatedTarget), ("shi_MA", "shi_Tfng_MA"),
         ("sr_BA", "sr_Cyrl_BA"), ("sr_CS", "sr_RS"), ("sr_Cyrl_CS", "sr_Cyrl_RS"),
         ("sr_Cyrl_YU", "sr_Cyrl_RS"), ("sr_Latn_CS", "sr_Latn_RS"),
         ("sr_Latn_YU", "sr_Latn_RS"), ("sr_ME", "sr_Latn_ME"), ("sr_RS", "sr_Cyrl_RS"),
