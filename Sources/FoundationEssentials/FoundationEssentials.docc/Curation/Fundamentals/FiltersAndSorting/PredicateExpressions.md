@@ -92,6 +92,7 @@
 ### Building conjunction and disjunction expressions
 
 - ``build_Conjunction(lhs:rhs:)``
+- ``Conjunction``
 - ``build_Disjunction(lhs:rhs:)``
 - ``Disjunction``
 

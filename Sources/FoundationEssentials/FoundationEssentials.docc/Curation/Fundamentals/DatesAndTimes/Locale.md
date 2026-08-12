@@ -1,6 +1,5 @@
 # ``/FoundationEssentials/Locale``
 
-<!-- The content below this line is auto-generated and is redundant. You should either incorporate it into your content above this line or delete it. -->
 
 ## Topics
 
@@ -22,12 +21,12 @@
 - ``autoupdatingCurrent``
 - ``current``
 
-### Working with between identifiers
+### Working with identifiers
 
 - ``identifier(fromComponents:)``
 - ``IdentifierType``
-
-
+- ``canonicalIdentifier(from:)``
+- ``canonicalLanguageIdentifier(from:)``
 
 ### Working with locale components
 
@@ -70,7 +69,6 @@
 - ``collation``
 - ``Collation``
 
-
 ### Working with information about a locale
 
 - ``identifier``
@@ -79,6 +77,7 @@
 - ``calendar``
 - ``regionCode``
 - ``languageCode``
+- ``LanguageCode``
 - ``scriptCode``
 - ``variantCode``
 - ``collationIdentifier``
@@ -105,7 +104,20 @@
 - ``localizedString(forScriptCode:)``
 - ``localizedString(forVariantCode:)``
 
-### Working with preferred languages
+### Working with preferred languages and locales
 
 - ``preferredLanguages``
+- ``preferredLocales``
 
+### Comparing locales
+
+- ``==(_:_:)``
+
+### Hashing
+
+- ``hash(into:)``
+
+### Supporting types
+
+- ``LanguageDirection-enum``
+- ``Script``
