@@ -63,39 +63,15 @@ let slots: [(cldrType: String, type: String, width: String)] = [
     ("or-narrow",       "or",   "narrow"),
 ]
 
-// Locale aliases: deprecated or under-specified identifiers → the canonical
-// identifier whose list patterns they should resolve to. This mirrors the
-// per-locale %%ALIAS redirects ICU ships in icu4c/source/data/locales/*.txt so
-// the runtime resolves the same patterns ICU would. It matters because the
-// requested Locale.identifier can arrive minimized (e.g. zh_Hant_HK canonicalizes
-// to zh_HK) or as a deprecated code (iw, in, sh), which the plain parent-chain
-// walk would otherwise fall back to the wrong data for (zh_HK → zh → "和" instead
-// of zh_Hant → "及").
-//
-// This is a curated snapshot rather than a value computed from the CLDR XML: the
-// set of aliased identifiers is ICU's, not CLDR's. ICU derives it in
-// tools/cldr-to-icu LdmlConverter.getAliasMap(config.getTargetLocaleIds(dir)),
-// which enumerates the curated <localeIds> list in cldr-to-icu/config.xml and,
-// per id, emits an alias when either:
-//   1. replaceDeprecatedTags changes the id (deprecated language/territory
-//      subtags from common/supplemental/supplementalMetadata.xml, e.g. iw→he,
-//      sh→sr_Latn, CS→RS), or
-//   2. the id has no data of its own and maximize adds a likely script
-//      (common/supplemental/likelySubtags.xml, e.g. az_AZ→az_Latn_AZ,
-//      zh_HK→zh_Hant_HK).
-// Three entries below (ars, no_NO, no_NO_NY) are ICU <forcedAlias> config
-// entries with no CLDR derivation. These mappings have been stable across CLDR
-// releases; the <localeIds> list grows by only a handful of ids per release.
-//
-// To refresh at a CLDR/ICU upgrade: re-extract the %%ALIAS values from a matching
-// icu4c/source/data/locales/*.txt checkout (each aliased locale's .txt file is a
-// single line `xx{ "%%ALIAS"{"yy"} }`), or re-run ICU's LdmlConverter over the
-// config's <localeIds>. Only the sources reachable through the public
-// ListFormatStyle surface (list patterns) need to appear here.
-//
-// This is the full curated record. The generator emits only the subset that the
-// current CLDR data doesn't already resolve correctly by plain truncation (see
-// trimRedundantAliases), so the shipped JSON is smaller.
+// The list of locale aliases below is hand-maintained.
+// It's used to handle deprecated identifiers such as `iw` → `he` and minimized
+// identifiers such as `zh_HK` → `zh_Hant_HK`, so that we are able to retrieve
+// the correct patterns.
+// For example, with these aliases we are able to correctly resolve
+// `zh_HK` → `zh_Hant_HK` → `及`, instead of the incorrect `zh_HK` → `zh` → `和`.
+// This list was originally based on the `%%ALIAS` entries in
+// `icu/icu4c/source/data/locales/*.txt`, which were in turn derived from a
+// hard-coded list in `icu/tools/cldr/cldr-to-icu/config.xml`.
 let localeAliases: [String: String] = [
     "ars": "ar_SA",
     "az_AZ": "az_Latn_AZ",
