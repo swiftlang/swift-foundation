@@ -30,3 +30,7 @@ The arrangement is similar with parsing:
 
 - ``ParseableFormatStyle``
 - ``ParseStrategy``
+
+### Internationalization
+
+- ``Locale``

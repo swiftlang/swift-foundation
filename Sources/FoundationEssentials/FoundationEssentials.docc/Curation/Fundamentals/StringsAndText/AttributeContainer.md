@@ -21,6 +21,11 @@
 - ``merge(_:mergePolicy:)``
 - ``merging(_:mergePolicy:)``
 
+### Filtering attributes
+
+- ``filter(inheritedByAddedText:)``
+- ``filter(runBoundaries:)``
+
 ### Encoding and decoding
 
 - ``AttributeScopeCodableConfiguration``
