@@ -2370,13 +2370,7 @@ extension Calendar {
             return nil
         }
 
-        // Substituting nanoseconds is arithmetic on the absolute time scale, so do it
-        // directly instead of decomposing into date components and resolving them
-        // again. Within a repeated hour, one set of wall clock components maps to two
-        // instants and date(from:) always picks the first, which would discard the
-        // occurrence that dateAfterMatchingHour selected via repeatedTimePolicy.
-        // This also avoids treating nanoseconds like seconds and iterating over them,
-        // which causes a hang. <rdar://problem/30229247>
+        // Substitute nanoseconds on the absolute time scale, instead of decomposing into date components and resolving them again. Within a repeated hour, one set of wall clock components maps to two instants. date(from:) always picks the first, which would discard the occurrence that dateAfterMatchingHour selected via repeatedTimePolicy. This also avoids treating nanoseconds like seconds and iterating over them, which causes a hang. <rdar://problem/30229247>
         guard let secondRange = dateInterval(of: .second, for: startingAt) else {
             return nil
         }
