@@ -267,7 +267,7 @@ extension Data {
             }
         }
         
-        @inlinable
+        @usableFromInline
         mutating func replaceSubrange(_ subrange: Range<Index>, with replacementBytes: UnsafeRawPointer?, count replacementLength: Int) {
             self.replaceSubrange(subrange, addingCount: replacementLength) { outputSpan in
                 outputSpan._append(copying: UnsafeRawBufferPointer(start: replacementBytes, count: replacementLength).bytes)
