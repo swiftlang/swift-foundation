@@ -350,7 +350,7 @@ extension AttributedString.Runs: BidirectionalCollection {
     
     @_alwaysEmitIntoClient
     public func distance(from start: Index, to end: Index) -> Int {
-        #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) {
             _distance(from: start, to: end)
         } else {
@@ -378,7 +378,7 @@ extension AttributedString.Runs: BidirectionalCollection {
 
     @_alwaysEmitIntoClient
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-    #if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }

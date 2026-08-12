@@ -33,6 +33,10 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
     }
 }
 
+let availabilityCheckingSettings: [SwiftSetting] = [
+    .unsafeFlags(["-library-level", "api", "-Xfrontend", "-require-explicit-availability=ignore"], .when(platforms: [.macOS]))
+]
+
 let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
     .enableExperimentalFeature("ImportMacroAliases"),
@@ -153,8 +157,8 @@ let package = Package(
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport"),
-            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
-          ] + availabilityMacros + featureSettings,
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
+          ] + availabilityMacros + featureSettings + availabilityCheckingSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
           ]
@@ -180,7 +184,7 @@ let package = Package(
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),
-            ] + availabilityMacros + featureSettings
+            ] + availabilityMacros + featureSettings + availabilityCheckingSettings
         ),
         .target(
             name: "FoundationInternationalization",
@@ -204,7 +208,7 @@ let package = Package(
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),
-            ] + availabilityMacros + featureSettings
+            ] + availabilityMacros + featureSettings + availabilityCheckingSettings
         ),
         
         .testTarget(
