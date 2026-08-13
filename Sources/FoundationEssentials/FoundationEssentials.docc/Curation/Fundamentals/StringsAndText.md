@@ -8,3 +8,4 @@
 - ``AttributedString``
 - ``AttributedSubstring``
 - ``AttributedStringProtocol``
+- ``DiscontiguousAttributedSubstring``

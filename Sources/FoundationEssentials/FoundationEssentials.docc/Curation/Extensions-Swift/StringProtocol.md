@@ -1,6 +1,6 @@
 # ``Swift/StringProtocol``
 
-Methods that extend the Swift string protocol.
+Methods and properties that extend the Swift string protocol.
 
 
 ## Overview

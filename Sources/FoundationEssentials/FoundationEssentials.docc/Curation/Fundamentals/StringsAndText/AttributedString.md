@@ -16,8 +16,6 @@
 
 - ``init(stringLiteral:)``
 
-
-
 ### Applying and modifying attributes
 
 - ``setAttributes(_:)``
@@ -37,12 +35,6 @@
 ### Creating an attributed string from Markdown
 
 - ``MarkdownDecodableAttributedStringKey``
-
-### Searching for a substring
-
-### Accessing a range
-
-### Accessing indices
 
 ### Accessing views into the attributed string
 
@@ -99,8 +91,6 @@
 - ``+=(_:_:)-mcpi``
 
 ### Performing automatic grammar agreement
-
-### Performing string interpolation
 
 ### Comparing attributed strings
 
