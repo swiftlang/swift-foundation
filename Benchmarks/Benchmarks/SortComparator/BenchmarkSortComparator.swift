@@ -41,6 +41,7 @@ fileprivate struct Entry {
     fileprivate let _computedProperty: Double?
     /// Computed property: exercises the key-path getter (no stored-field offset).
     var computedProperty: Double? { _computedProperty }
+    // Not used in comparisons directly, but used to have Entry contain a resilient type instead of all frozen types
     let id: UUID
 }
 
@@ -192,7 +193,7 @@ private func makeEntries(count: Int) -> [Entry] {
             str1: stringPool[Int(rng.next() % UInt64(stringPool.count))],
             str2: randomString(using: &rng),
             _computedProperty: computed,
-            id: UUID.random(using: &rng)))
+            id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))))
     }
     return entries
 }
