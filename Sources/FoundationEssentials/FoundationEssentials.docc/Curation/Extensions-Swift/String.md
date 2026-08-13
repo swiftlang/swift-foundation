@@ -1,6 +1,6 @@
 # ``Swift/String``
 
-Methods that extend the Swift string type.
+Methods, properties, and supporting types that extend the Swift string type.
 
 ## Overview
 

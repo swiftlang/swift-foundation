@@ -78,6 +78,7 @@
 - ``copyBytes(to:count:)``
 - ``copyBytes(to:from:)->()``                                                      <!-- func copyBytes(to pointer: UnsafeMutablePointer<UInt8>, from range: Range<Data.Index>) -->
 - ``copyBytes(to:from:)->()``                                   <!-- func copyBytes<DestinationType>(to buffer: UnsafeMutableBufferPointer<DestinationType>, from range: Range<Data.Index>? = nil) -> Int -->
+- ``copyBytes(to:from:)-7ei1u``
 - ``withContiguousStorageIfAvailable(_:)``
 
 
