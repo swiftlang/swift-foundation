@@ -317,7 +317,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///
     /// - Parameters:
     ///   - capacity: The storage capacity of the new data.
-    ///   - initializer: A callback that gets called at most once to directly populate newly reserved storage within the data. The function is allowed to add fewer than `capacity` bytes. The data is initialized with however many bytes the callback adds to the output raw span before it returns (or before it throws an error).
+    ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is allowed to add fewer than `capacity` bytes. The data is initialized with however many bytes the callback adds to the output raw span before it returns (or before it throws an error).
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public init<E: Error>(
@@ -565,11 +565,11 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Arbitrarily edit the storage underlying this data by invoking a user-supplied closure with a mutable `OutputRawSpan` view over it. This method calls its function argument at most once, allowing it to arbitrarily modify the contents of the output span it is given. The argument is free to add, remove or reorder any items; however, it is not allowed to replace the span or change its capacity.
+    /// Arbitrarily edit the storage underlying this data by invoking a user-supplied closure with a mutable `OutputRawSpan` view over it. This method calls its function argument exactly once, allowing it to arbitrarily modify the contents of the output span it is given. The argument is free to add, remove or reorder any items; however, it is not allowed to replace the span or change its capacity.
     ///
     /// When the function argument finishes (whether by returning or throwing an error) the data instance is updated to match the final contents of the output span.
     ///
-    /// - Parameter body: A function that edits the contents of this data through an `OutputRawSpan` argument. This method invokes this function at most once.
+    /// - Parameter body: A function that edits the contents of this data through an `OutputRawSpan` argument. This method invokes this function exactly once.
     /// - Returns: This method returns the result of its function argument.
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
@@ -651,7 +651,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///
     /// - Parameters:
     ///    - newByteCount: The number of bytes to append to the data.
-    ///    - initializer: A callback that gets called at most once to directly populate newly reserved storage within the data. The function is allowed to initialize fewer than `newByteCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
+    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is allowed to initialize fewer than `newByteCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
@@ -837,7 +837,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///    - newBytesCount: The maximum number of bytes to insert into the data.
     ///    - index: The position at which to insert the new items. `index` must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
-    ///    - initializer: A callback that gets called at most once to directly populate newly reserved storage within the data. The function is always called with an empty output span.
+    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is always called with an empty output span.
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func insert<E: Error>(
@@ -1001,7 +1001,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///   - subrange: The subrange of the data to replace. The bounds of the range must be valid indices in the data.
     ///   - newBytesCount: The maximum number of new bytes to insert in place of the old subrange.
-    ///   - initializer: A callback that gets called at most once to directly populate newly reserved storage within the data. The function is always called with an empty output raw span.
+    ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is always called with an empty output raw span.
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func replaceSubrange<E: Error>(
