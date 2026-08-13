@@ -16,8 +16,3 @@ The FoundationInternationalization library builds on FoundationEssentials by pro
 - <doc:units-and-measurement>
 - <doc:data-formatting>
 
-
-
-### Extensions from FoundationEssentials 
-
-- ``FoundationEssentials/URL``
