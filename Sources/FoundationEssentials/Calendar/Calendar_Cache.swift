@@ -40,8 +40,8 @@ internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
     return false
 }
 #else
-internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return false }
-internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return true }
+internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return true }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
