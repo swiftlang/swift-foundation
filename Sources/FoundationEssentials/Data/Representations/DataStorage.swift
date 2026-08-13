@@ -554,7 +554,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
         // Make room for the insertion if needed (we don't shrink / shift forward yet to avoid 2 moves if the output span isn't fully filled)
         if newByteCount > replacedLength {
-            memmove(mutableBytes!.advanced(by: trailingLocation), mutableBytes!.advanced(by: subrange.upperBound), trailingLength)
+            mutableBytes!.advanced(by: trailingLocation).copyMemory(from: mutableBytes!.advanced(by: subrange.upperBound), byteCount: trailingLength)
         } else {
             trailingLocation = subrange.upperBound
         }
@@ -565,7 +565,7 @@ internal final class __DataStorage : @unchecked Sendable {
             span = OutputRawSpan()
             let trailingDestination = subrange.lowerBound + insertedLength
             if trailingLocation != trailingDestination {
-                memmove(mutableBytes!.advanced(by: trailingDestination), mutableBytes!.advanced(by: trailingLocation), trailingLength)
+                mutableBytes!.advanced(by: trailingDestination).copyMemory(from: mutableBytes!.advanced(by: trailingLocation), byteCount: trailingLength)
             }
             let newLength = trailingDestination - _offset + trailingLength
             if insertedLength > replacedLength {
