@@ -643,23 +643,24 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Append a given number of bytes to the end of this data by populating output raw span.
+    /// Append a given number of bytes to the end of this data by populating an output raw span.
     ///
     /// If the capacity of the data isn't sufficient to perform the append, then this reallocates the data's storage to extend its capacity.
     ///
     /// If the callback fails to fully populate its output raw span or if it throws an error, then the data keeps all items that were successfully initialized before the callback terminated the operation.
     ///
     /// - Parameters:
-    ///    - newByteCount: The number of bytes to append to the data.
-    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is allowed to initialize fewer than `newByteCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
+    ///    - newBytesCount: The number of bytes to append to the data.
+    ///    A callback that gets called exactly once to directly populate newly reserved storage within the data.
+    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @_alwaysEmitIntoClient
     public mutating func append<E: Error>(
-        addingCount newByteCount: Int,
+        addingCount newBytesCount: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
-        precondition(newByteCount >= 0, "newByteCount must not be negative")
-        try _representation.append(addingCount: newByteCount, initializer)
+        precondition(newBytesCount >= 0, "newBytesCount must not be negative")
+        try _representation.append(addingCount: newBytesCount, initializer)
     }
 
     /// Copies the bytes of a raw span to the end of this data.
@@ -812,7 +813,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Inserts a given number of new bytes into this data at the specified position, using a callback to directly initialize data storage by populating an output raw span.
+    /// Inserts a given number of new bytes into this data at the specified index, using a callback to directly initialize data storage by populating an output raw span.
     ///
     /// Existing bytes in the data's storage are moved towards the back as needed to make room for the new bytes.
     ///
@@ -837,7 +838,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///    - newBytesCount: The maximum number of bytes to insert into the data.
     ///    - index: The position at which to insert the new items. `index` must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
-    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is always called with an empty output span.
+    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func insert<E: Error>(
@@ -848,17 +849,17 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try self.replaceSubrange(index ..< index, addingCount: newBytesCount, initializingWith: initializer)
     }
 
-    /// Copies the bytes of a raw span into this data at the specified position.
+    /// Copies the bytes of a raw span into this data at the specified index.
     ///
     /// The new bytes are inserted before the byte currently at the specified index. If you pass the data's `endIndex` as the `index` parameter, then the new bytes are appended to the end of the data.
     ///
-    /// All existing bytes at or following the specified position are moved to make room for the new bytes.
+    /// All existing bytes at or following the specified index are moved to make room for the new bytes.
     ///
     /// If the capacity of the data isn't sufficient to perform the insertion, then this reallocates the data's storage to extend its capacity.
     ///
     /// - Parameters:
     ///    - newBytes: The new bytes to insert into the data.
-    ///    - index: The position at which to insert the new bytes. It must be a valid index of the data.
+    ///    - index: The position at which to insert the new bytes. `index`  must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func insert(copying newBytes: RawSpan, at index: Int) {
@@ -1001,7 +1002,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///   - subrange: The subrange of the data to replace. The bounds of the range must be valid indices in the data.
     ///   - newBytesCount: The maximum number of new bytes to insert in place of the old subrange.
-    ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is always called with an empty output raw span.
+    ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
     @_alwaysEmitIntoClient
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func replaceSubrange<E: Error>(
@@ -1009,14 +1010,23 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         addingCount newBytesCount: Int,
         initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
     ) throws(E) -> Void {
-        precondition(newBytesCount >= 0, "newByteCount must not be negative")
+        precondition(newBytesCount >= 0, "newBytesCount must not be negative")
         try _representation.replaceSubrange(subrange, addingCount: newBytesCount, initializingWith: initializer)
     }
 
 
     /// Replaces the specified subrange of bytes by copying the bytes of the given raw span.
     ///
-    /// This method has the effect of removing the specified range of bytes from the data and inserting the new bytes starting at the same location. The number of new bytes need not match the number of bytes being removed.
+    /// The number of new bytes need not match the number of bytes being removed.
+    ///
+    /// This method has the same overall effect as calling
+    ///
+    ///     try data.removeSubrange(subrange)
+    ///     try data.insert(
+    ///       copying: newBytes,
+    ///       at: subrange.lowerBound)
+    ///
+    /// However, it performs faster (by a constant factor) by avoiding moving some bytes in the data twice.
     ///
     /// If the capacity of the data isn't sufficient to perform the replacement, then this reallocates the data's storage to extend its capacity.
     ///
