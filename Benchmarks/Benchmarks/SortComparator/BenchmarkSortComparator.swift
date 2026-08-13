@@ -41,6 +41,7 @@ fileprivate struct Entry {
     fileprivate let _computedProperty: Double?
     /// Computed property: exercises the key-path getter (no stored-field offset).
     var computedProperty: Double? { _computedProperty }
+    let id: UUID
 }
 
 /// The same fields as `Entry`, but a `final class`, so the element is a
@@ -56,6 +57,7 @@ fileprivate final class EntryObject: Sendable {
     let str2: String
     private let _computedProperty: Double?
     var computedProperty: Double? { _computedProperty }
+    let id: UUID
 
     init(_ e: Entry) {
         int0 = e.int0
@@ -66,6 +68,7 @@ fileprivate final class EntryObject: Sendable {
         str1 = e.str1
         str2 = e.str2
         _computedProperty = e.computedProperty
+        id = e.id
     }
 }
 
@@ -188,7 +191,8 @@ private func makeEntries(count: Int) -> [Entry] {
             str0: randomString(using: &rng),
             str1: stringPool[Int(rng.next() % UInt64(stringPool.count))],
             str2: randomString(using: &rng),
-            _computedProperty: computed))
+            _computedProperty: computed,
+            id: UUID.random(using: &rng)))
     }
     return entries
 }
