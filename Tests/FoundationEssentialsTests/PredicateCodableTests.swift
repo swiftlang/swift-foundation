@@ -213,6 +213,19 @@ private struct PredicateCodableTests {
         }
     }
     
+    @Test func sequenceAllSatisfyRoundTrip() throws {
+        let predicate = #Predicate<[Int]> {
+            $0.allSatisfy { $0 > 0 }
+        }
+        
+        let decoded = try _encodeDecode(predicate, for: StandardConfig.self)
+        
+        #expect(try predicate.evaluate([1, 2, 3]))
+        #expect(try decoded.evaluate([1, 2, 3]))
+        #expect(try !predicate.evaluate([-1, 2, 3]))
+        #expect(try !decoded.evaluate([-1, 2, 3]))
+    }
+    
     @Test func disallowedKeyPath() throws {
         var predicate = #Predicate<Object> {
             $0.f
