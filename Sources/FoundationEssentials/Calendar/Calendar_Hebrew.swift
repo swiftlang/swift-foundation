@@ -587,6 +587,26 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             return nil
         }
 
+        // Time-of-day in local seconds (defaults to midnight).
+        var secondsInDay: Double = 0
+        if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
+        if let minute = components.minute { secondsInDay += Double(minute) * 60 }
+        if let second = components.second { secondsInDay += Double(second) }
+        if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
+
+        let resolvedTimeZone = components.timeZone ?? timeZone
+
+        // `.yearForWeekOfYear` plus `.weekOfYear` plus `.weekday` names a date too. `firstDayOfWeekYear` already accounts for `firstWeekday` and `minimumDaysInFirstWeek`. A `.weekOfYear` past the end of the year runs on into the next, as in the Gregorian calendar.
+        if components.year == nil, let weekYearValue = components.yearForWeekOfYear {
+            // The Hebrew arithmetic works in Int32 years, same check as the `.year` path.
+            guard weekYearValue >= Int(Int32.min) && weekYearValue <= Int(Int32.max) else { return nil }
+            let weekOfYear = components.weekOfYear ?? 1
+            let weekday = components.weekday ?? firstWeekday
+            let dayWithinWeek = ((weekday - firstWeekday) % 7 + 7) % 7
+            let rataDie = firstDayOfWeekYear(Int32(weekYearValue)) &+ Int64((weekOfYear - 1) * 7 + dayWithinWeek)
+            return utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: resolvedTimeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        }
+
         guard let yearValue = components.year else { return nil }
         guard yearValue >= Int(Int32.min) && yearValue <= Int(Int32.max) else { return nil }
         let year = Int32(yearValue)
@@ -605,17 +625,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
         let rd = HebrewArithmetic.fixedFromHebrew(year: year, month: biblical, day: UInt8(day))
 
-        // Time-of-day in local seconds (defaults to midnight).
-        var secondsInDay: Double = 0
-        if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
-        if let minute = components.minute { secondsInDay += Double(minute) * 60 }
-        if let second = components.second { secondsInDay += Double(second) }
-        if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
-
-        let tz = components.timeZone ?? timeZone
         // Matches _CalendarGregorian's DST policy: skipped and repeated both resolve to .former.
-        return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: tz,
-                      repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        return utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: resolvedTimeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {

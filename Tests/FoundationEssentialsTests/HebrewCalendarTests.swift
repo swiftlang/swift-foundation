@@ -110,4 +110,64 @@ private struct HebrewCalendarTests {
         }
     }
 
+    // Expected values taken from the ICU-backed calendar.
+    @Test func dateFromWeekYearComponents() throws {
+        let cal = makeCalendar()
+        // (yearForWeekOfYear, weekOfYear, weekday, expected year, month, day)
+        let cases: [(Int, Int, Int, Int, Int, Int)] = [
+            (5779, 16, 2, 5779, 4, 16),
+            (5779, 1, 1, 5778, 13, 29),   // week 1 begins in the previous calendar year
+            (5779, 30, 7, 5779, 8, 1),
+            (5780, 52, 4, 5781, 1, 5),    // a week past the end of the week-year runs on, it is not clamped
+            (4656, 10, 6, 4656, 3, 8),
+            (4651, 38, 5, 4651, 10, 21),
+        ]
+        for (weekYear, weekOfYear, weekday, wantYear, wantMonth, wantDay) in cases {
+            var dc = DateComponents()
+            dc.era = 0
+            dc.yearForWeekOfYear = weekYear
+            dc.weekOfYear = weekOfYear
+            dc.weekday = weekday
+            dc.hour = 12
+            dc.timeZone = .gmt
+
+            let date = try #require(cal.date(from: dc), "date(from:) returned nil for yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday)")
+            let back = cal.dateComponents([.year, .month, .day, .weekday, .hour], from: date, in: .gmt)
+            let label = "yWoY \(weekYear) woY \(weekOfYear) weekday \(weekday)"
+            #expect(back.year == wantYear, "\(label): year \(String(describing: back.year)), wanted \(wantYear)")
+            #expect(back.month == wantMonth, "\(label): month \(String(describing: back.month)), wanted \(wantMonth)")
+            #expect(back.day == wantDay, "\(label): day \(String(describing: back.day)), wanted \(wantDay)")
+            #expect(back.weekday == weekday, "\(label): weekday \(String(describing: back.weekday))")
+            #expect(back.hour == 12, "\(label): hour \(String(describing: back.hour))")
+        }
+    }
+
+    // Week fields read from a date must return that date when passed back. `firstWeekday` and `minimumDaysInFirstWeek` are varied because the first week of a year depends on both.
+    @Test func weekYearComponentsRoundTrip() {
+        var failures: [String] = []
+        for (firstWeekday, minimumDays) in [(nil, nil), (2, 4), (7, 1), (4, 7)] as [(Int?, Int?)] {
+            let cal = _CalendarHebrew(identifier: .hebrew, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDays, gregorianStartDate: nil)
+            let config = "fw \(firstWeekday.map(String.init) ?? "default")/md \(minimumDays.map(String.init) ?? "default")"
+            // Midday on 2001-01-01 GMT, then one step per day.
+            let start = Date(timeIntervalSinceReferenceDate: 43_200)
+            for dayOffset in 0..<(20 * 365) {
+                let date = start + Double(dayOffset) * 86400
+                let read = cal.dateComponents([.era, .yearForWeekOfYear, .weekOfYear, .weekday, .hour], from: date, in: .gmt)
+                var dc = DateComponents()
+                dc.era = read.era
+                dc.yearForWeekOfYear = read.yearForWeekOfYear
+                dc.weekOfYear = read.weekOfYear
+                dc.weekday = read.weekday
+                dc.hour = read.hour
+                dc.timeZone = .gmt
+                guard let back = cal.date(from: dc) else {
+                    failures.append("\(config) day \(dayOffset): nil")
+                    continue
+                }
+                if back != date { failures.append("\(config) day \(dayOffset): off by \(back.timeIntervalSince(date) / 86400) days") }
+            }
+        }
+        #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")
+    }
+
 }
