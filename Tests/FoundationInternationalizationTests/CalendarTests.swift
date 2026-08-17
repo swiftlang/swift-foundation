@@ -526,6 +526,50 @@ private struct CalendarTests {
         #expect(result?.timeIntervalSinceReferenceDate == 657967500)
     }
 
+    /// Matches 01:20:00 on the day daylight saving time ends in Los Angeles, when that local time occurs twice: once at -0700 and again an hour later at -0800.
+    private func firstDateMatchingRepeatedHour(nanosecond: Int?, _ repeatedTimePolicy: Calendar.RepeatedTimePolicy, _ direction: Calendar.SearchDirection = .forward) throws -> Date? {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+
+        // 2024-11-02T01:26:40-0700 going forward, 2024-11-04T01:20:00-0800 going backward. Both are outside the repeated hour, so the first match lands inside it either way.
+        let start = Date(timeIntervalSince1970: direction == .forward ? 1730536000.0 : 1730712000.0)
+
+        var dc = DateComponents()
+        dc.hour = 1
+        dc.minute = 20
+        dc.second = 0
+        dc.nanosecond = nanosecond
+
+        var iterator = cal.dates(byMatching: dc, startingAt: start, matchingPolicy: .strict, repeatedTimePolicy: repeatedTimePolicy, direction: direction).makeIterator()
+        return iterator.next()
+    }
+
+    /// `nanosecond` must not change which occurrence is selected, and a non-zero value must be applied on top of it rather than truncated away. The `nil` case already behaved correctly and guards against regressing it.
+    @Test(arguments: [(nil as Int?, 0.0), (0, 0.0), (500_000_000, 0.5)])
+    func datesByMatchingRepeatedTimePolicyWithNanosecond(nanosecond: Int?, fraction: TimeInterval) throws {
+        let earlier = Date(timeIntervalSince1970: 1730622000.0) // 2024-11-03T01:20:00-0700
+        let later = Date(timeIntervalSince1970: 1730625600.0)   // 2024-11-03T01:20:00-0800
+
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nanosecond, .first) == earlier + fraction)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nanosecond, .last) == later + fraction)
+    }
+
+    /// Which occurrence each policy selects when searching backwards is existing behavior that this test deliberately does not pin down. What it does require is that setting `nanosecond` never changes the answer.
+    @Test(arguments: [Calendar.RepeatedTimePolicy.first, .last])
+    func datesByMatchingRepeatedTimePolicyWithNanosecondBackward(policy: Calendar.RepeatedTimePolicy) throws {
+        let reference = try #require(try firstDateMatchingRepeatedHour(nanosecond: nil, policy, .backward))
+
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: 0, policy, .backward) == reference)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: 500_000_000, policy, .backward) == reference + 0.5)
+    }
+
+    /// Guards the backward test against passing vacuously: the two policies must actually disagree, otherwise no repeated hour was involved.
+    @Test func datesByMatchingRepeatedTimePolicyDiffersByPolicyBackward() throws {
+        let first = try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .backward)
+        let last = try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .backward)
+        #expect(first != last)
+    }
+
     @Test func dayInWeekOfMonth() {
         let cal = Calendar(identifier: .chinese)
         // A very specific date for which we know a call into ICU produces an unusual result
