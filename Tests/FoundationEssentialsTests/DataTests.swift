@@ -2551,6 +2551,9 @@ private final class DataTests {
         if didAppend {
             #expect(d.count == 101)
             #expect(d.last == 2)
+            d.withUnsafeBytes { #expect($0.count == 101) }
+            d.replaceSubrange(100 ..< 101, copying: RawSpan())
+            #expect(d.count == 100)
         }
 
         d = Data(repeating: 1, count: 100)

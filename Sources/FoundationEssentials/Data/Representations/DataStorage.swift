@@ -463,6 +463,12 @@ internal final class __DataStorage : @unchecked Sendable {
             let updatedInitialized = span.finalize(for: buffer)
             span = OutputRawSpan()
             range = Range(uncheckedBounds: (range.lowerBound, range.lowerBound + updatedInitialized))
+            let resultingLength = range.upperBound - _offset
+            if resultingLength > _length {
+                _length = resultingLength
+            } else if resultingLength < _length {
+                setLength(resultingLength)
+            }
         }
         return try body(&span)
     }
