@@ -454,6 +454,25 @@ internal final class __DataStorage : @unchecked Sendable {
         return try initializer(&outputSpan)
     }
 
+    @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    func edit<E: Error, R: ~Copyable>(range: inout Range<Int>, _ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes?.advanced(by: range.lowerBound), count: _offset + capacity - range.lowerBound)
+        var span = OutputRawSpan(buffer: buffer, initializedCount: range.count)
+        defer {
+            let updatedInitialized = span.finalize(for: buffer)
+            span = OutputRawSpan()
+            range = Range(uncheckedBounds: (range.lowerBound, range.lowerBound + updatedInitialized))
+            let resultingLength = range.upperBound - _offset
+            if resultingLength > _length {
+                _length = resultingLength
+            } else if resultingLength < _length {
+                setLength(resultingLength)
+            }
+        }
+        return try body(&span)
+    }
+
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
     func get(_ index: Int) -> UInt8 {
         // index must have already been validated by the caller
@@ -520,7 +539,51 @@ internal final class __DataStorage : @unchecked Sendable {
             setLength(resultingLength)
         }
     }
-    
+
+    @_alwaysEmitIntoClient
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    func replaceSubrange<E: Error>(
+        _ subrange: Range<Int>,
+        endIndex: inout Int,
+        addingCount newByteCount: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) -> Void {
+        let replacedLength = subrange.upperBound &- subrange.lowerBound
+        var trailingLocation = subrange.lowerBound + newByteCount
+        let trailingLength = _length - (subrange.upperBound - _offset)
+        let resultingLength = _length - replacedLength + newByteCount
+        if resultingLength > _length {
+            ensureUniqueBufferReference(growingTo: resultingLength)
+            _length = resultingLength
+        } else {
+            ensureUniqueBufferReference()
+        }
+        // Make room for the insertion if needed (we don't shrink / shift forward yet to avoid 2 moves if the output span isn't fully filled)
+        if newByteCount > replacedLength {
+            mutableBytes!.advanced(by: trailingLocation).copyMemory(from: mutableBytes!.advanced(by: subrange.upperBound), byteCount: trailingLength)
+        } else {
+            trailingLocation = subrange.upperBound
+        }
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: subrange.lowerBound), count: newByteCount)
+        var span = OutputRawSpan(buffer: buffer, initializedCount: 0)
+        defer {
+            let insertedLength = span.finalize(for: buffer)
+            span = OutputRawSpan()
+            let trailingDestination = subrange.lowerBound + insertedLength
+            if trailingLocation != trailingDestination {
+                mutableBytes!.advanced(by: trailingDestination).copyMemory(from: mutableBytes!.advanced(by: trailingLocation), byteCount: trailingLength)
+            }
+            let newLength = trailingDestination - _offset + trailingLength
+            if insertedLength > replacedLength {
+                _length = newLength
+            } else if insertedLength < replacedLength {
+                setLength(newLength)
+            }
+            endIndex += insertedLength - replacedLength
+        }
+        return try initializer(&span)
+    }
+
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func resetBytes(in range_: Range<Int>) {
         let range = range_.lowerBound - _offset ..< range_.upperBound - _offset

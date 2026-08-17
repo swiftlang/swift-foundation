@@ -267,30 +267,53 @@ extension Data {
             }
         }
         
-        @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
+        @usableFromInline
         mutating func replaceSubrange(_ subrange: Range<Index>, with replacementBytes: UnsafeRawPointer?, count replacementLength: Int) {
+            self.replaceSubrange(subrange, addingCount: replacementLength) { outputSpan in
+                outputSpan._append(copying: UnsafeRawBufferPointer(start: replacementBytes, count: replacementLength).bytes)
+            }
+        }
+
+        @_alwaysEmitIntoClient
+        @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+        mutating func replaceSubrange<E: Error>(
+            _ subrange: Range<Int>,
+            addingCount newByteCount: Int,
+            initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+        ) throws(E) -> Void {
             assert(subrange.lowerBound <= MemoryLayout<Buffer>.size)
             assert(subrange.upperBound <= MemoryLayout<Buffer>.size)
-            assert(count - (subrange.upperBound - subrange.lowerBound) + replacementLength <= MemoryLayout<Buffer>.size)
+            assert(count - (subrange.upperBound - subrange.lowerBound) + newByteCount <= MemoryLayout<Buffer>.size)
             precondition(subrange.lowerBound >= 0 && subrange.lowerBound <= length, "index \(subrange.lowerBound) is out of bounds of 0..<\(length)")
             precondition(subrange.upperBound >= 0 && subrange.upperBound <= length, "index \(subrange.upperBound) is out of bounds of 0..<\(length)")
-            let currentLength = count
-            let resultingLength = currentLength - (subrange.upperBound - subrange.lowerBound) + replacementLength
-            let shift = resultingLength - currentLength
-            Swift.withUnsafeMutableBytes(of: &bytes) { mutableBytes in
-                /* shift the trailing bytes */
-                let start = subrange.lowerBound
-                let length = subrange.upperBound - subrange.lowerBound
-                if shift != 0 {
-                    memmove(mutableBytes.baseAddress!.advanced(by: start + replacementLength), mutableBytes.baseAddress!.advanced(by: start + length), currentLength - start - length)
+            let startingCount = count
+            var resultingLength = length
+            defer { length = resultingLength }
+            return try Swift.withUnsafeMutableBytes(of: &bytes) { mutableBytes throws(E) in
+                let replacedLength = subrange.upperBound - subrange.lowerBound
+                var trailingLocation = subrange.lowerBound + newByteCount
+                let trailingLength = startingCount - subrange.upperBound
+                // Make room for the insertion if needed (we don't shrink / shift forward yet to avoid 2 moves if the output span isn't fully filled)
+                if newByteCount > replacedLength {
+                    memmove(mutableBytes.baseAddress!.advanced(by: trailingLocation), mutableBytes.baseAddress!.advanced(by: subrange.upperBound), trailingLength)
+                } else {
+                    trailingLocation = subrange.upperBound
                 }
-                if replacementLength != 0 {
-                    memmove(mutableBytes.baseAddress!.advanced(by: start), replacementBytes!, replacementLength)
+                let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes.baseAddress!.advanced(by: subrange.lowerBound), count: newByteCount)
+                var span = OutputRawSpan(buffer: buffer, initializedCount: 0)
+                defer {
+                    let insertedLength = span.finalize(for: buffer)
+                    span = OutputRawSpan()
+                    let trailingDestination = subrange.lowerBound + insertedLength
+                    if trailingLocation != trailingDestination {
+                        memmove(mutableBytes.baseAddress!.advanced(by: trailingDestination), mutableBytes.baseAddress!.advanced(by: trailingLocation), trailingLength)
+                    }
+                    resultingLength = UInt8(trailingDestination + trailingLength)
                 }
+                return try initializer(&span)
             }
-            length = UInt8(resultingLength)
         }
-        
+
         @inlinable // This is @inlinable as trivially computable.
         func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
             precondition(startIndex <= range.lowerBound, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")

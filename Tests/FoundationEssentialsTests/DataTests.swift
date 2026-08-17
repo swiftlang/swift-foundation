@@ -202,21 +202,21 @@ private final class DataTests {
         struct LocalError: Error, Equatable {}
 
         // Initialize the inline representation
-        var data = Data(rawCapacity: 1) {
+        var data = Data(capacity: 1) {
             #expect($0.freeCapacity == 1)
             $0.append(42)
         }
         expectInlineIfLegacyABI(data)
         #expect(data.count == 1)
 
-        data = Data(rawCapacity: 0) {
+        data = Data(capacity: 0) {
             #expect($0.freeCapacity == 0)
         }
         expectEmptyRepresentation(data)
         #expect(data.count == 0)
 
         #expect(throws: LocalError()) {
-            data = try Data(rawCapacity: 2) {
+            data = try Data(capacity: 2) {
                 $0.append(42)
                 throw LocalError()
             }
@@ -225,7 +225,7 @@ private final class DataTests {
 
         let anInlineSliceSize = 96
         // Initialize an "inline slice"
-        data = Data(rawCapacity: anInlineSliceSize) {
+        data = Data(capacity: anInlineSliceSize) {
             #expect($0.freeCapacity == anInlineSliceSize)
             $0.append(42)
         }
@@ -233,13 +233,37 @@ private final class DataTests {
         #expect(data.count == 1)
     }
 
-    @Test func initializationWithOutputSpanOfUInt8() throws {
-        let data = Data(capacity: 1) {
-            #expect($0.freeCapacity == 1)
-            $0.append(42)
+    @Test func initializationWithRawSpan() async throws {
+        var d = Data(copying: RawSpan())
+        #expect(d.count == 0)
+        d.edit {
+            // Empty datas are special cased and shouldn't have an allocation
             #expect($0.freeCapacity == 0)
         }
-        #expect(data.count == 1)
+
+        d = Data(copying: Array<UInt8>(repeating: 1, count: 3).span.bytes)
+        #expect(d.count == 3)
+        #expect(d == Data([1, 1, 1]))
+
+        d = Data(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes)
+        #expect(d.count == 100)
+        #expect(d == Data(Array<UInt8>(repeating: 1, count: 100)))
+
+        d = Data(capacity: 10, copying: Array<UInt8>(repeating: 1, count: 3).span.bytes)
+        #expect(d.count == 3)
+        #expect(d == Data([1, 1, 1]))
+        d.edit {
+            #expect($0.freeCapacity >= 7)
+        }
+
+        #if FOUNDATION_EXIT_TESTS
+        await #expect(processExitsWith: .failure) {
+            _ = Data(capacity: -1, copying: RawSpan())
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = Data(capacity: 1, copying: Array<UInt8>(repeating: 1, count: 3).span.bytes)
+        }
+        #endif
     }
 
     @Test func mutableData() {
@@ -375,6 +399,87 @@ private final class DataTests {
         helloWorld.replaceSubrange(0..<0, with: hello)
 
         #expect(helloWorld == expected)
+    }
+
+    @Test func insertWithOutputRawSpan() {
+        struct LocalError: Error, Equatable {}
+        let insertedValue: UInt8 = (7..<252).randomElement()!
+
+        // Insert in the inline representation
+        var data = Data()
+        data.insert(addingCount: 8, at: 0) {
+            #expect($0.freeCapacity == 8)
+        }
+        expectEmptyRepresentation(data)
+        #expect(data.count == 0)
+
+        data = Data()
+        try? data.insert(addingCount: 1, at: 0) {
+            #expect($0.freeCapacity == 1)
+            $0.append(insertedValue)
+            throw LocalError()
+        }
+        expectInlineIfLegacyABI(data)
+        #expect(data.count == 1)
+        #expect(data[0] == insertedValue)
+
+        data = Data(0..<4)
+        let count0 = data.count
+        data.insert(addingCount: 20, at: 2) {
+            #expect($0.freeCapacity == 20)
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == count0)
+
+        try? data.insert(addingCount: 20, at: 2) {
+            #expect($0.freeCapacity == 20)
+            $0.append(repeating: insertedValue, count: 20, as: UInt8.self)
+            let full = $0.isFull
+            #expect(full)
+            throw LocalError()
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 24)
+        #expect(data[2] == insertedValue)
+        #expect(data.last == 3)
+
+        // Insert into the `InlineSlice` representation
+        data = Data(0..<23)
+        data.insert(addingCount: 20, at: 20) {
+            $0.append(insertedValue)
+        }
+        #expect(data.count == 24)
+        #expect(data[20] == insertedValue)
+        #expect(data.last == 22)
+        try? data.insert(addingCount: 1, at: 2) {
+            $0.append(insertedValue)
+            throw LocalError()
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 25)
+        #expect(data[2] == insertedValue)
+    }
+
+    @Test func insertWithRawSpan() {
+        var d = Data()
+        d.insert(copying: RawSpan(), at: 0)
+        #expect(d.count == 0)
+        d.edit {
+            #expect($0.freeCapacity == 0)
+        }
+
+        d.insert(copying: CollectionOfOne<UInt8>(1).span.bytes, at: 0)
+        #expect(d.count == 1)
+        #expect(d[0] == 1)
+
+        d.insert(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes, at: 0)
+        #expect(d.count == 101)
+        #expect(d.allSatisfy { $0 == 1 })
+
+        d = Data()
+        d.insert(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes, at: 0)
+        #expect(d.count == 100)
+        #expect(d.allSatisfy { $0 == 1 })
     }
 
     @Test func loops() {
@@ -1027,15 +1132,14 @@ private final class DataTests {
 
         // Append to the inline representation
         var data = Data()
-        print("NOW!!!")
-        data.append(addingRawCapacity: 8) {
+        data.append(addingCount: 8) {
             #expect($0.freeCapacity == 8)
         }
         expectEmptyRepresentation(data)
         #expect(data.count == 0)
 
         data = Data()
-        try? data.append(addingRawCapacity: 1) {
+        try? data.append(addingCount: 1) {
             #expect($0.freeCapacity == 1)
             $0.append(appendedValue)
             throw LocalError()
@@ -1046,13 +1150,13 @@ private final class DataTests {
 
         data = Data(0..<4)
         let count0 = data.count
-        data.append(addingRawCapacity: 20) {
+        data.append(addingCount: 20) {
             #expect($0.freeCapacity == 20)
         }
         expectSliceIfLegacyABI(data)
         #expect(data.count == count0)
 
-        try? data.append(addingRawCapacity: 20) {
+        try? data.append(addingCount: 20) {
             #expect($0.freeCapacity == 20)
             $0.append(repeating: appendedValue, count: 20, as: UInt8.self)
             let full = $0.isFull
@@ -1065,18 +1169,40 @@ private final class DataTests {
 
         // Append to the `InlineSlice` representation
         data = Data(0..<23)
-        data.append(addingRawCapacity: 20) {
+        data.append(addingCount: 20) {
           $0.append(appendedValue)
         }
         #expect(data.count == 24)
         #expect(data.last == appendedValue)
-        try? data.append(addingRawCapacity: 1) {
+        try? data.append(addingCount: 1) {
             $0.append(appendedValue)
             throw LocalError()
         }
         expectSliceIfLegacyABI(data)
         #expect(data.count == 25)
         #expect(data.last == appendedValue)
+    }
+
+    @Test func appendWithRawSpan() {
+        var d = Data()
+        d.append(copying: RawSpan())
+        #expect(d.count == 0)
+        d.edit {
+            #expect($0.freeCapacity == 0)
+        }
+
+        d.append(copying: CollectionOfOne<UInt8>(1).span.bytes)
+        #expect(d.count == 1)
+        #expect(d[0] == 1)
+
+        d.append(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes)
+        #expect(d.count == 101)
+        #expect(d.allSatisfy { $0 == 1 })
+
+        d = Data()
+        d.append(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes)
+        #expect(d.count == 100)
+        #expect(d.allSatisfy { $0 == 1 })
     }
 
     @Test func appendToSlicedInlineSlicesWithOutputRawSpan() {
@@ -1086,14 +1212,14 @@ private final class DataTests {
         #expect(data.count <= capacity(data))
         var slice = data[20..<80]
         #expect(slice.count <= capacity(slice))
-        slice.append(addingRawCapacity: 2) {
+        slice.append(addingCount: 2) {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
 
         slice = data[20..<80]
         _ = consume data
-        slice.append(addingRawCapacity: 2) {
+        slice.append(addingCount: 2) {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
@@ -1106,9 +1232,9 @@ private final class DataTests {
             var slice = original.suffix(1)
             #expect(slice.count == 1)
             let startCapacity = capacity(slice)
-            slice.append(addingCapacity: 25) {
+            slice.append(addingCount: 25) {
                 #expect($0.freeCapacity == 25)
-                $0.append(repeating: 1, count: 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
                 #expect($0.isFull == true)
             }
             #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
@@ -1125,9 +1251,9 @@ private final class DataTests {
             }
             #expect(slice.count == 1)
             let startCapacity = capacity(slice)
-            slice.append(addingCapacity: 25) {
+            slice.append(addingCount: 25) {
                 #expect($0.freeCapacity == 25)
-                $0.append(repeating: 1, count: 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
                 #expect($0.isFull == true)
             }
             #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
@@ -2380,6 +2506,150 @@ private final class DataTests {
             #expect($0.count == 5)
         }
     }
+
+    @Test func edit() {
+        var d = Data()
+        d.edit {
+            #expect($0.byteCount == 0)
+            #expect($0.freeCapacity == 0)
+        }
+
+        d = Data([1])
+        var didAppend = d.edit {
+            #expect($0.byteCount == 1)
+            if !$0.isFull {
+                $0.append(2)
+                return true
+            }
+            return false
+        }
+        if didAppend {
+            #expect(d.count == 2)
+            #expect(d == Data([1, 2]))
+        }
+
+        d = Data([1])
+        d.edit {
+            $0.removeAll()
+        }
+        #expect(d.isEmpty)
+        d.edit {
+            // Editing does not shrink allocation
+            #expect($0.byteCount == 0)
+            #expect($0.freeCapacity > 0)
+        }
+
+        d = Data(repeating: 1, count: 100)
+        didAppend = d.edit {
+            #expect($0.byteCount == 100)
+            if !$0.isFull {
+                $0.append(2)
+                return true
+            }
+            return false
+        }
+        if didAppend {
+            #expect(d.count == 101)
+            #expect(d.last == 2)
+            d.withUnsafeBytes { #expect($0.count == 101) }
+            d.replaceSubrange(100 ..< 101, copying: RawSpan())
+            #expect(d.count == 100)
+        }
+
+        d = Data(repeating: 1, count: 100)
+        d.edit {
+            $0.removeLast(20)
+        }
+        #expect(d.count == 80)
+        d.edit {
+            #expect($0.byteCount == 80)
+            #expect($0.freeCapacity >= 20)
+            $0.removeAll()
+        }
+        #expect(d.isEmpty)
+        d.edit {
+            // Editing does not shrink allocation
+            #expect($0.byteCount == 0)
+            #expect($0.freeCapacity > 0)
+        }
+
+        d = Data(repeating: 1, count: 10)
+        #expect(throws: CocoaError.self) {
+            try d.edit {
+                var ms = $0.mutableBytes
+                ms[0] = 2
+                $0.removeLast()
+                throw CocoaError(.featureUnsupported)
+            }
+        }
+        #expect(d.count == 9)
+        #expect(d[0] == 2)
+
+        d = Data(repeating: 1, count: 100)
+        #expect(throws: CocoaError.self) {
+            try d.edit {
+                var ms = $0.mutableBytes
+                ms[0] = 2
+                $0.removeLast()
+                throw CocoaError(.featureUnsupported)
+            }
+        }
+        #expect(d.count == 99)
+        #expect(d[0] == 2)
+    }
+
+    @Test func replaceSubrangeOutputRawSpan() {
+        var d = Data()
+        try? d.replaceSubrange(0 ..< 0, addingCount: 0) {
+            #expect($0.freeCapacity == 0)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 0)
+        d.edit {
+            #expect($0.freeCapacity == 0)
+        }
+
+        try? d.replaceSubrange(0 ..< 0, addingCount: 5) {
+            #expect($0.freeCapacity == 5)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 0)
+        expectEmptyRepresentation(d)
+
+        try? d.replaceSubrange(0 ..< 0, addingCount: 5) {
+            $0.append(2)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 1)
+        #expect(d[0] == 2)
+
+
+        d = Data(repeating: 2, count: 10)
+        try? d.replaceSubrange(1 ..< 4, addingCount: 100) {
+            $0.append(3)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 8)
+        #expect(d[0] == 2)
+        #expect(d[1] == 3)
+        #expect(d[2] == 2)
+
+        d = Data(repeating: 2, count: 10)
+        try? d.replaceSubrange(1 ..< 4, addingCount: 100) {
+            $0.append(repeating: 4, count: 20, as: UInt8.self)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 27)
+        #expect(d[0] == 2)
+        #expect(d[1] == 4)
+
+        d = Data(repeating: 2, count: 20)
+        try? d.replaceSubrange(1 ..< 6, addingCount: 5) {
+            $0.append(repeating: 4, count: 5, as: UInt8.self)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 20)
+    }
 }
 
 // MARK: - Base64 Encode/Decode Tests
@@ -3396,7 +3666,7 @@ struct LargeDataTests {
     @Test func largeRepresentationOutputRawSpanInitAndAppend() throws {
         struct LocalError: Error, Equatable {}
 
-        var data = Data(rawCapacity: largeCount) {
+        var data = Data(capacity: largeCount) {
             #expect($0.freeCapacity == largeCount)
             $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
@@ -3404,13 +3674,13 @@ struct LargeDataTests {
         #expect(data.count == largeCount)
 
         // exercise `LargeSlice.append()`
-        data.append(addingRawCapacity: 20) {
+        data.append(addingCount: 20) {
             #expect($0.freeCapacity == 20)
             $0.append(51)
         }
         #expect(data.count == largeCount+1)
         #expect(data.last == 51)
-        try? data.append(addingRawCapacity: 10) {
+        try? data.append(addingCount: 10) {
             #expect($0.freeCapacity == 10)
             $0.append(52)
             throw LocalError()
@@ -3420,7 +3690,7 @@ struct LargeDataTests {
 
         // transform from the `InlineData` form to the `LargeSlice` form
         data = Data([1, 2, 3])
-        data.append(addingRawCapacity: largeCount) {
+        data.append(addingCount: largeCount) {
             #expect($0.freeCapacity == largeCount)
             $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
@@ -3429,7 +3699,7 @@ struct LargeDataTests {
 
         // transform from the `InlineSlice` form to the `LargeSlice` form
         data = Data(0..<24)
-        data.append(addingRawCapacity: largeCount) {
+        data.append(addingCount: largeCount) {
             #expect($0.freeCapacity == largeCount)
             $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
@@ -3445,14 +3715,14 @@ struct LargeDataTests {
         #expect(data.count <= capacity(data))
         var slice = data.dropFirst(100).dropLast(100)
         #expect(slice.count <= capacity(slice))
-        slice.append(addingRawCapacity: 2) {
+        slice.append(addingCount: 2) {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
 
         slice = data.dropFirst(100).dropLast(100)
         _ = consume data
-        slice.append(addingRawCapacity: 2) {
+        slice.append(addingCount: 2) {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
@@ -3532,9 +3802,9 @@ struct LargeDataTests {
             var slice = original.suffix(1)
             #expect(slice.count == 1)
             let startCapacity = capacity(slice)
-            slice.append(addingCapacity: 25) {
+            slice.append(addingCount: 25) {
                 #expect($0.freeCapacity == 25)
-                $0.append(repeating: 1, count: 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
                 #expect($0.isFull == true)
             }
             #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
@@ -3551,9 +3821,9 @@ struct LargeDataTests {
             }
             #expect(slice.count == 1)
             let startCapacity = capacity(slice)
-            slice.append(addingCapacity: 25) {
+            slice.append(addingCount: 25) {
                 #expect($0.freeCapacity == 25)
-                $0.append(repeating: 1, count: 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
                 #expect($0.isFull == true)
             }
             #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
