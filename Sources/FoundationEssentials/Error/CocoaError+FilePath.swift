@@ -232,7 +232,7 @@ extension CocoaError {
         unknownErrno: Int32? = nil
     ) {
         #if FOUNDATION_FRAMEWORK
-        self.init(_uncheckedNSError: NSError._cocoaError(withCode: code.rawValue, path: path, url: url, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription, unknownErrno: unknownErrno) as NSError)
+        self.init(_uncheckedNSError: NSError._cocoaError(withCode: code.rawValue, path: path, url: url, underlying: underlying, variant: variant, source: source, destination: destination, debugDescription: debugDescription, unknownErrno: unknownErrno as NSNumber?) as NSError)
         #else
         var userInfo: [String : Any] = [:]
         if let path {
