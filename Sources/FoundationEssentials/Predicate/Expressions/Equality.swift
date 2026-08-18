@@ -40,7 +40,7 @@ extension PredicateExpressions {
     }
 }
 
-@available(FoundationPreview 6.4, *)
+@available(FoundationPreview 6.5, *)
 extension PredicateExpressions {
     public static func build_Equal<LHS, Wrapped>(lhs: LHS, nilLiteral: NilLiteral<Wrapped>) -> Equal<OptionalFlatMap<LHS, Wrapped, Value<Bool>, Bool>, Value<Bool?>> {
         Equal(lhs: OptionalFlatMap(lhs) { _ in Value(true) }, rhs: Value(nil))
