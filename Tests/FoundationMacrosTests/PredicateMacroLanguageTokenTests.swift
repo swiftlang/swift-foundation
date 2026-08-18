@@ -446,6 +446,38 @@ private struct PredicateMacroLanguageTokenTests {
             })
             """
         )
+        
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object?> { input in
+                nil == nil
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object?>({ input in
+                PredicateExpressions.\(foundationModuleName)::build_Equal(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_NilLiteral() as PredicateExpressions.\(foundationModuleName)::NilLiteral<Swift.Bool>,
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_NilLiteral()
+                )
+            })
+            """
+        )
+        
+        AssertPredicateExpansion(
+            """
+            #Predicate<Object?> { input in
+                nil != nil
+            }
+            """,
+            """
+            \(foundationModuleName).Predicate<Object?>({ input in
+                PredicateExpressions.\(foundationModuleName)::build_NotEqual(
+                    lhs: PredicateExpressions.\(foundationModuleName)::build_NilLiteral() as PredicateExpressions.\(foundationModuleName)::NilLiteral<Swift.Bool>,
+                    rhs: PredicateExpressions.\(foundationModuleName)::build_NilLiteral()
+                )
+            })
+            """
+        )
     }
     
     @Test func diagnoseDeclarations() {
