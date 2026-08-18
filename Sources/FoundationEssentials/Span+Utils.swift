@@ -102,3 +102,39 @@ extension OutputRawSpan {
         }
     }
 }
+
+extension String {
+    // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
+    // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
+    var utf8SpanMakingContiguous: UTF8Span {
+        mutating get {
+            #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
+            self.makeContiguousUTF8()
+            guard let span = self._utf8Span else {
+                preconditionFailure("Internal Inconsistency: A contiguous UTF-8 String produced nil for _utf8Span")
+            }
+            return span
+            #else
+            self.utf8Span
+            #endif
+        }
+    }
+}
+
+extension Substring {
+    // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
+    // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
+    var utf8SpanMakingContiguous: UTF8Span {
+        mutating get {
+            #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
+            self.makeContiguousUTF8()
+            guard let span = self._utf8Span else {
+                preconditionFailure("Internal Inconsistency: A contiguous UTF-8 String produced nil for _utf8Span")
+            }
+            return span
+            #else
+            self.utf8Span
+            #endif
+        }
+    }
+}
