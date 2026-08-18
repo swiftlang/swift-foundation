@@ -32,6 +32,16 @@ private struct LocaleTests {
 
         #expect(autoupdating != current)
     }
+    
+    @Test func rtgDummyTest() {
+        let identifiers = Locale.availableIdentifiers
+        let allComponents = identifiers.map { Locale.Components(identifier: $0) }
+        for components in allComponents {
+            let locale = Locale(components: components)
+            let components2 = Locale.Components(locale: locale)
+            let locale2 = Locale(components: components2) // cache hit
+        }
+    }
 
     @Test func localizedStringFunctions() {
         let locale = Locale(identifier: "en")

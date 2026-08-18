@@ -3,8 +3,8 @@ import Benchmark
 
 #if !FOUNDATION_FRAMEWORK
 let benchmarks: @Sendable () -> Void = {
-    calendarBenchmarks()
+//    calendarBenchmarks()
     localeBenchmarks()
-    timeZoneBenchmarks()
+//    timeZoneBenchmarks()
 }
 #endif

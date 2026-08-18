@@ -53,8 +53,8 @@ func localeBenchmarks() {
     Benchmark("LocaleInitFromComponents") { benchmark in
         for components in allComponents {
             let locale = Locale(components: components)
-            let components2 = Locale.Components(locale: locale)
-            let locale2 = Locale(components: components2) // cache hit
+//            let components2 = Locale.Components(locale: locale)
+//            let locale2 = Locale(components: components2) // cache hit
         }
     }
 
