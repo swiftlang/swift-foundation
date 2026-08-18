@@ -106,7 +106,7 @@ extension OutputRawSpan {
 extension String {
     // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
     // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
-    var utf8SpanMakingContiguous: UTF8Span {
+    package var utf8SpanMakingContiguous: UTF8Span {
         mutating get {
             #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
             self.makeContiguousUTF8()
@@ -124,7 +124,7 @@ extension String {
 extension Substring {
     // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
     // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
-    var utf8SpanMakingContiguous: UTF8Span {
+    package var utf8SpanMakingContiguous: UTF8Span {
         mutating get {
             #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
             self.makeContiguousUTF8()
