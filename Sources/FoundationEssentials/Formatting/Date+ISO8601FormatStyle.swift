@@ -34,7 +34,7 @@ extension Date {
     /// ```swift
     /// let now = Date()
     /// print(now.formatted(Date.ISO8601FormatStyle().dateSeparator(.dash)))
-    /// // 2021-06-21T211015Z
+    /// // 2021-06-21T21:10:15Z
     /// ```
     ///
     ///
@@ -184,12 +184,12 @@ extension Date {
         /// ```swift
         /// let aDate = Date()
         /// print(aDate.formatted(Date.ISO8601FormatStyle(dateSeparator: .omitted, dateTimeSeparator: .standard)))
-        /// // 20210622T172132Z
+        /// // 20210622T17:21:32Z
         ///
         /// if let centralStandardTimeZone = TimeZone(identifier: "CST") {
         ///    print(aDate.formatted(Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZone: centralStandardTimeZone)))
         /// }
-        /// // 2021-06-22 122132-0500
+        /// // 2021-06-22 12:21:32-0500
         /// ```
         ///
         /// - Parameters:
