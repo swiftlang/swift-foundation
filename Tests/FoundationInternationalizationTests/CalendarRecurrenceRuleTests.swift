@@ -141,8 +141,10 @@ private struct CalendarRecurrenceRuleTests {
 
     @Test func manyHours() {
         let bigCount = Array(repeating: 0, count: 100)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
         let rule = Calendar.RecurrenceRule(
-            calendar: Calendar(identifier: .gregorian),
+            calendar: calendar,
             frequency: .daily,
             interval: 1,
             end: .afterOccurrences(1),
@@ -152,9 +154,12 @@ private struct CalendarRecurrenceRuleTests {
         )
 
         let recurrences = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0))
+        var count = 0
         for r in recurrences {
-            #expect(r.timeIntervalSinceReferenceDate > 0)
+            #expect(r.timeIntervalSinceReferenceDate == 0)
+            count += 1
         }
+        #expect(count == 1)
     }
 
     @Test func outOfRangeHoursMinutesSecondsDoNotHang() {
