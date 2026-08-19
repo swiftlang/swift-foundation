@@ -67,6 +67,15 @@ extension OutputSpan where Element == UInt8 {
             }
         }
     }
+
+    /// Append `string`'s UTF-8 bytes. Goes through `utf8SpanMakingContiguous`
+    /// rather than `utf8Span` so it also works on 32-bit watchOS, where `String`
+    /// can't vend a span directly; that accessor is `mutating`, hence the copy.
+    @inline(__always)
+    mutating func append(copyingUTF8 string: String) {
+        var string = string
+        self.append(copying: string.utf8SpanMakingContiguous.span)
+    }
 }
 
 /// A compiled `<prefix>{0}<connector>{1}<suffix>` pattern — a minimal Swift
@@ -142,19 +151,20 @@ internal struct SimpleFormatter: Equatable {
         _ s1: borrowing UTF8Span,
         into output: inout OutputSpan<UInt8>
     ) {
-        output.append(copying: prefix.utf8Span.span)
+        output.append(copyingUTF8: prefix)
         output.append(copying: s0.span)
-        output.append(copying: connector.utf8Span.span)
+        output.append(copyingUTF8: connector)
         output.append(copying: s1.span)
-        output.append(copying: suffix.utf8Span.span)
+        output.append(copyingUTF8: suffix)
     }
 
     /// Format two arguments into a freshly allocated `String`.
     func format(_ s0: String, _ s1: String) -> String {
+        var s0 = s0, s1 = s1
         let total = utf8Count(s0.utf8.count, s1.utf8.count)
         return String(unsafeUninitializedCapacity: total) { buffer in
             var output = OutputSpan(buffer: buffer, initializedCount: 0)
-            format(s0.utf8Span, s1.utf8Span, into: &output)
+            format(s0.utf8SpanMakingContiguous, s1.utf8SpanMakingContiguous, into: &output)
             return output.finalize(for: buffer)
         }
     }
@@ -372,16 +382,16 @@ internal final class ListFormatterImpl: Sendable {
 
             return String(unsafeUninitializedCapacity: total) { buffer in
                 var output = OutputSpan(buffer: buffer, initializedCount: 0)
-                Self.writeItem(items[0].utf8Span, wrapped: conflicts[0], into: &output)
-                output.append(copying: start.connector.utf8Span.span)
-                Self.writeItem(items[1].utf8Span, wrapped: conflicts[1], into: &output)
+                Self.writeItem(items[0], wrapped: conflicts[0], into: &output)
+                output.append(copyingUTF8: start.connector)
+                Self.writeItem(items[1], wrapped: conflicts[1], into: &output)
                 for i in 2..<(items.count - 1) {
-                    output.append(copying: middle.connector.utf8Span.span)
-                    Self.writeItem(items[i].utf8Span, wrapped: conflicts[i], into: &output)
+                    output.append(copyingUTF8: middle.connector)
+                    Self.writeItem(items[i], wrapped: conflicts[i], into: &output)
                 }
-                output.append(copying: end.connector.utf8Span.span)
+                output.append(copyingUTF8: end.connector)
                 let lastIdx = items.count - 1
-                Self.writeItem(items[lastIdx].utf8Span, wrapped: conflicts[lastIdx], into: &output)
+                Self.writeItem(items[lastIdx], wrapped: conflicts[lastIdx], into: &output)
                 return output.finalize(for: buffer)
             }
         }
@@ -392,7 +402,7 @@ internal final class ListFormatterImpl: Sendable {
     /// wrapping is needed.
     @inline(__always)
     private static func writeItem(
-        _ item: borrowing UTF8Span,
+        _ item: String,
         wrapped: Bool,
         into output: inout OutputSpan<UInt8>
     ) {
@@ -402,7 +412,7 @@ internal final class ListFormatterImpl: Sendable {
             output.append(0x81)
             output.append(0xA8)
         }
-        output.append(copying: item.span)
+        output.append(copyingUTF8: item)
         if wrapped {
             // U+2069 POP DIRECTIONAL ISOLATE (PDI) = E2 81 A9
             output.append(0xE2)
@@ -444,17 +454,17 @@ internal final class ListFormatterImpl: Sendable {
             + after.utf8.count + formatter.suffix.utf8.count + extra
         return String(unsafeUninitializedCapacity: total) { buffer in
             var output = OutputSpan(buffer: buffer, initializedCount: 0)
-            output.append(copying: formatter.prefix.utf8Span.span)
-            output.append(copying: before.utf8Span.span)
+            output.append(copyingUTF8: formatter.prefix)
+            output.append(copyingUTF8: before)
             if needsLeading {
                 output.append(0x20) // ASCII space
             }
-            output.append(copying: formatter.connector.utf8Span.span)
+            output.append(copyingUTF8: formatter.connector)
             if needsTrailing {
                 output.append(0x20)
             }
-            output.append(copying: after.utf8Span.span)
-            output.append(copying: formatter.suffix.utf8Span.span)
+            output.append(copyingUTF8: after)
+            output.append(copyingUTF8: formatter.suffix)
             return output.finalize(for: buffer)
         }
     }
@@ -513,11 +523,12 @@ internal final class ListFormatterImpl: Sendable {
     /// without materializing the wrapped strings.
     @inline(__always)
     private func shouldWrapBidi(_ item: String) -> Bool {
+        var item = item
         // Everything that can disturb the list — strong-RTL characters, Arabic
         // numbers, and (in an RTL list) anything but a Latin letter — is either
         // outside ASCII or trivially classified by byte, so branch on the cheap
         // `isKnownASCII` bit first and only decode scalars when we must.
-        let isASCII = item.utf8Span.isKnownASCII
+        let isASCII = item.utf8SpanMakingContiguous.isKnownASCII
         if listDirection == .rightToLeft {
             // Only a strong-LTR character (`L`) disturbs an RTL list. Within
             // ASCII that means a Latin letter, so scan the UTF-8 bytes directly
