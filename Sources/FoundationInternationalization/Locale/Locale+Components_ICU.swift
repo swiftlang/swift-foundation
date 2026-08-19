@@ -27,64 +27,9 @@ extension Locale.Components {
     ///
     /// - Parameter identifier: A BCP-47 language identifier such as `en-u-nu-thai-ca-buddhist` or an ICU-style identifier such as `en@calendar=buddhist;numbers=thai`.
     public init(identifier: String) {
-        let languageComponents = Locale.Language.Components(identifier: identifier)
-        self.init(languageCode: languageComponents.languageCode, script: languageComponents.script, languageRegion: languageComponents.region)
-
-        let s = _withFixedCharBuffer { buffer, size, status in
-            return uloc_getVariant(identifier, buffer, size, &status)
-        }
-        if let s {
-            variant = Locale.Variant(s)
-        }
-
-        var status = U_ZERO_ERROR
-        let uenum = uloc_openKeywords(identifier, &status)
-        guard status.isSuccess, let uenum else { return }
-
-        let enumator = ICU.Enumerator(enumerator: uenum)
-        for key in enumator.elements {
-            guard let legacyKey = Locale.legacyKey(forKey: key) else {
-                continue
-            }
-
-            guard let value = Locale.keywordValue(identifier: identifier, key: legacyKey) else {
-                continue
-            }
-
-            switch legacyKey {
-            case Calendar.Identifier.legacyKeywordKey:
-                calendar = Calendar.Identifier(identifierString: value)
-            case Locale.Collation.legacyKeywordKey:
-                collation = Locale.Collation(value)
-            case Locale.Currency.legacyKeywordKey:
-                currency = Locale.Currency(value)
-            case Locale.NumberingSystem.legacyKeywordKey:
-                numberingSystem = Locale.NumberingSystem(value)
-            case Locale.Weekday.legacyKeywordKey:
-                firstDayOfWeek = Locale.Weekday(rawValue: value)
-            case Locale.HourCycle.legacyKeywordKey:
-                hourCycle = Locale.HourCycle(rawValue: value)
-            case Locale.MeasurementSystem.legacyKeywordKey:
-                if value == "imperial" {
-                    // Legacy alias for "uksystem"
-                    measurementSystem = .uk
-                } else {
-                    measurementSystem = Locale.MeasurementSystem(value)
-                }
-            case Locale.Region.legacyKeywordKey:
-                if value.count > 2 {
-                    // A valid `regionString` is a unicode subdivision id that consists of a region subtag suffixed either by "zzzz" ("uszzzz") for whole region, or by a subdivision suffix for a partial subdivision ("usca").
-                    // Retrieve the region part ("us").
-                    region = Locale.Region(String(value.prefix(2).uppercased()))
-                }
-            case Locale.Subdivision.legacyKeywordKey:
-                subdivision = Locale.Subdivision(value)
-            case TimeZone.legacyKeywordKey:
-                timeZone = TimeZone(identifier: value)
-            default:
-                break
-            }
-        }
+        // Dispatch to whichever `_LocaleProtocol` implementation is in play, so that the choice of
+        // locale implementation is made in exactly one place (`_localeICUClass()`).
+        self = _localeICUClass().components(forIdentifier: identifier)
     }
 
     /// Creates a `Locale.Components` with the identifier of the specified `locale`.
@@ -108,6 +53,73 @@ extension Locale.Components {
         if firstDayOfWeek == nil, let weekday = locale.forceFirstWeekday(locale._calendarIdentifier) {
             firstDayOfWeek = weekday
         }
+    }
+}
+
+extension _LocaleICU {
+    // Parses a BCP-47 or ICU-style identifier using ICU.
+    // Must handle every component stored by a `Locale.Components`, and be kept in sync with `Locale.Components.icuIdentifier`.
+    static func components(forIdentifier identifier: String) -> Locale.Components {
+        let languageComponents = Locale.Language.Components(identifier: identifier)
+        var result = Locale.Components(languageCode: languageComponents.languageCode, script: languageComponents.script, languageRegion: languageComponents.region)
+
+        let s = _withFixedCharBuffer { buffer, size, status in
+            return uloc_getVariant(identifier, buffer, size, &status)
+        }
+        if let s {
+            result.variant = Locale.Variant(s)
+        }
+
+        var status = U_ZERO_ERROR
+        let uenum = uloc_openKeywords(identifier, &status)
+        guard status.isSuccess, let uenum else { return result }
+
+        let enumator = ICU.Enumerator(enumerator: uenum)
+        for key in enumator.elements {
+            guard let legacyKey = Locale.legacyKey(forKey: key) else {
+                continue
+            }
+
+            guard let value = Locale.keywordValue(identifier: identifier, key: legacyKey) else {
+                continue
+            }
+
+            switch legacyKey {
+            case Calendar.Identifier.legacyKeywordKey:
+                result.calendar = Calendar.Identifier(identifierString: value)
+            case Locale.Collation.legacyKeywordKey:
+                result.collation = Locale.Collation(value)
+            case Locale.Currency.legacyKeywordKey:
+                result.currency = Locale.Currency(value)
+            case Locale.NumberingSystem.legacyKeywordKey:
+                result.numberingSystem = Locale.NumberingSystem(value)
+            case Locale.Weekday.legacyKeywordKey:
+                result.firstDayOfWeek = Locale.Weekday(rawValue: value)
+            case Locale.HourCycle.legacyKeywordKey:
+                result.hourCycle = Locale.HourCycle(rawValue: value)
+            case Locale.MeasurementSystem.legacyKeywordKey:
+                if value == "imperial" {
+                    // Legacy alias for "uksystem"
+                    result.measurementSystem = .uk
+                } else {
+                    result.measurementSystem = Locale.MeasurementSystem(value)
+                }
+            case Locale.Region.legacyKeywordKey:
+                if value.count > 2 {
+                    // A valid `regionString` is a unicode subdivision id that consists of a region subtag suffixed either by "zzzz" ("uszzzz") for whole region, or by a subdivision suffix for a partial subdivision ("usca").
+                    // Retrieve the region part ("us").
+                    result.region = Locale.Region(String(value.prefix(2).uppercased()))
+                }
+            case Locale.Subdivision.legacyKeywordKey:
+                result.subdivision = Locale.Subdivision(value)
+            case TimeZone.legacyKeywordKey:
+                result.timeZone = TimeZone(identifier: value)
+            default:
+                break
+            }
+        }
+
+        return result
     }
 }
 

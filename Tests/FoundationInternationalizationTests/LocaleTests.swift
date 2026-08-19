@@ -33,16 +33,6 @@ private struct LocaleTests {
         #expect(autoupdating != current)
     }
     
-    @Test func rtgDummyTest() {
-        let identifiers = Locale.availableIdentifiers
-        let allComponents = identifiers.map { Locale.Components(identifier: $0) }
-        for components in allComponents {
-            let locale = Locale(components: components)
-            let components2 = Locale.Components(locale: locale)
-            let locale2 = Locale(components: components2) // cache hit
-        }
-    }
-
     @Test func localizedStringFunctions() {
         let locale = Locale(identifier: "en")
 
@@ -518,6 +508,80 @@ private struct LocaleTests {
         #expect(nilLanguage.languageCode == nil)
         #expect(nilLanguage.script == nil)
         #expect(nilLanguage.region == nil)
+    }
+    
+    @Test func simpleComponentsFromIdentifier() {
+        func verify(id: String, languageCode: String?, scriptCode: String?, regionCode: String?, variantCode: String?, roundTripID: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let loc = Locale(identifier:id)
+            #expect(loc.language.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
+            #expect(loc.language.script?.identifier == scriptCode, sourceLocation:sourceLocation)
+            #expect(loc.language.region?.identifier == regionCode, sourceLocation:sourceLocation)
+            #expect(loc.variant?.identifier == variantCode, sourceLocation:sourceLocation)
+//            #expect(loc.identifier == roundTripID, sourceLocation:sourceLocation)
+        }
+        
+        // test empty and malformed language codes
+        verify(id: "", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: " ", languageCode: " ", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: " ") // should the language code be " " here?
+        verify(id: "und", languageCode: "und", scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "und") // should the language code be "und" here? should the script code be "Latn" here?
+        verify(id: "root", languageCode: "root", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "root") // should the language code be "root" here?
+        verify(id: "@#$@#$", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "@#$@#$")
+        verify(id: "1234", languageCode: "1234", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "1234") // should the language code be "1234" here?
+        verify(id: "abcdefghijklmnopqrstuvwxyz", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "abcdefghijklmnopqrstuvwxyz")
+        verify(id: "_", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "_")
+        
+        // test various combinations of fields (and formats for fields, and malformed fields)
+        verify(id: "en", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "") // why don't we fill in the region code?
+        verify(id: "eng", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: "fil", languageCode: "fil", scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: "iw", languageCode: "iw", scriptCode: "Hebr", regionCode: nil, variantCode: nil, roundTripID: "") // should we be normalizing "iw" to "he"?
+        verify(id: "xxx", languageCode: "xxx", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "") // should we allow an invalid language code?
+        verify(id: "en_Latn", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: "zh_Hant", languageCode: "zh", scriptCode: "Hant", regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: "en_US", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: nil, roundTripID: "")
+        verify(id: "zh_CN", languageCode: "zh", scriptCode: "Hans", regionCode: "CN", variantCode: nil, roundTripID: "")
+        verify(id: "zh_TW", languageCode: "zh", scriptCode: "Hant", regionCode: "TW", variantCode: nil, roundTripID: "")
+        verify(id: "en_Latn_US", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: nil, roundTripID: "")
+        verify(id: "zh_Hant_CN", languageCode: "zh", scriptCode: "Hant", regionCode: "CN", variantCode: nil, roundTripID: "")
+        verify(id: "zh_Hans_TW", languageCode: "zh", scriptCode: "Hans", regionCode: "TW", variantCode: nil, roundTripID: "")
+        verify(id: "Latn", languageCode: "latn", scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "") // why do we allow a 4-letter language code?
+        verify(id: "_Latn", languageCode: nil, scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: "Hans", languageCode: "hans", scriptCode: "Hans", regionCode: nil, variantCode: nil, roundTripID: "") // why do we allow a 4-letter language code?
+        verify(id: "Zzzz", languageCode: "zzzz", scriptCode: "Zzzz", regionCode: nil, variantCode: nil, roundTripID: "") // why do we allow a 4-letter language code?
+        verify(id: "es_419", languageCode: "es", scriptCode: "Latn", regionCode: "419", variantCode: nil, roundTripID: "")
+        verify(id: "419", languageCode: "419", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "") // why do we allow a numeric language code?
+        verify(id: "US", languageCode: "us", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "") // should we allow an invalid language code?
+        verify(id: "_419", languageCode: nil, scriptCode: "Latn", regionCode: "419", variantCode: nil, roundTripID: "") // why are we filling in the script code with no language code?
+        verify(id: "_US", languageCode: nil, scriptCode: "Latn", regionCode: "US", variantCode: nil, roundTripID: "") // why are we filling in the script code with no language code?
+        verify(id: "__419", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: "419", roundTripID: "") // should we be interpreting "419" as the variant code?  Is it a legal variant code?
+        verify(id: "__US", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: "US", roundTripID: "") // should we be interpreting "419" as the variant code?  Is it a legal variant code?
+        verify(id: "en_US_POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "")
+        verify(id: "ca_ES_VALENCIA", languageCode: "ca", scriptCode: "Latn", regionCode: "ES", variantCode: "VALENCIA", roundTripID: "")
+        verify(id: "ja_TRADITIONAL", languageCode: "ja", scriptCode: "Jpan", regionCode: nil, variantCode: "TRADITIONAL", roundTripID: "")
+        verify(id: "ja_JP_TRADITIONAL", languageCode: "ja", scriptCode: "Jpan", regionCode: "JP", variantCode: "TRADITIONAL", roundTripID: "")
+        verify(id: "ja_Jpan_JP_TRADITIONAL", languageCode: "ja", scriptCode: "Jpan", regionCode: "JP", variantCode: "TRADITIONAL", roundTripID: "")
+        verify(id: "VALENCIA", languageCode: "valencia", scriptCode: nil, regionCode: nil, variantCode: nil, roundTripID: "") // should we be interpreting "valencia" as a language code?
+        verify(id: "_VALENCIA", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: "VALENCIA", roundTripID: "")
+        verify(id: "__VALENCIA", languageCode: nil, scriptCode: nil, regionCode: nil, variantCode: "VALENCIA", roundTripID: "")
+        verify(id: "en_#$%#$#$_US", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: "#$%#$#$_US", roundTripID: "") // why are we allowing garbage in the variant code?
+        verify(id: "en_US_US", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "US", roundTripID: "") // why are we allowing "US" as a variant code?
+        verify(id: "en_US_Latn", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "LATN", roundTripID: "") // why are we allowing "LATN" as a variant code?
+        verify(id: "enzzz_US_Latn", languageCode: "enzzz", scriptCode: nil, regionCode: "US", variantCode: "LATN", roundTripID: "") // why are we allowing "enzzz" as a language code and "LATN" as a variant code?
+        verify(id: "en_Latnzzzz", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: "LATNZZZZ", roundTripID: "") // should we be allowing "LATNZZZ" as a variant code?
+        verify(id: "en_Latn_USzzzz", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: "USZZZZ", roundTripID: "") // should we be allowing "USZZZZ" as a variant code?
+        verify(id: "en_#$%%#$%#", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: "#$%%#$%#", roundTripID: "") // why are we allowing garbage in the variant code?
+        verify(id: "en_#$%%#$%#_US", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: "#$%%#$%#_US", roundTripID: "") // why are we allowing garbage in the variant code (and too many fields)?
+        verify(id: "en_Latn_#$%%#$%#", languageCode: "en", scriptCode: "Latn", regionCode: nil, variantCode: "#$%%#$%#", roundTripID: "") // why are we allowing garbage in the variant code?
+        verify(id: "en_Latn_US_SDFPISDFPSIDFOS", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "SDFPISDFPSIDFOS", roundTripID: "") // shouldn't "SDFPISDFPSIDFOS" be too long for a variant code?
+
+        // TODO: fill in the "roundTripID" fields in all of these cases (if it's ever different from the original input string)
+        // TODO: add tests for case normalization
+        // TODO: add tests for delimiter normalization and BCP47 handling
+        // TODO: line up the columns
+        // TODO: make a duplicate of this test that uses Components.init(identifier:) [which shouldn't fill in the language code]
+        // TODO: do I want to check what loc.region is giving me for the region code in these examples?
+        // TODO: try to figure out if ICU is the source of these problems and if we want to tighten it (this might be the difference between the Locale class and just using a string)
+        // TODO: find out how much leeway I have to change the interpretation of the above strings to make things easier for the implementation
     }
 }
 

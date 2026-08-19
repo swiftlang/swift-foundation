@@ -42,40 +42,44 @@ private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
 // TODO: Right now, this is just a copy of _Locale_Unlocalized.  The plan is first to convert it to a thin wrapper around _Locale_ICU and then slowly replace all of the calls to _Locale_ICU with our own implementations.
 
 internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
+    let _identifier: String
     let _prefs: LocalePreferences?
     
-//    internal static func waitASecond() {
-//        let startTime = ContinuousClock.now
-//        let endTime = startTime.advanced(by: .seconds(0.1))
-//        while ContinuousClock.now < endTime {}
-//    }
-    
     required init(identifier: String, prefs: LocalePreferences? = nil) {
-//        Self.waitASecond()
+        // TODO: we're probably going to have to validate and normalize the identifier here instead of just taking what the caller gives us (I think we'll need to do this just to support BCP47 syntax as an option)
+        _identifier = identifier
         _prefs = prefs
     }
     
     required init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
-//        Self.waitASecond()
+        // TODO: What does this function do?  How do I replicate the current implementation?
+        _identifier = ""
         _prefs = prefs
     }
     
     required init(components: Locale.Components) {
-//        Self.waitASecond()
-       _prefs = nil
+        _identifier = components.icuIdentifier
+        _prefs = nil
     }
-    
+
+    // TODO: Implement identifier parsing in Swift. Must handle every component stored by a
+    // `Locale.Components`, and be kept in sync with `Locale.Components.icuIdentifier`.
+    // See `_LocaleICU.components(forIdentifier:)` for the behavior being replaced.
+    static func components(forIdentifier identifier: String) -> Locale.Components {
+        Locale.Components(languageCode: "en", languageRegion: "001")
+    }
+
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
         // Nothing changes here
         self
     }
     
     var debugDescription: String {
-        "unlocalized en_001"
+        "Fixed \(_identifier)"
     }
     
     var identifier: String {
-        "en_001"
+        _identifier
     }
     
     func identifierDisplayName(for value: String) -> String? {
