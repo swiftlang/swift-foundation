@@ -236,209 +236,209 @@ public struct SortDescriptor<Compared>: SortComparator, Codable, Sendable {
     
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the related functions should be made public when rdar://131764614 is resolved
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init<Value>(_ keyPath: KeyPath<Compared, Value> & Sendable, order: SortOrder = .forward) where Value: Comparable {
         self.init(keyPath as KeyPath<Compared, Value>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init<Value>(_ keyPath: KeyPath<Compared, Value?> & Sendable, order: SortOrder = .forward) where Value: Comparable {
         self.init(keyPath as KeyPath<Compared, Value?>, order: order)
     }
     
     #if FOUNDATION_FRAMEWORK
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard) {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard) {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Bool> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Bool>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Bool?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Bool?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Double> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Double>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Double?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Double?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Float> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Float>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Float?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Float?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int8> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int8>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int8?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int8?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int16> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int16>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int16?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int16?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int32> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int32>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int32?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int32?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int64> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int64>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int64?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int64?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Int?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Int?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt8> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt8>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt8?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt8?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt16> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt16>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt16?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt16?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt32> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt32>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt32?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt32?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt64> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt64>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt64?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt64?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UInt?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UInt?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Date> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Date>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, Date?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, Date?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UUID> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UUID>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, UUID?> & Sendable, order: SortOrder = .forward) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, UUID?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, String> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String>, comparator: comparator, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ keyPath: KeyPath<Compared, String?> & Sendable, comparator: String.StandardComparator = .localizedStandard, order: SortOrder) where Compared: NSObject {
         self.init(keyPath as KeyPath<Compared, String?>, comparator: comparator, order: order)
     }
@@ -1172,7 +1172,7 @@ extension NSSortDescriptor {
         self.init(_sortDescriptor: sortDescriptor)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public convenience init<Compared>(_sortDescriptor: SortDescriptor<Compared>) {
         self.init(_sortDescriptor)
     }

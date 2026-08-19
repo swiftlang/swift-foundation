@@ -176,7 +176,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     func withUnsafeBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
             return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
@@ -202,7 +202,7 @@ internal final class __DataStorage : @unchecked Sendable {
 #endif // DATA_LEGACY_ABI
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     func withUnsafeMutableBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
             return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
@@ -438,7 +438,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
     
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
       extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
@@ -454,7 +454,7 @@ internal final class __DataStorage : @unchecked Sendable {
         return try initializer(&outputSpan)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func edit<E: Error, R: ~Copyable>(range: inout Range<Int>, _ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
         let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes?.advanced(by: range.lowerBound), count: _offset + capacity - range.lowerBound)
@@ -540,7 +540,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     func replaceSubrange<E: Error>(
         _ subrange: Range<Int>,

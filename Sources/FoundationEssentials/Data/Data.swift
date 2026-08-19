@@ -119,7 +119,7 @@ internal func __DataInvokeDeallocatorFree(_ mem: UnsafeMutableRawPointer, _ leng
 }
 
 
-@_alwaysEmitIntoClient
+@export(implementation)
 internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBufferPointer<UInt8>) -> Void) {
     guard capacity > 0 else {
         body(UnsafeMutableBufferPointer(start: nil, count: 0))
@@ -259,7 +259,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///   - capacity: The storage capacity of the new data, or nil to allocate just enough capacity to store the bytes of the span.
     ///   - span: The span whose bytes to copy into the new data. The span must not contain more than `capacity` bytes.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public init(capacity: Int? = nil, copying span: RawSpan) {
         self.init(capacity: capacity ?? span.byteCount) {
@@ -304,7 +304,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @available(watchOS, introduced: 5.2, deprecated, renamed: "init(capacity:initializingWith:)")
     @available(tvOS, introduced: 12.2, deprecated, renamed: "init(capacity:initializingWith:)")
     @available(visionOS, introduced: 1.0, deprecated, renamed: "init(capacity:initializingWith:)")
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @_spi(_) // TODO: Remove after no clients are using this
     public init<E: Error>(
         rawCapacity capacity: Int,
@@ -318,7 +318,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///   - capacity: The storage capacity of the new data.
     ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is allowed to add fewer than `capacity` bytes. The data is initialized with however many bytes the callback adds to the output raw span before it returns (or before it throws an error).
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public init<E: Error>(
         capacity: Int,
@@ -356,7 +356,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ data: Data) {
         #if DATA_LEGACY_ABI
         switch data._representation {
@@ -385,7 +385,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ elements: some Sequence<UInt8> & ContiguousBytes) {
         if let data = _specialize(elements, for: Data.self) {
             self.init(data)
@@ -398,7 +398,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @abi(init(fastCheckElements elements: some Sequence<UInt8>))
     public init(_ elements: some Sequence<UInt8>) {
         if let data = _specialize(elements, for: Data.self) {
@@ -519,7 +519,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func withUnsafeBytes<E, ResultType: ~Copyable>(_ body: (UnsafeRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
         try _representation.withUnsafeBytes(body)
     }
@@ -538,7 +538,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 #endif // DATA_LEGACY_ABI
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
@@ -547,7 +547,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var span: Span<UInt8> {
         @_lifetime(borrow self)
         borrowing get {
@@ -557,7 +557,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
         mutating get {
@@ -571,14 +571,14 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///
     /// - Parameter body: A function that edits the contents of this data through an `OutputRawSpan` argument. This method invokes this function exactly once.
     /// - Returns: This method returns the result of its function argument.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func edit<E: Error, R: ~Copyable>(_ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
         try _representation.edit(body)
     }
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var mutableSpan: MutableSpan<UInt8> {
         @_lifetime(&self)
         mutating get {
@@ -591,7 +591,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func withContiguousStorageIfAvailable<E, ResultType: ~Copyable>(
       _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
     ) throws(E) -> ResultType? {
@@ -601,7 +601,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func withUnsafeMutableBytes<E, ResultType: ~Copyable>(_ body: (UnsafeMutableRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
         try _representation.withUnsafeMutableBytes(body)
     }
@@ -654,7 +654,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///    A callback that gets called exactly once to directly populate newly reserved storage within the data.
     ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func append<E: Error>(
         addingCount newBytesCount: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
@@ -669,7 +669,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///
     /// - Parameters:
     ///    - newBytes: A raw span whose contents to copy into the data.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func append(copying newBytes: RawSpan) {
         self.append(addingCount: newBytes.byteCount) {
@@ -685,7 +685,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _append(buffer)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func append(_ byte: UInt8) {
         Swift.withUnsafeBytes(of: byte) { buffer in
             _representation.append(contentsOf: buffer)
@@ -707,7 +707,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func append(contentsOf elements: some Sequence<UInt8> & ContiguousBytes) {
         // Since the sequence is already contiguous, access the underlying raw memory directly.
         elements.withUnsafeBytes {
@@ -718,7 +718,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @abi(mutating func append(fastContentsof elements: some Sequence<UInt8>))
     public mutating func append(contentsOf elements: some Sequence<UInt8>) {
         // The sequence might be able to provide direct access to typed memory.
@@ -806,7 +806,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.resetBytes(in: range)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func insert(_ newElement: UInt8, at i: Index) {
         Swift.withUnsafeBytes(of: newElement) { buffer in
             _representation.replaceSubrange(i ..< i, with: buffer.baseAddress, count: buffer.count)
@@ -839,7 +839,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///    - newBytesCount: The maximum number of bytes to insert into the data.
     ///    - index: The position at which to insert the new items. `index` must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
     ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func insert<E: Error>(
         addingCount newBytesCount: Int,
@@ -860,7 +860,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///    - newBytes: The new bytes to insert into the data.
     ///    - index: The position at which to insert the new bytes. `index`  must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func insert(copying newBytes: RawSpan, at index: Int) {
         self.insert(addingCount: newBytes.byteCount, at: index) {
@@ -909,7 +909,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///   - subrange: The range in the data to replace.
     ///   - newElements: The replacement bytes.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8> & ContiguousBytes) {
         newElements.withUnsafeBytes { buffer in
             _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
@@ -925,7 +925,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///   - subrange: The range in the data to replace.
     ///   - newElements: The replacement bytes.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @abi(mutating func repalceSubrangeFast(_ subrange: Range<Index>, with newElements: some Collection<UInt8>))
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8>) {
         let replaced: Void? = newElements.withContiguousStorageIfAvailable { buffer in
@@ -1003,7 +1003,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///   - subrange: The subrange of the data to replace. The bounds of the range must be valid indices in the data.
     ///   - newBytesCount: The maximum number of new bytes to insert in place of the old subrange.
     ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func replaceSubrange<E: Error>(
         _ subrange: Range<Int>,
@@ -1037,7 +1037,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - Parameters:
     ///   - subrange: The subrange of the data to replace. The bounds of the range must be valid indices in the data.
     ///   - newBytes: The new bytes to copy into the data.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     public mutating func replaceSubrange(_ subrange: Range<Int>, copying newBytes: RawSpan) {
         self.replaceSubrange(subrange, addingCount: newBytes.byteCount) {
@@ -1045,7 +1045,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @discardableResult
     public mutating func remove(at position: Index) -> UInt8 {
         precondition(!isEmpty, "Can't remove from an empty collection")
@@ -1055,13 +1055,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         return result
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func removeSubrange(_ bounds: Range<Index>) {
         // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
         replaceSubrange(bounds, with: UnsafeRawBufferPointer(start: nil, count: 0))
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func removeAll(keepingCapacity keepCapacity: Bool = false) {
         if !keepCapacity {
             self = Data()

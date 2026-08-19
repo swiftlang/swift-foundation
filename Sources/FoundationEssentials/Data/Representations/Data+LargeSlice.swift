@@ -135,7 +135,7 @@ extension Data {
         #if FOUNDATION_FRAMEWORK
         @abi(mutating func __implementation_reserveCapacity(_ minimumCapacity: Int))
         #endif
-        @_alwaysEmitIntoClient // Ensures that newer clients who may be using `__DataStorage.withUninitializedBytes` always use a new copy of reserveCapacity
+        @export(implementation) // Ensures that newer clients who may be using `__DataStorage.withUninitializedBytes` always use a new copy of reserveCapacity
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             ensureUniqueReference()
             // the current capacity can be zero (representing externally owned buffer), and count can be greater than the capacity
@@ -168,7 +168,7 @@ extension Data {
         }
 
         @inline(__always)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             try storage.withUnsafeBytes(in: range, apply: apply)
         }
@@ -185,7 +185,7 @@ extension Data {
         }
 
         @inline(__always)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             ensureUniqueReference()
             return try storage.withUnsafeMutableBytes(in: range, apply: apply)
@@ -215,7 +215,7 @@ extension Data {
         }
         
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func append<E: Error>(
             _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
@@ -269,7 +269,7 @@ extension Data {
             slice.range = slice.range.lowerBound..<resultingUpper
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         mutating func replaceSubrange<E: Error>(
             _ subrange: Range<Int>,

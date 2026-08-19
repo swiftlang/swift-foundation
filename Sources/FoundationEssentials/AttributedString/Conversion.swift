@@ -28,7 +28,7 @@ extension String {
     }
 
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ characters: AttributedString.CharacterView) {
         #if FOUNDATION_FRAMEWORK || os(macOS)
         guard #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) else {

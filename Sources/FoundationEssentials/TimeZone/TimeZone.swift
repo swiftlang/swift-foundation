@@ -234,7 +234,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.localizedName(for: style, locale: locale)
     }
 
-    @_alwaysEmitIntoClient @_disfavoredOverload
+    @export(implementation) @_disfavoredOverload
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static var gmt: TimeZone { TimeZone(secondsFromGMT: 0)! }
 
