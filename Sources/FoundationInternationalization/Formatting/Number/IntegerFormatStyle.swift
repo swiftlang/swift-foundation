@@ -645,7 +645,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -657,7 +657,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int16> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -669,7 +669,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int32> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -681,7 +681,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int64> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -693,7 +693,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int8> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -705,7 +705,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -717,7 +717,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt16> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -729,7 +729,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt32> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -741,7 +741,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt64> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -753,7 +753,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt8> {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -767,7 +767,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -779,7 +779,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int16>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -791,7 +791,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int32>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -803,7 +803,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int64>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -815,7 +815,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<Int8>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -827,7 +827,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -839,7 +839,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt16>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -851,7 +851,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt32>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -863,7 +863,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt64>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -875,7 +875,7 @@ public extension FormatStyle where Self == IntegerFormatStyle<UInt8>.Percent {
     /// Use this type property when the call point allows the use of ``IntegerFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryInteger`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 

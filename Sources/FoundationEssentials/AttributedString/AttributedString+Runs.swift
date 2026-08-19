@@ -348,7 +348,7 @@ extension AttributedString.Runs: BidirectionalCollection {
         }
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func distance(from start: Index, to end: Index) -> Int {
         #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) {
@@ -376,7 +376,7 @@ extension AttributedString.Runs: BidirectionalCollection {
         return dist
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
     #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
@@ -408,7 +408,7 @@ extension AttributedString.Runs: BidirectionalCollection {
         return idx
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: Index, offsetBy distance: Int, limitedBy limit: Index) -> Index? {
         // This is the stdlib's default implementation for RandomAccessCollection types.
         // (It's _far_ more efficient than the O(n) algorithm that used to apply here by default,

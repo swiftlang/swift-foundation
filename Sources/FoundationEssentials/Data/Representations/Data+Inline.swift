@@ -83,7 +83,7 @@ extension Data {
         }
         
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         init<E: Error>(
             rawCapacity: Int,
             initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
@@ -156,7 +156,7 @@ extension Data {
         }
 
         @inline(__always)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             try Swift.withUnsafeBytes(of: bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
                 try apply(UnsafeRawBufferPointer(start: rawBuffer.baseAddress, count: count))
@@ -175,7 +175,7 @@ extension Data {
         }
 
         @inline(__always)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             try Swift.withUnsafeMutableBytes(of: &bytes) { [count = Int(length)] (rawBuffer) throws(E) -> Result in
                 try apply(UnsafeMutableRawBufferPointer(start: rawBuffer.baseAddress, count: count))
@@ -214,7 +214,7 @@ extension Data {
         }
         
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func append<E: Error>(
             _ extraCapacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
@@ -274,7 +274,7 @@ extension Data {
             }
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         mutating func replaceSubrange<E: Error>(
             _ subrange: Range<Int>,

@@ -19,7 +19,7 @@ extension Data {
     @usableFromInline
     @frozen
     internal struct _Representation : Sendable {
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         static var empty: _Representation {
             _Representation(.empty, count: 0)
         }
@@ -27,7 +27,7 @@ extension Data {
         @usableFromInline var _storage: __DataStorage
         @usableFromInline var _slice: Range<Int>
 
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         init(_ buffer: UnsafeRawBufferPointer) {
             let count = buffer.count
             guard let address = buffer.baseAddress, count > 0 else {
@@ -37,7 +37,7 @@ extension Data {
             self.init(__DataStorage(bytes: address, length: count), count: count)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         init(_ buffer: UnsafeRawBufferPointer, owner: AnyObject) {
             let count = buffer.count
             let storage = __DataStorage(bytes: UnsafeMutableRawPointer(mutating: buffer.baseAddress), length: count, copy: false, deallocator: { _, _ in
@@ -46,7 +46,7 @@ extension Data {
             self.init(storage, count: count)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         init(capacity: Int) {
             guard capacity > 0 else {
                 self = .empty
@@ -55,7 +55,7 @@ extension Data {
             self.init(__DataStorage(capacity: capacity), count: 0)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         init(count: Int) {
             guard count > 0 else {
                 self = .empty
@@ -64,13 +64,13 @@ extension Data {
             self.init(__DataStorage(length: count), count: count)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         init(_ storage: __DataStorage, count: Int) {
             _storage = storage
             _slice = 0 ..< count
         }
 
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         mutating func ensureUniqueReference() {
             if !isKnownUniquelyReferenced(&_storage) {
                 _storage = _storage.mutableCopy(_slice)
@@ -78,7 +78,7 @@ extension Data {
         }
         
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         init<E: Error>(
             capacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
@@ -97,7 +97,7 @@ extension Data {
             reserveCapacity(1)
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func reserveCapacity(_ minimumCapacity: Int) {
             ensureUniqueReference()
             // the current capacity can be zero (representing externally owned buffer), and count can be greater than the capacity
@@ -106,7 +106,7 @@ extension Data {
             _storage.ensureUniqueBufferReference(growingTo: prefixLength + Swift.max(minimumCapacity, count))
         }
         
-        @_alwaysEmitIntoClient
+        @export(implementation)
         var count: Int {
             @inline(__always)
             get {
@@ -130,7 +130,7 @@ extension Data {
             }
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         mutating func edit<E: Error, R: ~Copyable>(_ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
             self.ensureUniqueReference()
@@ -138,7 +138,7 @@ extension Data {
         }
 
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func append<E: Error>(
             addingCount newBytesCount: Int,
             _ initializer: (inout OutputRawSpan) throws(E) -> Void
@@ -156,23 +156,23 @@ extension Data {
             try _storage.withUninitializedBytes(extraCapacity: newBytesCount, location: endIndex, &appendedCount, initializer)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         func withUnsafeBytes<Result: ~Copyable, E>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             try _storage.withUnsafeBytes(in: _slice, apply: apply)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         mutating func withUnsafeMutableBytes<Result: ~Copyable, E>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             ensureUniqueReference()
             return try _storage.withUnsafeMutableBytes(in: _slice, apply: apply)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         func enumerateBytes(_ block: (_ buffer: UnsafeBufferPointer<UInt8>, _ byteIndex: Index, _ stop: inout Bool) -> Void) {
             _storage.enumerateBytes(in: _slice, block)
         }
         
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func append(contentsOf buffer: UnsafeRawBufferPointer) {
             guard let address = buffer.baseAddress, buffer.count > 0 else { return }
             ensureUniqueReference()
@@ -185,7 +185,7 @@ extension Data {
             _slice = _slice.lowerBound..<_slice.upperBound + buffer.count
         }
         
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func resetBytes(in range: Range<Index>) {
             precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             ensureUniqueReference()
@@ -212,7 +212,7 @@ extension Data {
             _slice = _slice.lowerBound..<resultingUpper
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         mutating func replaceSubrange<E: Error>(
             _ subrange: Range<Int>,
@@ -235,7 +235,7 @@ extension Data {
             try _storage.replaceSubrange(subrange, endIndex: &endIndex, addingCount: newBytesCount, initializingWith: initializer)
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         subscript(index: Index) -> UInt8 {
             get {
                 precondition(startIndex <= index, "index \(index) is out of bounds of \(startIndex)..<\(endIndex)")
@@ -250,7 +250,7 @@ extension Data {
             }
         }
         
-        @_alwaysEmitIntoClient
+        @export(implementation)
         subscript(bounds: Range<Index>) -> Data {
             get {
                 precondition(_slice.startIndex <= bounds.lowerBound, "Range \(bounds) out of bounds \(_slice)")
@@ -265,17 +265,17 @@ extension Data {
             }
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         var startIndex: Int {
             _assumeNonNegative(_slice.lowerBound)
         }
         
-        @_alwaysEmitIntoClient @inline(__always)
+        @export(implementation) @inline(__always)
         var endIndex: Int {
             _assumeNonNegative(_slice.upperBound)
         }
         
-        @_alwaysEmitIntoClient
+        @export(implementation)
         func copyBytes(to pointer: UnsafeMutableRawPointer, from range: Range<Int>) {
             precondition(startIndex <= range.lowerBound, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             precondition(range.upperBound <= endIndex, "index \(range.upperBound) is out of bounds of \(startIndex)..<\(endIndex)")
@@ -292,7 +292,7 @@ extension Data {
         }
 
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         var bytes: RawSpan {
             let buffer = unsafe UnsafeRawBufferPointer(
                 start: _storage.mutableBytes?.advanced(by: _slice.startIndex), count: _slice.count
@@ -302,7 +302,7 @@ extension Data {
         }
 
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         public var mutableBytes: MutableRawSpan {
             @_lifetime(&self)
             mutating get {

@@ -65,32 +65,32 @@ public struct KeyPathComparator<Compared>: SortComparator {
 
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the related functions should be made public when rdar://131764614 is resolved
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value> & Sendable, order: SortOrder = .forward) {
         self.init(keyPath as KeyPath<Compared, Value>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init<Value: Comparable>(_ keyPath: KeyPath<Compared, Value?> & Sendable, order: SortOrder = .forward) {
         self.init(keyPath as KeyPath<Compared, Value?>, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value>, comparator: comparator)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value?>, comparator: comparator)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value>, comparator: comparator, order: order)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init<Value, Comparator: SortComparator> (_ keyPath: KeyPath<Compared, Value?> & Sendable, comparator: Comparator, order: SortOrder) where Comparator.Compared == Value {
         self.init(keyPath as KeyPath<Compared, Value?>, comparator: comparator, order: order)
     }

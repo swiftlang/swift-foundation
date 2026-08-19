@@ -99,7 +99,7 @@ extension Data {
         }
 
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         init<E: Error>(
             capacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
@@ -240,7 +240,7 @@ extension Data {
             }
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         var bytes: RawSpan {
             @_lifetime(borrow self)
@@ -269,7 +269,7 @@ extension Data {
         }
 
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         var mutableBytes: MutableRawSpan {
             @_lifetime(&self)
             mutating get {
@@ -304,7 +304,7 @@ extension Data {
             }
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         mutating func edit<E: Error, R: ~Copyable>(_ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
             switch self {
@@ -343,7 +343,7 @@ extension Data {
         }
 
         @inline(__always)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         func withUnsafeBytes<E, Result: ~Copyable>(_ apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
@@ -372,7 +372,7 @@ extension Data {
         }
 
         @inline(__always)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func withUnsafeMutableBytes<E, Result: ~Copyable>(_ apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
             switch self {
             case .empty:
@@ -460,7 +460,7 @@ extension Data {
         }
 
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-        @_alwaysEmitIntoClient
+        @export(implementation)
         mutating func append<E: Error>(
             addingCount newByteCount: Int,
             _ initializer: (inout OutputRawSpan) throws(E) -> Void
@@ -643,7 +643,7 @@ extension Data {
             }
         }
 
-        @_alwaysEmitIntoClient
+        @export(implementation)
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         public mutating func replaceSubrange<E: Error>(
             _ subrange: Range<Int>,
