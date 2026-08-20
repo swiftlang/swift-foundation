@@ -465,8 +465,8 @@ public extension CommonDecoder where Self: ~Escapable {
     mutating func decode(_: String.Type) throws(CodingError.Decoding) -> String { throw CodingError.unsupportedDecodingType("string") }
     
     @_lifetime(self: copy self)
-    mutating func decodeString<V: DecodingStringVisitor>(_ visitor: V) throws(CodingError.Decoding) -> V.DecodedValue { throw CodingError.unsupportedDecodingType("string") }
-    
+    mutating func decodeString<V: DecodingStringVisitor & ~Copyable>(_ visitor: borrowing V) throws(CodingError.Decoding) -> V.DecodedValue { throw CodingError.unsupportedDecodingType("string") }
+
     @_lifetime(self: copy self)
     mutating func decodeNil() throws(CodingError.Decoding) -> Bool { throw CodingError.unsupportedDecodingType("nil") }
     
