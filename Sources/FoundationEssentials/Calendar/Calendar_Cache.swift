@@ -36,12 +36,11 @@ internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool {
 }
 
 internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
-    // _foundation_swift_chinese_calendar_feature_enabled() — once Apple adds the underscored binding
-    return false
+    _foundation_swift_chinese_calendar_feature_enabled()
 }
 #else
-internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return false }
-internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return true }
+internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return true }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {

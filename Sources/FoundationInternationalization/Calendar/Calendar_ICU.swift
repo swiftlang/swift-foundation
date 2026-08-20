@@ -262,12 +262,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             hasher.combine(preferredMinimumDaysInFirstweek)
         }
     }
-    
-#if FOUNDATION_FRAMEWORK
-    func bridgeToNSCalendar() -> NSCalendar {
-        _NSSwiftCalendar(calendar: Calendar(inner: self))
-    }
-#endif
 
     // MARK: -
 
