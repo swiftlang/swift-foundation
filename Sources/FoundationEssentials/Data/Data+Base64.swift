@@ -309,27 +309,13 @@ extension Base64 {
         UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"),
     ]
 
-    static func encodeToBytes(bytes: Span<UInt8>, options: Data.Base64EncodingOptions) -> [UInt8] {
-        let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
-
-        return [UInt8](unsafeUninitializedCapacity: newCapacity) { buffer, length in
-            var outputSpan = OutputRawSpan(buffer: UnsafeMutableRawBufferPointer(buffer), initializedCount: 0)
-            Self._encode(input: bytes, buffer: &outputSpan, options: options)
-        }
-    }
-
     static func encodeToString(bytes: Span<UInt8>, options: Data.Base64EncodingOptions = []) -> String {
         let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
 
-        if #available(OSX 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
-            return String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
-                var outputSpan = OutputRawSpan(buffer: UnsafeMutableRawBufferPointer(buffer), initializedCount: 0)
-                Self._encode(input: bytes, buffer: &outputSpan, options: options)
-                return outputSpan.byteCount
-            }
-        } else {
-            let bytes: [UInt8] = self.encodeToBytes(bytes: bytes, options: options)
-            return String(decoding: bytes, as: Unicode.UTF8.self)
+        return String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
+            var outputSpan = OutputRawSpan(buffer: UnsafeMutableRawBufferPointer(buffer), initializedCount: 0)
+            Self._encode(input: bytes, buffer: &outputSpan, options: options)
+            return outputSpan.byteCount
         }
     }
 
