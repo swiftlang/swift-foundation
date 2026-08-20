@@ -35,9 +35,17 @@ private struct UUIDTests {
         #expect(uuidC != uuidD, "Two different UUIDs must not be equal.")
     }
 
-    @Test func invalidString() {
-        let invalid = UUID(uuidString: "Invalid UUID")
-        #expect(invalid == nil, "The convenience initializer `init?(uuidString string:)` must return nil for an invalid UUID string.")
+    @Test(arguments: [
+        "", // Empty string
+        "E621E1F8", // Too short
+        "E621E1F8-C36C-495A-93FC", // Incomplete segments
+        "E621E1F8-C36C-495A-93FC-0C247A3E6E5FFF", // Too long
+        "E621E1F8-C36C-495A-93FC-0C247A3E6E5Z", // Invalid hex character 'Z'
+        "E621E1F8_C36C_495A_93FC_0C247A3E6E5F", // Invalid separator (underscore)
+        "E621E1F8 C36C 495A 93FC 0C247A3E6E5F" // Invalid separator (spaces)
+    ])
+    func invalidString(string: String) {
+        #expect(UUID(uuidString: string) == nil, "Initializing with '\(string)' must return nil.")
     }
 
     // `uuidString` should return an uppercase string
