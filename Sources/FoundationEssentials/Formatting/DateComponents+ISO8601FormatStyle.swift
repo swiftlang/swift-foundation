@@ -245,20 +245,18 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
     internal func format(_ components: DateComponents, appendingTimeZoneOffset timeZoneOffset: Int?) -> String {
         var needSeparator = false
         let capacity = 128 // It is believed no ISO8601 date can exceed this size
-        let result = withUnsafeTemporaryAllocation(of: CChar.self, capacity: capacity + 1) { _buffer in
-            var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
-            
-            let asciiColon = CChar(58)
-            let asciiDash = CChar(45)
-            let asciiSpace = CChar(32)
-            let asciiPeriod = CChar(46)
-            let asciiTimeSeparator = CChar(84)
-            let asciiWeekOfYearSeparator = CChar(87)
-            let asciiZulu = CChar(90)
-            let asciiPlus = CChar(43)
-            let asciiMinus = CChar(45) // Same as dash, renamed for clarity
-            let asciiNull = CChar(0)
-            
+        return String(_capacity: capacity + 1) { buffer in
+            let asciiColon = UInt8(58)
+            let asciiDash = UInt8(45)
+            let asciiSpace = UInt8(32)
+            let asciiPeriod = UInt8(46)
+            let asciiTimeSeparator = UInt8(84)
+            let asciiWeekOfYearSeparator = UInt8(87)
+            let asciiZulu = UInt8(90)
+            let asciiPlus = UInt8(43)
+            let asciiMinus = UInt8(45) // Same as dash, renamed for clarity
+            let asciiNull = UInt8(0)
+
             if formatFields.contains(.year) {
                 if formatFields.contains(.weekOfYear), let y = components.yearForWeekOfYear {
                     buffer.append(y, zeroPad: 4)
@@ -268,7 +266,7 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
                         y = 1 - y
                     }
                     if y < 0 {
-                        buffer.appendElement(asciiMinus)
+                        buffer.append(asciiMinus)
                         y = -y
                     }
                     buffer.append(y, zeroPad: 4)
@@ -279,7 +277,7 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
             
             if formatFields.contains(.month) {
                 if needSeparator && dateSeparator == .dash {
-                    buffer.appendElement(asciiDash)
+                    buffer.append(asciiDash)
                 }
                 let m = components.month ?? 1
                 buffer.append(m, zeroPad: 2)
@@ -288,17 +286,17 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
             
             if formatFields.contains(.weekOfYear) {
                 if needSeparator && dateSeparator == .dash {
-                    buffer.appendElement(asciiDash)
+                    buffer.append(asciiDash)
                 }
                 let woy = components.weekOfYear ?? 1
-                buffer.appendElement(asciiWeekOfYearSeparator)
+                buffer.append(asciiWeekOfYearSeparator)
                 buffer.append(woy, zeroPad: 2)
                 needSeparator = true
             }
 
             if formatFields.contains(.day) {
                 if needSeparator && dateSeparator == .dash {
-                    buffer.appendElement(asciiDash)
+                    buffer.append(asciiDash)
                 }
                 
                 if formatFields.contains(.weekOfYear) {
@@ -322,8 +320,8 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
             if formatFields.contains(.time) {
                 if needSeparator {
                     switch dateTimeSeparator {
-                    case .space: buffer.appendElement(asciiSpace)
-                    case .standard: buffer.appendElement(asciiTimeSeparator)
+                    case .space: buffer.append(asciiSpace)
+                    case .standard: buffer.append(asciiTimeSeparator)
                     }
                 }
                 
@@ -334,9 +332,9 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
                 switch timeSeparator {
                 case .colon:
                     buffer.append(h, zeroPad: 2)
-                    buffer.appendElement(asciiColon)
+                    buffer.append(asciiColon)
                     buffer.append(m, zeroPad: 2)
-                    buffer.appendElement(asciiColon)
+                    buffer.append(asciiColon)
                     buffer.append(s, zeroPad: 2)
                 case .omitted:
                     buffer.append(h, zeroPad: 2)
@@ -348,7 +346,7 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
                     let ns = components.nanosecond ?? 0
                     // Format the milliseconds field by truncating the nanosecond toward zero. The `Date` entry point already rounds to the nearest millisecond and carries any overflow across the second boundary through the calendar, then hands this layer a nanosecond that sits exactly on a millisecond, so truncation reads it back correctly and can never overflow the three-digit field. A bare `DateComponents` formatted directly has no anchoring `Date` to carry through, so it keeps the original truncating behavior here unchanged.
                     let ms = Int((Double(ns) / 1_000_000.0).rounded(.towardZero))
-                    buffer.appendElement(asciiPeriod)
+                    buffer.append(asciiPeriod)
                     buffer.append(ms, zeroPad: 3)
                 }
                 
@@ -365,39 +363,30 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
                 }
 
                 if secondsFromGMT == 0 {
-                    buffer.appendElement(asciiZulu)
+                    buffer.append(asciiZulu)
                 } else {
                     let (hour, minuteAndSecond) = abs(secondsFromGMT).quotientAndRemainder(dividingBy: 3600)
                     let (minute, second) = minuteAndSecond.quotientAndRemainder(dividingBy: 60)
                     
                     if secondsFromGMT < 0 {
-                        buffer.appendElement(asciiMinus)
+                        buffer.append(asciiMinus)
                     } else {
-                        buffer.appendElement(asciiPlus)
+                        buffer.append(asciiPlus)
                     }
                     buffer.append(hour, zeroPad: 2)
                     if timeZoneSeparator == .colon {
-                        buffer.appendElement(asciiColon)
+                        buffer.append(asciiColon)
                     }
                     buffer.append(minute, zeroPad: 2)
                     if second != 0 {
                         if timeZoneSeparator == .colon {
-                            buffer.appendElement(asciiColon)
+                            buffer.append(asciiColon)
                         }
                         buffer.append(second, zeroPad: 2)
                     }
                 }
             }
-            
-            // Null-terminate
-            buffer.appendElement(asciiNull)
-            
-            // Make a string
-            let initialized = buffer.relinquishBorrowedMemory()
-            return String(validatingUTF8: initialized.baseAddress!)!
         }
-        
-        return result
     }
 }
 

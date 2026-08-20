@@ -111,9 +111,9 @@ extension String {
                 return Data(capacity: self.utf8.count) {
                     for scalar in self.unicodeScalars {
                         if scalar.isASCII {
-                            $0.append(fromContentsOf: scalar.utf8)
+                            $0._append(copying: scalar.utf8)
                         } else {
-                            $0.appendElement(lossyReplacement)
+                            $0.append(lossyReplacement)
                         }
                     }
                 }

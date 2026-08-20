@@ -24,7 +24,6 @@ add_library(FoundationEssentials
     FoundationEssentials.swift
     IndexPath.swift
     Mutex+ExtendedLifetime.swift
-    OutputBuffer.swift
     Platform.swift
     Progress+Stub.swift
     SortComparator.swift
