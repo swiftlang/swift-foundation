@@ -13,6 +13,7 @@
 ##===----------------------------------------------------------------------===##
 
 add_library(FoundationInternationalization
+    BidiClass+ICU.swift
     BinaryFloatingPoint.swift
     Date+ICU.swift
     Duration+Utils.swift
