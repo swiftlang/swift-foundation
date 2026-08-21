@@ -180,25 +180,25 @@ private struct GregorianCalendarTests {
         test(.init(year: 2935, month: 6, day: -3), expected: Date(timeIntervalSince1970: 30465158400.0))
         test(.init(year: 2935, month: 6, day: 3), expected: Date(timeIntervalSince1970: 30465676800.0))
 
-        test(.init(year: 1582, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: -12232857600.0))
-        test(.init(year: 1582, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: -12232857600.0))
+        test(.init(year: 1582, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: -12234844800.0))
+        test(.init(year: 1582, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: -12231216000.0))
         test(.init(year: 1705, month: 2, weekOfMonth: 1), expected: Date(timeIntervalSince1970: -8359891200.0))
-        test(.init(year: 1705, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: -8349523200.0))
-        test(.init(year: 1828, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: -4465411200.0))
-        test(.init(year: 1828, month: 7, weekOfMonth: 5), expected: Date(timeIntervalSince1970: -4465411200.0))
-        test(.init(year: 1828, month: 11, weekOfMonth: 0), expected: Date(timeIntervalSince1970: -4454784000.0))
-        test(.init(year: 2197, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: 7173878400.0))
-        test(.init(year: 2197, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 7173878400.0))
+        test(.init(year: 1705, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: -8352028800.0))
+        test(.init(year: 1828, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: -4464979200.0))
+        test(.init(year: 1828, month: 7, weekOfMonth: 5), expected: Date(timeIntervalSince1970: -4463164800.0))
+        test(.init(year: 1828, month: 11, weekOfMonth: 0), expected: Date(timeIntervalSince1970: -4455302400.0))
+        test(.init(year: 2197, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: 7171977600.0))
+        test(.init(year: 2197, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 7173792000.0))
         test(.init(year: 2320, month: 2, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 11047536000.0))
-        test(.init(year: 2320, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 11057990400.0))
-        test(.init(year: 2443, month: -5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 14910566400.0))
-        test(.init(year: 2443, month: -1, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14921193600.0))
-        test(.init(year: 2443, month: 7, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14942102400.0))
-        test(.init(year: 2443, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: 14942102400.0))
-        test(.init(year: 2812, month: -3, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 26560396800.0))
-        test(.init(year: 2812, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 26581392000.0))
-        test(.init(year: 2812, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 26581392000.0))
-        test(.init(year: 2935, month: 6, weekOfMonth: 0), expected: Date(timeIntervalSince1970: 30465504000.0))
+        test(.init(year: 2320, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 11055398400.0))
+        test(.init(year: 2443, month: -5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 14912208000.0))
+        test(.init(year: 2443, month: -1, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14920070400.0))
+        test(.init(year: 2443, month: 7, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14940633600.0))
+        test(.init(year: 2443, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: 14942448000.0))
+        test(.init(year: 2812, month: -3, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 26558236800.0))
+        test(.init(year: 2812, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 26581219200.0))
+        test(.init(year: 2812, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 26583033600.0))
+        test(.init(year: 2935, month: 6, weekOfMonth: 0), expected: Date(timeIntervalSince1970: 30464640000.0))
 
         test(.init(weekOfYear: 20, yearForWeekOfYear: 1582), expected: Date(timeIntervalSince1970: -12231820800.0))
         test(.init(weekOfYear: -25, yearForWeekOfYear: 1705), expected: Date(timeIntervalSince1970: -8378035200.0))
@@ -215,6 +215,28 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: -52, yearForWeekOfYear: 2812), expected: Date(timeIntervalSince1970: 26538883200.0))
         test(.init(weekOfYear: 1, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30452544000.0))
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
+    }
+
+    // Regression test for https://github.com/swiftlang/swift-foundation/issues/532:
+    // year + month + weekOfMonth (without day or weekday) resolved to the 1st of the month
+    // for every weekOfMonth value instead of the correct week.
+    @Test func testDateFromComponentsWeekOfMonth() {
+        let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
+            let date = cal.date(from: dateComponents)
+            #expect(date == expected, "date components: \(dateComponents)", sourceLocation: sourceLocation)
+        }
+
+        test(.init(year: 2024, month: 1, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 1703980800.0)) // 2023-12-31
+        test(.init(year: 2024, month: 1, weekOfMonth: 2), expected: Date(timeIntervalSince1970: 1704585600.0)) // 2024-01-07
+        test(.init(year: 2024, month: 1, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705190400.0)) // 2024-01-14
+        test(.init(year: 2024, month: 1, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 1705795200.0)) // 2024-01-21
+        test(.init(year: 2024, month: 1, weekOfMonth: 5), expected: Date(timeIntervalSince1970: 1706400000.0)) // 2024-01-28
+
+        // day and weekOfMonth together: day takes precedence, weekOfMonth is ignored.
+        test(.init(year: 2024, month: 1, day: 20, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705708800.0)) // 2024-01-20
+        // weekOfMonth and weekday together: resolves to the given weekday within that week.
+        test(.init(year: 2024, month: 1, weekday: 4, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705449600.0)) // 2024-01-17
     }
 
     // MARK: - DateComponents from date
