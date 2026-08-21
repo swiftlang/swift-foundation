@@ -101,6 +101,50 @@ extension OutputRawSpan {
             }
         }
     }
+
+    mutating func _append<S: Sequence<Element>, Element: ConvertibleToBytes & ConvertibleFromBytes>(copying elements: S) {
+        let early: Void? = elements.withContiguousStorageIfAvailable { buffer in
+            self._append(copying: buffer.span.bytes)
+        }
+
+        if early == nil {
+            self.withUnsafeMutableBytes { buffer, initializedCount in
+                let uninitialized = UnsafeMutableRawBufferPointer(rebasing: buffer.suffix(from: initializedCount))
+                var (iterator, idx) = elements._copyContents(initializing: uninitialized.assumingMemoryBound(to: Element.self))
+                precondition(iterator.next() == nil, "Insufficient space to store contents in OutputRawSpan")
+                initializedCount += idx - uninitialized.startIndex
+            }
+        }
+    }
+}
+
+extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
+    mutating func _append(copying span: Span<Element>) {
+        precondition(self.freeCapacity >= span.count, "Insufficient space to copy the provided span (have space for \(self.freeCapacity) but writing \(span.count))")
+        guard !span.isEmpty else { return }
+        self.withUnsafeMutableBufferPointer { buffer, initializedCount in
+            span.withUnsafeBufferPointer { src in
+                let dstPtr = buffer.baseAddress.unsafelyUnwrapped.advanced(by: initializedCount)
+                dstPtr.initialize(from: src.baseAddress.unsafelyUnwrapped, count: src.count)
+                initializedCount += src.count
+            }
+        }
+    }
+
+    mutating func _append<S: Sequence<Element>>(copying elements: S) {
+        let early: Void? = elements.withContiguousStorageIfAvailable { buffer in
+            self._append(copying: buffer.span)
+        }
+
+        if early == nil {
+            self.withUnsafeMutableBufferPointer { buffer, initializedCount in
+                let uninitialized = UnsafeMutableBufferPointer(rebasing: buffer.suffix(from: initializedCount))
+                var (iterator, idx) = elements._copyContents(initializing: uninitialized)
+                precondition(iterator.next() == nil, "Insufficient space to store contents in OutputSpan")
+                initializedCount += idx - uninitialized.startIndex
+            }
+        }
+    }
 }
 
 extension String {
@@ -117,6 +161,14 @@ extension String {
             #else
             self.utf8Span
             #endif
+        }
+    }
+
+    package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
+        try self.init(unsafeUninitializedCapacity: capacity) { buffer throws(E) in
+            var outputSpan = OutputSpan(buffer: buffer, initializedCount: 0)
+            try body(&outputSpan)
+            return outputSpan.finalize(for: buffer)
         }
     }
 }

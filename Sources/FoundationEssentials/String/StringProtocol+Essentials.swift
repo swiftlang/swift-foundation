@@ -111,9 +111,9 @@ extension String {
                 return Data(capacity: self.utf8.count) {
                     for scalar in self.unicodeScalars {
                         if scalar.isASCII {
-                            $0.append(fromContentsOf: scalar.utf8)
+                            $0._append(copying: scalar.utf8)
                         } else {
-                            $0.appendElement(lossyReplacement)
+                            $0.append(lossyReplacement)
                         }
                     }
                 }
@@ -242,7 +242,7 @@ extension String {
                     guard let valid = UInt8(exactly: scalar.value) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(valid)
+                    buffer.append(valid)
                 }
             }
         case .macOSRoman:
@@ -251,7 +251,7 @@ extension String {
                     guard let value = UInt8(macRomanFor: scalar) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(value)
+                    buffer.append(value)
                 }
             }
         case .japaneseEUC:
