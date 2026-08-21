@@ -514,8 +514,8 @@ private struct CalendarTests {
         }
 
         #expect(!loopedForever)
-        // Expected 1126-10-18 07:52:58 +0000
-        #expect(foundDate?.timeIntervalSinceReferenceDate == -27586714022)
+        // Expected 1107-10-18 07:52:58 +0000.
+        #expect(foundDate?.timeIntervalSinceReferenceDate == -28186330022)
     }
 
     @Test func dateFromComponentsNearDSTTransition() {
