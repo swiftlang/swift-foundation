@@ -385,21 +385,21 @@ extension Calendar {
                 }
                 
                 let calendar = recurrence.calendar
-                                
+
                 var dates: [Date] = [anchor]
-                     
-                let components = calendar._dateComponents([.second, .minute, .hour, .day, .month, .isLeapMonth, .dayOfYear, .weekday], from: anchor) 
+
+                lazy var components = calendar._dateComponents([.second, .minute, .hour, .day, .month, .isLeapMonth, .dayOfYear, .weekday], from: anchor)
 
                 var componentCombinations = Calendar._DateComponentCombinations()
-                
+
                 if recurrence.frequency == .yearly || recurrence.frequency == .monthly {
                     if dayOfYearAction == .expand {
                         componentCombinations.months = nil
                         componentCombinations.daysOfMonth = nil
-                        componentCombinations.daysOfYear = recurrence.daysOfTheYear
+                        componentCombinations.daysOfYear = Set(recurrence.daysOfTheYear)
                     } else {
-                        componentCombinations.months = if recurrence.months.isEmpty { [RecurrenceRule.Month(from: components)!] } else { recurrence.months }
-                        componentCombinations.daysOfMonth = if recurrence.daysOfTheMonth.isEmpty { [components.day!] } else { recurrence.daysOfTheMonth}
+                        componentCombinations.months = if recurrence.months.isEmpty { [RecurrenceRule.Month(from: components)!] } else { Set(recurrence.months) }
+                        componentCombinations.daysOfMonth = if recurrence.daysOfTheMonth.isEmpty { [components.day!] } else { Set(recurrence.daysOfTheMonth) }
                         componentCombinations.daysOfYear = nil
                     }
                 } else {
@@ -409,7 +409,7 @@ extension Calendar {
                 }
 
                 if weekdayAction == .expand {
-                    componentCombinations.weekdays = recurrence.weekdays
+                    componentCombinations.weekdays = Set(recurrence.weekdays)
                     componentCombinations.daysOfYear = nil
                     componentCombinations.daysOfMonth = nil
                     if recurrence.frequency == .yearly, monthAction != .expand {
@@ -425,17 +425,21 @@ extension Calendar {
                 }
                 if weekAction == .expand {
                     // In a yearly recurrence with weeks specified, results do not land on any specific month
-                    componentCombinations.weeksOfYear = recurrence.weeks
+                    componentCombinations.weeksOfYear = Set(recurrence.weeks)
                     componentCombinations.months = nil
                 }
                 if recurrence.frequency != .hourly, recurrence.frequency != .minutely {
-                    componentCombinations.hours = if hourAction == .expand { recurrence.hours } else { components.hour.map { [$0] } }
+                    componentCombinations.hours = if hourAction == .expand { Set(recurrence.hours) } else { components.hour.map { Set([$0]) } }
                 }
                 if recurrence.frequency != .minutely {
-                    componentCombinations.minutes = if minuteAction == .expand { recurrence.minutes } else { components.minute.map { [$0] } }
+                    componentCombinations.minutes = if minuteAction == .expand { Set(recurrence.minutes) } else { components.minute.map { Set([$0]) } }
                 }
-                componentCombinations.seconds = if secondAction == .expand { recurrence.seconds } else { components.second.map { [$0] } }
-                
+                componentCombinations.seconds = if secondAction == .expand { Set(recurrence.seconds) } else { components.second.map { Set([$0]) } }
+
+                guard let componentCombinations = componentCombinations.validate(withCalendar: calendar) else {
+                    finished = true
+                    return
+                }
 
                 let searchInterval = calendar.dateInterval(of: recurrence.frequency.component, for: anchor)!
                 let searchRange = searchInterval.start..<searchInterval.end
@@ -559,7 +563,7 @@ extension Calendar {
 
 extension Calendar.RecurrenceRule {
     internal func _limitMonths(dates: inout [Date], anchor: Date) {
-        let months = calendar._normalizedMonths(months, for: anchor) 
+        let months = calendar._normalizedMonths(Set(months), for: anchor)
         
         dates = dates.filter {
             let idx = calendar.component(.month, from: $0)
@@ -634,9 +638,7 @@ extension Calendar.RecurrenceRule {
             parentComponent = .month
         }
 
-        let weekdayComponents = self.calendar._weekdayComponents(for: weekdays,
-                                                   in: parentComponent,
-                                                   anchor: anchor)
+        let weekdayComponents = self.calendar._weekdayComponents(for: Set(weekdays), in: parentComponent, anchor: anchor)
         dates = dates.filter { date in
             weekdayComponents?.contains(where: { components in
                 calendar.date(date, matchesComponents: components)
@@ -654,14 +656,84 @@ extension Calendar {
     ///
     /// Components here can be negative integers to indicate backwards search.
     struct _DateComponentCombinations {
-        var daysOfMonth: [Int]? = nil
-        var daysOfYear: [Int]? = nil
-        var weeksOfYear: [Int]? = nil
-        var months: [RecurrenceRule.Month]? = nil
-        var weekdays: [RecurrenceRule.Weekday]? = nil
-        var hours: [Int]? = nil
-        var minutes: [Int]? = nil
-        var seconds: [Int]? = nil
+        var daysOfMonth: Set<Int>? = nil
+        var daysOfYear: Set<Int>? = nil
+        var weeksOfYear: Set<Int>? = nil
+        var months: Set<RecurrenceRule.Month>? = nil
+        var weekdays: Set<RecurrenceRule.Weekday>? = nil
+        var hours: Set<Int>? = nil
+        var minutes: Set<Int>? = nil
+        var seconds: Set<Int>? = nil
+
+        func filterUnit(_ values: Set<Int>, for unit: Calendar.Component, withCalendar calendar: Calendar, allowsNegative: Bool) -> Set<Int> {
+            values.filter {
+                guard $0 >= 0 || allowsNegative else { return false }
+                return calendar.value($0 >= 0 ? $0 : -$0, isValidFor: unit)
+            }
+        }
+
+        /// Returns a copy of this combination with out-of-range values removed.
+        /// Returns `nil` if the combination is effectively empty.
+        func validate(withCalendar calendar: Calendar) -> _DateComponentCombinations? {
+            var new = _DateComponentCombinations()
+            var hasValue = false
+            if let daysOfMonth {
+                let validated = filterUnit(daysOfMonth, for: .day, withCalendar: calendar, allowsNegative: true)
+                if !validated.isEmpty { hasValue = true }
+                new.daysOfMonth = validated
+            }
+
+            if let daysOfYear {
+                let validated = filterUnit(daysOfYear, for: .dayOfYear, withCalendar: calendar, allowsNegative: true)
+                if !validated.isEmpty { hasValue = true }
+                new.daysOfYear = validated
+            }
+
+            if let weeksOfYear {
+                let validated = filterUnit(weeksOfYear, for: .weekOfYear, withCalendar: calendar, allowsNegative: true)
+                if !validated.isEmpty { hasValue = true }
+                new.weeksOfYear = validated
+            }
+
+            if let hours {
+                let validated = filterUnit(hours, for: .hour, withCalendar: calendar, allowsNegative: false)
+                if !validated.isEmpty { hasValue = true }
+                new.hours = validated
+            }
+
+            if let minutes {
+                let validated = filterUnit(minutes, for: .minute, withCalendar: calendar, allowsNegative: false)
+                if !validated.isEmpty { hasValue = true }
+                new.minutes = validated
+            }
+
+            if let seconds {
+                let validated = filterUnit(seconds, for: .second, withCalendar: calendar, allowsNegative: false)
+                if !validated.isEmpty { hasValue = true }
+                new.seconds = validated
+            }
+
+            if let months {
+                let validated = months.filter { calendar.value($0.index >= 0 ? $0.index : -$0.index, isValidFor: .month) }
+                if !validated.isEmpty { hasValue = true }
+                new.months = validated
+            }
+
+            if let weekdays {
+                let validated = weekdays.filter { weekday in
+                    switch weekday {
+                    case .every:
+                        true
+                    case .nth(let n, _):
+                        calendar.value(n > 0 ? n : -n, isValidFor: .weekdayOrdinal)
+                    }
+                }
+                if !validated.isEmpty { hasValue = true }
+                new.weekdays = validated
+            }
+
+            return hasValue ? new : nil
+        }
     }
 
     /// Expand `_DateComponentCombinations` into a flat array of single-valued `DateComponents` for the fast path. Negative ordinals are translated to `{month, weekday, weekOfMonth}` using `anchor`'s month structure. Returns nil if the pattern can't be expanded.
@@ -710,9 +782,9 @@ extension Calendar {
             let targetMonth: Int
             let targetIsLeap: Bool
             let targetYear: Int
-            if let ms = c.months, ms.count == 1 {
-                targetMonth = ms[0].index
-                targetIsLeap = ms[0].isLeap
+            if let ms = c.months, ms.count == 1, let m = ms.first {
+                targetMonth = m.index
+                targetIsLeap = m.isLeap
                 targetYear = self.component(.year, from: anchor)
             } else if c.months == nil || c.months!.isEmpty {
                 targetMonth = self.component(.month, from: anchor)
@@ -736,18 +808,18 @@ extension Calendar {
         }
 
         var base = DateComponents()
-        if let ms = c.months, ms.count == 1 { base.month = ms[0].index; base.isLeapMonth = ms[0].isLeap }
-        if let woy = c.weeksOfYear, woy.count == 1 { base.weekOfYear = woy[0] }
-        if let doy = c.daysOfYear, doy.count == 1 { base.dayOfYear = doy[0] }
-        if let dom = c.daysOfMonth, dom.count == 1 { base.day = dom[0] }
-        if let hs = c.hours, hs.count == 1 { base.hour = hs[0] }
-        if let mins = c.minutes, mins.count == 1 { base.minute = mins[0] }
-        if let secs = c.seconds, secs.count == 1 { base.second = secs[0] }
+        if let ms = c.months, ms.count == 1, let m = ms.first { base.month = m.index; base.isLeapMonth = m.isLeap }
+        if let woy = c.weeksOfYear, woy.count == 1, let first = woy.first { base.weekOfYear = first }
+        if let doy = c.daysOfYear, doy.count == 1, let first = doy.first { base.dayOfYear = first }
+        if let dom = c.daysOfMonth, dom.count == 1, let first = dom.first { base.day = first }
+        if let hs = c.hours, hs.count == 1, let first = hs.first { base.hour = first }
+        if let mins = c.minutes, mins.count == 1, let first = mins.first { base.minute = first }
+        if let secs = c.seconds, secs.count == 1, let first = secs.first { base.second = first }
 
         var seeds: [DateComponents]
         if let wds = c.weekdays {
-            if wds.count == 1 {
-                guard Self._translateWeekday(wds[0], into: &base, hasNegativeOrdinal: hasNegativeOrdinal, month: negOrdMonth, isLeapMonth: negOrdIsLeap, day1Weekday: negOrdDay1Weekday, daysInMonth: negOrdDaysInMonth, firstWeekday: negOrdFirstWeekday, minDays: negOrdMinDays) else { return nil }
+            if wds.count == 1, let wd = wds.first {
+                guard Self._translateWeekday(wd, into: &base, hasNegativeOrdinal: hasNegativeOrdinal, month: negOrdMonth, isLeapMonth: negOrdIsLeap, day1Weekday: negOrdDay1Weekday, daysInMonth: negOrdDaysInMonth, firstWeekday: negOrdFirstWeekday, minDays: negOrdMinDays) else { return nil }
                 seeds = [base]
             } else {
                 seeds = []
@@ -821,7 +893,7 @@ extension Calendar {
     ///   - anchor: a date around which to perform the expansion
     /// - Returns: array of `DateComponents`, which can be used to enumerate all
     ///   weekdays of intereset, or to filter a list of dates
-    func _weekdayComponents(for weekdays: [Calendar.RecurrenceRule.Weekday],
+    func _weekdayComponents(for weekdays: Set<Calendar.RecurrenceRule.Weekday>,
                             in parent: Calendar.Component,
                             anchor: Date) -> [DateComponents]? {
         /// Map of weekdays to which occurences of the weekday we are interested
@@ -901,7 +973,7 @@ extension Calendar {
     }
 
     /// Normalized months so that all months are positive
-    func _normalizedMonths(_ months: [Calendar.RecurrenceRule.Month], for anchor: Date) -> [Calendar.RecurrenceRule.Month] {
+    func _normalizedMonths(_ months: Set<Calendar.RecurrenceRule.Month>, for anchor: Date) -> [Calendar.RecurrenceRule.Month] {
         lazy var monthRange = self.range(of: .month, in: .year, for: anchor)
         return months.compactMap { month in
             if month.index > 0 {
@@ -917,7 +989,7 @@ extension Calendar {
     }
     
     /// Normalized days in a month so that all days are positive
-    internal func _normalizedDaysOfMonth(_ days: [Int], for anchor: Date) -> [Int] {
+    internal func _normalizedDaysOfMonth(_ days: Set<Int>, for anchor: Date) -> [Int] {
         lazy var dayRange = self.range(of: .day, in: .month, for: anchor)
         return days.compactMap { day in
             if day > 0 {
@@ -931,7 +1003,7 @@ extension Calendar {
     }
     
     /// Normalized days in a year so that all days are positive
-    internal func _normalizedDaysOfYear(_ days: [Int], for anchor: Date) -> [Int] {
+    internal func _normalizedDaysOfYear(_ days: Set<Int>, for anchor: Date) -> [Int] {
         lazy var dayRange = self.range(of: .day, in: .year, for: anchor)
         return days.compactMap { day in
             if day > 0 {
@@ -945,7 +1017,7 @@ extension Calendar {
     }
 
     /// Normalized weeks of year so that all weeks are positive
-    fileprivate func _normalizedWeeksOfYear(_ weeksOfYear: [Int], anchor: Date) -> [Int] {
+    fileprivate func _normalizedWeeksOfYear(_ weeksOfYear: Set<Int>, anchor: Date) -> [Int] {
         // Positive week indices can be treated as a date component the way they
         // are. Negative indices mean that we count backwards from the last week
         // of the year that contains the anchor weekday
