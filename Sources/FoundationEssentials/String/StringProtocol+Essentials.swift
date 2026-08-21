@@ -242,7 +242,7 @@ extension String {
                     guard let valid = UInt8(exactly: scalar.value) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(valid)
+                    buffer.append(valid)
                 }
             }
         case .macOSRoman:
@@ -251,7 +251,7 @@ extension String {
                     guard let value = UInt8(macRomanFor: scalar) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(value)
+                    buffer.append(value)
                 }
             }
         case .japaneseEUC:
