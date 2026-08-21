@@ -2953,6 +2953,40 @@ private struct URLTests {
         #expect(invalid == nil)
     }
 
+    @Test(.enabled(if: foundation_swift_url_v2_enabled()))
+    func hostPartialIPLiteralIsRejected() throws {
+        // An "@" inside an IP-literal is still the userinfo delimiter, which
+        // leaves only part of the IP-literal in the host, e.g. host = "host]".
+        // These should be rejected, matching WHATWG and RFC 3986 parsers.
+        #expect(URL(string: "x://[v1.a@host]/") == nil)
+        #expect(URL(string: "x://[@example.com]/") == nil)
+        #expect(URL(string: "x://[v1.a@host]:80/") == nil)
+        #expect(URL(string: "x://[fe80::a%25en1@host]/") == nil)
+
+        // The same is true for a "[" or "]" anywhere else in the host,
+        // whether or not the IP-literal was terminated.
+        #expect(URL(string: "x://a[b]c/") == nil)
+        #expect(URL(string: "x://a]b/") == nil)
+        #expect(URL(string: "x://[unterminated/") == nil)
+
+        // An already percent-encoded bracket is a valid host character.
+        var url = try #require(URL(string: "x://%5Bfoo%5D/"))
+        #expect(url.host(percentEncoded: true) == "%5Bfoo%5D")
+
+        // An "@" after the IP-literal still delimits the userinfo, so the
+        // whole IP-literal belongs to the user and the host is intact.
+        url = try #require(URL(string: "x://[foo]@bar/"))
+        #expect(url.absoluteString == "x://%5Bfoo%5D@bar/")
+        #expect(url.user(percentEncoded: true) == "%5Bfoo%5D")
+        #expect(url.host(percentEncoded: true) == "bar")
+
+        // An unterminated "[" before the "@" only affects the user.
+        url = try #require(URL(string: "x://[v1.a@host/"))
+        #expect(url.absoluteString == "x://%5Bv1.a@host/")
+        #expect(url.user(percentEncoded: true) == "%5Bv1.a")
+        #expect(url.host(percentEncoded: true) == "host")
+    }
+
     #if !os(Windows)
     @Test func tildeFilePath() throws {
         func isAbsolute(_ url: URL) -> Bool {
