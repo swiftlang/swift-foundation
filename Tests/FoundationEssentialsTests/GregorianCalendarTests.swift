@@ -220,7 +220,7 @@ private struct GregorianCalendarTests {
     // Regression test for https://github.com/swiftlang/swift-foundation/issues/532:
     // year + month + weekOfMonth (without day or weekday) resolved to the 1st of the month
     // for every weekOfMonth value instead of the correct week.
-    @Test func testDateFromComponentsWeekOfMonthWithoutWeekday() {
+    @Test func testDateFromComponentsWeekOfMonth() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
             let date = cal.date(from: dateComponents)
@@ -232,6 +232,11 @@ private struct GregorianCalendarTests {
         test(.init(year: 2024, month: 1, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705190400.0)) // 2024-01-14
         test(.init(year: 2024, month: 1, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 1705795200.0)) // 2024-01-21
         test(.init(year: 2024, month: 1, weekOfMonth: 5), expected: Date(timeIntervalSince1970: 1706400000.0)) // 2024-01-28
+
+        // day and weekOfMonth together: day takes precedence, weekOfMonth is ignored.
+        test(.init(year: 2024, month: 1, day: 20, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705708800.0)) // 2024-01-20
+        // weekOfMonth and weekday together: resolves to the given weekday within that week.
+        test(.init(year: 2024, month: 1, weekday: 4, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705449600.0)) // 2024-01-17
     }
 
     // MARK: - DateComponents from date
