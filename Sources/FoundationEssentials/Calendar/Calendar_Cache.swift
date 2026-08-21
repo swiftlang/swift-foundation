@@ -44,9 +44,27 @@ internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool {
 internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
     _foundation_swift_chinese_calendar_feature_enabled()
 }
+
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool {
+    // _foundation_swift_buddhist_calendar_feature_enabled() — once Apple adds the underscored binding
+    return false
+}
+
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool {
+    // _foundation_swift_japanese_calendar_feature_enabled() — once Apple adds the underscored binding
+    return false
+}
+
+internal func foundation_swift_roc_calendar_feature_enabled() -> Bool {
+    // _foundation_swift_roc_calendar_feature_enabled() — once Apple adds the underscored binding
+    return false
+}
 #else
 internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return true }
 internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return true }
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_roc_calendar_feature_enabled() -> Bool { return false }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
@@ -59,6 +77,15 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
     }
     if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
         return _CalendarChinese.self
+    }
+    if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
+        return _CalendarBuddhist.self
+    }
+    if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
+        return _CalendarJapanese.self
+    }
+    if foundation_swift_roc_calendar_feature_enabled() && identifier == .republicOfChina {
+        return _CalendarRepublicOfChina.self
     }
 #endif
     return _calendarICUClass()

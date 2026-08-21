@@ -18,13 +18,17 @@ target_sources(FoundationEssentials PRIVATE
     CalendarUtility.swift
     Calendar_Astronomy.swift
     Calendar_Autoupdating.swift
+    Calendar_Buddhist.swift
     Calendar_Cache.swift
     Calendar_Chinese.swift
     Calendar_Enumerate.swift
     Calendar_Gregorian.swift
+    Calendar_GregorianBacked.swift
     Calendar_Hebrew.swift
+    Calendar_Japanese.swift
     Calendar_Protocol.swift
     Calendar_Recurrence.swift
+    Calendar_RepublicOfChina.swift
     Date+FormatStyle.swift
     Date+Locale.swift
     DateComponents.swift
