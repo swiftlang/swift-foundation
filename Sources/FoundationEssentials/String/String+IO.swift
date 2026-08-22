@@ -175,17 +175,14 @@ extension String {
             self.init(decoding: bytes.lazy.map { UInt16($0) }, as: UTF16.self)
         case .macOSRoman:
             func buildString(_ bytes: UnsafeBufferPointer<UInt8>) -> String {
-                String(unsafeUninitializedCapacity: bytes.count * 3) { buffer in
-                    var next = 0
+                String(_capacity: bytes.count * 3) { buffer in
                     for byte in bytes {
                         if Unicode.ASCII.isASCII(byte) {
-                            buffer.initializeElement(at: next, to: byte)
-                            next += 1
+                            buffer.append(byte)
                         } else {
-                            next = buffer.suffix(from: next).initialize(fromContentsOf: byte.macRomanNonASCIIAsUTF8)
+                            buffer._append(copying: String.utf8(forMacRomanNonASCII: byte))
                         }
                     }
-                    return next
                 }
             }
             self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
