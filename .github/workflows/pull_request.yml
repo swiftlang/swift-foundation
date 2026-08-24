@@ -38,7 +38,7 @@ jobs:
         run: apt update && apt install -y ninja-build jq curl
       - name: Install CMake
         id: install-cmake
-        uses: swiftlang/github-workflows/.github/actions/install-cmake@main
+        uses: swiftlang/github-workflows/.github/actions/install-cmake@0.0.15
         with:
           # Version from swiftlang/swift update-checkout-config.json
           cmake-version: 3.30.2
