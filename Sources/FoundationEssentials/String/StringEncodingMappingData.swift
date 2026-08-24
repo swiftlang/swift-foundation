@@ -152,9 +152,7 @@ extension String {
         if span[2] == 0 {
             span = span.extracting(droppingLast: 1)
         }
-
-        // This is immortal because it comes from an InlineArray embedded directly in the binary
-        return _overrideLifetime(span, copying: ())
+        return span
     }
 }
 
