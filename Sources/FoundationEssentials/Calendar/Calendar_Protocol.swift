@@ -77,6 +77,14 @@ extension _CalendarProtocol {
     package var gregorianStartDate: Date? { nil }
     package var debugDescription: String { "\(identifier)" }
     
+    package func hash(into hasher: inout Hasher) {
+        _CalendarUtility.hash(self, into: &hasher)
+    }
+
+    package func isDateInWeekend(_ date: Date) -> Bool {
+        _CalendarUtility.isDateInWeekend(date, in: self)
+    }
+
     package var localeIdentifier: String {
         // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
         locale?.identifier ?? ""

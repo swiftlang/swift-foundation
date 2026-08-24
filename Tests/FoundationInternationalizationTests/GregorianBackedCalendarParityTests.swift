@@ -41,6 +41,16 @@ private enum GregorianBackedFamily: String, Sendable, CaseIterable, CustomTestSt
         return Calendar(inner: inner)
     }
 
+    func calendar(firstWeekday: Int?, minimumDaysInFirstWeek: Int?) -> Calendar {
+        let inner: any _CalendarProtocol
+        switch self {
+        case .buddhist: inner = _CalendarBuddhist(identifier: .buddhist, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        case .japanese: inner = _CalendarJapanese(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        case .roc: inner = _CalendarRepublicOfChina(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        }
+        return Calendar(inner: inner)
+    }
+
     var icu: Calendar {
         Calendar(inner: _CalendarICU(identifier: identifier, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
     }
@@ -381,5 +391,34 @@ private struct GregorianBackedEraOrdinalityParityTests {
         for probe in Self.dates {
             #expect(calendar.ordinality(of: .year, in: .era, for: probe.date) == calendar.dateComponents([.year], from: probe.date).year, "at \(probe.label)")
         }
+    }
+}
+
+/// The three calendars share one `hash(into:)` from `_CalendarProtocol`, so they must honour the Hashable contract: calendars that compare equal have to hash equally.
+@Suite("Gregorian-Backed Hash Contract")
+private struct GregorianBackedHashContractTests {
+
+    private static func hashValue(_ calendar: Calendar) -> Int {
+        var hasher = Hasher()
+        calendar.hash(into: &hasher)
+        return hasher.finalize()
+    }
+
+    /// An unset `firstWeekday` and one set explicitly to the value it would resolve to are equal, so they must hash the same. Hashing the stored value instead of the resolved one breaks this.
+    @Test(arguments: GregorianBackedFamily.allCases)
+    func resolvedAndExplicitSettingsHashAlike(_ family: GregorianBackedFamily) {
+        let unset = family.calendar(firstWeekday: nil, minimumDaysInFirstWeek: nil)
+        let explicit = family.calendar(firstWeekday: unset.firstWeekday, minimumDaysInFirstWeek: unset.minimumDaysInFirstWeek)
+        #expect(unset == explicit)
+        #expect(Self.hashValue(unset) == Self.hashValue(explicit))
+    }
+
+    @Test(arguments: GregorianBackedFamily.allCases)
+    func differentTimeZonesHashApart(_ family: GregorianBackedFamily) {
+        let gmt = family.calendar(firstWeekday: nil, minimumDaysInFirstWeek: nil)
+        var tokyo = gmt
+        tokyo.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        #expect(gmt != tokyo)
+        #expect(Self.hashValue(gmt) != Self.hashValue(tokyo))
     }
 }

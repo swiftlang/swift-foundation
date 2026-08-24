@@ -132,16 +132,6 @@ extension _GregorianBackedCalendar {
         return Self(identifier: identifier, timeZone: args.timeZone, locale: args.locale, firstWeekday: args.firstWeekday, minimumDaysInFirstWeek: args.minimumDaysInFirstWeek, gregorianStartDate: nil)
     }
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-        hasher.combine(timeZone)
-        hasher.combine(firstWeekday)
-        hasher.combine(minimumDaysInFirstWeek)
-        hasher.combine(localeIdentifier)
-        hasher.combine(preferredFirstWeekday)
-        hasher.combine(preferredMinimumDaysInFirstweek)
-    }
-
     func supportsNextDateFastPath(for components: Calendar.ComponentSet) -> Bool {
         gregorian.supportsNextDateFastPath(for: components)
     }
@@ -181,6 +171,7 @@ extension _GregorianBackedCalendar {
     }
 
     func isDateInWeekend(_ date: Date) -> Bool {
+        // The engine has a faster path than the shared helper, so use it rather than recomputing components here.
         gregorian.isDateInWeekend(date)
     }
 
