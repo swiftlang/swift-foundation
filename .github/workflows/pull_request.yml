@@ -35,15 +35,26 @@ jobs:
         uses: actions/checkout@v7
       - name: Install Dependencies
         shell: bash
-        run: apt update && apt install -y cmake ninja-build jq
+        run: apt update && apt install -y ninja-build jq curl
+      - name: Install CMake
+        id: install-cmake
+        uses: swiftlang/github-workflows/.github/actions/install-cmake@0.0.15
+        with:
+          # Version from swiftlang/swift update-checkout-config.json
+          cmake-version: 3.30.2
+          hash: cdd7fb352605cee3ae53b0e18b5929b642900e33d6b0173e19f6d4f2067ebf16
       - name: Configure Project
         shell: bash
+        env:
+          CMAKE: ${{ steps.install-cmake.outputs.cmake }}
         run: |
           mkdir -p build/.cmake/api/v1/query
           touch build/.cmake/api/v1/query/codemodel-v2
-          cmake -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
+          "$CMAKE" -G 'Ninja' -B build -S . -DCMAKE_C_COMPILER=clang -DCMAKE_Swift_COMPILER=swiftc -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=YES
       - name: Validate CMake File Lists Match SwiftPM
         shell: bash
+        env:
+          CMAKE: ${{ steps.install-cmake.outputs.cmake }}
         run: |
           swift package describe --type json | jq '.targets[] | select(.name == "FoundationEssentials") | .sources[]' | sort > /tmp/swiftpm-essentials
           cat build/.cmake/api/v1/reply/target-FoundationEssentials-*.json | jq '.sources[].path[29:]' | sort > /tmp/cmake-essentials
@@ -55,7 +66,10 @@ jobs:
           exit $exit_code
       - name: Build Project
         shell: bash
-        run: cmake --build build
+        env:
+          CMAKE: ${{ steps.install-cmake.outputs.cmake }}
+        run: |
+          "$CMAKE" --build build
 
   soundness:
     name: Soundness
