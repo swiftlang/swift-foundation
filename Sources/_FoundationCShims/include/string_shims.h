@@ -39,12 +39,6 @@ inline static int _stringshims_LC_ALL_MASK() {
 #include <strings.h>
 #endif
 
-#define _STRINGSHIMS_MACROMAN_MAP_SIZE 129
-INTERNAL const uint8_t _stringshims_macroman_mapping[_STRINGSHIMS_MACROMAN_MAP_SIZE][3];
-
-#define _STRINGSHIMS_NEXTSTEP_MAP_SIZE 128
-INTERNAL const uint16_t _stringshims_nextstep_mapping[_STRINGSHIMS_NEXTSTEP_MAP_SIZE];
-
 #ifdef __cplusplus
 }
 #endif
