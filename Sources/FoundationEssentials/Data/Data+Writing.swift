@@ -73,7 +73,7 @@ private func openatFileDescriptorProtected(dirfd: Int32, name: UnsafePointer<CCh
 private var minimalOpenFlagsForDirectories: Int32 {
 #if canImport(Darwin)
     O_SEARCH
-#elseif os(WASI) || os(Emscripten)
+#elseif os(WASI) || os(Emscripten) || os(OpenBSD)
     O_DIRECTORY | O_RDONLY
 #else
     O_DIRECTORY | O_PATH
