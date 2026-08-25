@@ -570,7 +570,6 @@ private struct CalendarTests {
         #expect(first != last)
     }
 
-    /// Pins which occurrence each `RepeatedTimePolicy` selects in each search direction. The policy is applied in the order the search encounters the repeated times, so the two cases swap meaning in absolute time under `.backward`.
     @Test func repeatedTimePolicyIsAppliedInSearchOrder() throws {
         let earlier = Date(timeIntervalSince1970: 1730622000.0) // 2024-11-03T01:20:00-0700
         let later = Date(timeIntervalSince1970: 1730625600.0)   // 2024-11-03T01:20:00-0800
