@@ -73,9 +73,6 @@ private struct CalendarICUTests {
     }
 #endif
 
-    // https://github.com/swiftlang/swift-foundation/issues/532
-    // `date(from:)` with only `weekOfMonth` set (no `day`) used to always resolve to the
-    // 1st of the month because ICU's day-of-month default took priority over week-of-month.
     @Test(arguments: [
         (1, Date(timeIntervalSince1970: 1703980800)), // 2023-12-31
         (2, Date(timeIntervalSince1970: 1704585600)), // 2024-01-07
@@ -85,21 +82,17 @@ private struct CalendarICUTests {
     ])
     func dateFromComponentsWeekOfMonth(weekOfMonth: Int, expected: Date) {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
-        let components = DateComponents(year: 2024, month: 1, weekOfMonth: weekOfMonth)
-        #expect(icuCalendar.date(from: components) == expected)
+        #expect(icuCalendar.date(from: DateComponents(year: 2024, month: 1, weekOfMonth: weekOfMonth)) == expected)
     }
 
-    // Parity check: `_CalendarICU` and `_CalendarGregorian` must agree on `date(from:)` when
-    // only `weekOfMonth` is set. See https://github.com/swiftlang/swift-foundation/issues/532
-    @Test func dateFromComponentsWeekOfMonthMatchesGregorianBackend() {
+    @Test(arguments: 1...5)
+    func dateFromComponentsWeekOfMonthMatchesGregorianBackend(weekOfMonth: Int) {
         let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        let components = DateComponents(year: 2024, month: 1, weekOfMonth: weekOfMonth)
+        let icuResult = icuCalendar.date(from: components)
+        let gregorianResult = gregorianCalendar.date(from: components)
 
-        for weekOfMonth in 1...5 {
-            let dc = DateComponents(year: 2024, month: 1, weekOfMonth: weekOfMonth)
-            let icuResult = icuCalendar.date(from: dc)
-            let gregorianResult = gregorianCalendar.date(from: dc)
-            #expect(icuResult == gregorianResult, "weekOfMonth \(weekOfMonth): ICU returned \(String(describing: icuResult)), Gregorian returned \(String(describing: gregorianResult))")
-        }
+        #expect(icuResult == gregorianResult, "ICU returned \(String(describing: icuResult)), Gregorian returned \(String(describing: gregorianResult))")
     }
 }
