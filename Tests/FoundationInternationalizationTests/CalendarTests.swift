@@ -570,14 +570,14 @@ private struct CalendarTests {
         #expect(first != last)
     }
 
-    @Test func repeatedTimePolicyIsAppliedInSearchOrder() throws {
-        let earlier = Date(timeIntervalSince1970: 1730622000.0) // 2024-11-03T01:20:00-0700
-        let later = Date(timeIntervalSince1970: 1730625600.0)   // 2024-11-03T01:20:00-0800
-
-        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .forward) == earlier)
-        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .forward) == later)
-        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .backward) == later)
-        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .backward) == earlier)
+    @Test(arguments: [
+        (Calendar.RepeatedTimePolicy.first, Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1730622000.0)),  // 2024-11-03T01:20:00-0700
+        (Calendar.RepeatedTimePolicy.last, Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1730625600.0)),   // 2024-11-03T01:20:00-0800
+        (Calendar.RepeatedTimePolicy.first, Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1730625600.0)), // 2024-11-03T01:20:00-0800
+        (Calendar.RepeatedTimePolicy.last, Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1730622000.0)),  // 2024-11-03T01:20:00-0700
+    ])
+    func repeatedTimePolicyIsAppliedInSearchOrder(policy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection, expected: Date) throws {
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, policy, direction) == expected)
     }
 
     @Test func dayInWeekOfMonth() {
