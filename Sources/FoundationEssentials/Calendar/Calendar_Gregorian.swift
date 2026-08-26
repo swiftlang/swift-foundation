@@ -86,8 +86,7 @@ enum ResolvedDateComponents {
             rawYear = 1
         }
 
-        // The era table turns an era-relative year into an extended one. An absent era means the calendar's default era, which is how a bare `year` of 2568 reads as Buddhist rather than as an extended year.
-        // For Gregorian and ISO8601 this reproduces the old behaviour exactly: era 0 gives `1 - rawYear`, and era 1 or none leaves it alone.
+        // The era table turns an era-relative year into an extended one. For Gregorian and ISO8601 this reproduces the old behaviour: era 0 gives `1 - rawYear`, era 1 or none leaves it alone.
         if adjustEra, let entry = eraTable.entry(code: components.era ?? eraTable.defaultCode) {
             rawYear = entry.extendedYear(fromEraYear: rawYear)
         }
@@ -338,7 +337,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Range
 
-    /// How this calendar labels eras and numbers years inside them. Everything else about the five identifiers this class serves is identical, in the same way ISO8601 differs from Gregorian only by its defaults.
+    /// How this calendar labels eras and numbers years inside them. The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults.
     let eraTable: _CalendarEraTable
 
     static func eraTable(for identifier: Calendar.Identifier) -> _CalendarEraTable {
@@ -1669,18 +1668,14 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     /// An era table with no entries, used to build a date from a year that is already extended so no era conversion applies.
     static let noEraRelabeling = _CalendarEraTable([])
 
-    /// Midnight on a date given as an extended year, with era relabeling switched off.
-    func extendedYearMidnight(year: Int, month: Int, day: Int) -> Date? {
-        let components = DateComponents(year: year, month: month, day: day, hour: 0, minute: 0, second: 0)
-        return try? date(from: components, inTimeZone: timeZone, eraTable: Self.noEraRelabeling)
-    }
-
     func eraBoundary(of entry: _CalendarEraEntry) -> Date? {
-        // The CE and BCE boundary is a proleptic 0001-01-01. Going through `date(from:)` would honour the 1582 Julian cutover and land two days earlier, shifting every Gregorian era interval, so keep the reference instant.
+        // The CE and BCE boundary is a proleptic 0001-01-01. `date(from:)` is Julian-cutover aware and would land two days earlier, so keep the reference instant.
         if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
             return Date(timeIntervalSinceReferenceDate: -63113904000.0)
         }
-        return extendedYearMidnight(year: entry.anchorYear, month: entry.startMonth, day: entry.startDay)
+        // Midnight on the boundary date, with era relabeling switched off since the year given here is already extended.
+        let components = DateComponents(year: entry.anchorYear, month: entry.startMonth, day: entry.startDay, hour: 0, minute: 0, second: 0)
+        return try? date(from: components, inTimeZone: timeZone, eraTable: Self.noEraRelabeling)
     }
 
     func eraInterval(containing date: Date) -> DateInterval? {
@@ -1688,7 +1683,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         for entry in eraTable.entries where entry.direction == .forward {
             guard let boundary = eraBoundary(of: entry), date >= boundary else { continue }
 
-            // An era ends where the next one begins. This diverges from ICU on purpose, because ICU keeps the era start's month and day and reports Showa ending 1989-12-25, eleven months after Heisei began.
+            // An era ends where the next one begins. This diverges from ICU on purpose: ICU reports Showa ending 1989-12-25, eleven months after Heisei began.
             guard let next = eraTable.eraAfter(entry), let end = eraBoundary(of: next) else {
                 return DateInterval(start: boundary, duration: Calendar._maxDateIntervalDuration)
             }
