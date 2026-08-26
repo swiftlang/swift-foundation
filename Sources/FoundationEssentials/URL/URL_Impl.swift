@@ -1470,10 +1470,8 @@ extension _URL {
         guard !path.isEmpty else {
             return nil
         }
-        // A path ending in a "." or ".." component refers to a directory,
-        // even though hasDirectoryPath reports false for such file paths for
-        // compatibility. Check the URL's own path, since resolving a relative
-        // URL against its base already removes the trailing dot segments.
+        // The file-path initializers don't set .hasDirectoryPath for a trailing
+        // "." or ".." component, so re-check the unresolved path here.
         let isDirectory = hasDirectoryPath || withPathSpan { pathSpan in
             pathSpan.withUnsafeBufferPointer { buffer in
                 URL.hasDirectoryPath(buffer, pathEnd: buffer.count, pathLength: buffer.count)
