@@ -18,6 +18,3 @@
 - ``iso8601-2ppw0`` <!-- static var iso8601: DateComponents.ISO8601FormatStyle { get } -->
 - ``iso8601-97xn6`` <!-- static var iso8601: Date.ISO8601FormatStyle { get } -->
 
-### Type Methods
-
-- ``currency(code:)``

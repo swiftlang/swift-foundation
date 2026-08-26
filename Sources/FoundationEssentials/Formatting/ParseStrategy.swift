@@ -14,12 +14,12 @@
 ///
 /// A ``ParseStrategy`` allows you to convert a formatted representation into a data type, using one of two approaches:
 ///
-/// - Initialize the data type by calling an initializer of that type that takes a formatted instance and a parse strategy as parameters. For example, you can create a ``Decimal`` from a formatted string with the initializer ``Decimal/init(_:format:lenient:)-6fk71``.
+/// - Initialize the data type by calling an initializer of that type that takes a formatted instance and a parse strategy as parameters. For example, you can create a ``Decimal`` from a formatted string with the initializer `Decimal.init(_:format:lenient:)` from the FoundationInternationalization module.
 /// - Create a parse strategy and call its ``parse(_:)`` method on one or more formatted instances.
 ///
 /// ``ParseStrategy`` is closely related to ``FormatStyle``, which provides the opposite conversion: from data type to formatted representation. To use a parse strategy, you create a ``FormatStyle`` to define the representation you expect, then access the style's `parseStrategy` property to get a strategy instance.
 ///
-/// The following example creates a ``Decimal/FormatStyle/Currency`` format style that uses US dollars and US English number-formatting conventions. It then creates a ``Decimal`` instance by providing a formatted string to parse and the format style's ``Decimal/FormatStyle/Currency/parseStrategy``.
+/// The following example creates a `Decimal.FormatStyle.Currency` format style (as provided by FoundationInternationlization) that uses US dollars and US English number-formatting conventions. It then creates a ``Decimal`` instance by providing a formatted string to parse and the format style's `Decimal.FormatStyle.Currency.parseStrategy``.
 ///
 /// ```swift
 /// let style = Decimal.FormatStyle.Currency(code: "USD",

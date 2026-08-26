@@ -101,12 +101,8 @@ extension DecodableAttributedStringKey where Value : Decodable {
 ///
 /// This protocol is separate from ``DecodableAttributedStringKey`` to separate explicit attributes defined by the SDK from Markdown's semantic styling attributes. You use these attributes with Apple's extended syntax for markdown: `^[text](attribute: value)`.
 ///
-/// Using this protocol allows your markup names to differ from the names of your attributes. For example, the automatic grammar agreement feature uses markup like `^[text to inflect](inflect: true)`. This feature defines an ``AttributeScopes/FoundationAttributes/InflectionRuleAttribute`` that conforms to ``MarkdownDecodableAttributedStringKey``. The value of its ``AttributeScopes/FoundationAttributes/InflectionRuleAttribute/name`` proprerty is `NSInflect`, while its ``AttributeScopes/FoundationAttributes/InflectionRuleAttribute/markdownName-aom1``, used in actual Markdown strings like the one shown here, is `inflect`.
-///
 /// To define your own attributes for use with Markdown syntax, make sure your attributes conform to this protocol. The markdown parser ignores attributes that don't conform, even if you use the extended Markdown syntax.
 ///
-/// > Tip:
-/// > When creating attributed strings from Markdown-based initializers like ``AttributedString/init(markdown:options:baseURL:)-52n3u``, be sure to set the ``AttributedString/MarkdownParsingOptions/allowsExtendedAttributes`` option. If you don't include this option, the string won't parse ``MarkdownDecodableAttributedStringKey``-based attributes.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol MarkdownDecodableAttributedStringKey : AttributedStringKey {
     /// Decodes a value from the provided decoder.

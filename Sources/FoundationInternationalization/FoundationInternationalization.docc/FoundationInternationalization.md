@@ -14,5 +14,4 @@ The FoundationInternationalization library builds on FoundationEssentials by pro
 ### Fundamentals
 
 - <doc:units-and-measurement>
-- <doc:data-formatting>
 

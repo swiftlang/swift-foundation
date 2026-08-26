@@ -4,7 +4,7 @@ Extensions to types that the Swift Standard Library defines.
 
 ## Overview
 
-In some cases, FoundationEssentials extends Swift standard library types with properties, methods, or other symbols. These add new functionality to the standard library type when you import FoundationEssentials.
+In some cases, FoundationEssentials extends Swift standard library types by adding properties, methods, or other symbols. These add new functionality to the standard library type when you import FoundationEssentials.
 
 Other times, a type appears in this list only because FoundationEssentials extends the type to add conformance to a FoundationEssentials protocol, such as ``ContiguousBytes`` or ``DataProtocol``.
 

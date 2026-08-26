@@ -40,4 +40,4 @@ The text encoding a string uses.
 - ``windowsCP1251``
 - ``windowsCP1252``
 - ``windowsCP1253``
-- ``windowsCP1254
+- ``windowsCP1254``
