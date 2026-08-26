@@ -70,11 +70,12 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
     } else if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
         return _CalendarChinese.self
     } else if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
-        return _CalendarBuddhist.self
+        // These three share Gregorian arithmetic and differ only in how they label eras, which `_CalendarGregorian` reads from an era table chosen by identifier.
+        return _CalendarGregorian.self
     } else if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
-        return _CalendarJapanese.self
+        return _CalendarGregorian.self
     } else if foundation_swift_roc_calendar_feature_enabled() && identifier == .republicOfChina {
-        return _CalendarRepublicOfChina.self
+        return _CalendarGregorian.self
     } else {
         return _calendarICUClass()
     }
