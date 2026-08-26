@@ -4492,7 +4492,6 @@ private struct URLTests {
         #expect(url.query() == nil)
     }
 
-    #if !os(Windows)
     @Test func standardizedFileURLDotSegmentEndings() throws {
         // A path ending in a "." or ".." component refers to a directory,
         // but the file path initializers don't set .hasDirectoryPath for
@@ -4514,6 +4513,7 @@ private struct URLTests {
         #expect(absolute.standardizedFileURL.absoluteString == "file:///base/dir/a/")
     }
 
+    #if !os(Windows)
     @Test func standardizedFileURLAndResolvingSymlinks() async throws {
         try await FilePlayground {
             Directory("a") {
