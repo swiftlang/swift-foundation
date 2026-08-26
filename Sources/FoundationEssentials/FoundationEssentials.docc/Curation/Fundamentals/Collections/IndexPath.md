@@ -8,7 +8,7 @@
 - ``init()``
 - ``init(index:)``
 - ``init(arrayLiteral:)``
-- ``init(indexes:)-([IndexPath.Element])`` <!-- init(indexes: Array<IndexPath.Element>) -->
+- ``init(indexes:)-([Element])`` <!-- init(indexes: Array<IndexPath.Element>) -->
 - ``init(indexes:)-(ElementSequence)``     <!-- init<ElementSequence>(indexes: ElementSequence) where ElementSequence : Sequence, ElementSequence.Element == Int -->
 
 ### Working with terminal nodes
@@ -31,12 +31,12 @@
 ### Appending nodes
 
 - ``+(_:_:)``
-- ``appending(_:)-(IndexPath.Element)``   <!-- func appending(_ other: IndexPath.Element) -> IndexPath -->
-- ``appending(_:)-([IndexPath.Element])`` <!-- func appending(_ other: Array<IndexPath.Element>) -> IndexPath -->
+- ``appending(_:)-(Element)``   <!-- func appending(_ other: IndexPath.Element) -> IndexPath -->
+- ``appending(_:)-([Element])`` <!-- func appending(_ other: Array<IndexPath.Element>) -> IndexPath -->
 - ``appending(_:)-(IndexPath)``           <!-- func appending(_ other: IndexPath) -> IndexPath -->
 - ``+=(_:_:)``
-- ``append(_:)-(IndexPath.Element)``      <!-- mutating func append(_ other: IndexPath.Element) -->
-- ``append(_:)-([IndexPath.Element])``    <!-- mutating func append(_ other: Array<IndexPath.Element>) -->
+- ``append(_:)-(Element)``      <!-- mutating func append(_ other: IndexPath.Element) -->
+- ``append(_:)-([Element])``    <!-- mutating func append(_ other: Array<IndexPath.Element>) -->
 - ``append(_:)-(IndexPath)``              <!-- mutating func append(_ other: IndexPath) -->
 
 ### Excluding nodes

@@ -34,8 +34,6 @@
 - ``autoupdatingCurrent``
 - ``current``
 - ``gmt``
-- ``knownTimeZoneIdentifiers``
-- ``timeZoneDataVersion``
 
 ### Enumerations
 

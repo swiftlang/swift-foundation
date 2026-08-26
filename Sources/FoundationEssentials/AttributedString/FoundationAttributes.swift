@@ -626,7 +626,7 @@ extension AttributeScopes.FoundationAttributes {
     
     /// A type for using a replacement index as an attribute.
     ///
-    /// When you use the ``AttributedString/FormattingOptions/applyReplacementIndexAttribute``
+    /// When you use the `AttributedString.FormattingOptions.applyReplacementIndexAttribute`
     /// formatting option, the resulting formatted string uses this attribute to mark
     /// the location of replacement strings. This allows you to relate ranges to
     /// replacements even if localizers change the word order in format strings.
@@ -1090,18 +1090,18 @@ extension AttributedString {
     /// alignment, its line layout direction, or its character direction.
     /// However, it is often used to determine the default alignment of a
     /// paragraph. E.g. English (a language with
-    /// ``Locale/LanguageDirection-swift.enum/leftToRight``
-    /// ``Locale/Language-swift.struct/characterDirection``) is usually aligned
+    /// ``Locale/LanguageDirection-swift.enum/leftToRight`` for its
+    /// `characterDirection`, as defined by the FoundationInternationization module) is usually aligned
     /// to the left, but may be centered or aligned to the right for special
     /// effect, or to be visually more appealing in a user interface.
     ///
     /// For bidirectional text to be perceived as laid out correctly, make sure
     /// that the writing direction is set to the value equivalent to the
-    /// ``Locale/Language-swift.struct/characterDirection`` of the primary
+    /// `characterDirection`of the primary
     /// language in the text. E.g. an English sentence that contains some
     /// Arabic (a language with
-    /// ``Locale/LanguageDirection-swift.enum/rightToLeft``
-    /// ``Locale/Language-swift.struct/characterDirection``) words, should use
+    /// ``Locale/LanguageDirection-swift.enum/rightToLeft`` value for
+    /// `characterDirection`) words, should use
     /// a ``leftToRight`` writing direction. An Arabic sentence that contains
     /// some English words, should use a ``rightToLeft`` writing direction.
     ///
@@ -1111,7 +1111,7 @@ extension AttributedString {
     /// is usually displayed with a line layout direction of
     /// ``Locale/LanguageDirection-swift.enum/topToBottom``. While languages do
     /// have an associated line language direction (see
-    /// ``Locale/Language-swift.struct/lineLayoutDirection``), not all displays
+    /// `lineLayoutDirection` in FoundationInternationlization), not all displays
     /// of text follow the line layout direction of the text's primary language.
     ///
     /// Horizontal script is script with a line layout direction of either

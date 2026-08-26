@@ -100,7 +100,7 @@ public protocol AttributedStringProtocol
     @preconcurrency subscript<K: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K.Value : Sendable { get set }
     /// Returns a scoped attribute container that a key path indicates.
     ///
-    /// Use this subscript when you need to work with an explicit attribute scope. For example, the SwiftUI ``AttributeScopes/SwiftUIAttributes/foregroundColor`` attribute overrides the attribute in the AppKit and UIKit scopes with the same name. If you work with both the SwiftUI and UIKit scopes, you can use the syntax `myAttributedString.uiKit.foregroundColor` to disambiguate and explicitly use the UIKit attribute.
+    /// Use this subscript when you need to work with an explicit attribute scope. For example, the SwiftUI `AttributeScopes.SwiftUIAttributes.foregroundColor` attribute overrides the attribute in the AppKit and UIKit scopes with the same name. If you work with both the SwiftUI and UIKit scopes, you can use the syntax `myAttributedString.uiKit.foregroundColor` to disambiguate and explicitly use the UIKit attribute.
     subscript<S: AttributeScope>(dynamicMember keyPath: KeyPath<AttributeScopes, S.Type>) -> ScopedAttributeContainer<S> { get set }
 
     /// Returns a substring of the attributed string using a range to indicate the substring bounds.

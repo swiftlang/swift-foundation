@@ -705,8 +705,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalAdd(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: A value to add.
@@ -724,8 +723,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalSubtract(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: The value to subtract from.
@@ -743,8 +741,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalMultiply(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: A value to multiply.
@@ -764,8 +761,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalDivide(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: The value to divide.
@@ -785,8 +781,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalAdd(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: A value to add.
@@ -802,8 +797,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalSubtract(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: The value to subtract from.
@@ -819,8 +813,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalMultiply(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode.
     ///
     /// - Parameters:
     ///   - lhs: A value to multiply.
@@ -836,8 +829,7 @@ extension Decimal : SignedNumeric {
     ///
     /// If the result of this operation requires more precision than the `Decimal`
     /// type can provide, the result is rounded using the
-    /// ``NSDecimalNumber/RoundingMode/plain`` rounding mode. To specify a different
-    /// rounding mode, use the ``NSDecimalDivide(_:_:_:_:)`` function instead.
+    /// ``Decimal/RoundingMode/plain`` rounding mode. 
     ///
     /// - Parameters:
     ///   - lhs: The value to divide.
