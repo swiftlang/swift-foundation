@@ -85,19 +85,19 @@ extension Data {
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
         @export(implementation) @inline(__always)
         init<E: Error>(
-            rawCapacity: Int,
+            capacity: Int,
             initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             self.init()
             do throws(E) {
                 let count = try Swift.withUnsafeMutableBytes(of: &bytes) {
                     buffer throws(E) in
-                    let prefix = buffer.prefix(rawCapacity)
+                    let prefix = buffer.prefix(capacity)
                     var output = OutputRawSpan(buffer: prefix, initializedCount: 0)
                     try initializer(&output)
                     return output.finalize(for: prefix)
                 }
-                assert(count <= rawCapacity)
+                assert(count <= capacity)
                 length = UInt8(count)
             } catch {
                 self = .init()

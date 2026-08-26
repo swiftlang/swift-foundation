@@ -281,38 +281,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = .empty
     }
 
-    /// Creates a data instance with the specified capacity, and then calls the given
-    /// closure with an output span covering the instance's uninitialized memory.
-    ///
-    /// Inside the closure, initialize elements by appending to the `OutputRawSpan`.
-    /// The `OutputRawSpan` keeps track of the initialized memory, ensuring
-    /// safety. Its `count` at the end of the closure will become the `count` of
-    /// the newly-initialized instance of `Data`.
-    ///
-    /// - Note: While the resulting `Data` may have a capacity larger than the
-    ///   requested amount, the `OutputRawSpan` passed to the closure will cover
-    ///   exactly the number of bytes requested.
-    ///
-    /// - Parameters:
-    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
-    ///   - initializer: A closure to initialize the allocated memory.
-    ///     - Parameters:
-    ///       - span: An `OutputRawSpan` covering uninitialized memory with
-    ///         space for the specified number of bytes.
-    @available(macOS, introduced: 10.14.4, deprecated, renamed: "init(capacity:initializingWith:)")
-    @available(iOS, introduced: 12.2, deprecated, renamed: "init(capacity:initializingWith:)")
-    @available(watchOS, introduced: 5.2, deprecated, renamed: "init(capacity:initializingWith:)")
-    @available(tvOS, introduced: 12.2, deprecated, renamed: "init(capacity:initializingWith:)")
-    @available(visionOS, introduced: 1.0, deprecated, renamed: "init(capacity:initializingWith:)")
-    @export(implementation)
-    @_spi(_) // TODO: Remove after no clients are using this
-    public init<E: Error>(
-        rawCapacity capacity: Int,
-        initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
-    ) throws(E) {
-        try self.init(capacity: capacity, initializingWith: initializer)
-    }
-
     /// Creates a new data with the specified capacity, directly initializing its storage using an output raw span.
     ///
     /// - Parameters:
