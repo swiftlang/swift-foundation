@@ -561,6 +561,27 @@ private struct URLTests {
         try FileManager.default.removeItem(at: URL(filePath: "\(tempDirectory.path)/tmp-dir"))
     }
 
+    @Test func standardizedFileURLDotSegmentEndings() throws {
+        // A path ending in a "." or ".." component refers to a directory.
+        // hasDirectoryPath reports false for such file paths for compatibility
+        // (see deletingLastPathComponent), but the standardized file URL must
+        // still end in a directory slash, consistent with .standardized (#2207).
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+        let cases = [
+            ("a/x/..", "file:///base/dir/a/"),
+            ("a/x/.", "file:///base/dir/a/x/"),
+            ("a/..", "file:///base/dir/"),
+        ]
+        for (path, standardized) in cases {
+            let url = URL(filePath: path, relativeTo: base)
+            #expect(url.standardized.absoluteString == standardized, "standardized \"\(path)\"")
+            #expect(url.standardizedFileURL.absoluteString == standardized, "standardizedFileURL \"\(path)\"")
+        }
+
+        let absolute = URL(filePath: "/base/dir/a/x/..")
+        #expect(absolute.standardizedFileURL.absoluteString == "file:///base/dir/a/")
+    }
+
     @Test func fileURLWithPathDirectoryHintConversion() throws {
         let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
 

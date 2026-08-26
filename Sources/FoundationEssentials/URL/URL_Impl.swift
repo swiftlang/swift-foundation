@@ -1470,7 +1470,16 @@ extension _URL {
         guard !path.isEmpty else {
             return nil
         }
-        return _URL(filePath: path.standardizingPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory).url
+        // A path ending in a "." or ".." component refers to a directory,
+        // even though hasDirectoryPath reports false for such file paths for
+        // compatibility. Check the URL's own path, since resolving a relative
+        // URL against its base already removes the trailing dot segments.
+        let isDirectory = hasDirectoryPath || withPathSpan { pathSpan in
+            pathSpan.withUnsafeBufferPointer { buffer in
+                URL.hasDirectoryPath(buffer, pathEnd: buffer.count, pathLength: buffer.count)
+            }
+        }
+        return _URL(filePath: path.standardizingPath, directoryHint: isDirectory ? .isDirectory : .notDirectory).url
     }
 
     func resolvingSymlinksInPath() -> URL? {
