@@ -78,14 +78,15 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
     if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
         return _CalendarChinese.self
     }
+    // These three share Gregorian arithmetic and differ only in how they label eras, which `_CalendarGregorian` reads from an era table chosen by identifier.
     if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
-        return _CalendarBuddhist.self
+        return _CalendarGregorian.self
     }
     if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
-        return _CalendarJapanese.self
+        return _CalendarGregorian.self
     }
     if foundation_swift_roc_calendar_feature_enabled() && identifier == .republicOfChina {
-        return _CalendarRepublicOfChina.self
+        return _CalendarGregorian.self
     }
 #endif
     return _calendarICUClass()
