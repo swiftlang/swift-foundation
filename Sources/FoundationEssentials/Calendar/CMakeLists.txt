@@ -15,13 +15,13 @@
 target_sources(FoundationEssentials PRIVATE
     Calendar.swift
     CalendarConstants.swift
+    CalendarEra.swift
     CalendarUtility.swift
     Calendar_Astronomy.swift
     Calendar_Autoupdating.swift
     Calendar_Cache.swift
     Calendar_Chinese.swift
     Calendar_Enumerate.swift
-    Calendar_EraTable.swift
     Calendar_Gregorian.swift
     Calendar_Hebrew.swift
     Calendar_Protocol.swift
