@@ -34,9 +34,9 @@ private enum GregorianBackedFamily: String, Sendable, CaseIterable, CustomTestSt
     var ours: Calendar {
         let inner: any _CalendarProtocol
         switch self {
-        case .buddhist: inner = _CalendarBuddhist(identifier: .buddhist, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        case .japanese: inner = _CalendarJapanese(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
-        case .roc: inner = _CalendarRepublicOfChina(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        case .buddhist: inner = _CalendarGregorian(identifier: .buddhist, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        case .japanese: inner = _CalendarGregorian(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        case .roc: inner = _CalendarGregorian(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
         }
         return Calendar(inner: inner)
     }
@@ -44,9 +44,9 @@ private enum GregorianBackedFamily: String, Sendable, CaseIterable, CustomTestSt
     func calendar(firstWeekday: Int?, minimumDaysInFirstWeek: Int?) -> Calendar {
         let inner: any _CalendarProtocol
         switch self {
-        case .buddhist: inner = _CalendarBuddhist(identifier: .buddhist, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
-        case .japanese: inner = _CalendarJapanese(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
-        case .roc: inner = _CalendarRepublicOfChina(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        case .buddhist: inner = _CalendarGregorian(identifier: .buddhist, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        case .japanese: inner = _CalendarGregorian(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
+        case .roc: inner = _CalendarGregorian(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: nil)
         }
         return Calendar(inner: inner)
     }
@@ -179,7 +179,7 @@ private struct ROCBackwardEraTests {
     static let beforeMinguo = 0, minguo = 1
 
     private static func roc() -> Calendar {
-        Calendar(inner: _CalendarRepublicOfChina(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+        Calendar(inner: _CalendarGregorian(identifier: .republicOfChina, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
     }
 
     struct EraCase: Sendable, CustomTestStringConvertible {

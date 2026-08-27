@@ -86,9 +86,14 @@ enum ResolvedDateComponents {
             rawYear = 1
         }
 
-        // The era table turns an era-relative year into an extended one. For Gregorian and ISO8601 this reproduces the old behaviour: era 0 gives `1 - rawYear`, era 1 or none leaves it alone.
-        if adjustEra, let entry = eraTable.entry(code: components.era ?? eraTable.defaultCode) {
-            rawYear = entry.extendedYear(fromEraYear: rawYear)
+        // The era table turns an era-relative year into an extended one. A code this calendar's own table does not list, like Japanese reading a pre-Meiji era, is an inherited Gregorian era instead.
+        // Only an era the caller actually set counts as inherited BCE. An absent era must not, or building a date with no era relabeling at all (the empty table used to find an era's own boundary) would default to code 0 and flip the sign.
+        if adjustEra {
+            if let entry = eraTable.entry(code: components.era ?? eraTable.defaultCode) {
+                rawYear = entry.extendedYear(fromEraYear: rawYear)
+            } else if components.era == 0 {
+                rawYear = 1 - rawYear
+            }
         }
 
         guard let rawMonth = components.month else {
@@ -1665,6 +1670,15 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Era relabeling
 
+    /// Whether this era counts its years down instead of up, like BCE or ROC's Before-Minguo. Adding or wrapping a year has to move opposite the requested amount in that case.
+    ///
+    /// A code this calendar's own table does not list, like Japanese reading a pre-Meiji date, is an inherited Gregorian era: code 0 is BCE and counts backward, code 1 or absent is CE.
+    func eraCountsBackward(_ code: Int?) -> Bool {
+        guard let code else { return false }
+        if let entry = eraTable.entry(code: code) { return entry.direction == .backward }
+        return code == 0
+    }
+
     /// An era table with no entries, used to build a date from a year that is already extended so no era conversion applies.
     static let noEraRelabeling = _CalendarEraTable([])
 
@@ -2277,10 +2291,10 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
         }
 
-        // `year` here is the extended year, so the era table decides both fields. For Gregorian and ISO8601 the table reproduces the old `year < 1` test exactly.
+        // `year` here is the extended year, so the era table decides both fields. A date with no matching entry, like a pre-Meiji Japanese date, keeps the inherited Gregorian era instead.
         let eraEntry = eraTable.entry(extendedYear: year, month: month, day: day)
-        let dcEra = components.contains(.era) ? eraEntry?.code : nil
-        let dcYear = components.contains(.year) ? (eraEntry?.eraYear(fromExtendedYear: year) ?? year) : nil
+        let dcEra = components.contains(.era) ? (eraEntry?.code ?? (year < 1 ? 0 : 1)) : nil
+        let dcYear = components.contains(.year) ? (eraEntry?.eraYear(fromExtendedYear: year) ?? (year < 1 ? 1 - year : year)) : nil
         let dcMonth = components.contains(.month) ? month : nil
         let dcDay = components.contains(.day) ? day : nil
         let dcDayOfYear = components.contains(.dayOfYear) ? dayOfYear : nil
@@ -2462,7 +2476,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .yearForWeekOfYear:
             var dc = dateComponents(weekBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if let era = dc.era, era == 0 {
+            if eraCountsBackward(dc.era) {
                 amount = -amount
             }
 
@@ -2483,7 +2497,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .year:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if let era = dc.era, era == 0 {
+            if eraCountsBackward(dc.era) {
                 amount = -amount
             }
 
@@ -2642,8 +2656,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
             }
             var amount = amount
-            if dc.era == 0 /* BC */ {
-                // in BC year goes backwards
+            if eraCountsBackward(dc.era) {
+                // A backward-counting era, like BCE, moves opposite the amount.
                 amount = -amount
             }
 
@@ -2903,8 +2917,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
 
             var amount = amount
-            if dc.era == 0 /* BC */ {
-                // in BC year goes backwards
+            if eraCountsBackward(dc.era) {
+                // A backward-counting era, like BCE, moves opposite the amount.
                 amount = -amount
             }
 
