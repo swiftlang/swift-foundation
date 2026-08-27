@@ -4493,10 +4493,7 @@ private struct URLTests {
     }
 
     @Test func standardizedFileURLDotSegmentEndings() throws {
-        // A path ending in a "." or ".." component refers to a directory,
-        // but the file path initializers don't set .hasDirectoryPath for
-        // these trailing components. The standardized file URL must still
-        // end in a directory slash, consistent with .standardized.
+        // A path ending in a "." or ".." component refers to a directory, but the file path initializers don't set .hasDirectoryPath for these trailing components. The standardized file URL must still end in a directory slash, consistent with .standardized.
         let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
         let cases = [
             ("a/x/..", "file:///base/dir/a/"),
