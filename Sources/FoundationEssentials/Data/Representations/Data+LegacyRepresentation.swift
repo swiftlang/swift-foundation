@@ -104,7 +104,7 @@ extension Data {
             capacity: Int, _ initializer: (inout OutputRawSpan) throws(E) -> Void
         ) throws(E) {
             if InlineData.canStore(count: capacity) {
-                let inline = try InlineData(rawCapacity: capacity, initializingWith: initializer)
+                let inline = try InlineData(capacity: capacity, initializingWith: initializer)
                 self = (inline.count == 0) ? .empty : .inline(inline)
             } else {
                 let storage = __DataStorage(capacity: capacity)
