@@ -2870,7 +2870,7 @@ extension JSONEncoderTests {
     
     @Test func decodeDecimalInfinityAndNaN() throws {
         let decoder = JSONDecoder()
-        decoder.allowsJSON5 = true  // <-- Changed this line
+        decoder.allowsJSON5 = true
         
         let nanData = "NaN".data(using: .utf8)!
         let nanDecimal = try decoder.decode(Decimal.self, from: nanData)
