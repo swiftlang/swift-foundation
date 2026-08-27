@@ -19,7 +19,7 @@
 ///
 /// ``ParseStrategy`` is closely related to ``FormatStyle``, which provides the opposite conversion: from data type to formatted representation. To use a parse strategy, you create a ``FormatStyle`` to define the representation you expect, then access the style's `parseStrategy` property to get a strategy instance.
 ///
-/// The following example creates a `Decimal.FormatStyle.Currency` format style (as provided by FoundationInternationlization) that uses US dollars and US English number-formatting conventions. It then creates a ``Decimal`` instance by providing a formatted string to parse and the format style's `Decimal.FormatStyle.Currency.parseStrategy``.
+/// The following example creates a `Decimal.FormatStyle.Currency` format style (as provided by FoundationInternationalization) that uses US dollars and US English number-formatting conventions. It then creates a ``Decimal`` instance by providing a formatted string to parse and the format style's `Decimal.FormatStyle.Currency.parseStrategy``.
 ///
 /// ```swift
 /// let style = Decimal.FormatStyle.Currency(code: "USD",

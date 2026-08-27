@@ -1091,7 +1091,7 @@ extension AttributedString {
     /// However, it is often used to determine the default alignment of a
     /// paragraph. E.g. English (a language with
     /// ``Locale/LanguageDirection-swift.enum/leftToRight`` for its
-    /// `characterDirection`, as defined by the FoundationInternationization module) is usually aligned
+    /// `characterDirection`, as defined by the FoundationInternationalization module) is usually aligned
     /// to the left, but may be centered or aligned to the right for special
     /// effect, or to be visually more appealing in a user interface.
     ///
@@ -1111,7 +1111,7 @@ extension AttributedString {
     /// is usually displayed with a line layout direction of
     /// ``Locale/LanguageDirection-swift.enum/topToBottom``. While languages do
     /// have an associated line language direction (see
-    /// `lineLayoutDirection` in FoundationInternationlization), not all displays
+    /// `lineLayoutDirection` in FoundationInternationalization), not all displays
     /// of text follow the line layout direction of the text's primary language.
     ///
     /// Horizontal script is script with a line layout direction of either
