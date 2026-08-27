@@ -1697,11 +1697,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         }
         // A table that labels every date has no era to inherit, so there is nothing to report before its first era. ICU reports nothing there either.
         if eraTable.entries.contains(where: { $0.labelsEveryDate }) { return nil }
-        return inheritedEraInterval(for: date)
-    }
 
-    /// For a date older than every era in the table, the inherited era interval cut short where the oldest era begins.
-    private func inheritedEraInterval(for date: Date) -> DateInterval? {
+        // For a date older than every era in the table, the inherited era interval cut short where the oldest era begins.
         let time = date.timeIntervalSinceReferenceDate
         let ceStart = Date(timeIntervalSinceReferenceDate: -63113904000.0)
         let inherited = time < ceStart.timeIntervalSinceReferenceDate
