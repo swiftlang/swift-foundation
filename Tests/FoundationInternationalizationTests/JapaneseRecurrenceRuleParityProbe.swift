@@ -19,7 +19,7 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-/// RecurrenceRule parity probe: compares date sequences from `recurrences(of:)` between the ICU backed Japanese calendar and `_CalendarJapanese`. Includes era transition tests.
+/// RecurrenceRule parity probe: compares date sequences from `recurrences(of:)` between the ICU backed Japanese calendar and `_CalendarGregorian`. Includes era transition tests.
 @Suite("Japanese RecurrenceRule Parity Probe")
 private struct JapaneseRecurrenceRuleParityProbe {
 
@@ -28,7 +28,7 @@ private struct JapaneseRecurrenceRuleParityProbe {
             identifier: .japanese, timeZone: .gmt, locale: nil,
             firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
         )
-        let oursInner = _CalendarJapanese(
+        let oursInner = _CalendarGregorian(
             identifier: .japanese, timeZone: .gmt, locale: nil,
             firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
         )

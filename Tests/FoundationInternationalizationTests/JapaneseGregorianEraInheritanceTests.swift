@@ -29,7 +29,7 @@ private struct JapaneseGregorianEraInheritanceTests {
     static let bce = 0, ce = 1, meiji = 232, taisho = 233, showa = 234, heisei = 235, reiwa = 236
 
     private static func japanese() -> Calendar {
-        Calendar(inner: _CalendarJapanese(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+        Calendar(inner: _CalendarGregorian(identifier: .japanese, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
     }
 
     private static func gregorianDate(era: Int, _ year: Int, _ month: Int, _ day: Int) throws -> Date {

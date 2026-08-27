@@ -19,7 +19,7 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-/// RecurrenceRule parity probe: compares date sequences from `recurrences(of:)` between the ICU backed Buddhist calendar and `_CalendarBuddhist`.
+/// RecurrenceRule parity probe: compares date sequences from `recurrences(of:)` between the ICU backed Buddhist calendar and `_CalendarGregorian`.
 @Suite("Buddhist RecurrenceRule Parity Probe")
 private struct BuddhistRecurrenceRuleParityProbe {
 
@@ -28,7 +28,7 @@ private struct BuddhistRecurrenceRuleParityProbe {
             identifier: .buddhist, timeZone: .gmt, locale: nil,
             firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
         )
-        let oursInner = _CalendarBuddhist(
+        let oursInner = _CalendarGregorian(
             identifier: .buddhist, timeZone: .gmt, locale: nil,
             firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
         )
