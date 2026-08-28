@@ -20,7 +20,7 @@ import Testing
 #endif
 
 /// The three calendars that share the era-table engine over `_CalendarGregorian`.
-private enum GregorianBackedFamily: String, Sendable, CaseIterable, CustomTestStringConvertible {
+private enum GregorianCalendarFamily: String, Sendable, CaseIterable, CustomTestStringConvertible {
     case buddhist, japanese, roc
 
     var identifier: Calendar.Identifier {
@@ -59,7 +59,7 @@ private enum GregorianBackedFamily: String, Sendable, CaseIterable, CustomTestSt
 }
 
 /// A Gregorian date to probe, given as an era plus an era-relative year so dates before the Common Era are reachable.
-private struct GregorianBackedProbe: Sendable, CustomTestStringConvertible {
+private struct GregorianFamilyProbe: Sendable, CustomTestStringConvertible {
     let label: String
     let era, year, month, day: Int
     /// True for dates the Japanese calendar deliberately labels differently from the bundled ICU.
@@ -89,38 +89,38 @@ private struct GregorianBackedProbe: Sendable, CustomTestStringConvertible {
     }
 }
 
-private let gregorianBackedProbes: [GregorianBackedProbe] = [
-    GregorianBackedProbe("2025-08-20", era: 1, year: 2025, month: 8, day: 20),
-    GregorianBackedProbe("2019-05-01 Reiwa start", era: 1, year: 2019, month: 5, day: 1),
-    GregorianBackedProbe("2019-04-30 Heisei end", era: 1, year: 2019, month: 4, day: 30, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1989-01-08 Heisei start", era: 1, year: 1989, month: 1, day: 8, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1926-12-25 Showa start", era: 1, year: 1926, month: 12, day: 25, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1912-07-30 Taisho start", era: 1, year: 1912, month: 7, day: 30, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1912-01-01 Minguo 1", era: 1, year: 1912, month: 1, day: 1, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1911-12-31 before Minguo", era: 1, year: 1911, month: 12, day: 31, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1868-09-08 Meiji start", era: 1, year: 1868, month: 9, day: 8, endsInsideABoundedJapaneseEra: true),
-    GregorianBackedProbe("1868-09-07 before Meiji", era: 1, year: 1868, month: 9, day: 7, isPreMeiji: true),
-    GregorianBackedProbe("1600-01-15", era: 1, year: 1600, month: 1, day: 15, isPreMeiji: true),
-    GregorianBackedProbe("0900-06-15", era: 1, year: 900, month: 6, day: 15, isPreMeiji: true),
-    GregorianBackedProbe("0001-01-01", era: 1, year: 1, month: 1, day: 1, isPreMeiji: true),
-    GregorianBackedProbe("1 BCE", era: 0, year: 1, month: 6, day: 15, isPreMeiji: true),
-    GregorianBackedProbe("15 BCE", era: 0, year: 15, month: 7, day: 10, isPreMeiji: true),
-    GregorianBackedProbe("543 BCE", era: 0, year: 543, month: 3, day: 1, isPreMeiji: true),
-    GregorianBackedProbe("544 BCE", era: 0, year: 544, month: 3, day: 1, isPreMeiji: true),
-    GregorianBackedProbe("1000 BCE", era: 0, year: 1000, month: 5, day: 5, isPreMeiji: true),
+private let gregorianFamilyProbes: [GregorianFamilyProbe] = [
+    GregorianFamilyProbe("2025-08-20", era: 1, year: 2025, month: 8, day: 20),
+    GregorianFamilyProbe("2019-05-01 Reiwa start", era: 1, year: 2019, month: 5, day: 1),
+    GregorianFamilyProbe("2019-04-30 Heisei end", era: 1, year: 2019, month: 4, day: 30, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1989-01-08 Heisei start", era: 1, year: 1989, month: 1, day: 8, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1926-12-25 Showa start", era: 1, year: 1926, month: 12, day: 25, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1912-07-30 Taisho start", era: 1, year: 1912, month: 7, day: 30, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1912-01-01 Minguo 1", era: 1, year: 1912, month: 1, day: 1, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1911-12-31 before Minguo", era: 1, year: 1911, month: 12, day: 31, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1868-09-08 Meiji start", era: 1, year: 1868, month: 9, day: 8, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1868-09-07 before Meiji", era: 1, year: 1868, month: 9, day: 7, isPreMeiji: true),
+    GregorianFamilyProbe("1600-01-15", era: 1, year: 1600, month: 1, day: 15, isPreMeiji: true),
+    GregorianFamilyProbe("0900-06-15", era: 1, year: 900, month: 6, day: 15, isPreMeiji: true),
+    GregorianFamilyProbe("0001-01-01", era: 1, year: 1, month: 1, day: 1, isPreMeiji: true),
+    GregorianFamilyProbe("1 BCE", era: 0, year: 1, month: 6, day: 15, isPreMeiji: true),
+    GregorianFamilyProbe("15 BCE", era: 0, year: 15, month: 7, day: 10, isPreMeiji: true),
+    GregorianFamilyProbe("543 BCE", era: 0, year: 543, month: 3, day: 1, isPreMeiji: true),
+    GregorianFamilyProbe("544 BCE", era: 0, year: 544, month: 3, day: 1, isPreMeiji: true),
+    GregorianFamilyProbe("1000 BCE", era: 0, year: 1000, month: 5, day: 5, isPreMeiji: true),
 ]
 
-/// Parity tests for the three Gregorian-backed calendars against ICU. They share one era-table engine, so a divergence in any one of them usually means the engine is wrong rather than the calendar.
+/// Parity tests for the three Gregorian-family calendars against ICU. They share one era-table engine, so a divergence in any one of them usually means the engine is wrong rather than the calendar.
 ///
 /// The Japanese calendar diverges from the bundled ICU in two deliberate ways, both marked below as known issues and both pinned by golden values in `JapaneseGregorianEraInheritanceTests`.
 ///
 /// It drops the pre-Meiji eras (unicode-org/icu#4019, ICU-23341), and it ends an era where the next era really starts.
-@Suite("Gregorian-Backed Calendar Parity")
-private struct GregorianBackedCalendarParityTests {
+@Suite("Gregorian Family Calendar Parity")
+private struct GregorianFamilyCalendarParityTests {
 
     /// Reading the era and year off a date must match ICU, including dates before the Common Era. The Buddhist year is an offset from the extended Gregorian year, not from the era-relative one.
-    @Test(arguments: GregorianBackedFamily.allCases, gregorianBackedProbes)
-    func eraAndYearMatchICU(_ family: GregorianBackedFamily, _ probe: GregorianBackedProbe) throws {
+    @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
+    func eraAndYearMatchICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) throws {
         try withKnownIssue("the Japanese calendar deliberately drops the pre-Meiji eras", isIntermittent: false) {
             let ours = family.ours.dateComponents([.era, .year, .month, .day], from: probe.date)
             let icu = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
@@ -134,8 +134,8 @@ private struct GregorianBackedCalendarParityTests {
     }
 
     /// Building a date from this calendar's own era and year must match ICU.
-    @Test(arguments: GregorianBackedFamily.allCases, gregorianBackedProbes)
-    func dateFromComponentsMatchesICU(_ family: GregorianBackedFamily, _ probe: GregorianBackedProbe) throws {
+    @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
+    func dateFromComponentsMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) throws {
         try withKnownIssue("the Japanese calendar deliberately drops the pre-Meiji eras", isIntermittent: false) {
             // Read the native era and year off ICU, then ask both calendars to rebuild the date from them.
             let native = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
@@ -148,8 +148,8 @@ private struct GregorianBackedCalendarParityTests {
         }
     }
 
-    @Test(arguments: GregorianBackedFamily.allCases, gregorianBackedProbes)
-    func eraIntervalMatchesICU(_ family: GregorianBackedFamily, _ probe: GregorianBackedProbe) throws {
+    @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
+    func eraIntervalMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) throws {
         try withKnownIssue("the Japanese calendar drops the pre-Meiji eras and ends an era at the next era's real start", isIntermittent: false) {
             #expect(family.ours.dateInterval(of: .era, for: probe.date) == family.icu.dateInterval(of: .era, for: probe.date))
         } when: {
@@ -157,15 +157,15 @@ private struct GregorianBackedCalendarParityTests {
         }
     }
 
-    @Test(arguments: GregorianBackedFamily.allCases, [Calendar.Component.era, .year, .month, .day, .weekday, .quarter, .weekOfMonth, .weekOfYear, .dayOfYear])
-    func componentRangesMatchICU(_ family: GregorianBackedFamily, _ component: Calendar.Component) {
+    @Test(arguments: GregorianCalendarFamily.allCases, [Calendar.Component.era, .year, .month, .day, .weekday, .quarter, .weekOfMonth, .weekOfYear, .dayOfYear])
+    func componentRangesMatchICU(_ family: GregorianCalendarFamily, _ component: Calendar.Component) {
         #expect(family.ours.minimumRange(of: component) == family.icu.minimumRange(of: component))
         #expect(family.ours.maximumRange(of: component) == family.icu.maximumRange(of: component))
     }
 
     /// Adding to `.era` does not move the date, because the Gregorian engine ignores the era field for compatibility.
-    @Test(arguments: GregorianBackedFamily.allCases, gregorianBackedProbes)
-    func addingEraDoesNotMoveTheDate(_ family: GregorianBackedFamily, _ probe: GregorianBackedProbe) {
+    @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
+    func addingEraDoesNotMoveTheDate(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) {
         let calendar = family.ours
         #expect(calendar.date(byAdding: .era, value: 1, to: probe.date) == probe.date)
         #expect(calendar.date(byAdding: .era, value: -1, to: probe.date) == probe.date)
@@ -247,8 +247,8 @@ private struct ROCBackwardEraTests {
 /// Those forms are the week-year one, `range(of: .day, in: .weekOfMonth)`, a month roll past the end of the year, the year-anchored forms, and a missing year.
 ///
 /// These three calendars hand all of that to `_CalendarGregorian`, so most of it works by delegation. A missing year did not: see `dateFromWithNoYearUsesEraYearOne`.
-@Suite("Gregorian-Backed Component Form Parity")
-private struct GregorianBackedComponentFormParityTests {
+@Suite("Gregorian Family Component Form Parity")
+private struct GregorianFamilyComponentFormParityTests {
 
     /// Dates chosen to sit in different eras of each calendar, including two era boundaries.
     static let dates: [(label: String, date: Date)] = [
@@ -269,8 +269,8 @@ private struct GregorianBackedComponentFormParityTests {
     }
 
     /// ICU leaves `.yearForWeekOfYear` as the Gregorian year even where it relabels `.year`, so a Buddhist date reports year 2568 next to yearForWeekOfYear 2025. Odd, but it is what ICU does.
-    @Test(arguments: GregorianBackedFamily.allCases, dates)
-    func weekYearFieldsMatchICU(_ family: GregorianBackedFamily, _ probe: (label: String, date: Date)) {
+    @Test(arguments: GregorianCalendarFamily.allCases, dates)
+    func weekYearFieldsMatchICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let ours = family.ours.dateComponents([.yearForWeekOfYear, .weekOfYear, .weekday], from: probe.date)
         let icu = family.icu.dateComponents([.yearForWeekOfYear, .weekOfYear, .weekday], from: probe.date)
         #expect(ours.yearForWeekOfYear == icu.yearForWeekOfYear)
@@ -279,8 +279,8 @@ private struct GregorianBackedComponentFormParityTests {
     }
 
     /// The week-year form of `date(from:)`, which #2165 fixed for Hebrew and Chinese.
-    @Test(arguments: GregorianBackedFamily.allCases, dates)
-    func dateFromWeekYearFormMatchesICU(_ family: GregorianBackedFamily, _ probe: (label: String, date: Date)) {
+    @Test(arguments: GregorianCalendarFamily.allCases, dates)
+    func dateFromWeekYearFormMatchesICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let native = family.icu.dateComponents([.era, .yearForWeekOfYear, .weekOfYear, .weekday], from: probe.date)
         var components = DateComponents()
         components.era = native.era; components.yearForWeekOfYear = native.yearForWeekOfYear
@@ -289,16 +289,16 @@ private struct GregorianBackedComponentFormParityTests {
     }
 
     /// `range(of: .day, in: .weekOfMonth)` returned nil for Chinese before #2165.
-    @Test(arguments: GregorianBackedFamily.allCases, dates)
-    func rangeOfDayInWeekOfMonthMatchesICU(_ family: GregorianBackedFamily, _ probe: (label: String, date: Date)) {
+    @Test(arguments: GregorianCalendarFamily.allCases, dates)
+    func rangeOfDayInWeekOfMonthMatchesICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let ours = family.ours.range(of: .day, in: .weekOfMonth, for: probe.date)
         #expect(ours == family.icu.range(of: .day, in: .weekOfMonth, for: probe.date))
         #expect(ours != nil)
     }
 
     /// Rolling `.month` past December carried into the year for Chinese before #2165. A roll must stay inside the year.
-    @Test(arguments: GregorianBackedFamily.allCases, dates)
-    func rollingMonthMatchesICU(_ family: GregorianBackedFamily, _ probe: (label: String, date: Date)) {
+    @Test(arguments: GregorianCalendarFamily.allCases, dates)
+    func rollingMonthMatchesICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         for amount in [1, -1, 5] {
             let ours = family.ours.date(byAdding: .month, value: amount, to: probe.date, wrappingComponents: true)
             #expect(ours == family.icu.date(byAdding: .month, value: amount, to: probe.date, wrappingComponents: true), "\(probe.label) roll \(amount)")
@@ -306,8 +306,8 @@ private struct GregorianBackedComponentFormParityTests {
     }
 
     /// The year-anchored forms, never checked in Hebrew or Chinese and flagged as a likely repeat of the week-year gap.
-    @Test(arguments: GregorianBackedFamily.allCases, dates)
-    func yearAnchoredFormsMatchICU(_ family: GregorianBackedFamily, _ probe: (label: String, date: Date)) {
+    @Test(arguments: GregorianCalendarFamily.allCases, dates)
+    func yearAnchoredFormsMatchICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let native = family.icu.dateComponents([.era, .year, .month, .weekday, .weekdayOrdinal, .dayOfYear], from: probe.date)
 
         var weekdayOrdinalForm = DateComponents()
@@ -322,8 +322,8 @@ private struct GregorianBackedComponentFormParityTests {
     }
 
     /// A `DateComponents` with no year must fall back to year 1 of this calendar's own era, not to Gregorian year 1. Buddhist lands in 543 BCE, Japanese in Reiwa 1, ROC in Minguo 1.
-    @Test(arguments: GregorianBackedFamily.allCases)
-    func dateFromWithNoYearUsesEraYearOne(_ family: GregorianBackedFamily) {
+    @Test(arguments: GregorianCalendarFamily.allCases)
+    func dateFromWithNoYearUsesEraYearOne(_ family: GregorianCalendarFamily) {
         var components = DateComponents()
         components.month = 6; components.day = 15; components.hour = 12
         #expect(family.ours.date(from: components) == family.icu.date(from: components))
@@ -331,8 +331,8 @@ private struct GregorianBackedComponentFormParityTests {
 }
 
 /// Parity for units counted inside an era. The engine counts these from this calendar's era start, where delegating to `_CalendarGregorian` would count from the Gregorian one.
-@Suite("Gregorian-Backed Era Ordinality Parity")
-private struct GregorianBackedEraOrdinalityParityTests {
+@Suite("Gregorian Family Era Ordinality Parity")
+private struct GregorianFamilyEraOrdinalityParityTests {
 
     /// The week-based units are left out on purpose. ICU's week count inside an era is not a function of the day count inside that era.
     ///
@@ -359,8 +359,8 @@ private struct GregorianBackedEraOrdinalityParityTests {
         return date
     }
 
-    @Test(arguments: GregorianBackedFamily.allCases, units)
-    func ordinalityInEraMatchesICU(_ family: GregorianBackedFamily, _ unit: Calendar.Component) {
+    @Test(arguments: GregorianCalendarFamily.allCases, units)
+    func ordinalityInEraMatchesICU(_ family: GregorianCalendarFamily, _ unit: Calendar.Component) {
         let ours = family.ours, icu = family.icu
         for probe in Self.dates {
             #expect(ours.ordinality(of: unit, in: .era, for: probe.date) == icu.ordinality(of: unit, in: .era, for: probe.date), "\(unit) in .era at \(probe.label)")
@@ -371,8 +371,8 @@ private struct GregorianBackedEraOrdinalityParityTests {
     ///
     /// ICU's differs by one in some cases. We do not follow it, because a self-consistent count is more useful than an inconsistent match.
     ///
-    @Test(arguments: GregorianBackedFamily.allCases)
-    func weekInEraAdvancesOneWeekAtATime(_ family: GregorianBackedFamily) throws {
+    @Test(arguments: GregorianCalendarFamily.allCases)
+    func weekInEraAdvancesOneWeekAtATime(_ family: GregorianCalendarFamily) throws {
         let calendar = family.ours
         let start = try #require(calendar.date(from: DateComponents(timeZone: .gmt, year: 2024, month: 1, day: 7, hour: 12)))
         var previous = try #require(calendar.ordinality(of: .weekOfYear, in: .era, for: start))
@@ -385,8 +385,8 @@ private struct GregorianBackedEraOrdinalityParityTests {
     }
 
     /// The year counted inside an era is the same number the calendar reports as its `.year` component.
-    @Test(arguments: GregorianBackedFamily.allCases)
-    func yearInEraMatchesTheYearComponent(_ family: GregorianBackedFamily) {
+    @Test(arguments: GregorianCalendarFamily.allCases)
+    func yearInEraMatchesTheYearComponent(_ family: GregorianCalendarFamily) {
         let calendar = family.ours
         for probe in Self.dates {
             #expect(calendar.ordinality(of: .year, in: .era, for: probe.date) == calendar.dateComponents([.year], from: probe.date).year, "at \(probe.label)")
@@ -395,8 +395,8 @@ private struct GregorianBackedEraOrdinalityParityTests {
 }
 
 /// The three calendars share one `hash(into:)` from `_CalendarProtocol`, so they must honour the Hashable contract: calendars that compare equal have to hash equally.
-@Suite("Gregorian-Backed Hash Contract")
-private struct GregorianBackedHashContractTests {
+@Suite("Gregorian Family Hash Contract")
+private struct GregorianFamilyHashContractTests {
 
     private static func hashValue(_ calendar: Calendar) -> Int {
         var hasher = Hasher()
@@ -405,16 +405,16 @@ private struct GregorianBackedHashContractTests {
     }
 
     /// An unset `firstWeekday` and one set explicitly to the value it would resolve to are equal, so they must hash the same. Hashing the stored value instead of the resolved one breaks this.
-    @Test(arguments: GregorianBackedFamily.allCases)
-    func resolvedAndExplicitSettingsHashAlike(_ family: GregorianBackedFamily) {
+    @Test(arguments: GregorianCalendarFamily.allCases)
+    func resolvedAndExplicitSettingsHashAlike(_ family: GregorianCalendarFamily) {
         let unset = family.calendar(firstWeekday: nil, minimumDaysInFirstWeek: nil)
         let explicit = family.calendar(firstWeekday: unset.firstWeekday, minimumDaysInFirstWeek: unset.minimumDaysInFirstWeek)
         #expect(unset == explicit)
         #expect(Self.hashValue(unset) == Self.hashValue(explicit))
     }
 
-    @Test(arguments: GregorianBackedFamily.allCases)
-    func differentTimeZonesHashApart(_ family: GregorianBackedFamily) {
+    @Test(arguments: GregorianCalendarFamily.allCases)
+    func differentTimeZonesHashApart(_ family: GregorianCalendarFamily) {
         let gmt = family.calendar(firstWeekday: nil, minimumDaysInFirstWeek: nil)
         var tokyo = gmt
         tokyo.timeZone = TimeZone(identifier: "Asia/Tokyo")!
