@@ -180,7 +180,7 @@ extension Data {
         
         @_alwaysEmitIntoClient
         mutating func resetBytes(in range: Range<Index>) {
-            precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(range.lowerBound >= startIndex && range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             ensureUniqueReference()
             _storage.resetBytes(in: range)
             if _slice.upperBound < range.upperBound {
