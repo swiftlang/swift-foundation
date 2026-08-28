@@ -385,12 +385,10 @@ private struct GregorianFamilyEraOrdinalityParityTests {
     }
 
     /// The year counted inside an era is the same number the calendar reports as its `.year` component.
-    @Test(arguments: GregorianCalendarFamily.allCases)
-    func yearInEraMatchesTheYearComponent(_ family: GregorianCalendarFamily) {
+    @Test(arguments: GregorianCalendarFamily.allCases, dates)
+    func yearInEraMatchesTheYearComponent(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let calendar = family.ours
-        for probe in Self.dates {
-            #expect(calendar.ordinality(of: .year, in: .era, for: probe.date) == calendar.dateComponents([.year], from: probe.date).year, "at \(probe.label)")
-        }
+        #expect(calendar.ordinality(of: .year, in: .era, for: probe.date) == calendar.dateComponents([.year], from: probe.date).year, "at \(probe.label)")
     }
 }
 

@@ -18,11 +18,11 @@ internal enum _CalendarEraDirection: Sendable {
     case backward
 }
 
-/// One era of a Gregorian-backed calendar.
+/// One era of a Gregorian-family calendar.
 internal struct _CalendarEraEntry: Sendable {
     /// The value `DateComponents.era` carries for this era. These match ICU's numbering.
     let code: Int
-    /// The extended Gregorian year holding this era's boundary. A forward era numbers that year 1; a backward era counts down from it.
+    /// The extended Gregorian year holding this era's boundary. A forward era numbers that year 1. A backward era counts down from it.
     let anchorYear: Int
     /// Month and day of the boundary within `anchorYear`.
     let startMonth: Int
@@ -64,7 +64,7 @@ internal struct _CalendarEraEntry: Sendable {
     }
 }
 
-/// The eras of one Gregorian-backed calendar, newest first.
+/// The eras of one Gregorian-family calendar, newest first.
 internal struct _CalendarEraTable: Sendable {
     let entries: [_CalendarEraEntry]
 
@@ -77,7 +77,7 @@ internal struct _CalendarEraTable: Sendable {
     /// The anchor year of the newest era, which limits how high a year number can go once years are era-relative.
     let newestAnchorYear: Int
 
-    /// True when an era can end as well as begin, so one era can cover a single year. The Japanese eras do; the Buddhist and Minguo eras run on without limit.
+    /// True when an era can end as well as begin, so one era can cover a single year. The Japanese eras do. The Buddhist and Minguo eras run on without limit.
     let erasCanEnd: Bool
 
     init(_ entries: [_CalendarEraEntry]) {
