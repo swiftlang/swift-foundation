@@ -28,7 +28,7 @@ internal struct _CalendarEraEntry: Sendable {
     let startMonth: Int
     let startDay: Int
     let direction: _CalendarEraDirection
-    /// True when the era labels dates before its boundary too. ICU's Buddhist era does this: 1000 BCE gets a Buddhist year but no era interval.
+    /// True when the era labels dates before its boundary too. The Buddhist era does this: 1000 BCE gets a Buddhist year, but no era interval, since the era has no start to measure from.
     let labelsEveryDate: Bool
 
     init(code: Int, anchorYear: Int, startMonth: Int, startDay: Int, direction: _CalendarEraDirection, labelsEveryDate: Bool = false) {
@@ -71,7 +71,7 @@ internal struct _CalendarEraTable: Sendable {
     /// The highest era code. Era ranges run from 0 up to this value, because codes 0 and 1 stay reserved for the Gregorian BCE and CE eras a calendar inherits.
     let highestCode: Int
 
-    /// The code to assume when `DateComponents.era` is absent. ICU defaults to the newest era.
+    /// The code to assume when `DateComponents.era` is absent, which is the newest era in the table.
     let defaultCode: Int
 
     /// The anchor year of the newest era, which limits how high a year number can go once years are era-relative.
@@ -106,7 +106,7 @@ internal struct _CalendarEraTable: Sendable {
 
 /// The era tables themselves, one per calendar that `_CalendarGregorian` serves.
 ///
-/// These are stored properties rather than a function returning a fresh table, so each table is built once for the whole process. Building one per calendar would allocate an array every time a calendar is created or copied, and copying happens whenever a caller changes a time zone or a locale.
+/// These are stored properties, so each table is built once for the process. A function returning a fresh table would allocate on every calendar copy.
 extension _CalendarEraTable {
 
     /// Gregorian and ISO8601. CE counts forward from year 1, and BCE counts backward from it.
