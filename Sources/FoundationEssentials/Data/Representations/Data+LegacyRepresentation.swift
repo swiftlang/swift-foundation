@@ -479,16 +479,14 @@ extension Data {
         mutating func resetBytes(in range: Range<Index>) {
             switch self {
             case .empty:
+                precondition(range.lowerBound == 0, "index \(range.lowerBound) is out of bounds of 0..<0)")
                 if range.upperBound == 0 {
                     self = .empty
                 } else if InlineData.canStore(count: range.upperBound) {
-                    precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
                     self = .inline(InlineData(count: range.upperBound))
                 } else if InlineSlice.canStore(count: range.upperBound) {
-                    precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
                     self = .slice(InlineSlice(count: range.upperBound))
                 } else {
-                    precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
                     self = .large(LargeSlice(count: range.upperBound))
                 }
             case .inline(var inline):

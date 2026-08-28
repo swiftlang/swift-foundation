@@ -817,9 +817,6 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - parameter range: The range in the data to set to `0`.
     @inlinable // This is @inlinable as trivially forwarding.
     public mutating func resetBytes(in range: Range<Index>) {
-        // it is worth noting that the range here may be out of bounds of the Data itself (which triggers a growth)
-        precondition(range.lowerBound >= 0, "Ranges must not be negative bounds")
-        precondition(range.upperBound >= 0, "Ranges must not be negative bounds")
         _representation.resetBytes(in: range)
     }
 

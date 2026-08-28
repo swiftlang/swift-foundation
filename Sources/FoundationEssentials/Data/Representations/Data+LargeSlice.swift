@@ -244,7 +244,7 @@ extension Data {
         
         @inlinable // This is @inlinable as reasonably small.
         mutating func resetBytes(in range: Range<Int>) {
-            precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(range.lowerBound >= startIndex && range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             ensureUniqueReference()
             storage.resetBytes(in: range)
             if slice.range.upperBound < range.upperBound {
