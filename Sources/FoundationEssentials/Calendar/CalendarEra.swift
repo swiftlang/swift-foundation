@@ -103,3 +103,52 @@ internal struct _CalendarEraTable: Sendable {
         return entries[index - 1]
     }
 }
+
+/// The era tables themselves, one per calendar that `_CalendarGregorian` serves.
+///
+/// These are stored properties rather than a function returning a fresh table, so each table is built once for the whole process. Building one per calendar would allocate an array every time a calendar is created or copied, and copying happens whenever a caller changes a time zone or a locale.
+extension _CalendarEraTable {
+
+    /// Gregorian and ISO8601. CE counts forward from year 1, and BCE counts backward from it.
+    static let gregorian = _CalendarEraTable([
+        _CalendarEraEntry(code: 1, anchorYear: 1, startMonth: 1, startDay: 1, direction: .forward),
+        _CalendarEraEntry(code: 0, anchorYear: 1, startMonth: 1, startDay: 1, direction: .backward),
+    ])
+
+    /// One era, which labels every date. 1 CE is 544 BE.
+    static let buddhist = _CalendarEraTable([
+        _CalendarEraEntry(code: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward, labelsEveryDate: true)
+    ])
+
+    /// The five modern eras, newest first, with ICU's numbering (Meiji 232 through Reiwa 236).
+    ///
+    /// CLDR and ICU dropped the pre-Meiji eras (unicode-org/icu#4019, ICU-23341), so earlier dates keep the Gregorian era and codes 2 through 231 are unused.
+    ///
+    /// Meiji starts 1868-09-08 to match Apple's runtime ICU, where the CLDR canonical date is 1868-10-23.
+    static let japanese = _CalendarEraTable([
+        _CalendarEraEntry(code: 236, anchorYear: 2019, startMonth: 5, startDay: 1, direction: .forward),
+        _CalendarEraEntry(code: 235, anchorYear: 1989, startMonth: 1, startDay: 8, direction: .forward),
+        _CalendarEraEntry(code: 234, anchorYear: 1926, startMonth: 12, startDay: 25, direction: .forward),
+        _CalendarEraEntry(code: 233, anchorYear: 1912, startMonth: 7, startDay: 30, direction: .forward),
+        _CalendarEraEntry(code: 232, anchorYear: 1868, startMonth: 9, startDay: 8, direction: .forward),
+    ])
+
+    /// Two eras sharing the 1912 boundary, with ICU's numbering from `taiwncal.h` (Before-Minguo 0, Minguo 1).
+    static let republicOfChina = _CalendarEraTable([
+        _CalendarEraEntry(code: 1, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .forward),
+        _CalendarEraEntry(code: 0, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .backward),
+    ])
+
+    /// An empty table, used to build a date from a year that is already extended so no era conversion applies.
+    static let noRelabeling = _CalendarEraTable([])
+
+    /// The table an identifier labels its eras with. Anything other than the three era-relabeling calendars uses the Gregorian eras.
+    static func forCalendar(_ identifier: Calendar.Identifier) -> _CalendarEraTable {
+        switch identifier {
+        case .buddhist: return .buddhist
+        case .japanese: return .japanese
+        case .republicOfChina: return .republicOfChina
+        default: return .gregorian
+        }
+    }
+}

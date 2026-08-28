@@ -206,7 +206,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         let defaultFirstWeekday: Int?
         let defaultMinimumDaysInFirstWeek: Int?
         
-        self.eraTable = Self.eraTable(for: identifier)
+        self.eraTable = .forCalendar(identifier)
 
         if identifier == .iso8601 {
             defaultLocale = Locale.unlocalized
@@ -342,41 +342,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Range
 
-    /// How this calendar labels eras and numbers years inside them. The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults.
+    /// How this calendar labels eras and numbers years inside them. The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults. The tables live in `CalendarEra.swift`.
     let eraTable: _CalendarEraTable
-
-    static func eraTable(for identifier: Calendar.Identifier) -> _CalendarEraTable {
-        switch identifier {
-        case .buddhist:
-            // One era, which labels every date. 1 CE is 544 BE.
-            return _CalendarEraTable([
-                _CalendarEraEntry(code: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward, labelsEveryDate: true)
-            ])
-        case .japanese:
-            // The five modern eras, newest first, with ICU's numbering (Meiji 232 through Reiwa 236).
-            // CLDR and ICU dropped the pre-Meiji eras (unicode-org/icu#4019, ICU-23341), so earlier dates keep the Gregorian era and codes 2 through 231 are unused.
-            // Meiji starts 1868-09-08 to match Apple's runtime ICU, where the CLDR canonical date is 1868-10-23.
-            return _CalendarEraTable([
-                _CalendarEraEntry(code: 236, anchorYear: 2019, startMonth: 5, startDay: 1, direction: .forward),
-                _CalendarEraEntry(code: 235, anchorYear: 1989, startMonth: 1, startDay: 8, direction: .forward),
-                _CalendarEraEntry(code: 234, anchorYear: 1926, startMonth: 12, startDay: 25, direction: .forward),
-                _CalendarEraEntry(code: 233, anchorYear: 1912, startMonth: 7, startDay: 30, direction: .forward),
-                _CalendarEraEntry(code: 232, anchorYear: 1868, startMonth: 9, startDay: 8, direction: .forward),
-            ])
-        case .republicOfChina:
-            // Two eras sharing the 1912 boundary, with ICU's numbering from `taiwncal.h` (Before-Minguo 0, Minguo 1).
-            return _CalendarEraTable([
-                _CalendarEraEntry(code: 1, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .forward),
-                _CalendarEraEntry(code: 0, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .backward),
-            ])
-        default:
-            // Gregorian and ISO8601. CE counts forward from year 1 and BCE counts backward from it.
-            return _CalendarEraTable([
-                _CalendarEraEntry(code: 1, anchorYear: 1, startMonth: 1, startDay: 1, direction: .forward),
-                _CalendarEraEntry(code: 0, anchorYear: 1, startMonth: 1, startDay: 1, direction: .backward),
-            ])
-        }
-    }
 
     // Returns the range of a component in Gregorian Calendar.
     // When there are multiple possible upper bounds, the smallest one is returned.
@@ -1679,9 +1646,6 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return code == 0
     }
 
-    /// An era table with no entries, used to build a date from a year that is already extended so no era conversion applies.
-    static let noEraRelabeling = _CalendarEraTable([])
-
     func eraBoundary(of entry: _CalendarEraEntry) -> Date? {
         // The CE and BCE boundary is a proleptic 0001-01-01. `date(from:)` is Julian-cutover aware and would land two days earlier, so keep the reference instant.
         if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
@@ -1689,7 +1653,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         }
         // Midnight on the boundary date, with era relabeling switched off since the year given here is already extended.
         let components = DateComponents(year: entry.anchorYear, month: entry.startMonth, day: entry.startDay, hour: 0, minute: 0, second: 0)
-        return try? date(from: components, inTimeZone: timeZone, eraTable: Self.noEraRelabeling)
+        return try? date(from: components, inTimeZone: timeZone, eraTable: .noRelabeling)
     }
 
     func eraInterval(containing date: Date) -> DateInterval? {
