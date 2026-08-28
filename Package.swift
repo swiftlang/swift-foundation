@@ -38,7 +38,7 @@ let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("ImportMacroAliases"),
     .enableUpcomingFeature("InferSendableFromCaptures"),
     .enableUpcomingFeature("MemberImportVisibility"),
-//    .define("FOUNDATION_LOCALE_EXPERIMENTAL"), // TODO: TAKE ME OUT when checking in!
+    .define("FOUNDATION_LOCALE_EXPERIMENTAL"), // TODO: TAKE ME OUT when checking in!
     .swiftLanguageMode(.v5)
 ]
 

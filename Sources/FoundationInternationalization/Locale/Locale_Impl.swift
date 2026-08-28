@@ -42,23 +42,49 @@ private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
 // TODO: Right now, this is just a copy of _Locale_Unlocalized.  The plan is first to convert it to a thin wrapper around _Locale_ICU and then slowly replace all of the calls to _Locale_ICU with our own implementations.
 
 internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
-    let _identifier: String
-    let _prefs: LocalePreferences?
+    private let _originalIdentifier: String
+    private let _normalizedIdentifier: String
+    private let _prefs: LocalePreferences?
     
     required init(identifier: String, prefs: LocalePreferences? = nil) {
-        // TODO: we're probably going to have to validate and normalize the identifier here instead of just taking what the caller gives us (I think we'll need to do this just to support BCP47 syntax as an option)
-        _identifier = identifier
+        _originalIdentifier = identifier
         _prefs = prefs
+        
+        let (language, script, region, variant) = Self.parseBaseLocaleID(identifier)
+        var normalizedIdentifier = ""
+        if let language {
+            // TODO: Add code to map 3-letter codes into equivalent 2-letter codes when possible
+            normalizedIdentifier.append(language.lowercased())
+        }
+        if let script {
+            // TODO: Add code to fill in a default script when appropriate and possible
+            normalizedIdentifier.append("_\(script.capitalized)")
+        }
+        if let region {
+            // TODO: Add code to map 3-letter codes [I didn't know they were legal!] into equivalent 2-letter codes when possible
+            normalizedIdentifier.append("_\(region.uppercased())")
+        }
+        if let variant {
+            if language == nil {
+                // special-case for the situation where the variant is the only populated field
+                normalizedIdentifier.append("__\(variant.uppercased())")
+            } else {
+                normalizedIdentifier.append("_\(variant.uppercased())")
+            }
+        }
+        _normalizedIdentifier = normalizedIdentifier
     }
     
     required init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
         // TODO: What does this function do?  How do I replicate the current implementation?
-        _identifier = ""
+        _originalIdentifier = ""
+        _normalizedIdentifier = ""
         _prefs = prefs
     }
     
     required init(components: Locale.Components) {
-        _identifier = components.icuIdentifier
+        _originalIdentifier = components.icuIdentifier
+        _normalizedIdentifier = _originalIdentifier
         _prefs = nil
     }
 
@@ -75,11 +101,11 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var debugDescription: String {
-        "Fixed \(_identifier)"
+        "Fixed \(_originalIdentifier)"
     }
     
     var identifier: String {
-        _identifier
+        _originalIdentifier
     }
     
     func identifierDisplayName(for value: String) -> String? {
@@ -227,7 +253,11 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
 
     var language: Locale.Language {
-        Locale.Language(components: .init(languageCode: .init("en"), script: nil, region: .init("001")))
+        let (language, script, region, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        
+        return Locale.Language(languageCode: language.map { .init(String($0)) },
+                               script: script.map { .init(String($0)) },
+                               region: region.map { .init(String($0)) })
     }
     
     func identifier(_ type: Locale.IdentifierType) -> String {
@@ -247,7 +277,10 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var region: Locale.Region? {
-        Locale.Region("001")
+        // TODO: This will need to be beefed up to also handle the "rg" subtag
+        let (_, _, region, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        
+        return region.map { .init(String($0)) }
     }
     
     var timeZone: TimeZone? {
@@ -259,7 +292,9 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var variant: Locale.Variant? {
-        nil
+        let (_, _, _, variant) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        
+        return variant.map { .init(String($0)) }
     }
     
     var temperatureUnit: LocalePreferences.TemperatureUnit {
@@ -310,4 +345,48 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
 #endif
 
+    private static func parseBaseLocaleID(_ identifier: String) -> (language: Substring?, script: Substring?, region: Substring?, variant: Substring?) {
+        let baseLocaleID = identifier.split(separator: "@").first ?? ""
+        var parts = baseLocaleID.split(omittingEmptySubsequences: false, whereSeparator: { $0 == "-" || $0 == "_" })[...]
+        
+        // the first segment is always considered to be the language code, even if empty or syntactically malformed (TODO: tighten this up?)
+        // TODO: the corresponding ICU code also handles language codes that begin with "i-" and "x-".  We might need to do the same (maybe in a separate BCP 47 code path)
+        var language = parts.first
+        parts = parts.dropFirst()
+        if let l = language, !(1...11).contains(l.count) {
+            language = nil
+        }
+        
+        // if the next segment contains exactly 4 letters, it's the script code
+        var script = parts.first
+        if let script, script.count == 4, script.allSatisfy({ $0.isASCII && $0.isLetter }) {
+            parts = parts.dropFirst()
+        } else {
+            script = nil
+        }
+        
+        // the next segment is considered the region code if it contains 2 or 3 characters
+        // TODO: we don't check the actual characters here, but maybe should?
+        var region = parts.first
+        if let region, region.count == 2 || region.count == 3 {
+            parts = parts.dropFirst()
+        } else {
+            region = nil
+        }
+        
+        // if there are any segments left, consider ALL of them together to be the variant code (TODO: tighten this up somehow? deal with the fact that - in the variant doesn't get converted to _?)
+        while let p = parts.first, p.isEmpty {
+            parts = parts.dropFirst()
+        }
+        var variant: Substring? = if let first = parts.first, let last = parts.last {
+            baseLocaleID[first.startIndex..<last.endIndex]
+        } else {
+            nil
+        }
+        if let v = variant, v.isEmpty {
+            variant = nil
+        }
+
+        return (language, script, region, variant)
+    }
 }
