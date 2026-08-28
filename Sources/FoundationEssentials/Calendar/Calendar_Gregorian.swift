@@ -342,7 +342,9 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Range
 
-    /// How this calendar labels eras and numbers years inside them. The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults. The tables live in `CalendarEra.swift`.
+    /// How this calendar labels eras and numbers years inside them. The tables live in `CalendarEra.swift`.
+    ///
+    /// The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults.
     let eraTable: _CalendarEraTable
 
     // Returns the range of a component in Gregorian Calendar.
@@ -1635,7 +1637,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         }
     }
 
-    // MARK: - Era relabeling
+    // MARK: - Era lookup
 
     /// Whether this era counts its years down instead of up, like BCE or ROC's Before-Minguo. Adding or wrapping a year has to move opposite the requested amount in that case.
     ///
@@ -1661,7 +1663,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         for entry in eraTable.entries where entry.direction == .forward {
             guard let boundary = eraBoundary(of: entry), date >= boundary else { continue }
 
-            // An era ends where the next one begins. This diverges from ICU on purpose: ICU reports Showa ending 1989-12-25, eleven months after Heisei began.
+            // An era ends where the next one begins, so successive eras meet exactly and never overlap.
             guard let next = eraTable.eraAfter(entry), let end = eraBoundary(of: next) else {
                 return DateInterval(start: boundary, duration: Calendar._maxDateIntervalDuration)
             }
@@ -1673,7 +1675,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
            let boundary = eraBoundary(of: backward) {
             return DateInterval(start: boundary - Calendar._maxDateIntervalDuration, end: boundary)
         }
-        // A table that labels every date has no era to inherit, so there is nothing to report before its first era. ICU reports nothing there either.
+        // A table that labels every date has no era to inherit, so there is nothing to report before its first era.
         if eraTable.entries.contains(where: { $0.labelsEveryDate }) { return nil }
 
         // For a date older than every era in the table, the inherited era interval cut short where the oldest era begins.

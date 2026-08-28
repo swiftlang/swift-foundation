@@ -151,11 +151,7 @@ private struct JapaneseGregorianEraInheritanceTests {
         #expect(calendar.minimumRange(of: .era) == 0..<237)
     }
 
-    /// An era ends where the next era really starts. This is a deliberate divergence from ICU, so the values are pinned here rather than compared.
-    ///
-    /// ICU bumps the era field and keeps the era start's month and day. That puts Showa's end at 1989-12-25, eleven months after Heisei began.
-    ///
-    /// Successive eras overlap in ICU's answer. Ours meet exactly.
+    /// An era ends where the next one starts, so successive eras meet exactly and never overlap.
     @Test func eraIntervalEndsWhereTheNextEraStarts() throws {
         let calendar = Self.japanese()
         let showaStart = try Self.gregorianDate(era: Self.ce, 1926, 12, 25)
