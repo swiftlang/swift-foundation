@@ -19,7 +19,7 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-/// RecurrenceRule parity probe: compares date sequences from `recurrences(of:)` between the ICU-backed calendar and `_CalendarGregorian`, for the three Gregorian-family calendars. Includes each calendar's own era transition, where it has one.
+/// Compares `recurrences(of:)` sequences between the ICU-backed calendar and `_CalendarGregorian` for the three Gregorian-family calendars. Covers each one's era transition where it has one.
 @Suite("Gregorian Family RecurrenceRule Parity Probe")
 private struct GregorianFamilyRecurrenceRuleParityProbe {
 
@@ -156,7 +156,7 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
-    /// Only Buddhist and ROC carry this test; the original Japanese probe never had a weekly case.
+    /// Only Buddhist and ROC carry this test. The original Japanese probe never had a weekly case.
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: [Family.buddhist, .roc])
     private func weekly_mondays(_ family: Family) {

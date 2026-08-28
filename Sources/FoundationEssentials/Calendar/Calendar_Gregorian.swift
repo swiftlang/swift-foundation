@@ -87,7 +87,7 @@ enum ResolvedDateComponents {
         }
 
         // The era table turns an era-relative year into an extended one. A code this calendar's own table does not list, like Japanese reading a pre-Meiji era, is an inherited Gregorian era instead.
-        // Only an era the caller actually set counts as inherited BCE. An absent era must not, or building a date with no era relabeling at all (the empty table used to find an era's own boundary) would default to code 0 and flip the sign.
+        // Only an era the caller actually set counts as inherited BCE. An absent era must not: the empty table used to find an era's own boundary defaults to code 0, which would flip the sign.
         if adjustEra {
             if let entry = eraTable.entry(code: components.era ?? eraTable.defaultCode) {
                 rawYear = entry.extendedYear(fromEraYear: rawYear)

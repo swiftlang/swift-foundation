@@ -41,17 +41,17 @@ internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
 }
 
 internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool {
-    // _foundation_swift_buddhist_calendar_feature_enabled() — once Apple adds the underscored binding
+    // Call _foundation_swift_buddhist_calendar_feature_enabled() once Apple adds the underscored binding.
     return false
 }
 
 internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool {
-    // _foundation_swift_japanese_calendar_feature_enabled() — once Apple adds the underscored binding
+    // Call _foundation_swift_japanese_calendar_feature_enabled() once Apple adds the underscored binding.
     return false
 }
 
 internal func foundation_swift_roc_calendar_feature_enabled() -> Bool {
-    // _foundation_swift_roc_calendar_feature_enabled() — once Apple adds the underscored binding
+    // Call _foundation_swift_roc_calendar_feature_enabled() once Apple adds the underscored binding.
     return false
 }
 #else
