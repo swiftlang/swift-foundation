@@ -254,7 +254,7 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
 
     var language: Locale.Language {
         let (language, script, region, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
-        
+
         return Locale.Language(languageCode: language.map { .init(String($0)) },
                                script: script.map { .init(String($0)) },
                                region: region.map { .init(String($0)) })
@@ -345,7 +345,7 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
 #endif
 
-    private static func parseBaseLocaleID(_ identifier: String) -> (language: Substring?, script: Substring?, region: Substring?, variant: Substring?) {
+    static func parseBaseLocaleID(_ identifier: String) -> (language: Substring?, script: Substring?, region: Substring?, variant: Substring?) {
         let baseLocaleID = identifier.split(separator: "@").first ?? ""
         var parts = baseLocaleID.split(omittingEmptySubsequences: false, whereSeparator: { $0 == "-" || $0 == "_" })[...]
         
@@ -388,5 +388,56 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
         }
 
         return (language, script, region, variant)
+    }
+}
+
+/// Pure-Swift implementation of the `Locale.Language` operations.
+///
+/// Selected as `_LanguageEngine` when `FOUNDATION_LOCALE_EXPERIMENTAL` is defined. Until each
+/// operation has a native implementation, it forwards sideways to `_LocaleLanguageICU` so that
+/// `Locale.Language` keeps behaving correctly during the transition.
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+enum _LocaleLanguageImpl: _LocaleLanguageProtocol {
+    // These read the parsed component directly (no ICU). An absent subtag is returned as `nil`
+    // rather than being inferred from likely subtags.
+    static func languageCode(_ components: Locale.Language.Components) -> Locale.LanguageCode? {
+        components.languageCode
+    }
+
+    static func script(_ components: Locale.Language.Components) -> Locale.Script? {
+        components.script
+    }
+
+    static func region(_ components: Locale.Language.Components) -> Locale.Region? {
+        components.region
+    }
+
+    static func components(forIdentifier identifier: String) -> Locale.Language.Components {
+        let (language, script, region, _) = _LocaleImpl.parseBaseLocaleID(identifier)
+        return Locale.Language.Components(
+            languageCode: language.map { Locale.LanguageCode(String($0)) },
+            script: script.map { Locale.Script(String($0)) },
+            region: region.map { Locale.Region(String($0)) })
+    }
+
+    // TODO: Replace these ICU forwards with pure-Swift implementations, one at a time.
+    static func minimalIdentifier(_ components: Locale.Language.Components) -> String {
+        _LocaleLanguageICU.minimalIdentifier(components)
+    }
+
+    static func maximalIdentifier(_ components: Locale.Language.Components) -> String {
+        _LocaleLanguageICU.maximalIdentifier(components)
+    }
+
+    static func parent(_ components: Locale.Language.Components) -> Locale.Language? {
+        _LocaleLanguageICU.parent(components)
+    }
+
+    static func characterDirection(_ components: Locale.Language.Components) -> Locale.LanguageDirection {
+        _LocaleLanguageICU.characterDirection(components)
+    }
+
+    static func lineLayoutDirection(_ components: Locale.Language.Components) -> Locale.LanguageDirection {
+        _LocaleLanguageICU.lineLayoutDirection(components)
     }
 }
