@@ -112,49 +112,40 @@ private let gregorianFamilyProbes: [GregorianFamilyProbe] = [
 
 /// Parity tests for the three Gregorian-family calendars against ICU. They share one era-table engine, so a divergence in any one of them usually means the engine is wrong rather than the calendar.
 ///
-/// The Japanese calendar diverges from the bundled ICU in two deliberate ways, both marked below as known issues and both pinned by golden values in `JapaneseGregorianEraInheritanceTests`.
+/// The Japanese calendar labels two sets of dates differently on purpose, so those dates are skipped here and pinned by golden values in `JapaneseGregorianEraInheritanceTests` instead.
 ///
 /// It drops the pre-Meiji eras (unicode-org/icu#4019, ICU-23341), and it ends an era where the next era really starts.
 @Suite("Gregorian Family Calendar Parity")
 private struct GregorianFamilyCalendarParityTests {
 
-    /// Reading the era and year off a date must match ICU, including dates before the Common Era. The Buddhist year is an offset from the extended Gregorian year, not from the era-relative one.
+    /// Reading the era and year off a date must match ICU, including dates before the Common Era. The Buddhist year is an offset from the extended Gregorian year, not from the year counted inside the era.
     @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
-    func eraAndYearMatchICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) throws {
-        try withKnownIssue("the Japanese calendar deliberately drops the pre-Meiji eras", isIntermittent: false) {
-            let ours = family.ours.dateComponents([.era, .year, .month, .day], from: probe.date)
-            let icu = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
-            #expect(ours.era == icu.era)
-            #expect(ours.year == icu.year)
-            #expect(ours.month == icu.month)
-            #expect(ours.day == icu.day)
-        } when: {
-            family == .japanese && probe.isPreMeiji
-        }
+    func eraAndYearMatchICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) {
+        guard !(family == .japanese && probe.isPreMeiji) else { return }
+        let ours = family.ours.dateComponents([.era, .year, .month, .day], from: probe.date)
+        let icu = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
+        #expect(ours.era == icu.era)
+        #expect(ours.year == icu.year)
+        #expect(ours.month == icu.month)
+        #expect(ours.day == icu.day)
     }
 
     /// Building a date from this calendar's own era and year must match ICU.
     @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
-    func dateFromComponentsMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) throws {
-        try withKnownIssue("the Japanese calendar deliberately drops the pre-Meiji eras", isIntermittent: false) {
-            // Read the native era and year off ICU, then ask both calendars to rebuild the date from them.
-            let native = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
-            var components = DateComponents()
-            components.era = native.era; components.year = native.year
-            components.month = native.month; components.day = native.day; components.hour = 12
-            #expect(family.ours.date(from: components) == family.icu.date(from: components))
-        } when: {
-            family == .japanese && probe.isPreMeiji
-        }
+    func dateFromComponentsMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) {
+        guard !(family == .japanese && probe.isPreMeiji) else { return }
+        // Read the native era and year off ICU, then ask both calendars to rebuild the date from them.
+        let native = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
+        var components = DateComponents()
+        components.era = native.era; components.year = native.year
+        components.month = native.month; components.day = native.day; components.hour = 12
+        #expect(family.ours.date(from: components) == family.icu.date(from: components))
     }
 
     @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
-    func eraIntervalMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) throws {
-        try withKnownIssue("the Japanese calendar drops the pre-Meiji eras and ends an era at the next era's real start", isIntermittent: false) {
-            #expect(family.ours.dateInterval(of: .era, for: probe.date) == family.icu.dateInterval(of: .era, for: probe.date))
-        } when: {
-            family == .japanese && (probe.isPreMeiji || probe.endsInsideABoundedJapaneseEra)
-        }
+    func eraIntervalMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) {
+        guard !(family == .japanese && (probe.isPreMeiji || probe.endsInsideABoundedJapaneseEra)) else { return }
+        #expect(family.ours.dateInterval(of: .era, for: probe.date) == family.icu.dateInterval(of: .era, for: probe.date))
     }
 
     @Test(arguments: GregorianCalendarFamily.allCases, [Calendar.Component.era, .year, .month, .day, .weekday, .quarter, .weekOfMonth, .weekOfYear, .dayOfYear])
