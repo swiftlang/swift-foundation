@@ -257,7 +257,7 @@ extension Data {
         mutating func resetBytes(in range: Range<Index>) {
             assert(range.lowerBound <= MemoryLayout<Buffer>.size)
             assert(range.upperBound <= MemoryLayout<Buffer>.size)
-            precondition(range.lowerBound <= length, "index \(range.lowerBound) is out of bounds of 0..<\(length)")
+            precondition(range.lowerBound >= 0 && range.lowerBound <= length, "index \(range.lowerBound) is out of bounds of 0..<\(length)")
             if length < range.upperBound {
                 length = UInt8(range.upperBound)
             }

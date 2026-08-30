@@ -261,7 +261,7 @@ extension Data {
         mutating func resetBytes(in range: Range<Index>) {
             assert(range.lowerBound < HalfInt.max)
             assert(range.upperBound < HalfInt.max)
-            precondition(range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
+            precondition(range.lowerBound >= startIndex && range.lowerBound <= endIndex, "index \(range.lowerBound) is out of bounds of \(startIndex)..<\(endIndex)")
             ensureUniqueReference()
             storage.resetBytes(in: range)
             if slice.upperBound < range.upperBound {

@@ -2330,8 +2330,33 @@ private final class DataTests {
     
     @Test func bounding_failure_reset_range() async {
         await #expect(processExitsWith: .failure) {
+            var data = Data()
+            data.resetBytes(in: -1..<0)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data()
+            data.resetBytes(in: 2..<3)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data.resetBytes(in: -1..<2)
+        }
+
+        await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.resetBytes(in: 100..<200)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: 128)
+            data.resetBytes(in: -1..<2)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: 128)
+            data.resetBytes(in: 200..<201)
         }
     }
     
@@ -3846,6 +3871,20 @@ struct LargeDataTests {
         #expect(large[1] == 0xBB)
         #expect(large[2] == 0xCC)
     }
+
+    #if FOUNDATION_EXIT_TESTS
+    @Test func resetBytesBounds() async {
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: largeCount)
+            data.resetBytes(in: -1..<2)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: largeCount)
+            data.resetBytes(in: (data.endIndex + 1) ..< (data.endIndex + 2))
+        }
+    }
+    #endif
 }
 
 private func expectLargeIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
