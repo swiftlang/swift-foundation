@@ -2690,6 +2690,9 @@ extension DataTests {
         let input = Data(repeating: 0, count: 10)
         #expect(input.base64EncodedString() == "AAAAAAAAAAAAAA==")
         #expect(input.base64EncodedData() == Data("AAAAAAAAAAAAAA==".utf8))
+
+        #expect(input.base64EncodedString(options: .omitPaddingCharacter) == "AAAAAAAAAAAAAA")
+        #expect(input.base64EncodedData(options: .omitPaddingCharacter) == Data("AAAAAAAAAAAAAA".utf8))
     }
 
     @Test func base64Encode_allBytesSequentially() {
@@ -2727,15 +2730,6 @@ extension DataTests {
             8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_w
             """
         )
-    }
-
-    func test_base64Encode_arrayOfNulls() {
-        let input = Data(repeating: 0, count: 10)
-        #expect(input.base64EncodedString() == "AAAAAAAAAAAAAA==")
-        #expect(input.base64EncodedData() == Data("AAAAAAAAAAAAAA==".utf8))
-
-        #expect(input.base64EncodedString(options: .omitPaddingCharacter) == "AAAAAAAAAAAAAA")
-        #expect(input.base64EncodedData(options: .omitPaddingCharacter) == Data("AAAAAAAAAAAAAA".utf8))
     }
 
     @Test func base64Encode_differentPaddingNeeds() {
