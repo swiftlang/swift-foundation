@@ -41,6 +41,22 @@ private struct SortComparatorTests {
         #expect(intDesc.compare(100, 100) == .orderedSame)
     }
     
+    @Test func sortedWithSingleUseSequenceOfComparators() {
+        struct OrderTracker: SortComparator, Equatable {
+            var order: SortOrder = .forward
+            func compare(_ lhs: Int, _ rhs: Int) -> ComparisonResult {
+                if lhs < rhs { return order == .forward ? .orderedAscending : .orderedDescending }
+                if lhs > rhs { return order == .forward ? .orderedDescending : .orderedAscending }
+                return .orderedSame
+            }
+        }
+        let comparator = OrderTracker()
+        let input = [5, 2, 9, 1, 3]
+        var iterator = AnyIterator([comparator].makeIterator())
+        let singleUse = AnySequence { iterator }
+        #expect(input.sorted(using: singleUse) == [1, 2, 3, 5, 9])
+    }
+
     @Test func anySortComparatorEquality() {
         let a: ComparableComparator<Int> = ComparableComparator<Int>()
         let b: ComparableComparator<Int> = ComparableComparator<Int>(order: .reverse)
