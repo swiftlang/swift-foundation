@@ -60,6 +60,45 @@ extension _FileManagerImpl {
     var temporaryDirectory: URL {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
+
+    private func itemReplacementDirectory(appropriateFor reference: URL) throws -> URL {
+        guard reference.isFileURL else {
+            throw CocoaError.errorWithFilePath(.fileWriteUnsupportedScheme, reference)
+        }
+
+        let temporaryItemsDirectory = temporaryDirectory.appending(component: "TemporaryItems", directoryHint: .isDirectory)
+        let referenceDirectory = reference.deletingPathExtension()
+        let useTemporaryDirectory: Bool
+        if let temporaryVolumeIdentifier = try? temporaryDirectory.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier,
+           let referenceVolumeIdentifier = try? reference.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier {
+            useTemporaryDirectory = temporaryVolumeIdentifier.isEqual(referenceVolumeIdentifier)
+        } else {
+            useTemporaryDirectory = !fileManager.isWritableFile(atPath: referenceDirectory.path)
+        }
+
+        let containerDirectory = useTemporaryDirectory ? temporaryItemsDirectory : referenceDirectory
+        try fileManager.createDirectory(at: containerDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+
+        var attempt = 0
+        while true {
+            let replacementDirectory = containerDirectory.appending(component: itemReplacementDirectoryName(forAttempt: attempt), directoryHint: .isDirectory)
+            do {
+                try fileManager.createDirectory(at: replacementDirectory, withIntermediateDirectories: false)
+                return replacementDirectory
+            } catch let error as CocoaError where error.code == .fileWriteFileExists {
+                attempt += 1
+            }
+        }
+    }
+
+    private func itemReplacementDirectoryName(forAttempt attempt: Int) -> String {
+        let processName = ProcessInfo.processInfo.processName.filter { $0.isLetter || $0.isNumber }
+        let sanitizedProcessName = processName.isEmpty ? "Process" : processName
+        if attempt == 0 {
+            return "(A Document Being Saved By \(sanitizedProcessName))"
+        }
+        return "(A Document Being Saved By \(sanitizedProcessName) \(attempt + 1))"
+    }
     
     func url(
         for directory: FileManager.SearchPathDirectory,
@@ -83,6 +122,10 @@ extension _FileManagerImpl {
             domain = ._partitionedSystemDomainMask
         }
         #endif
+
+        if let url, domain == .userDomainMask, directory == .itemReplacementDirectory {
+            return try itemReplacementDirectory(appropriateFor: url)
+        }
         
         let urls = Array(_SearchPathURLs(for: directory, in: domain, expandTilde: true))
         #if FOUNDATION_FRAMEWORK
