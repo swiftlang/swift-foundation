@@ -76,11 +76,11 @@ private func __NSDecimalAdd(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let addition = try lhs.pointee._add(
+        let addition = try lhs.pointee._addReportingInexact(
             rhs: rhs.pointee, roundingMode: roundingMode
         )
         result.pointee = addition.result
-        if addition.lossOfPrecision {
+        if addition.inexact {
             return .lossOfPrecision
         } else {
             return .noError
@@ -248,12 +248,19 @@ private func __NSDecimalMultiplyByPowerOf10(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try decimal.pointee._multiplyByPowerOfTen(power: Int(power), roundingMode: roundingMode)
-        result.pointee = product
+        let product = try decimal.pointee._multiplyByPowerOfTenReportingInexact(
+            power: Int(power), roundingMode: roundingMode
+        )
+        result.pointee = product.result
+        if product.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
@@ -302,8 +309,8 @@ private func __NSDecimalRound(
         )
         result.pointee = rounded
     } catch {
-        // Noop since this method does not
-        // return a calculation error
+        // If rounding away from zero, a sufficiently negative `scale` can cause overflow.
+        result.pointee = .nan
     }
 }
 
@@ -324,22 +331,17 @@ private func __NSDecimalNormalize(
     _ rhs: UnsafeMutablePointer<Decimal>,
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
-    do {
-        var a = lhs.pointee
-        var b = rhs.pointee
-        let lossPrecision = try Decimal._normalize(
-            a: &a, b: &b, roundingMode: roundingMode
-        )
-        lhs.pointee = a
-        rhs.pointee = b
-        if lossPrecision {
-            return .lossOfPrecision
-        }
-        return .noError
-    } catch {
-        let converted = _convertError(error)
-        return converted
+    var a = lhs.pointee
+    var b = rhs.pointee
+    let lossOfPrecision = Decimal._normalize(
+        a: &a, b: &b, roundingMode: roundingMode
+    )
+    lhs.pointee = a
+    rhs.pointee = b
+    if lossOfPrecision {
+        return .lossOfPrecision
     }
+    return .noError
 }
 
 #if FOUNDATION_FRAMEWORK
@@ -411,14 +413,16 @@ internal func __NSStringToDecimal(
     processedLength: UnsafeMutablePointer<Int>,
     result: UnsafeMutablePointer<Decimal>
 ) {
-    let parsed = Decimal._decimal(
-        from: string.utf8,
-        decimalSeparator: ".".utf8,
+    if let (parsedResult, _, processedCodeUnits) = try? Decimal.__decimal(
+        from: string.utf8Span.span,
+        prevalidatedUTF8: true,
+        decimalSeparator: ".".utf8Span,
         matchEntireString: false
-    ).asOptional
-    processedLength.pointee = parsed.processedLength
-    if let parsedResult = parsed.result {
+    ) {
+        processedLength.pointee = processedCodeUnits
         result.pointee = parsedResult
+    } else {
+        processedLength.pointee = 0
     }
 }
 
