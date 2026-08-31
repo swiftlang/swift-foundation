@@ -81,5 +81,11 @@ extension _CalendarProtocol {
         // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
         locale?.identifier ?? ""
     }
+
+#if FOUNDATION_FRAMEWORK
+    package func bridgeToNSCalendar() -> NSCalendar {
+        _NSSwiftCalendar(calendar: Calendar(inner: self))
+    }
+#endif
 }
 
