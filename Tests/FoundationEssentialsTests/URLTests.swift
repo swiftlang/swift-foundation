@@ -4492,6 +4492,24 @@ private struct URLTests {
         #expect(url.query() == nil)
     }
 
+    @Test func standardizedFileURLDotSegmentEndings() throws {
+        // A path ending in a "." or ".." component refers to a directory, but the file path initializers don't set .hasDirectoryPath for these trailing components. The standardized file URL must still end in a directory slash, consistent with .standardized.
+        let base = URL(filePath: "/base/dir/", directoryHint: .isDirectory)
+        let cases = [
+            ("a/x/..", "file:///base/dir/a/"),
+            ("a/x/.", "file:///base/dir/a/x/"),
+            ("a/..", "file:///base/dir/"),
+        ]
+        for (path, standardized) in cases {
+            let url = URL(filePath: path, relativeTo: base)
+            #expect(url.standardized.absoluteString == standardized, "standardized \"\(path)\"")
+            #expect(url.standardizedFileURL.absoluteString == standardized, "standardizedFileURL \"\(path)\"")
+        }
+
+        let absolute = URL(filePath: "/base/dir/a/x/..")
+        #expect(absolute.standardizedFileURL.absoluteString == "file:///base/dir/a/")
+    }
+
     #if !os(Windows)
     @Test func standardizedFileURLAndResolvingSymlinks() async throws {
         try await FilePlayground {
