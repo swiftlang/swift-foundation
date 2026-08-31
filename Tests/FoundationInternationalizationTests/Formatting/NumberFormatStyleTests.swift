@@ -608,6 +608,113 @@ private struct NumberFormatStyleTests {
         #expect((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$1000T")
     }
 
+    @available(FoundationPreview 6.6, *)
+    @Test func currency_compactLong() throws {
+        let baseStyle = Decimal.FormatStyle.Currency(code: "USD", locale: Locale(identifier: "en_US")).notation(.compactLong)
+
+        // significant digits
+        // ICU currently has no long-form compact patterns for currency, so `compactLong` falls back to the same
+        // abbreviated output as `compactName` when combined with a currency style. See `currency_compactName` above
+        // for the equivalent non-currency-specific expectations.
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920T")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92T")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2T")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920B")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92B")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2B")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920M")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92M")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2M")
+        #expect(          (922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920K")
+        #expect(           (92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92K")
+        #expect(            (9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.2K")
+        #expect(             (922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$920")
+        #expect(              (92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$92")
+        #expect(               (9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$9.0")
+        #expect(               (0 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "$0.0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.0")
+        #expect(             (-92 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92")
+        #expect(            (-922 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2K")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92K")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920K")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2M")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92M")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920M")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2B")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92B")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920B")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$9.2T")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$92T")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.precision(.significantDigits(2...2))) == "-$920T")
+
+        // fraction length
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34T")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23T")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22T")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34B")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23B")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22B")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34M")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23M")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22M")
+        #expect(          (922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.34K")
+        #expect(           (92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.23K")
+        #expect(            (9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.22K")
+        #expect(             (922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$922.00")
+        #expect(              (92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$92.00")
+        #expect(               (9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$9.00")
+        #expect(               (0 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "$0.00")
+        #expect(              (-9 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.00")
+        #expect(             (-92 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.00")
+        #expect(            (-922 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.00")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22K")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23K")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34K")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22M")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23M")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34M")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22B")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23B")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34B")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$9.22T")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$92.23T")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.precision(.fractionLength(2...2))) == "-$922.34T")
+
+        // rounded
+        #expect( (922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$1000T")
+        #expect(  (92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100T")
+        #expect(   (9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100T")
+        #expect(    (922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100T")
+        #expect(     (92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100B")
+        #expect(      (9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100B")
+        #expect(       (922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100B")
+        #expect(        (92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100M")
+        #expect(         (9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100M")
+        #expect(          (922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100M")
+        #expect(           (92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100K")
+        #expect(            (9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100K")
+        #expect(             (922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100K")
+        #expect(              (92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100")
+        #expect(               (9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$100")
+        #expect(               (0 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "$0")
+        #expect(              (-9 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100")
+        #expect(             (-92 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100")
+        #expect(            (-922 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100K")
+        #expect(           (-9223 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100K")
+        #expect(          (-92233 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100K")
+        #expect(         (-922337 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100M")
+        #expect(        (-9223372 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100M")
+        #expect(       (-92233720 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100M")
+        #expect(      (-922337203 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100B")
+        #expect(     (-9223372036 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100B")
+        #expect(    (-92233720368 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100B")
+        #expect(   (-922337203685 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100T")
+        #expect(  (-9223372036854 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100T")
+        #expect( (-92233720368547 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100T")
+        #expect((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$1000T")
+    }
+
     @Test func currency_Codable() throws {
         let gbpInUS = Decimal.FormatStyle.Currency(code: "GBP", locale: enUSLocale)
         let _ = try JSONEncoder().encode(gbpInUS)
@@ -1629,6 +1736,141 @@ private struct IntegerFormatStyleExhaustiveTests {
                 "-92,300T",
                 "-922,400T",
                 "-9,223,400T",
+            ],
+        ]
+        for (style, expectedStrings) in expectations {
+            for i in 0..<exhaustiveIntNumbers.count {
+                #expect(style.format(Int(exhaustiveIntNumbers[i])) == expectedStrings[i], "Style: \(style.collection.debugDescription) is failing")
+            }
+        }
+    }
+
+    @available(FoundationPreview 6.6, *)
+    @Test func plainStyle_compactLong() throws {
+        let expectations: [IntegerFormatStyle<Int> : [String]] = [
+            // `compactLong` naturally rounds the number to the closest "name", just like `compactName`, but spells the name out in full.
+            baseStyle.precision(.significantDigits(2...2)).notation(.compactLong): [
+                "9,200,000 trillion",
+                "920,000 trillion",
+                "92,000 trillion",
+                "9200 trillion",
+                "920 trillion",
+                "92 trillion",
+                "9.2 trillion",
+                "920 billion",
+                "92 billion",
+                "9.2 billion",
+                "920 million",
+                "92 million",
+                "9.2 million",
+                "920 thousand",
+                "92 thousand",
+                "9.2 thousand",
+                "920",
+                "92",
+                "9.0",
+                "0.0",
+                "-9.0",
+                "-92",
+                "-920",
+                "-9.2 thousand",
+                "-92 thousand",
+                "-920 thousand",
+                "-9.2 million",
+                "-92 million",
+                "-920 million",
+                "-9.2 billion",
+                "-92 billion",
+                "-920 billion",
+                "-9.2 trillion",
+                "-92 trillion",
+                "-920 trillion",
+                "-9200 trillion",
+                "-92,000 trillion",
+                "-920,000 trillion",
+                "-9,200,000 trillion",
+            ],
+            baseStyle.notation(.compactLong).precision(.fractionLength(2...2)): [
+                "9,223,372.04 trillion",
+                "922,337.20 trillion",
+                "92,233.72 trillion",
+                "9223.37 trillion",
+                "922.34 trillion",
+                "92.23 trillion",
+                "9.22 trillion",
+                "922.34 billion",
+                "92.23 billion",
+                "9.22 billion",
+                "922.34 million",
+                "92.23 million",
+                "9.22 million",
+                "922.34 thousand",
+                "92.23 thousand",
+                "9.22 thousand",
+                "922.00",
+                "92.00",
+                "9.00",
+                "0.00",
+                "-9.00",
+                "-92.00",
+                "-922.00",
+                "-9.22 thousand",
+                "-92.23 thousand",
+                "-922.34 thousand",
+                "-9.22 million",
+                "-92.23 million",
+                "-922.34 million",
+                "-9.22 billion",
+                "-92.23 billion",
+                "-922.34 billion",
+                "-9.22 trillion",
+                "-92.23 trillion",
+                "-922.34 trillion",
+                "-9223.37 trillion",
+                "-92,233.72 trillion",
+                "-922,337.20 trillion",
+                "-9,223,372.04 trillion",
+            ],
+            baseStyle.notation(.compactLong).rounded(rule: .awayFromZero, increment: 100): [
+                "9,223,400 trillion",
+                "922,400 trillion",
+                "92,300 trillion",
+                "9300 trillion",
+                "1000 trillion",
+                "100 trillion",
+                "100 trillion",
+                "100 trillion",
+                "100 billion",
+                "100 billion",
+                "100 billion",
+                "100 million",
+                "100 million",
+                "100 million",
+                "100 thousand",
+                "100 thousand",
+                "100 thousand",
+                "100",
+                "100",
+                "0",
+                "-100",
+                "-100",
+                "-100 thousand",
+                "-100 thousand",
+                "-100 thousand",
+                "-100 million",
+                "-100 million",
+                "-100 million",
+                "-100 billion",
+                "-100 billion",
+                "-100 billion",
+                "-100 trillion",
+                "-100 trillion",
+                "-100 trillion",
+                "-1000 trillion",
+                "-9300 trillion",
+                "-92,300 trillion",
+                "-922,400 trillion",
+                "-9,223,400 trillion",
             ],
         ]
         for (style, expectedStrings) in expectations {

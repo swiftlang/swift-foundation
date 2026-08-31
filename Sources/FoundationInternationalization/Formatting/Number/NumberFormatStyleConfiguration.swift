@@ -358,6 +358,7 @@ public enum NumberFormatStyleConfiguration {
             case automatic
             case scientific
             case compactName
+            case compactLong
         }
         var option: Option
 
@@ -386,6 +387,26 @@ public enum NumberFormatStyleConfiguration {
         /// - note: We do not support parsing a number string containing localized prefixes or suffixes.
         public static var compactName: Self { .init(option: .compactName) }
 
+        /// A locale-appropriate compact long name notation.
+        ///
+        /// A compact long name notation, when available in the format style's locale, that uses the full-length
+        /// unit names corresponding to powers of ten, such as "thousand" or "million", instead of the abbreviated
+        /// symbols that ``compactName`` uses. The following example shows a compact long name notation in the
+        /// `en_US` locale:
+        ///
+        /// ```swift
+        /// let compactLongFormatted = 1234.formatted(.number
+        ///     .locale(Locale(identifier: "en_US"))
+        ///     .notation(.compactLong)) // "1.2 thousand"
+        /// ```
+        ///
+        /// - note: We do not support parsing a number string containing localized prefixes or suffixes.
+        /// - note: When combined with a currency format style, this currently falls back to the same abbreviated
+        ///   output as ``compactName``, since ICU does not yet provide long-form compact patterns for currency;
+        ///   this is expected to improve as upstream ICU/CLDR gains that support.
+        @available(FoundationPreview 6.6, *)
+        public static var compactLong: Self { .init(option: .compactLong) }
+
         public var description: String {
             switch option {
             case .scientific:
@@ -394,6 +415,8 @@ public enum NumberFormatStyleConfiguration {
                 return "automatic"
             case .compactName:
                 return "compact name"
+            case .compactLong:
+                return "compact long name"
             }
         }
     }
@@ -963,6 +986,8 @@ extension NumberFormatStyleConfiguration.Notation {
             stem = ""
         case .compactName:
             stem = "compact-short"
+        case .compactLong:
+            stem = "compact-long"
         }
         return stem
     }
