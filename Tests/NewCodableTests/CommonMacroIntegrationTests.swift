@@ -81,6 +81,12 @@ struct CommonCodableStructWithDefaultedProperty {
     let bar: String
 }
 
+@CommonCodable
+struct CommonCodableStructWithVarDefaultProperty {
+    let name: String
+    var locale: String = "en"
+}
+
 // Public types exercise access-level propagation in the generated extensions.
 
 @CommonEncodable
@@ -376,5 +382,31 @@ struct CommonCodableMacroIntegrationTests {
         #expect(json2 == #"{"pair":{"_0":"hello","_1":99}}"#)
         let decoded2 = try NewJSONDecoder().decode(CommonWrapper.self, from: data2)
         #expect(decoded2 == pair)
+    }
+    
+    @Test func varDefaultValueUsedWhenFieldMissing() throws {
+        let json = #"{"name":"Yeo"}"#
+        let data = Data(json.utf8)
+        let decoded = try NewJSONDecoder().decode(CommonCodableStructWithVarDefaultProperty.self, from: data)
+        #expect(decoded.name == "Yeo")
+        #expect(decoded.locale == "en")
+    }
+
+    @Test func varDefaultValueOverriddenByProvidedField() throws {
+        let json = #"{"name":"Yeo","locale":"ko"}"#
+        let data = Data(json.utf8)
+        let decoded = try NewJSONDecoder().decode(CommonCodableStructWithVarDefaultProperty.self, from: data)
+        #expect(decoded.name == "Yeo")
+        #expect(decoded.locale == "ko")
+    }
+
+    @Test func varDefaultValueRoundTrip() throws {
+        let original = CommonCodableStructWithVarDefaultProperty(name: "Yeo")
+        let data = try NewJSONEncoder().encode(original)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json == #"{"name":"Yeo","locale":"en"}"#)
+        let decoded = try NewJSONDecoder().decode(CommonCodableStructWithVarDefaultProperty.self, from: data)
+        #expect(decoded.name == "Yeo")
+        #expect(decoded.locale == "en")
     }
 }
