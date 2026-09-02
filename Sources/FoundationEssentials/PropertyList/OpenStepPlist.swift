@@ -67,8 +67,9 @@ internal func __ParseOldStylePropertyList(utf16: String.UTF16View) throws -> Any
         if advanceToNonSpace(&parseInfo) {
             if result is String {
                 // Reset info and keep parsing
+                // Check for a strings file (looks like a dictionary without the opening/closing curly braces). With no closing brace to look for, the content has to run to the end of the input.
                 parseInfo = _ParseInfo(utf16: utf16, curr: utf16.startIndex)
-                result = parsePlistDictContent(&parseInfo, depth: 0)
+                result = parsePlistDictContent(&parseInfo, depth: 0, expectsEOFTermination: true)
             } else {
                 parseInfo.err = OpenStepPlistError("Junk after plist at line \(lineNumberStrings(parseInfo))")
                 result = nil
@@ -116,21 +117,19 @@ private func parsePlistObject(_ pInfo: inout _ParseInfo, requireObject: Bool, de
 }
 
 private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String:Any]? {
-    guard let dict = parsePlistDictContent(&pInfo, depth: depth) else {
+    guard let dict = parsePlistDictContent(&pInfo, depth: depth, expectsEOFTermination: false) else {
         return nil
     }
-    guard advanceToNonSpace(&pInfo) && pInfo.currChar == UInt16(ascii: "}") else {
-        pInfo.err = OpenStepPlistError("Expected terminating '}' for dictionary at line \(lineNumberStrings(pInfo))")
-        return nil
-    }
-    pInfo.advance()
+    // parsePlistDictContent only succeeds having seeing the closing brace.
+    pInfo.advance() // consume the '}'
     return dict
 }
 
-private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String:Any]? {
+// `expectsEOFTermination` is true when the dictionary is ended by the end of the input rather than by a closing brace, as in a strings file.
+private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32, expectsEOFTermination: Bool) -> [String:Any]? {
     var dict = [String:Any]()
 
-    while let key = parsePlistString(&pInfo, requireObject: false) {
+    while let key = parsePlistKeyOrEndOfDictionary(&pInfo, expectsEOFTermination: expectsEOFTermination) {
         guard advanceToNonSpace(&pInfo) else {
             pInfo.err = OpenStepPlistError("Missing ';' on line \(lineNumberStrings(pInfo))")
             return nil
@@ -160,6 +159,11 @@ private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32) -> 
         }
 
         pInfo.advance()
+    }
+
+    // Check for errors from parsePlistKeyOrEndOfDictionary.
+    if pInfo.err != nil {
+        return nil
     }
 
     // this is a success path, so clear errors (NOTE: this seems weird, but is historical)
@@ -198,10 +202,11 @@ private func parsePlistArray(_ pInfo: inout _ParseInfo, depth: UInt32) -> [Any]?
     return array
 }
 
-private func parsePlistString(_ pInfo: inout _ParseInfo, requireObject: Bool) -> String? {
+// Parses the next key of a dictionary's contents, or recognizes the end of that dictionary. `expectsEOFTermination` is true when the dictionary is ended by the end of the input rather than by a closing brace, as in a strings file. Returns nil if no key is found. Sets pInfo.err if that nil is caused by a parsing error instead of the legitimate end of the dictionary.
+private func parsePlistKeyOrEndOfDictionary(_ pInfo: inout _ParseInfo, expectsEOFTermination: Bool) -> String? {
     guard advanceToNonSpace(&pInfo) else {
-        if requireObject {
-            pInfo.err = OpenStepPlistError("Unexpected EOF while parsing string")
+        if !expectsEOFTermination {
+            pInfo.err = OpenStepPlistError("Expected terminating '}' for dictionary at line \(lineNumberStrings(pInfo))")
         }
         return nil
     }
@@ -212,12 +217,15 @@ private func parsePlistString(_ pInfo: inout _ParseInfo, requireObject: Bool) ->
         return parseQuotedPlistString(&pInfo, quote: ch)
     } else if isValidUnquotedStringCharacter(ch) {
         return parseUnquotedPlistString(&pInfo)
-    } else {
-        if requireObject {
-            pInfo.err = OpenStepPlistError("Invalid string character at line \(lineNumberStrings(pInfo))")
-        }
-        return nil
     }
+
+    // Not the start of a key. For a braced dictionary that is acceptable only if it is the closing brace, which is left for the caller to consume.
+    if expectsEOFTermination {
+        pInfo.err = OpenStepPlistError("Invalid string character at line \(lineNumberStrings(pInfo))")
+    } else if ch != UInt16(ascii: "}") {
+        pInfo.err = OpenStepPlistError("Expected terminating '}' for dictionary at line \(lineNumberStrings(pInfo))")
+    }
+    return nil
 }
 
 private func parseQuotedPlistString(_ pInfo: inout _ParseInfo, quote: UInt16) -> String? {

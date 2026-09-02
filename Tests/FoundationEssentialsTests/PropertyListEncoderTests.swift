@@ -886,6 +886,18 @@ private struct PropertyListEncoderTests {
         }
     }
 
+    @Test func oldStylePlist_stringsFileWithInterstitialJunkIsRejected() {
+        // A full-width space (U+3000) is considered neither whitespace nor a valid unquoted string character so parsing must stop there.
+        let stringsFile = "\"key1\" = \"text1\";\n\"key2\" = \"text2\";\n\u{3000}\n\"key3\" = \"text3\";\n\"key4\" = \"text4\";"
+        let data = stringsFile.data(using: .utf8)!
+
+        #expect {
+            try PropertyListDecoder().decode([String:String].self, from: data)
+        } throws: {
+            String(describing: $0).contains("Invalid string character at line 3")
+        }
+    }
+
     // <rdar://problem/34321354> Microsoft: Microsoft vso 1857102 : High Sierra regression that caused data loss : CFBundleCopyLocalizedString returns incorrect string
     // Escaped octal chars can be shorter than 3 chars long; i.e. \5 ≡ \05 ≡ \005.
     @Test func oldStylePlist_getSlashedChars_octal() throws {
