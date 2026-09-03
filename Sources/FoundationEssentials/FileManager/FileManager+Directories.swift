@@ -115,7 +115,7 @@ extension _FileManagerImpl {
         create shouldCreate: Bool
     ) throws -> URL {
         #if FOUNDATION_FRAMEWORK
-        // TODO: Support correct trash/replacement locations in swift-foundation
+        // TODO: Support correct trash locations in FoundationEssentials
         #if os(macOS) || os(iOS)
         if let url, directory == .trashDirectory {
             return try fileManager._URLForTrashingItem(at: url, create: shouldCreate)
