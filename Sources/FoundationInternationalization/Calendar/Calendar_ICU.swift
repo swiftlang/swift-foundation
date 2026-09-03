@@ -1174,7 +1174,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
             ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
 #endif
-            ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
+            // ICU resolves the day-of-month and week-of-month ambiguity in favor of day-of-month, so defaulting the day to 1 would ignore week-of-month entirely.
+            let resolvesByWeekOfMonth = components.weekOfMonth != nil && components.day == nil && components.weekday == nil
+            if !resolvesByWeekOfMonth {
+                ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
+            }
             ucal_set(ucalendar, UCAL_HOUR_OF_DAY, 0)
             ucal_set(ucalendar, UCAL_MINUTE, 0)
             ucal_set(ucalendar, UCAL_SECOND, 0)

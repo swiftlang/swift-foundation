@@ -148,12 +148,12 @@ enum ResolvedDateComponents {
             self = .dayOfYear(year: year, dayOfYear: dayOfYear)
         } else if components.yearForWeekOfYear != nil  {
             self = .weekOfYear(year: year, weekOfYear: components.weekOfYear, weekday: components.weekday)
+        } else if let weekOfMonth = components.weekOfMonth {
+            self = .weekOfMonth(year: year, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
         } else if components.year != nil {
             self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
         } else if let weekOfYear = components.weekOfYear {
             self = .weekOfYear(year: year, weekOfYear: weekOfYear, weekday: components.weekday)
-        } else if let weekOfMonth = components.weekOfMonth {
-            self = .weekOfMonth(year: year, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
         } else if let weekdayOrdinal = components.weekdayOrdinal {
             self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: components.weekday)
         } else if let weekday = components.weekday {
