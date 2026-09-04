@@ -53,23 +53,20 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
         let (language, script, region, variant) = Self.parseBaseLocaleID(identifier)
         var normalizedIdentifier = ""
         if let language {
-            // TODO: Add code to map 3-letter codes into equivalent 2-letter codes when possible
-            normalizedIdentifier.append(language.lowercased())
+            normalizedIdentifier.append(Self.normalizedLanguageCode(language))
         }
         if let script {
-            // TODO: Add code to fill in a default script when appropriate and possible
-            normalizedIdentifier.append("_\(script.capitalized)")
+            normalizedIdentifier.append("_\(Self.normalizedScriptCode(script))")
         }
         if let region {
-            // TODO: Add code to map 3-letter codes [I didn't know they were legal!] into equivalent 2-letter codes when possible
-            normalizedIdentifier.append("_\(region.uppercased())")
+            normalizedIdentifier.append("_\(Self.normalizedRegionCode(region))")
         }
         if let variant {
             if language == nil {
                 // special-case for the situation where the variant is the only populated field
-                normalizedIdentifier.append("__\(variant.uppercased())")
+                normalizedIdentifier.append("__\(Self.normalizedVariantCode(variant))")
             } else {
-                normalizedIdentifier.append("_\(variant.uppercased())")
+                normalizedIdentifier.append("_\(Self.normalizedVariantCode(variant))")
             }
         }
         _normalizedIdentifier = normalizedIdentifier
@@ -92,11 +89,14 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     // `Locale.Components`, and be kept in sync with `Locale.Components.icuIdentifier`.
     // See `_LocaleICU.components(forIdentifier:)` for the behavior being replaced.
     static func components(forIdentifier identifier: String) -> Locale.Components {
-        Locale.Components(languageCode: "en", languageRegion: "001")
+        let (language, script, region, variant) = Self.parseBaseLocaleID(identifier)
+        var result = Locale.Components(languageCode: language.map { Locale.LanguageCode(Self.normalizedLanguageCode($0)) }, script: script.map { Locale.Script(Self.normalizedScriptCode($0)) }, languageRegion: region.map { Locale.Region(Self.normalizedRegionCode($0)) })
+        result.variant = variant.map { Locale.Variant(Self.normalizedVariantCode($0)) }
+        return result
     }
 
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
-        // Nothing changes here
+        // TODO: FILL IN!!!
         self
     }
     
@@ -109,59 +109,73 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     func identifierDisplayName(for value: String) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func languageCodeDisplayName(for value: String) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func countryCodeDisplayName(for regionCode: String) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func scriptCodeDisplayName(for scriptCode: String) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func variantCodeDisplayName(for variantCode: String) -> String? {
-        nil
+        // TODO: FILL IN!!!
+       nil
     }
     
     func calendarIdentifierDisplayName(for value: Calendar.Identifier) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func currencyCodeDisplayName(for value: String) -> String? {
-        nil
+       // TODO: FILL IN!!!
+       nil
     }
     
     func currencySymbolDisplayName(for value: String) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func collationIdentifierDisplayName(for value: String) -> String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func collatorIdentifierDisplayName(for collatorIdentifier: String) -> String? {
-        nil
+        // TODO: FILL IN!!!
+       nil
     }
     
     var languageCode: String? {
-        "en"
+        let (result, _, _, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        return result.map { String($0) }
     }
     
     var scriptCode: String? {
-        nil
+        let (_, result, _, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        return result.map { String($0) }
     }
     
     var variantCode: String? {
-        nil
+        let (_, _, _, result) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        return result.map { String($0) }
     }
     
     var regionCode: String? {
-        "001"
+        let (_, _, result, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
+        return result.map { String($0) }
     }
     
 #if FOUNDATION_FRAMEWORK
@@ -171,83 +185,103 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
 #endif
     
     var calendar: Calendar {
+        // TODO: FILL IN!!!
         Calendar.current
     }
     
     var calendarIdentifier: Calendar.Identifier {
+        // TODO: FILL IN!!!
         .gregorian
     }
     
     var collationIdentifier: String? {
+        // TODO: FILL IN!!!
         "standard"
     }
     
     var usesMetricSystem: Bool {
+        // TODO: FILL IN!!!
         true
     }
     
     var decimalSeparator: String? {
+        // TODO: FILL IN!!!
         "."
     }
     
     var groupingSeparator: String? {
+        // TODO: FILL IN!!!
         ","
     }
     
     var currencySymbol: String? {
+        // TODO: FILL IN!!!
         "¤"
     }
     
     var currencyCode: String? {
+        // TODO: FILL IN!!!
         nil
     }
     
     var collatorIdentifier: String? {
+        // TODO: FILL IN!!!
         identifier
     }
     
     var quotationBeginDelimiter: String? {
+        // TODO: FILL IN!!!
         "“"
     }
     
     var quotationEndDelimiter: String? {
+        // TODO: FILL IN!!!
         "”"
     }
     
     var alternateQuotationBeginDelimiter: String? {
+        // TODO: FILL IN!!!
         "‘"
     }
     
     var alternateQuotationEndDelimiter: String? {
+        // TODO: FILL IN!!!
         "’"
     }
     
     var measurementSystem: Locale.MeasurementSystem {
+        // TODO: FILL IN!!!
         .metric
     }
     
     var currency: Locale.Currency? {
+        // TODO: FILL IN!!!
         nil
     }
     
     var numberingSystem: Locale.NumberingSystem {
+        // TODO: FILL IN!!!
         .latn
     }
     
     var availableNumberingSystems: [Locale.NumberingSystem] {
+        // TODO: FILL IN!!!
         [.latn]
     }
     
     var firstDayOfWeek: Locale.Weekday {
+        // TODO: FILL IN!!!
         .monday
     }
 
     var weekendRange: WeekendRange? {
+        // TODO: FILL IN!!!
         // Weekend range for 001 region
         WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
     }
 
     var minimumDaysInFirstWeek: Int {
+        // TODO: FILL IN!!!
         // Minimum days in first week for 001 region
         1
     }
@@ -261,6 +295,7 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     func identifier(_ type: Locale.IdentifierType) -> String {
+        // TODO: FILL IN!!!
         switch type {
         case .bcp47: "en-001"
         case .cldr: "en_001"
@@ -269,10 +304,12 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var hourCycle: Locale.HourCycle {
+        // TODO: FILL IN!!!
         .zeroToTwentyThree
     }
     
     var collation: Locale.Collation {
+        // TODO: FILL IN!!!
         .standard
     }
     
@@ -284,10 +321,12 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var timeZone: TimeZone? {
+        // TODO: FILL IN!!!
         nil
     }
     
     var subdivision: Locale.Subdivision? {
+        // TODO: FILL IN!!!
         nil
     }
     
@@ -298,26 +337,32 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var temperatureUnit: LocalePreferences.TemperatureUnit {
+        // TODO: FILL IN!!!
         .celsius
     }
     
     var forceHourCycle: Locale.HourCycle? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func forceFirstWeekday(_ calendar: Calendar.Identifier) -> Locale.Weekday? {
+        // TODO: FILL IN!!!
         nil
     }
     
     func forceMinDaysInFirstWeek(_ calendar: Calendar.Identifier) -> Int? {
+        // TODO: FILL IN!!!
         nil
     }
     
     var forceMeasurementSystem: Locale.MeasurementSystem? {
+        // TODO: FILL IN!!!
         nil
     }
     
     var forceTemperatureUnit: LocalePreferences.TemperatureUnit? {
+        // TODO: FILL IN!!!
         nil
     }
     
@@ -388,6 +433,25 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
         }
 
         return (language, script, region, variant)
+    }
+    
+    static func normalizedLanguageCode(_ language: Substring) -> String {
+        // TODO: Add code here to map from 3-letter language codes to 2-letter equivalents
+        return language.lowercased()
+    }
+    
+    static func normalizedScriptCode(_ script: Substring) -> String {
+        // TODO: Add code to calculate the default script for the language code (which will mean changing this function's signature)
+        return script.capitalized
+    }
+    
+    static func normalizedRegionCode(_ region: Substring) -> String {
+        // TODO: Add code to map 3-letter codes [I didn't know they were legal!] into equivalent 2-letter codes when possible (if we need this?)
+        return region.uppercased()
+    }
+    
+    static func normalizedVariantCode(_ variant: Substring) -> String {
+        return variant.uppercased()
     }
 }
 
