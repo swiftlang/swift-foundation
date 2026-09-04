@@ -62,6 +62,51 @@ extension _FileManagerImpl {
     var temporaryDirectory: URL {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
+
+    #if !FOUNDATION_FRAMEWORK
+    private func itemReplacementDirectory(appropriateFor reference: URL) throws -> URL {
+        guard reference.isFileURL else {
+            throw CocoaError.errorWithFilePath(.fileWriteUnsupportedScheme, reference)
+        }
+
+        let temporaryDirectory = fileManager.temporaryDirectory
+        let temporaryItemsDirectory = temporaryDirectory.appending(component: "TemporaryItems", directoryHint: .isDirectory)
+        let referenceDirectory = reference.deletingPathExtension()
+        let useTemporaryDirectory: Bool
+        if let temporaryVolumeIdentifier = systemNumber(for: temporaryDirectory),
+           let referenceVolumeIdentifier = systemNumber(for: reference) {
+            useTemporaryDirectory = temporaryVolumeIdentifier == referenceVolumeIdentifier
+        } else {
+            useTemporaryDirectory = !fileManager.isWritableFile(atPath: referenceDirectory.path)
+        }
+
+        let containerDirectory = useTemporaryDirectory ? temporaryItemsDirectory : referenceDirectory
+        try fileManager.createDirectory(at: containerDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+
+        var attempt = 0
+        while true {
+            let replacementDirectory = containerDirectory.appending(component: itemReplacementDirectoryName(forAttempt: attempt), directoryHint: .isDirectory)
+            do {
+                try fileManager.createDirectory(at: replacementDirectory, withIntermediateDirectories: false)
+                return replacementDirectory
+            } catch let error as CocoaError where error.code == .fileWriteFileExists {
+                attempt += 1
+            }
+        }
+
+        func systemNumber(for url: URL) -> UInt? {
+            try? fileManager.attributesOfItem(atPath: url.path)[.systemNumber] as? UInt
+        }
+    }
+
+    private func itemReplacementDirectoryName(forAttempt attempt: Int) -> String {
+        let processName = ProcessInfo.processInfo.processName.filter { $0.isLetter || $0.isNumber }
+        if attempt == 0 {
+            return "(A Document Being Saved By \(processName))"
+        }
+        return "(A Document Being Saved By \(processName) \(attempt + 1))"
+    }
+    #endif
     
     func url(
         for directory: FileManager.SearchPathDirectory,
@@ -70,16 +115,22 @@ extension _FileManagerImpl {
         create shouldCreate: Bool
     ) throws -> URL {
         #if FOUNDATION_FRAMEWORK
-        // TODO: Support correct trash/replacement locations in swift-foundation
+        // TODO: Support correct trash locations in FoundationEssentials
         #if os(macOS) || os(iOS)
         if let url, directory == .trashDirectory {
             return try fileManager._URLForTrashingItem(at: url, create: shouldCreate)
         }
         #endif
+        #endif
         if let url, domain == .userDomainMask, directory == .itemReplacementDirectory {
+            #if FOUNDATION_FRAMEWORK
             // The only place we need to do this is for certain operations, namely the replacing item API.
             return try fileManager._URLForReplacingItem(at: url)
+            #else
+            return try itemReplacementDirectory(appropriateFor: url)
+            #endif
         }
+        #if FOUNDATION_FRAMEWORK
         var domain = domain
         if domain == .systemDomainMask {
             domain = ._partitionedSystemDomainMask

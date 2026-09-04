@@ -1096,6 +1096,41 @@ private struct FileManagerTests {
         assertSearchPaths([.itemReplacementDirectory], exists: false)
     }
 
+    @Test(arguments: [false, true])
+    func itemReplacementDirectory(create: Bool) async throws {
+        try await FilePlayground {
+            Directory("Documents") {}
+        }.test { fileManager in
+            let reference = URL.currentDirectory()
+                .appending(component: "Documents", directoryHint: .isDirectory)
+            let replacementDirectory = try fileManager.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: reference, create: create)
+            let secondReplacementDirectory = try fileManager.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: reference, create: create)
+            defer {
+                try? fileManager.removeItem(at: replacementDirectory)
+                try? fileManager.removeItem(at: secondReplacementDirectory)
+            }
+
+            #if FOUNDATION_FRAMEWORK
+            var isDir: ObjCBool = false
+            func isDirBool() -> Bool {
+                isDir.boolValue
+            }
+            #else
+            var isDir: Bool = false
+            func isDirBool() -> Bool {
+                isDir
+            }
+            #endif
+            #expect(fileManager.fileExists(atPath: replacementDirectory.path, isDirectory: &isDir))
+            #expect(isDirBool())
+            isDir = false
+            #expect(fileManager.fileExists(atPath: secondReplacementDirectory.path, isDirectory: &isDir))
+            #expect(isDirBool())
+            #expect(replacementDirectory != reference)
+            #expect(secondReplacementDirectory != replacementDirectory)
+        }
+    }
+
     #if !canImport(Darwin) && !os(Windows)
     @Test(.disabled(if: ProcessInfo.processInfo.environment.keys.contains(where: { $0.starts(with: "XDG") }), "Skipping due to presence of XDG environment variables which may affect this test"))
     func searchPaths_XDGEnvironmentVariables() async throws {
