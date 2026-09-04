@@ -800,8 +800,11 @@ extension JSONDecoderImpl: Decoder {
                         return decimal
                     }
                 } else if isSpecialJSON5DoubleValue {
-                    // Decimal itself doesn't have support for Infinity values yet. Even the part of the old NSJSONSerialization implementation that would try to reinterpret an NaN or Infinity value as an NSDecimalNumber did not have very predictable behavior.
-                    // TODO: Proper handling of Infinity and NaN Decimal values.
+                    
+                    if numberBuffer.contains(UInt8(ascii: "I")) {
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: String(decoding: numberBuffer, as: UTF8.self))
+                    }
+                    
                     return Decimal.quietNaN
                 } else {
                     switch Decimal._decimal(from: numberBuffer, matchEntireString: true) {
