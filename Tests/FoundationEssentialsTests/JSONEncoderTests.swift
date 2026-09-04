@@ -1581,6 +1581,25 @@ private struct JSONEncoderTests {
 
     }
 
+    @Test func assumesTopLevelDictionaryTrailingNumber() throws {
+        // A brace-less top-level dictionary whose final value is a number ends at the last byte of the input. The number parser (`strtod`) peeks one byte past the last consumed digit, so the input buffer must be copied to guarantee a trailing NUL byte. Verifies rdar://183390354.
+        let decoder = JSONDecoder()
+        decoder.assumesTopLevelDictionary = true
+
+        let intResult = try decoder.decode([String:Int].self, from: Data("\"x\" : 42".utf8))
+        #expect(intResult == ["x" : 42])
+
+        let doubleResult = try decoder.decode([String:Double].self, from: Data("\"x\" : 1.5".utf8))
+        #expect(doubleResult == ["x" : 1.5])
+
+        // JSON5 numbers can also end with a non-digit ('1.' is a valid JSON5 number). Any scanned number reaching EOF must trigger the buffer copy.
+        let json5Decoder = JSONDecoder()
+        json5Decoder.assumesTopLevelDictionary = true
+        json5Decoder.allowsJSON5 = true
+        let json5Result = try json5Decoder.decode([String:Double].self, from: Data("\"x\" : 1.".utf8))
+        #expect(json5Result == ["x" : 1.0])
+    }
+
     @Test func bomPrefixes() throws {
         let json = "\"👍🏻\""
         let decoder = JSONDecoder()
@@ -2233,6 +2252,11 @@ extension JSONEncoderTests {
                 let decoded = try decoder.decode(HelloGoodbye.self, from: json.data(using: .utf8)!)
                 #expect(helloGoodbyeExpectedValue == decoded)
             }
+        }
+        
+        let incompleteNumberValue = "hello: 0x".data(using: .utf8)! // Incomplete hex number
+        #expect(throws: (any Error).self) {
+            try decoder.decode([String:Int].self, from: incompleteNumberValue)
         }
 
         let arrayJSON = "[1,2,3]".data(using: .utf8)! // Assumed dictionary can't be an array

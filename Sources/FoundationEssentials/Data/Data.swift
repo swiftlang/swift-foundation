@@ -199,6 +199,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     /// - parameter count: The number of bytes to copy.
     @inlinable // This is @inlinable as a trivial initializer.
     public init(bytes: UnsafeRawPointer, count: Int) {
+        precondition(count >= 0, "Byte count cannot be negative")
         _representation = _Representation(UnsafeRawBufferPointer(start: bytes, count: count))
     }
 
@@ -613,6 +614,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @inlinable // This is @inlinable as a generic, trivially forwarding function.
     public mutating func append(_ bytes: UnsafePointer<UInt8>, count: Int) {
         if count == 0 { return }
+        precondition(count >= 0, "Byte count cannot be negative")
         _append(UnsafeBufferPointer(start: bytes, count: count))
     }
 

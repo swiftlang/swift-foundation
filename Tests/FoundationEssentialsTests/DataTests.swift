@@ -2164,6 +2164,11 @@ private final class DataTests {
             var data = try #require("Hello World".data(using: .utf8))
             data.replaceSubrange(5..<200, with: Data())
         }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data.replaceSubrange(-1..<1, with: Data())
+        }
     }
     
     @Test func bounding_failure_replace2() async {
@@ -2247,6 +2252,31 @@ private final class DataTests {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data[100] = 4
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[-1] = 4
+        }
+
+        await #expect(processExitsWith: .failure) {
+            let data = try #require("Hello World".data(using: .utf8))
+            _ = data[-1 ..< 2]
+        }
+
+        await #expect(processExitsWith: .failure) {
+            let data = try #require("Hello World".data(using: .utf8))
+            _ = data[2 ..< 100]
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[-1 ..< 2] = Data()
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[2 ..< 100] = Data()
         }
     }
 
@@ -2579,6 +2609,70 @@ extension DataTests {
             """
         )
 
+    }
+
+    @Test func base64Encode_omitPaddingWithLineBreaks() {
+        #expect(
+            Data(repeating: 0xFF, count: 1).base64EncodedString(options: [.lineLength76Characters, .omitPaddingCharacter]) ==
+            "/w"
+        )
+        #expect(
+            Data(repeating: 0xFF, count: 2).base64EncodedString(options: [.lineLength76Characters, .omitPaddingCharacter]) ==
+            "//8"
+        )
+        #expect(
+            Data(repeating: 0xFF, count: 3).base64EncodedString(options: [.lineLength76Characters, .omitPaddingCharacter]) ==
+            "////"
+        )
+
+        // a full first line followed by a partial last line that needs padding
+        #expect(
+            Data(repeating: 0, count: 49).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
+            """
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+            AA
+            """
+        )
+        #expect(
+            Data(repeating: 0, count: 50).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
+            """
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+            AAA
+            """
+        )
+    }
+
+    @Test func base64Encode_omitPaddingWithLineBreaksMatchesUnbrokenOutput() {
+        let lineLengthOptions: [Data.Base64EncodingOptions] = [.lineLength64Characters, .lineLength76Characters]
+        let lineEndOptions: [Data.Base64EncodingOptions] = [
+            [], .endLineWithCarriageReturn, .endLineWithLineFeed, [.endLineWithCarriageReturn, .endLineWithLineFeed]
+        ]
+
+        for count in 0..<260 {
+            let data = Data((0..<count).map { UInt8($0 % 256) })
+
+            for lineLength in lineLengthOptions {
+                for lineEnd in lineEndOptions {
+                    let options: Data.Base64EncodingOptions = [lineLength, lineEnd, .omitPaddingCharacter]
+                    let padded = data.base64EncodedString(options: [lineLength, lineEnd])
+                    let expected = String(padded.filter { $0 != "=" })
+
+                    let string = data.base64EncodedString(options: options)
+                    #expect(string == expected, "count: \(count), options: \(options.rawValue)")
+
+                    // `base64EncodedData` keeps the full allocated capacity, so a mismatch here
+                    // means the computed capacity did not match what was actually written.
+                    let encodedData = data.base64EncodedData(options: options)
+                    #expect(encodedData == Data(expected.utf8), "count: \(count), options: \(options.rawValue)")
+                    #expect(encodedData.count == string.utf8.count, "count: \(count), options: \(options.rawValue)")
+
+                    #expect(
+                        data.base64EncodedData(options: [lineLength, lineEnd]) == Data(padded.utf8),
+                        "count: \(count), options: \(options.rawValue)"
+                    )
+                }
+            }
+        }
     }
 
     @Test func base64Decode_emptyString() {

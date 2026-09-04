@@ -33,6 +33,9 @@ internal struct JSON5Scanner {
     var depth: Int = 0
     var partialMap = JSONPartialMapData()
 
+    // True if any scanned number extends to the last byte of the input.
+    var numberExtendsToEndOfBuffer: Bool = false
+
     internal struct Options {
         var assumesTopLevelDictionary = false
     }
@@ -134,8 +137,8 @@ internal struct JSON5Scanner {
 
         let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
 
-        // If the input contains only a number, ensure a trailing NUL byte is available for strtod/strtof parsing.
-        if case .number = map.loadValue(at: 0)! {
+        // If any number token extends to the last byte of the input, we must give the map an owned buffer with a trailing NUL so that `strtod` (which peeks one byte past the last consumed digit) doesn't OOB read. Covers the top-level-number case and the `assumesTopLevelDictionary` case where the last value in the (brace-less) object is a number.
+        if numberExtendsToEndOfBuffer {
             map.copyInBuffer()
         }
 
@@ -362,6 +365,9 @@ internal struct JSON5Scanner {
         let start = reader.readIndex
         reader.skipNumber()
         let end = reader.readIndex
+        if reader.isEOF {
+            numberExtendsToEndOfBuffer = true
+        }
         return partialMap.record(tagType: .number, count: reader.distance(from: start, to: end), dataOffset: reader.byteOffset(at: start), with: reader)
     }
 
@@ -953,7 +959,7 @@ extension JSON5Scanner {
         case UInt8(ascii: "x"), UInt8(ascii: "X"):
             // We have to further validate that there is another digit following this one.
             let firstHexDigitIndex = jsonBytes.index(after: jsonBytes.startIndex)
-            guard firstHexDigitIndex <= jsonBytes.endIndex else {
+            guard firstHexDigitIndex < jsonBytes.endIndex else {
                 throw JSONError.unexpectedCharacter(context: "in number", ascii: jsonBytes[offset: 0], location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
             }
             let maybeHex = jsonBytes[unchecked: firstHexDigitIndex]
