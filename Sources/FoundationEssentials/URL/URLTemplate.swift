@@ -22,7 +22,7 @@ extension URL {
     /// A template for constructing a URL from variable expansions.
     ///
     /// This is an template that can be expanded into
-    /// a ``URL`` by calling ``URL(template:variables:)``.
+    /// a ``URL`` by calling `URL(template:variables:)`.
     ///
     /// Templating has a rich set of options for substituting various parts of URLs. See
     /// [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) for

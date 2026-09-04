@@ -24,7 +24,7 @@
 ///
 /// In addition, the ``language`` property allows you examine traits of languages, through the ``Language`` type, in contast with `NSLocale`, where `NSLocale.languageCode` is just a string identifier. You can use a locale's language to compare whether two locales use the same language, or if one language is a parent of another.
 ///
-/// The following example creates a `Locale` from the identifier `zh-CN`, for Chinese. It then accesses this locale's ``language`` to get the language's ``Language/script``, and uses a US English locale to get a localized string describing the script: "Simplified Han". With the locale `zh-Hant-CN`, for Traditional Chinese, the script would be "Traditional Han" instead.
+/// The following example creates a `Locale` from the identifier `zh-CN`, for Chinese. It then accesses this locale's ``language`` to get the language's `Language.script`, and uses a US English locale to get a localized string describing the script: "Simplified Han". With the locale `zh-Hant-CN`, for Traditional Chinese, the script would be "Traditional Han" instead.
 ///
 /// ```swift
 /// let zhCN = Locale(identifier: "zh-CN")
@@ -103,7 +103,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     ///
     /// Use this property when you want a locale that always reflects the latest configuration settings. When the person using the app changes settings, reading properties from a locale instance obtained from this property provides the latest values. If you need to rely on a locale that does not change, use the locale given by the ``Locale/current`` property instead.
     ///
-    /// Although the locale obtained here automatically follows the latest language and region settings, it provides no indication when the settings change. To receive notification of locale changes in Swift, add an observer for ``Locale/CurrentLocaleDidChangeMessage``. In Objective-C, you can add your object as an observer of `NSCurrentLocaleDidChangeNotification`.
+    /// Although the locale obtained here automatically follows the latest language and region settings, it provides no indication when the settings change.
     ///
     /// If mutated, this `Locale` no longer tracks the user's preferences.
     ///
@@ -121,8 +121,6 @@ public struct Locale : Hashable, Equatable, Sendable {
     /// * The availability of the preferred locale in the app. For example, if the person using an app has set their device to use a Spanish-language locale, but the app only supports English, this value returns an English locale.
     ///
     /// Use this property when you need to rely on a consistent locale. A locale instance obtained this way does not change even when the person using the device changes language or region settings. If you want a locale instance that always reflects the current configuration, use the one provided by the ``Locale/autoupdatingCurrent`` property instead.
-    ///
-    /// To receive notification of locale changes in Swift, add an observer for ``Locale/CurrentLocaleDidChangeMessage``. In Objective-C, you can add your object as an observer of ``NSLocale/currentLocaleDidChangeNotification``.
     public static var current : Locale {
         Locale(inner: LocaleCache.cache.current)
     }

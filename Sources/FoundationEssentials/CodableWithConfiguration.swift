@@ -194,7 +194,7 @@ public extension UnkeyedDecodingContainer {
 ///
 /// ``CodableConfiguration`` allows you to create <doc://com.apple.documentation/documentation/swift/codable> types whose members don't all conform to <doc://com.apple.documentation/documentation/swift/codable>. For types that can't support encoding and decoding by themselves but could become encodable and decodable with some statically-defined information, use the `@CodableConfiguration` wrapper. This lets you assign a configuration provider — a type that conforms to both ``EncodingConfigurationProviding`` and ``DecodingConfigurationProviding`` — to supply this data.
 ///
-/// Limiting the ``CodableConfiguration`` to statically-defined information protects clients from loading unexpected data, similar to the protection provided by ``NSSecureCoding``.
+/// Limiting the ``CodableConfiguration`` to statically-defined information protects clients from loading unexpected data.
 ///
 /// In the following example, the `Message` type uses `@CodableConfiguration` for an ``AttributedString`` property called `content`. While ``AttributedString`` does conform to <doc://com.apple.documentation/documentation/swift/codable>, it can only encode its known attributes — those declared by the platform SDK — as part of this conformance. By adding a ``CodableConfiguration`` for the custom `MyAttributes` type, `Message` uses ``EncodableWithConfiguration/encode(to:configuration:)`` when encoding `content`, which preserves the custom attributes.
 ///

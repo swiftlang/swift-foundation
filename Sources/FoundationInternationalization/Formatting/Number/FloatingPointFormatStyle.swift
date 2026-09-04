@@ -22,7 +22,7 @@ import FoundationEssentials
 /// ``FloatingPointFormatStyle`` includes two nested types, ``Percent`` and ``Currency``, for working with percentages and currencies, respectively. Each format style includes a configuration that determines how it represents numeric values, for things like grouping, displaying signs, and variant presentations like scientific notation. ``FloatingPointFormatStyle`` and ``Percent`` include a ``NumberFormatStyleConfiguration``, and ``Currency`` includes a ``CurrencyFormatStyleConfiguration``. You can customize numeric formatting for a style by adjusting its backing configuration. The system automatically caches unique configurations of a format style to enhance performance.
 ///
 /// > Note:
-/// > Foundation provides another format style type, ``IntegerFormatStyle``, for working with numbers that conform to <doc://com.apple.documentation/documentation/swift/binaryinteger>. For Foundation's ``Decimal`` type, use ``Decimal/FormatStyle``.
+/// > Foundation provides another format style type, ``IntegerFormatStyle``, for working with numbers that conform to <doc://com.apple.documentation/documentation/swift/binaryinteger>. For Foundation's ``FoundationEssentials/Decimal`` type, use ``FoundationEssentials/Decimal/FormatStyle``.
 ///
 /// ### Formatting floating-point values
 ///
@@ -72,7 +72,7 @@ import FoundationEssentials
 ///
 /// ### Creating a floating-point format style instance
 ///
-/// The previous examples use static factory methods like ``FormatStyle/number-8c8rj`` to create format styles within the call to the <doc://com.apple.documentation/documentation/swift/binaryfloatingpoint/formatted(_:)-4ksqj> method. You can also create a ``FloatingPointFormatStyle`` instance and use it to repeatedly format different values, with the ``format(_:)`` method:
+/// The previous examples use static factory methods like `FormatStyle.number` to create format styles within the call to the `BinaryFloatingPoint/formatted(_:)` method. You can also create a ``FloatingPointFormatStyle`` instance and use it to repeatedly format different values, with the ``format(_:)`` method:
 ///
 /// ```swift
 /// let percentFormatStyle = FloatingPointFormatStyle<Double>.Percent()
@@ -124,7 +124,7 @@ import FoundationEssentials
 public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Hashable, Sendable {
     /// The locale of the format style.
     ///
-    /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
+    /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
     public var locale: Locale
 
     /// Creates a floating-point format style that uses the given locale.
@@ -152,8 +152,8 @@ public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Has
     /// An attributed format style based on the floating-point format style.
     ///
     /// Use this modifier to create a ``FloatingPointFormatStyle/Attributed`` instance, which formats
-    /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-    /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+    /// values as `AttributedString` instances. These attributed strings contain attributes from
+    /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
     /// these attributes to determine which runs of the attributed string represent different
     /// parts of the formatted value.
     public var attributed: FloatingPointFormatStyle.Attributed {
@@ -247,7 +247,7 @@ extension FloatingPointFormatStyle {
     public struct Percent : Codable, Hashable, Sendable {
         /// The locale of the format style.
         ///
-        /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
+        /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
         public var locale: Locale
 
         /// Creates a floating-point percent format style that uses the given locale.
@@ -261,8 +261,8 @@ extension FloatingPointFormatStyle {
         /// An attributed format style based on the floating-point percent format style.
         ///
         /// Use this modifier to create a ``FloatingPointFormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         public var attributed: FloatingPointFormatStyle.Attributed {
@@ -357,7 +357,7 @@ extension FloatingPointFormatStyle {
     public struct Currency : Codable, Hashable, Sendable {
         /// The locale of the format style.
         ///
-        /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
+        /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
         public var locale: Locale
 
         /// The currency code this format style uses, such as `USD` or `EUR`.
@@ -381,8 +381,8 @@ extension FloatingPointFormatStyle {
         /// An attributed format style based on the floating-point currency format style.
         ///
         /// Use this modifier to create a ``FloatingPointFormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         public var attributed: FloatingPointFormatStyle.Attributed {
@@ -703,7 +703,7 @@ extension FloatingPointFormatStyle {
     /// to create a format style of this type.
     ///
     /// The attributed strings that this format style creates contain attributes from the
-    /// ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use these
+    /// `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use these
     /// attributes to determine which runs of the attributed string represent different parts of
     /// the formatted value.
     public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
@@ -747,7 +747,7 @@ extension FloatingPointFormatStyle {
         /// - Parameter value: The floating-point value to format.
         /// - Returns: An attributed string representation of `value`, formatted according to the
         ///   style's configuration. The returned string contains attributes from the
-        ///   ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope to
+        ///   `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope to
         ///   indicate runs formatted by this format style.
         public func format(_ value: Value) -> AttributedString {
             switch style {

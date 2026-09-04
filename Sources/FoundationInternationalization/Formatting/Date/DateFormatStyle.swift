@@ -72,7 +72,7 @@ extension Date {
     ///
     /// The default date format style uses the `numeric` date style and the `shortened` time style.
     ///
-    /// To customize the formatted measurement string, use either the ``Date/formatted(_:)`` method and include a `Measurement.FormatStyle` or the ``Date/formatted(date:time:)`` and include a date and time style.
+    /// To customize the formatted measurement string, use either the `Date.formatted(_:)` method and include a `Measurement.FormatStyle` or the ``Date/formatted(date:time:)`` and include a date and time style.
     ///
     /// For more information about formatting dates, see ``Date/FormatStyle``.
     ///
@@ -267,7 +267,7 @@ extension Date {
     ///
     /// When you want to apply a specific formatting style to a single ``Date`` instance, use ``Date/FormatStyle``. For other instances, use the following:
     ///
-    /// - When working with date representations in ISO 8601 format, use ``Date/ISO8601FormatStyle``.
+    /// - When working with date representations in ISO 8601 format, use `Date.ISO8601FormatStyle`.
     /// - To represent an interval between two date instances, use ``Date/RelativeFormatStyle``.
     /// - To represent two dates as a pair, for example to get output that looks like `10/21/1985 1:45 PM - 9/13/2015 6:33 PM`, use ``Date/IntervalFormatStyle``.
     ///
@@ -304,7 +304,7 @@ extension Date {
     ///
     /// The default date style is ``DateStyle/abbreviated`` and the default time style is ``TimeStyle/shortened``.
     ///
-    /// For full customization of the string representation of a date, use the ``Date/formatted(_:)`` instance method of ``Date`` and provide a ``Date/FormatStyle`` instance.
+    /// For full customization of the string representation of a date, use the `Date.formatted(_:)` instance method of ``Date`` and provide a ``Date/FormatStyle`` instance.
     ///
     /// You can apply more customization of the date and time components and their representation in your app by appying a series of convenience modifiers to your format style. The following example applies a series of modifiers to the format style to precisely define the formatting of the year, month, day, hour, minute, and timezone components of the resulting string. The ordering of the date and time modifiers has no impact on the string produced.
     ///
@@ -1210,7 +1210,7 @@ public extension FormatStyle where Self == Date.FormatStyle {
     /// A style for formatting a date and time.
     ///
     /// Use this type property when the call point allows the use of ``Date/FormatStyle``.
-    /// You typically do this when calling the ``Date/formatted(_:)`` method of ``Date``.
+    /// You typically do this when calling the `Date.formatted(_:)` method of ``Date``.
     ///
     /// Customize the date format style using modifier syntax to apply specific date and time
     /// formats. For example:
@@ -1248,7 +1248,7 @@ public extension ParseStrategy where Self == Date.FormatStyle {
     /// A default format style for formatting dates.
     ///
     /// Use this type property when the call point allows the use of ``Date/FormatStyle``; in other
-    /// words, when the value type is ``Date``. Typically, you use this with the ``Date/formatted(_:)``
+    /// words, when the value type is ``Date``. Typically, you use this with the `Date.formatted(_:)`
     /// method of ``Date``.
     ///
     /// Customize the date format style using modifier syntax to apply specific date and time formats.
