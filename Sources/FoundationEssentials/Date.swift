@@ -36,8 +36,6 @@ public typealias TimeInterval = Double
 /// A `Date` value encapsulates a single point in time, independent of any particular calendrical system or time zone. Date values represent a time interval relative to an absolute reference date.
 ///
 /// The `Date` structure provides methods for comparing dates, calculating the time interval between two dates, and creating a new date from a time interval relative to another date. Use date values in conjunction with `DateFormatter` instances to create localized representations of dates and times and with `Calendar` instances to perform calendar arithmetic.
-///
-/// `Date` bridges to the `NSDate` class. You can use these interchangeably in code that interacts with Objective-C APIs.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct Date : Comparable, Hashable, Equatable, Sendable {
 
