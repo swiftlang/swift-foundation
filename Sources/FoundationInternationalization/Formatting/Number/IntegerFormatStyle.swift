@@ -16,7 +16,7 @@ import FoundationEssentials
 
 /// A structure that converts between integer values and their textual representations.
 ///
-/// Instances of ``IntegerFormatStyle`` create localized, human-readable text from <doc://com.apple.documentation/documentation/swift/binaryinteger> numbers and parse string representations of numbers into instances of <doc://com.apple.documentation/documentation/swift/binaryinteger> types. All of the Swift standard library's integer types, such as <doc://com.apple.documentation/documentation/swift/int> and <doc://com.apple.documentation/documentation/swift/uint32>, conform to <doc://com.apple.documentation/documentation/swift/binaryinteger>, and therefore work with this format style.
+/// Instances of ``IntegerFormatStyle`` create localized, human-readable text from `BinaryInteger` numbers and parse string representations of numbers into instances of `BinaryInteger` types. All of the Swift standard library's integer types, such as `Int` and `UInt32`, conform to `BinaryInteger`, and therefore work with this format style.
 ///
 /// ``IntegerFormatStyle`` includes two nested types, ``Percent`` and ``Currency``, for working with percentages and currencies. Each format style includes a configuration that determines how it represents numeric values, for things like grouping, displaying signs, and variant presentations like scientific notation. ``IntegerFormatStyle`` and ``Percent`` include a ``NumberFormatStyleConfiguration``, and ``Currency`` includes a ``CurrencyFormatStyleConfiguration``. You can customize numeric formatting for a style by adjusting its backing configuration. The system automatically caches unique configurations of a format style to enhance performance.
 ///
@@ -36,7 +36,7 @@ import FoundationEssentials
 /// ```
 ///
 ///
-/// You can specify a format style by providing an argument to the <doc://com.apple.documentation/documentation/swift/binaryinteger/formatted(_:)-73k3e> method. The following example shows the number `12345` represented in each of the available styles, in the `en_US` locale:
+/// You can specify a format style by providing an argument to the `BinaryInteger.formatted(_:)` method. The following example shows the number `12345` represented in each of the available styles, in the `en_US` locale:
 ///
 /// ```swift
 /// let number = 123456
