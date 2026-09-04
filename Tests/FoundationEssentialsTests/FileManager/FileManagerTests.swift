@@ -1110,12 +1110,22 @@ private struct FileManagerTests {
                 try? fileManager.removeItem(at: secondReplacementDirectory)
             }
 
-            var isDirectory = false
-            #expect(fileManager.fileExists(atPath: replacementDirectory.path, isDirectory: &isDirectory))
-            #expect(isDirectory)
-            isDirectory = false
-            #expect(fileManager.fileExists(atPath: secondReplacementDirectory.path, isDirectory: &isDirectory))
-            #expect(isDirectory)
+            #if FOUNDATION_FRAMEWORK
+            var isDir: ObjCBool = false
+            func isDirBool() -> Bool {
+                isDir.boolValue
+            }
+            #else
+            var isDir: Bool = false
+            func isDirBool() -> Bool {
+                isDir
+            }
+            #endif
+            #expect(fileManager.fileExists(atPath: replacementDirectory.path, isDirectory: &isDir))
+            #expect(isDirBool())
+            isDir = false
+            #expect(fileManager.fileExists(atPath: secondReplacementDirectory.path, isDirectory: &isDir))
+            #expect(isDirBool())
             #expect(replacementDirectory != reference)
             #expect(secondReplacementDirectory != replacementDirectory)
         }
