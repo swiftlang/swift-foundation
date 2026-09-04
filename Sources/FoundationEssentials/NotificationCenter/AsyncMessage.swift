@@ -65,42 +65,6 @@ extension NotificationCenter {
     /// ```swift
     /// NotificationCenter.default.removeObserver(observerToken)
     /// ```
-    ///
-    /// ### Notification Interoperability
-    ///
-    /// `AsyncMessage` includes optional interoperability with ``Notification``, enabling posters and observers of both types
-    /// to pass information.
-    ///
-    /// It does this by offering a ``makeMessage(_:)`` method that collects values from a ``Notification``'s ``Notification/userInfo`` and populates properties on a new message.
-    /// In the other direction, a ``makeNotification(_:)`` method collects the message's defined properties and loads them into a new notification's ``Notification/userInfo`` dictionary.
-    ///
-    /// For example, if there exists a ``Notification`` posted on an arbitrary isolation identified by the ``Notification/Name`` `"eventDidFinish"` with a ``Notification/userInfo``
-    /// dictionary containing the key `"duration"` as an ``NSNumber``, an app could post and observe the notification with the following ``AsyncMessage``:
-    ///
-    /// ```swift
-    /// struct EventDidFinish: NotificationCenter.AsyncMessage {
-    ///     typealias Subject = Event
-    ///     static var name: Notification.Name { Notification.Name("eventDidFinish") }
-    ///
-    ///     var duration: Int
-    ///
-    ///     static func makeNotification(_ message: Self) -> Notification {
-    ///         return Notification(name: Self.name, userInfo: ["duration": NSNumber(message.duration)])
-    ///     }
-    ///
-    ///     static func makeMessage(_ notification: Notification) -> Self? {
-    ///         guard let userInfo = notification.userInfo,
-    ///               let duration = userInfo["duration"] as? Int
-    ///         else {
-    ///             return nil
-    ///         }
-    ///
-    ///         return Self(duration: duration)
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// With this definition, an observer for this `AsyncMessage` type receives information even if the poster used the ``Notification`` equivalent, and vice versa.
     public protocol AsyncMessage: Sendable {
         /// A type which you can optionally post and observe along with this `AsyncMessage`.
         associatedtype Subject

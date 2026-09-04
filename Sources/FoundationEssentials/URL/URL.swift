@@ -633,20 +633,13 @@ internal import os
 /// You can construct URLs and access their parts. For URLs that represent local
 /// files, you can also manipulate properties of those files directly, such as
 /// changing the file's last modification date. Finally, you can pass URLs to
-/// other APIs to retrieve the contents of those URLs. For example, you can use
-/// ``URLSession`` and its related classes to access the contents of remote
-/// resources.
+/// other APIs to retrieve the contents of those URLs.
 ///
 /// URLs are the preferred way to refer to local files. Most objects that read
 /// data from or write data to a file have methods that accept a URL instead of
 /// a pathname as the file reference. For example, you can get the contents of a
 /// local file URL as `String` by calling `init(contentsOf:encoding:)`, or as a
 /// ``Data`` by calling ``Data/init(contentsOf:options:)``.
-///
-/// As a convenience, you can use Swift's `async`-`await` syntax to
-/// asynchronously access the contents of a ``URL`` through the
-/// ``resourceBytes`` and ``lines`` properties. These properties use the shared
-/// ``URLSession`` instance to load the resource.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 

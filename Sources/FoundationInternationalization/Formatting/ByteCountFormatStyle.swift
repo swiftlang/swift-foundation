@@ -163,7 +163,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
     ///
     /// Use the ``ByteCountFormatStyle/attributed`` modifier on a ``ByteCountFormatStyle`` to create a format style of this type.
     ///
-    /// The attributed strings that this format style creates contain attributes from the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use these attributes to determine which runs of the attributed string represent different parts of the formatted value.
+    /// The attributed strings that this format style creates contain attributes from the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use these attributes to determine which runs of the attributed string represent different parts of the formatted value.
     public struct Attributed: FormatStyle, Sendable {
         /// The semantic style the format style uses to represent a byte count value.
         public var style: Style

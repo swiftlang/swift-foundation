@@ -21,13 +21,13 @@ import FoundationEssentials
 /// ``IntegerFormatStyle`` includes two nested types, ``Percent`` and ``Currency``, for working with percentages and currencies. Each format style includes a configuration that determines how it represents numeric values, for things like grouping, displaying signs, and variant presentations like scientific notation. ``IntegerFormatStyle`` and ``Percent`` include a ``NumberFormatStyleConfiguration``, and ``Currency`` includes a ``CurrencyFormatStyleConfiguration``. You can customize numeric formatting for a style by adjusting its backing configuration. The system automatically caches unique configurations of a format style to enhance performance.
 ///
 /// > Note:
-/// > Foundation provides another format style type, ``FloatingPointFormatStyle``, for working with numbers that conform to <doc://com.apple.documentation/documentation/swift/binaryfloatingpoint>. For Foundation's ``Decimal`` type, use ``Decimal/FormatStyle``.
+/// > Foundation provides another format style type, ``FloatingPointFormatStyle``, for working with numbers that conform to `BinaryFloatingPoint`. For Foundation's `Decimal` type, use `Decimal.FormatStyle`.
 ///
 ///
 ///
 /// ### Formatting integers
 ///
-/// Use the <doc://com.apple.documentation/documentation/swift/binaryinteger/formatted()> method to create a string representation of an integer using the default ``IntegerFormatStyle`` configuration.
+/// Use the `BinaryInteger.formatted()` method to create a string representation of an integer using the default ``IntegerFormatStyle`` configuration.
 ///
 /// ```swift
 /// let formattedDefault = 123456.formatted()
@@ -74,7 +74,7 @@ import FoundationEssentials
 ///
 /// ### Creating an integer format style instance
 ///
-/// The previous examples use static factory methods like ``FormatStyle/number-7fxvo`` to create format styles within the call to the <doc://com.apple.documentation/documentation/swift/binaryinteger/formatted(_:)-73k3e> method. You can also create an ``IntegerFormatStyle`` instance and use it to repeatedly format different values with the ``format(_:)`` method:
+/// The previous examples use static factory methods like `FormatStyle.number` to create format styles within the call to the `BinaryInteger.formatted()` method. You can also create an ``IntegerFormatStyle`` instance and use it to repeatedly format different values with the ``format(_:)`` method:
 ///
 /// ```swift
 /// let percentFormatStyle = IntegerFormatStyle<Int>.Percent()
@@ -128,7 +128,7 @@ public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Senda
 
     /// The locale of the format style.
     ///
-    /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
+    /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
     public var locale: Locale
     internal var collection: Configuration.Collection = Configuration.Collection()
 
@@ -156,8 +156,8 @@ public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Senda
     /// An attributed format style based on the integer format style.
     ///
     /// Use this modifier to create an ``IntegerFormatStyle/Attributed`` instance, which formats
-    /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-    /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+    /// values as `AttributedString` instances. These attributed strings contain attributes from
+    /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
     /// these attributes to determine which runs of the attributed string represent different
     /// parts of the formatted value.
     public var attributed: IntegerFormatStyle.Attributed {
@@ -264,7 +264,7 @@ extension IntegerFormatStyle {
 
         /// The locale of the format style.
         ///
-        /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
+        /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
         public var locale: Locale
         // Specifically set scale to 1 so `42` is formatted as `42%`.
         var collection: Configuration.Collection = Configuration.Collection(scale: 1)
@@ -280,8 +280,8 @@ extension IntegerFormatStyle {
         /// An attributed format style based on the integer percent format style.
         ///
         /// Use this modifier to create an ``IntegerFormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         public var attributed: IntegerFormatStyle.Attributed {
@@ -373,7 +373,7 @@ extension IntegerFormatStyle {
 
         /// The locale of the format style.
         ///
-        /// Use the ``FormatStyle/locale(_:)`` modifier to create a copy of this format style with a different locale.
+        /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
         public var locale: Locale
 
         /// The currency code this format style uses, such as `USD` or `EUR`.
@@ -396,8 +396,8 @@ extension IntegerFormatStyle {
         /// An attributed format style based on the integer currency format style.
         ///
         /// Use this modifier to create an ``IntegerFormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         public var attributed: IntegerFormatStyle.Attributed {
@@ -914,34 +914,7 @@ extension IntegerFormatStyle {
     ///
     /// Use the ``IntegerFormatStyle/attributed`` modifier on a ``FloatingPointFormatStyle`` to create a format style of this type.
     ///
-    /// The attributed strings that this format style creates contain attributes from the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use these attributes to determine which runs of the attributed string represent different parts of the formatted value.
-    ///
-    /// The following example finds runs of the attributed string that represent different parts of a formatted currency, and adds additional attributes like ``AttributeScopes/SwiftUIAttributes/foregroundColor`` and ``AttributeScopes/FoundationAttributes/inlinePresentationIntent``.
-    ///
-    /// ```swift
-    /// func attributedPrice(price: Decimal) -> AttributedString {
-    /// var attributedPrice = price.formatted(
-    /// .currency(code: "USD")
-    /// .attributed)
-    ///
-    /// for run in attributedPrice.runs {
-    /// if run.attributes.numberSymbol == .currency ||
-    /// run.attributes.numberSymbol == .decimalSeparator  {
-    /// attributedPrice[run.range].foregroundColor = .red
-    /// }
-    /// if run.attributes.numberPart == .integer ||
-    /// run.attributes.numberPart == .fraction {
-    /// attributedPrice[run.range].inlinePresentationIntent = [.stronglyEmphasized]
-    /// }
-    /// }
-    /// return attributedPrice
-    /// }
-    /// ```
-    ///
-    ///
-    /// User interface frameworks like SwiftUI can use these attributes when presenting the attributed string, as seen here:
-    ///
-    /// ![The currency value $1,234.56, with the dollar sign and decimal separator in red, and the digits in bold.](media-4099417)
+    /// The attributed strings that this format style creates contain attributes from the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use these attributes to determine which runs of the attributed string represent different parts of the formatted value.
     public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
         enum Style : Codable, Hashable {
             case integer(IntegerFormatStyle)
@@ -974,7 +947,7 @@ extension IntegerFormatStyle {
         /// - Parameter value: The integer to format.
         /// - Returns: An attributed string representation of `value`, formatted according to the
         ///   style's configuration. The returned string contains attributes from the
-        ///   ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope to
+        ///   `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope to
         ///   indicate runs formatted by this format style.
         public func format(_ value: Value) -> AttributedString {
             // Formatting Int64 is the fastest option -- try that first.
