@@ -40,34 +40,34 @@ internal import Synchronization
 /// ```swift
 /// var attributedString = AttributedString("This is a string with empty attributes.")
 /// var container = AttributeContainer()
-/// container[AttributeScopes.AppKitAttributes.ForegroundColorAttribute.self] = .red
+/// container[AttributeScopes.FoundationAttributes.LinkAttribute.self] = URL(string:"https://example.com")
 /// attributedString.mergeAttributes(container, mergePolicy: .keepNew)
 /// ```
 ///
-/// Using the attributed string's ``subscript(_:)-6gvcp`` method, you can omit the explicit use of
+/// Using the attributed string's ``subscript(_:)->K.Value?`` method, you can omit the explicit use of
 /// an ``AttributeContainer`` and just set the attribute by its type:
 ///
 /// ```swift
-/// attributedString[AttributeScopes.AppKitAttributes.ForegroundColorAttribute.self] = .yellow
+/// attributedString[AttributeScopes.FoundationAttributes.LinkAttribute.self] = URL(string:"https://example.com")
 /// ```
 ///
 /// Because an ``AttributedString`` supports dynamic member lookup — as described under
 /// [Attributes](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/attributes)
 /// in *The Swift Programming Language* — you can access its subscripts with dot syntax instead.
-/// When combined with properties like `foregroundColor` that return the attribute key type, this
+/// When combined with properties like `link` that return the attribute key type, this
 /// final form offers a natural way to set an attribute that applies to an entire string:
 ///
 /// ```swift
-/// attributedString.foregroundColor = .green
+/// attributedString.link = URL(string:"https://example.com")
 /// ```
 ///
 /// You can also set an attribute to apply only to part of an attributed string, by applying the
 /// attribute to a range, as seen here:
 ///
 /// ```swift
-/// var attributedString = AttributedString("The first month of your subscription is free.")
-/// guard let range = attributedString.range(of: "free") else { return }
-/// attributedString[range].foregroundColor = .green
+/// var attributedString = AttributedString("Visit the example site here.")
+/// guard let range = attributedString.range(of: "here") else { return }
+/// attributedString[range].link = URL(string:"https://example.com")
 /// ```
 ///
 /// You can access portions of the string with unique combinations of attributes by iterating over
@@ -77,42 +77,12 @@ internal import Synchronization
 /// ``AttributedStringKey``, and collecting them in an ``AttributeScope``. Custom keys should also
 /// extend ``AttributeDynamicLookup``, so callers can use dot-syntax to access the attribute.
 ///
-/// ## Creating Attributed Strings with Markdown
-///
-/// You can create an attributed string by passing a standard `String` or `Data` instance that
-/// contains Markdown to initializers like ``init(markdown:options:baseURL:)-52n3u``. The attributed
-/// string creates attributes by parsing the markup in the string.
-///
-/// ```swift
-/// do {
-///     let thankYouString = try AttributedString(
-///         markdown: "**Thank you!** Please visit our [website](https://example.com)")
-/// } catch {
-///     print("Couldn't parse the string. \(error.localizedDescription)")
-/// }
-/// ```
-///
-/// Localized strings that you load from strings files with initializers like
-/// ``init(localized:options:table:bundle:locale:comment:)-8dlnl`` can also contain Markdown to add
-/// styling. In addition, these localized attributed string initializers can apply the
-/// ``AttributeScopes/FoundationAttributes/ReplacementIndexAttribute`` attribute, which allows you
-/// to determine the range of replacement strings, whose order may vary between languages.
-///
-/// By declaring new attributes that conform to ``MarkdownDecodableAttributedStringKey``, you can
-/// add attributes that you invoke by using Apple's Markdown extension syntax:
-/// `^[text](name: value, name: value, …)`.
-///
-/// Localized attributed strings can also use the extension syntax to indicate parts of the string
-/// where the system can apply automatic grammar agreement. See the initializers that take a
-/// `localized:` parameter for examples of this extension syntax, as used with automatic grammar
-/// agreement.
-///
 /// ## Attribute Scopes
 ///
 /// The ``AttributedString`` API defines keys for common uses, such as text styling, semantically
 /// marking up formattable types like dates and numbers, and hyperlinking. You can find these in the
-/// ``AttributeScopes`` enumeration, which contains attributes for AppKit, Foundation, SwiftUI, and
-/// UIKit.
+/// ``AttributeScopes`` enumeration, which contains attributes defined by Foundation. Other platforms
+/// can extend this enumeration with their own attributes.
 ///
 /// You can define your own attributes by implementing ``AttributedStringKey``, and reference them
 /// by name by collecting them in an ``AttributeScope``.

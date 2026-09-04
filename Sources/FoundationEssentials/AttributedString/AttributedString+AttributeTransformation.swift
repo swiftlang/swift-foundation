@@ -22,7 +22,7 @@ internal import _FoundationCollections
 extension AttributedString {
     /// A type that transforms an attribute by altering its range or value, or by replacing it entirely.
     ///
-    /// For simple transformations, the closure you provide to the `transformingAttributes(…)` methods of ``AttributedString`` can use this instance to change the attribute's value. You can also use this instance to change the range of the string that the attribute applies to. To completely replace the attribute with an attribute of a different type, use ``replace(with:value:)-6bn0e``.
+    /// For simple transformations, the closure you provide to the `transformingAttributes(…)` methods of ``AttributedString`` can use this instance to change the attribute's value. You can also use this instance to change the range of the string that the attribute applies to. To completely replace the attribute with an attribute of a different type, use ``replace(with:value:)-6-(U.Type,_).
     @preconcurrency
     public struct SingleAttributeTransformer<T: AttributedStringKey> : Sendable where T.Value : Sendable {
         /// The range of the attribute in the attributed string.

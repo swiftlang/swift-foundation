@@ -258,7 +258,7 @@ public struct KeyPathComparator<Compared>: SortComparator {
 
     /// Provides the relative ordering of two items according to the ordering of the properties that the comparator's key path references.
     ///
-    /// The method returns flipped comparisons if the sort order is ``SortOrder/reverse``.
+    /// The method returns flipped comparisons if the sort order is `SortOrder.reverse`.
     ///
     /// - Parameters:
     ///   - lhs: The first property to compare.

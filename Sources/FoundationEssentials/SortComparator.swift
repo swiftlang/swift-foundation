@@ -151,7 +151,7 @@ package struct AnySortComparator: SortComparator, Sendable {
 
 /// A comparator that compares types according to their conformance to the comparable protocol.
 ///
-/// The comparator uses the relevant type's <doc://com.apple.documentation/documentation/swift/comparable> implementation to compare instances.
+/// The comparator uses the relevant type's `Comparable` implementation to compare instances.
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
 public struct ComparableComparator<Compared: Comparable>: SortComparator, Sendable {
     /// The sort order that the comparator uses to compare.
