@@ -71,7 +71,7 @@ enum ResolvedDateComponents {
     case weekOfMonth(year: Int, month: Int, weekOfMonth: Int, weekday: Int?)
 
     // Pick the year field between yearForWeekOfYear and year and resolves era
-    static func yearOrYearForWOYAdjustingEra(from components: DateComponents) -> (year: Int, month: Int) {
+    static func yearOrYearForWOYAdjustingEra(from components: DateComponents, eraTable: _CalendarEraTable) -> (year: Int, month: Int) {
         var rawYear: Int
         // Don't adjust for era if week is also specified
         var adjustEra = true
@@ -86,8 +86,14 @@ enum ResolvedDateComponents {
             rawYear = 1
         }
 
-        if adjustEra && components.era == 0 /* BC */{
-           rawYear = 1 - rawYear
+        // The era table turns an era-relative year into an extended one. A code this calendar's own table does not list, like Japanese reading a pre-Meiji era, is an inherited Gregorian era instead.
+        // Only an era the caller actually set counts as inherited BCE. An absent era must not: the empty table used to find an era's own boundary defaults to code 0, which would flip the sign.
+        if adjustEra {
+            if let entry = eraTable.entry(code: components.era ?? eraTable.defaultCode) {
+                rawYear = entry.extendedYear(fromEraYear: rawYear)
+            } else if components.era == 0 {
+                rawYear = 1 - rawYear
+            }
         }
 
         guard let rawMonth = components.month else {
@@ -118,8 +124,8 @@ enum ResolvedDateComponents {
         return (year,  month)
     }
 
-    init(dateComponents components: DateComponents) {
-        let (year, month) = Self.yearOrYearForWOYAdjustingEra(from: components)
+    init(dateComponents components: DateComponents, eraTable: _CalendarEraTable) {
+        let (year, month) = Self.yearOrYearForWOYAdjustingEra(from: components, eraTable: eraTable)
         let minWeekdayOrdinal = 1
 
         if let d = components.day {
@@ -200,6 +206,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         let defaultFirstWeekday: Int?
         let defaultMinimumDaysInFirstWeek: Int?
         
+        self.eraTable = .forCalendar(identifier)
+
         if identifier == .iso8601 {
             defaultLocale = Locale.unlocalized
             defaultFirstWeekday = 2
@@ -334,12 +342,17 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Range
 
+    /// How this calendar labels eras and numbers years inside them. The tables live in `CalendarEra.swift`.
+    ///
+    /// The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults.
+    let eraTable: _CalendarEraTable
+
     // Returns the range of a component in Gregorian Calendar.
     // When there are multiple possible upper bounds, the smallest one is returned.
     package func minimumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: 0..<2
-        case .year: 1..<140743
+        case .era: 0..<eraTable.highestCode + 1
+        case .year: eraTable.erasCanEnd ? 1..<2 : 1..<140743
         case .month: 1..<13
         case .day: 1..<29
         case .hour: 0..<24
@@ -365,8 +378,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     // When there are multiple possible upper bounds, the largest one is returned.
     package func maximumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: return 0..<2
-        case .year: return 1..<144684
+        case .era: return 0..<eraTable.highestCode + 1
+        case .year: return eraTable.erasCanEnd ? 1..<144684 - eraTable.newestAnchorYear : 1..<144684
         case .month: return 1..<13
         case .day: return 1..<32
         case .hour: return 0..<24
@@ -877,11 +890,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
-            if time < -63113904000.0 {
-                return Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti)
-            } else {
-                return Date(timeIntervalSinceReferenceDate: -63113904000.0)
-            }
+            // The era start comes from the table, so the ordinality algorithms below count from this calendar's era rather than from the Gregorian one.
+            return eraInterval(containing: at)?.start
 
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: at))
@@ -1456,11 +1466,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
-            if time < -63113904000.0 {
-                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti), duration: inf_ti)
-            } else {
-                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0), duration: inf_ti)
-            }
+            return eraInterval(containing: date)
 
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: date))
@@ -1631,11 +1637,66 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         }
     }
 
+    // MARK: - Era lookup
+
+    /// Whether this era counts its years down instead of up, like BCE or ROC's Before-Minguo. Adding or wrapping a year has to move opposite the requested amount in that case.
+    ///
+    /// A code this calendar's own table does not list, like Japanese reading a pre-Meiji date, is an inherited Gregorian era: code 0 is BCE and counts backward, code 1 or absent is CE.
+    func eraCountsBackward(_ code: Int?) -> Bool {
+        guard let code else { return false }
+        if let entry = eraTable.entry(code: code) { return entry.direction == .backward }
+        return code == 0
+    }
+
+    func eraBoundary(of entry: _CalendarEraEntry) -> Date? {
+        // The CE and BCE boundary is a proleptic 0001-01-01. `date(from:)` is Julian-cutover aware and would land two days earlier, so keep the reference instant.
+        if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
+            return Date(timeIntervalSinceReferenceDate: -63113904000.0)
+        }
+        // Midnight on the boundary date, with era relabeling switched off since the year given here is already extended.
+        let components = DateComponents(year: entry.anchorYear, month: entry.startMonth, day: entry.startDay, hour: 0, minute: 0, second: 0)
+        return try? date(from: components, inTimeZone: timeZone, eraTable: .noRelabeling)
+    }
+
+    func eraInterval(containing date: Date) -> DateInterval? {
+        // Find the era by instant rather than by extended year. At the CE boundary the two disagree, because the boundary is proleptic while the arithmetic is Julian aware.
+        for entry in eraTable.entries where entry.direction == .forward {
+            guard let boundary = eraBoundary(of: entry), date >= boundary else { continue }
+
+            // An era ends where the next one begins, so successive eras meet exactly and never overlap.
+            guard let next = eraTable.eraAfter(entry), let end = eraBoundary(of: next) else {
+                return DateInterval(start: boundary, duration: Calendar._maxDateIntervalDuration)
+            }
+            return DateInterval(start: boundary, end: end)
+        }
+
+        // Older than every forward era. A backward era covers that, otherwise the era is inherited.
+        if let backward = eraTable.entries.first(where: { $0.direction == .backward }),
+           let boundary = eraBoundary(of: backward) {
+            return DateInterval(start: boundary - Calendar._maxDateIntervalDuration, end: boundary)
+        }
+        // A table that labels every date has no era to inherit, so there is nothing to report before its first era.
+        if eraTable.entries.contains(where: { $0.labelsEveryDate }) { return nil }
+
+        // For a date older than every era in the table, the inherited era interval cut short where the oldest era begins.
+        let time = date.timeIntervalSinceReferenceDate
+        let ceStart = Date(timeIntervalSinceReferenceDate: -63113904000.0)
+        let inherited = time < ceStart.timeIntervalSinceReferenceDate
+            ? DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti), duration: inf_ti)
+            : DateInterval(start: ceStart, duration: inf_ti)
+        guard let oldest = eraTable.entries.last, let oldestBoundary = eraBoundary(of: oldest) else { return inherited }
+        if inherited.start < oldestBoundary && inherited.end > oldestBoundary {
+            return DateInterval(start: inherited.start, end: oldestBoundary)
+        }
+        return inherited
+    }
+
     // MARK:
 
-    static func isComponentsInSupportedRange(_ components: DateComponents) -> Bool {
+    static func isComponentsInSupportedRange(_ components: DateComponents, eraTable: _CalendarEraTable) -> Bool {
         // `Date.validCalendarRange` supports approximately from year -4713 to year 506713. These valid ranges were chosen as if representing the entire supported date range in one calendar unit.
-        let validEra = -10...10
+        // The era bound comes from the table, because the Japanese era codes run up to 236 where Gregorian only uses 0 and 1.
+        let validEra = -10...max(10, eraTable.highestCode)
         let validYear = -4714...506714
         let validQuarter = -4714*4...506714*4
         let validWeek = -4714*52...506714*52
@@ -1669,7 +1730,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     }
 
     package func date(from components: DateComponents) -> Date? {
-        guard _CalendarGregorian.isComponentsInSupportedRange(components) else {
+        guard _CalendarGregorian.isComponentsInSupportedRange(components, eraTable: eraTable) else {
 
             // One or more values exceeds supported date range
             return nil
@@ -1814,9 +1875,9 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return julianDay
     }
 
-    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, eraTable: _CalendarEraTable? = nil, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
 
-        let resolvedComponents = ResolvedDateComponents(dateComponents: components)
+        let resolvedComponents = ResolvedDateComponents(dateComponents: components, eraTable: eraTable ?? self.eraTable)
 
         var useJulianReference = false
         switch resolvedComponents {
@@ -2196,8 +2257,10 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
         }
 
-        let dcEra = components.contains(.era) ? (year < 1 ? 0 : 1) : nil
-        let dcYear = components.contains(.year) ? (year < 1 ? 1 - year : year) : nil
+        // `year` here is the extended year, so the era table decides both fields. A date with no matching entry, like a pre-Meiji Japanese date, keeps the inherited Gregorian era instead.
+        let eraEntry = eraTable.entry(extendedYear: year, month: month, day: day)
+        let dcEra = components.contains(.era) ? (eraEntry?.code ?? (year < 1 ? 0 : 1)) : nil
+        let dcYear = components.contains(.year) ? (eraEntry?.eraYear(fromExtendedYear: year) ?? (year < 1 ? 1 - year : year)) : nil
         let dcMonth = components.contains(.month) ? month : nil
         let dcDay = components.contains(.day) ? day : nil
         let dcDayOfYear = components.contains(.dayOfYear) ? dayOfYear : nil
@@ -2379,7 +2442,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .yearForWeekOfYear:
             var dc = dateComponents(weekBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if let era = dc.era, era == 0 {
+            if eraCountsBackward(dc.era) {
                 amount = -amount
             }
 
@@ -2400,7 +2463,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .year:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if let era = dc.era, era == 0 {
+            if eraCountsBackward(dc.era) {
                 amount = -amount
             }
 
@@ -2559,8 +2622,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
             }
             var amount = amount
-            if dc.era == 0 /* BC */ {
-                // in BC year goes backwards
+            if eraCountsBackward(dc.era) {
+                // A backward-counting era, like BCE, moves opposite the amount.
                 amount = -amount
             }
 
@@ -2820,8 +2883,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
 
             var amount = amount
-            if dc.era == 0 /* BC */ {
-                // in BC year goes backwards
+            if eraCountsBackward(dc.era) {
+                // A backward-counting era, like BCE, moves opposite the amount.
                 amount = -amount
             }
 

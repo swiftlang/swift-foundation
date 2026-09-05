@@ -39,9 +39,27 @@ internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
     // _foundation_swift_chinese_calendar_feature_enabled() — once Apple adds the underscored binding
     return false
 }
+
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool {
+    // Call _foundation_swift_buddhist_calendar_feature_enabled() once Apple adds the underscored binding.
+    return false
+}
+
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool {
+    // Call _foundation_swift_japanese_calendar_feature_enabled() once Apple adds the underscored binding.
+    return false
+}
+
+internal func foundation_swift_roc_calendar_feature_enabled() -> Bool {
+    // Call _foundation_swift_roc_calendar_feature_enabled() once Apple adds the underscored binding.
+    return false
+}
 #else
 internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return false }
 internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_roc_calendar_feature_enabled() -> Bool { return false }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
@@ -51,6 +69,13 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
         return _CalendarHebrew.self
     } else if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
         return _CalendarChinese.self
+    } else if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
+        // These three share Gregorian arithmetic and differ only in how they label eras, which `_CalendarGregorian` reads from an era table chosen by identifier.
+        return _CalendarGregorian.self
+    } else if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
+        return _CalendarGregorian.self
+    } else if foundation_swift_roc_calendar_feature_enabled() && identifier == .republicOfChina {
+        return _CalendarGregorian.self
     } else {
         return _calendarICUClass()
     }
