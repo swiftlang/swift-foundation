@@ -23,7 +23,11 @@ internal import Synchronization
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
 // Here, we always have access to _LocaleICU
 internal func _localeICUClass() -> _LocaleProtocol.Type {
+#if FOUNDATION_LOCALE_EXPERIMENTAL
+    _LocaleImpl.self
+#else
     _LocaleICU.self
+#endif
 }
 #else
 dynamic package func _localeICUClass() -> _LocaleProtocol.Type {

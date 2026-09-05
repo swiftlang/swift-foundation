@@ -27,64 +27,9 @@ extension Locale.Components {
     ///
     /// - Parameter identifier: A BCP-47 language identifier such as `en-u-nu-thai-ca-buddhist` or an ICU-style identifier such as `en@calendar=buddhist;numbers=thai`.
     public init(identifier: String) {
-        let languageComponents = Locale.Language.Components(identifier: identifier)
-        self.init(languageCode: languageComponents.languageCode, script: languageComponents.script, languageRegion: languageComponents.region)
-
-        let s = _withFixedCharBuffer { buffer, size, status in
-            return uloc_getVariant(identifier, buffer, size, &status)
-        }
-        if let s {
-            variant = Locale.Variant(s)
-        }
-
-        var status = U_ZERO_ERROR
-        let uenum = uloc_openKeywords(identifier, &status)
-        guard status.isSuccess, let uenum else { return }
-
-        let enumator = ICU.Enumerator(enumerator: uenum)
-        for key in enumator.elements {
-            guard let legacyKey = Locale.legacyKey(forKey: key) else {
-                continue
-            }
-
-            guard let value = Locale.keywordValue(identifier: identifier, key: legacyKey) else {
-                continue
-            }
-
-            switch legacyKey {
-            case Calendar.Identifier.legacyKeywordKey:
-                calendar = Calendar.Identifier(identifierString: value)
-            case Locale.Collation.legacyKeywordKey:
-                collation = Locale.Collation(value)
-            case Locale.Currency.legacyKeywordKey:
-                currency = Locale.Currency(value)
-            case Locale.NumberingSystem.legacyKeywordKey:
-                numberingSystem = Locale.NumberingSystem(value)
-            case Locale.Weekday.legacyKeywordKey:
-                firstDayOfWeek = Locale.Weekday(rawValue: value)
-            case Locale.HourCycle.legacyKeywordKey:
-                hourCycle = Locale.HourCycle(rawValue: value)
-            case Locale.MeasurementSystem.legacyKeywordKey:
-                if value == "imperial" {
-                    // Legacy alias for "uksystem"
-                    measurementSystem = .uk
-                } else {
-                    measurementSystem = Locale.MeasurementSystem(value)
-                }
-            case Locale.Region.legacyKeywordKey:
-                if value.count > 2 {
-                    // A valid `regionString` is a unicode subdivision id that consists of a region subtag suffixed either by "zzzz" ("uszzzz") for whole region, or by a subdivision suffix for a partial subdivision ("usca").
-                    // Retrieve the region part ("us").
-                    region = Locale.Region(String(value.prefix(2).uppercased()))
-                }
-            case Locale.Subdivision.legacyKeywordKey:
-                subdivision = Locale.Subdivision(value)
-            case TimeZone.legacyKeywordKey:
-                timeZone = TimeZone(identifier: value)
-            default:
-                break
-            }
-        }
+        // Dispatch to whichever `_LocaleProtocol` implementation is in play, so that the choice of
+        // locale implementation is made in exactly one place (`_localeICUClass()`).
+        self = _localeICUClass().components(forIdentifier: identifier)
     }
 
     /// Creates a `Locale.Components` with the identifier of the specified `locale`.
@@ -108,6 +53,73 @@ extension Locale.Components {
         if firstDayOfWeek == nil, let weekday = locale.forceFirstWeekday(locale._calendarIdentifier) {
             firstDayOfWeek = weekday
         }
+    }
+}
+
+extension _LocaleICU {
+    // Parses a BCP-47 or ICU-style identifier using ICU.
+    // Must handle every component stored by a `Locale.Components`, and be kept in sync with `Locale.Components.icuIdentifier`.
+    static func components(forIdentifier identifier: String) -> Locale.Components {
+        let languageComponents = Locale.Language.Components(identifier: identifier)
+        var result = Locale.Components(languageCode: languageComponents.languageCode, script: languageComponents.script, languageRegion: languageComponents.region)
+
+        let s = _withFixedCharBuffer { buffer, size, status in
+            return uloc_getVariant(identifier, buffer, size, &status)
+        }
+        if let s {
+            result.variant = Locale.Variant(s)
+        }
+
+        var status = U_ZERO_ERROR
+        let uenum = uloc_openKeywords(identifier, &status)
+        guard status.isSuccess, let uenum else { return result }
+
+        let enumator = ICU.Enumerator(enumerator: uenum)
+        for key in enumator.elements {
+            guard let legacyKey = Locale.legacyKey(forKey: key) else {
+                continue
+            }
+
+            guard let value = Locale.keywordValue(identifier: identifier, key: legacyKey) else {
+                continue
+            }
+
+            switch legacyKey {
+            case Calendar.Identifier.legacyKeywordKey:
+                result.calendar = Calendar.Identifier(identifierString: value)
+            case Locale.Collation.legacyKeywordKey:
+                result.collation = Locale.Collation(value)
+            case Locale.Currency.legacyKeywordKey:
+                result.currency = Locale.Currency(value)
+            case Locale.NumberingSystem.legacyKeywordKey:
+                result.numberingSystem = Locale.NumberingSystem(value)
+            case Locale.Weekday.legacyKeywordKey:
+                result.firstDayOfWeek = Locale.Weekday(rawValue: value)
+            case Locale.HourCycle.legacyKeywordKey:
+                result.hourCycle = Locale.HourCycle(rawValue: value)
+            case Locale.MeasurementSystem.legacyKeywordKey:
+                if value == "imperial" {
+                    // Legacy alias for "uksystem"
+                    result.measurementSystem = .uk
+                } else {
+                    result.measurementSystem = Locale.MeasurementSystem(value)
+                }
+            case Locale.Region.legacyKeywordKey:
+                if value.count > 2 {
+                    // A valid `regionString` is a unicode subdivision id that consists of a region subtag suffixed either by "zzzz" ("uszzzz") for whole region, or by a subdivision suffix for a partial subdivision ("usca").
+                    // Retrieve the region part ("us").
+                    result.region = Locale.Region(String(value.prefix(2).uppercased()))
+                }
+            case Locale.Subdivision.legacyKeywordKey:
+                result.subdivision = Locale.Subdivision(value)
+            case TimeZone.legacyKeywordKey:
+                result.timeZone = TimeZone(identifier: value)
+            default:
+                break
+            }
+        }
+
+        return result
     }
 }
 
@@ -659,26 +671,14 @@ extension Locale.Language {
     /// For example, top-to-bottom for English; right-to-left for Mongolian in the Mongolian Script
     /// - note: See also `characterDirection`.
     public var lineLayoutDirection: Locale.LanguageDirection {
-        var status = U_ZERO_ERROR
-        let orientation = uloc_getLineOrientation(components.identifier, &status)
-        guard status.isSuccess else {
-            return .unknown
-        }
-
-        return Locale.LanguageDirection(layoutType: orientation)
+        _LanguageEngine.lineLayoutDirection(components)
     }
 
     /// The ordering of characters within a line.
     ///
     /// For example, English uses left-to-right while Mongolian in the Mongolian script uses top-to-bottom.
     public var characterDirection: Locale.LanguageDirection {
-        var status = U_ZERO_ERROR
-        let orientation = uloc_getCharacterOrientation(components.identifier, &status)
-        guard status.isSuccess else {
-            return .unknown
-        }
-
-        return Locale.LanguageDirection(layoutType: orientation)
+        _LanguageEngine.characterDirection(components)
     }
 
     // MARK: - Getting information
@@ -689,17 +689,7 @@ extension Locale.Language {
     ///
     /// If the system can't determine a parent language, this value is `nil`.
     public var parent: Locale.Language? {
-        let parentID = _withFixedCharBuffer { buffer, size, status in
-            return ualoc_getAppleParent(components.identifier, buffer, size, &status)
-        }
-
-        if let parentID {
-            let comp = Locale.Language.Components(identifier: parentID)
-            return Locale.Language(components: comp)
-        } else {
-            return nil
-        }
-
+        _LanguageEngine.parent(components)
     }
     
     /// Returns a Boolean value that indicates if the given language shares a common parent with this language.
@@ -744,6 +734,90 @@ extension Locale.Language {
 
     /// Returns a BCP-47 identifier in a minimalist form. Script and region may be omitted. For example, "zh-TW", "en"
     public var minimalIdentifier : String {
+        _LanguageEngine.minimalIdentifier(components)
+    }
+
+    /// Returns a BCP-47 identifier that always includes the script: "zh-Hant-TW", "en-Latn-US"
+    public var maximalIdentifier : String {
+        _LanguageEngine.maximalIdentifier(components)
+    }
+    
+    // MARK: -
+
+    /// The language code that identifies the language. Returns `nil` if it cannot be determined.
+    public var languageCode: Locale.LanguageCode? {
+        _LanguageEngine.languageCode(components)
+    }
+
+    /// The script of the language. Returns `nil` if it cannot be determined.
+    public var script: Locale.Script? {
+        _LanguageEngine.script(components)
+    }
+
+    /// The region of the language. Returns `nil` if it cannot be determined.
+    public var region: Locale.Region? {
+        _LanguageEngine.region(components)
+    }
+}
+
+/// The back end for the ICU-dependent operations on `Locale.Language`.
+///
+/// The public accessors on `Locale.Language` forward to `_LanguageEngine`, whose concrete type is
+/// chosen by `FOUNDATION_LOCALE_EXPERIMENTAL`. Keeping that choice in one place (rather than
+/// `#if`-ing each accessor) means the public API is declared exactly once and can't drift between
+/// builds, and it lets the pure-Swift back end (`_LocaleLanguageImpl`) call sideways into the ICU
+/// back end (`_LocaleLanguageICU`) for operations it hasn't replaced yet.
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+protocol _LocaleLanguageProtocol {
+    static func languageCode(_ components: Locale.Language.Components) -> Locale.LanguageCode?
+    static func script(_ components: Locale.Language.Components) -> Locale.Script?
+    static func region(_ components: Locale.Language.Components) -> Locale.Region?
+    static func minimalIdentifier(_ components: Locale.Language.Components) -> String
+    static func maximalIdentifier(_ components: Locale.Language.Components) -> String
+    static func parent(_ components: Locale.Language.Components) -> Locale.Language?
+    static func characterDirection(_ components: Locale.Language.Components) -> Locale.LanguageDirection
+    static func lineLayoutDirection(_ components: Locale.Language.Components) -> Locale.LanguageDirection
+    static func components(forIdentifier identifier: String) -> Locale.Language.Components
+}
+
+#if FOUNDATION_LOCALE_EXPERIMENTAL
+typealias _LanguageEngine = _LocaleLanguageImpl
+#else
+typealias _LanguageEngine = _LocaleLanguageICU
+#endif
+
+/// ICU-backed implementation of the `Locale.Language` operations.
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+enum _LocaleLanguageICU: _LocaleLanguageProtocol {
+    static func languageCode(_ components: Locale.Language.Components) -> Locale.LanguageCode? {
+        if let lang = components.languageCode {
+            return lang
+        }
+        return _withFixedCharBuffer { buffer, size, status in
+            uloc_getLanguage(components.identifier, buffer, size, &status)
+        }.map { Locale.LanguageCode($0) }
+    }
+
+    static func script(_ components: Locale.Language.Components) -> Locale.Script? {
+        if let script = components.script {
+            return script
+        }
+        return _withFixedCharBuffer { buffer, size, status in
+            // Use `maximalIdentifier` to ensure that script code is present in the identifier.
+            uloc_getScript(maximalIdentifier(components), buffer, size, &status)
+        }.map { Locale.Script($0) }
+    }
+
+    static func region(_ components: Locale.Language.Components) -> Locale.Region? {
+        if let region = components.region {
+            return region
+        }
+        return _withFixedCharBuffer { buffer, size, status in
+            uloc_getCountry(components.identifier, buffer, size, &status)
+        }.map { Locale.Region($0) }
+    }
+
+    static func minimalIdentifier(_ components: Locale.Language.Components) -> String {
         let componentsIdentifier = components.identifier
 
         guard !componentsIdentifier.isEmpty else {
@@ -766,8 +840,7 @@ extension Locale.Language {
         return tag
     }
 
-    /// Returns a BCP-47 identifier that always includes the script: "zh-Hant-TW", "en-Latn-US"
-    public var maximalIdentifier : String {
+    static func maximalIdentifier(_ components: Locale.Language.Components) -> String {
         let id = components.identifier
         guard !id.isEmpty else {
             // Just return "" instead of trying to fill it up
@@ -788,56 +861,41 @@ extension Locale.Language {
 
         return tag
     }
-    
-    // MARK: -
 
-    /// The language code that identifies the language. Returns `nil` if it cannot be determined.
-    public var languageCode: Locale.LanguageCode? {
-        var result: Locale.LanguageCode?
-        if let lang = components.languageCode {
-            result = lang
-        } else {
-            result = _withFixedCharBuffer { buffer, size, status in
-                uloc_getLanguage(components.identifier, buffer, size, &status)
-            }.map { Locale.LanguageCode($0) }
+    static func parent(_ components: Locale.Language.Components) -> Locale.Language? {
+        let parentID = _withFixedCharBuffer { buffer, size, status in
+            return ualoc_getAppleParent(components.identifier, buffer, size, &status)
         }
-        return result
+
+        if let parentID {
+            let comp = Locale.Language.Components(identifier: parentID)
+            return Locale.Language(components: comp)
+        } else {
+            return nil
+        }
     }
 
-    /// The script of the language. Returns `nil` if it cannot be determined.
-    public var script: Locale.Script? {
-        var result: Locale.Script?
-        if let script = components.script {
-            result = script
-        } else {
-            result = _withFixedCharBuffer { buffer, size, status in
-                // Use `maximalIdentifier` to ensure that script code is present in the identifier.
-                uloc_getScript(maximalIdentifier, buffer, size, &status)
-            }.map { Locale.Script($0) }
+    static func characterDirection(_ components: Locale.Language.Components) -> Locale.LanguageDirection {
+        var status = U_ZERO_ERROR
+        let orientation = uloc_getCharacterOrientation(components.identifier, &status)
+        guard status.isSuccess else {
+            return .unknown
         }
-        return result
+
+        return Locale.LanguageDirection(layoutType: orientation)
     }
 
-    /// The region of the language. Returns `nil` if it cannot be determined.
-    public var region: Locale.Region? {
-        var result: Locale.Region?
-        if let script = components.region {
-            result = script
-        } else {
-            result = _withFixedCharBuffer { buffer, size, status in
-                uloc_getCountry(components.identifier, buffer, size, &status)
-            }.map { Locale.Region($0) }
+    static func lineLayoutDirection(_ components: Locale.Language.Components) -> Locale.LanguageDirection {
+        var status = U_ZERO_ERROR
+        let orientation = uloc_getLineOrientation(components.identifier, &status)
+        guard status.isSuccess else {
+            return .unknown
         }
-        return result
-    }
-}
 
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-extension Locale.Language.Components {
-    /// Creates a language components instance from a language identifier.
-    ///
-    /// - Parameter identifier: A Unicode language identifier, like `en-US`, `es-419`, or `zh-Hant-TW`.
-    public init(identifier: String) {
+        return Locale.LanguageDirection(layoutType: orientation)
+    }
+
+    static func components(forIdentifier identifier: String) -> Locale.Language.Components {
         let languageCode = _withFixedCharBuffer { buffer, size, status in
             uloc_getLanguage(identifier, buffer, size, &status)
         }
@@ -848,25 +906,20 @@ extension Locale.Language.Components {
             uloc_getCountry(identifier, buffer, size, &status)
         }
 
-        let lc: Locale.LanguageCode? = if let languageCode {
-            Locale.LanguageCode(languageCode)
-        } else {
-            nil
-        }
-        
-        let sc: Locale.Script? = if let scriptCode {
-            Locale.Script(scriptCode)
-        } else {
-            nil
-        }
-        
-        let rc: Locale.Region? = if let countryCode {
-            Locale.Region(countryCode)
-        } else {
-            nil
-        }
-        
-        self = Locale.Language.Components(languageCode: lc, script: sc, region: rc)
+        return Locale.Language.Components(
+            languageCode: languageCode.map { Locale.LanguageCode($0) },
+            script: scriptCode.map { Locale.Script($0) },
+            region: countryCode.map { Locale.Region($0) })
+    }
+}
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Language.Components {
+    /// Creates a language components instance from a language identifier.
+    ///
+    /// - Parameter identifier: A Unicode language identifier, like `en-US`, `es-419`, or `zh-Hant-TW`.
+    public init(identifier: String) {
+        self = _LanguageEngine.components(forIdentifier: identifier)
     }
     
     /// Creates a language components instance from an existing language instance.
