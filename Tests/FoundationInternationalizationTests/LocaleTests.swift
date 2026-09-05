@@ -591,10 +591,9 @@ private struct LocaleTests {
         verify(id: "en-latn-us-posix", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en-latn-us-posix")
         verify(id: "en-Latn_US_POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en-Latn_US_POSIX")
         verify(id: "en_Latn-US-POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en_Latn-US-POSIX")
-
-        // TODO: try to figure out if ICU is the source of these problems and if we want to tighten it (this might be the difference between the Locale class and just using a string)
-        // TODO: find out how much leeway I have to change the interpretation of the above strings to make things easier for the implementation
     }
+    
+    // TODO: Add tests for the key-value pairs!
 }
 
 @Suite("Locale Properties")

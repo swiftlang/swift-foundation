@@ -69,6 +69,9 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
                 normalizedIdentifier.append("_\(Self.normalizedVariantCode(variant))")
             }
         }
+        if let keyValuePairs = Self.normalizeKeyValuePairs(identifier) {
+            normalizedIdentifier.append("@\(keyValuePairs)")
+        }
         _normalizedIdentifier = normalizedIdentifier
     }
     
@@ -452,6 +455,133 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     
     static func normalizedVariantCode(_ variant: Substring) -> String {
         return variant.uppercased()
+    }
+    
+    static func normalizeKeyValuePairs(_ identifier: String) -> String? {
+        let segments = identifier.split(separator: "@", maxSplits: 2)
+        guard segments.count == 2 else {
+            return nil
+        }
+        let pairsStr = segments[1]
+        let pairs = pairsStr.split(separator: ";")
+        var normalizedPairs: [(key:String, value:String)] = []
+        
+        for pairStr in pairs {
+            let pair = pairStr.split(separator: "=", maxSplits: 1)
+            guard pair.count == 2 else {
+                // if we have a malformed key-value pair, with something other than one =, just skip it (ICU signals an error)
+                continue
+            }
+            let (key, value) = (pair[0], pair[1])
+            let normalizedKey = Self.normalizedLocaleKey(key)
+            if !normalizedKey.isEmpty && !normalizedPairs.contains(where: { $0.key == normalizedKey }) {
+                let normalizedValue = Self.normalizedLocaleKeyValue(value)
+                if !normalizedValue.isEmpty {
+                    normalizedPairs.append((normalizedKey, normalizedValue))
+                }
+            }
+        }
+        normalizedPairs.sort(by: { $0.key < $1.key })
+        
+        var normalizedKayValuePairsStr = ""
+        for pair in normalizedPairs {
+            if normalizedKayValuePairsStr.isEmpty {
+                normalizedKayValuePairsStr += "@\(pair.key)=\(pair.value)"
+            } else {
+                normalizedKayValuePairsStr += ";\(pair.key)=\(pair.value)"
+            }
+        }
+        return normalizedKayValuePairsStr
+    }
+    
+    // TODO: This map is derived from the keyMap resource in icu4c/source/data/misc/keyTypeData.txt, which
+    // is in turn derived from the "alias" attributes on the "key" elements in the various .xml files in
+    // common/bcp47 in CLDR.  I've created this by hand; we're going to need an automated tool to build
+    // this directly from CLDR.
+    // TODO: A Dictionary is the simplest way to model this lookup table, but probably not the smallest
+    // or fastest.  Explore better options.
+    // TODO: At some point, we're going to have to make this mapping bidirectional, so that we can also
+    // go from the legacy tags back to their BCP47 equivalents.
+    static let legacyKeyMap = [
+        "ca": "calendar",
+        "ka": "colalternate",
+        "kb": "colbackwards",
+        "kf": "colcasefirst",
+        "kc": "colcaselevel",
+        "kh": "colhiraganaquaternary",
+        "co": "collation",
+        "kk": "colnormalization",
+        "kn": "colnumeric",
+        "kr": "colreorder",
+        "ks": "colstrength",
+        "cu": "currency",
+        "hc": "hours",
+        "ms": "measure",
+        "nu": "numbers",
+        "tz": "timezone",
+        "vt": "variabletop",
+    ]
+    
+    // TODO: This map is derived from the typeMap resource in icu4c/source/data/misc/keyTypeData.txt, which
+    // is in turn derived from the "alias" attributes on the "type" elements in the various .xml files in
+    // common/bcp47 in CLDR.  I've created this by hand; we're going to need an automated tool to build
+    // this directly from CLDR.
+    // TODO: The actual resource in ICU also includes time zone aliases, which are in a different file.
+    // We need to add that.
+    // TODO: A Dictionary is the simplest way to model this lookup table, but probably not the smallest
+    // or fastest.  Explore better options.
+    // TODO: At some point, we're going to have to make this mapping bidirectional, so that we can also
+    // go from the legacy tags back to their BCP47 equivalents.  There might also be some value in
+    // breaking up this table by key instead of putting all key-value values through this full lookup.
+    static let legacyValueMap = [
+        "ethioaa": "ethiopic-amete-alem",
+        "gregory": "gregorian",
+        "malayalm": "malayalam",
+        "vietnam": "vietnamese",
+        "noignore": "non-ignorable",
+        "false": "no",
+        "true": "yes",
+        "dict": "dictionary",
+        "gb2312": "gb2312han",
+        "phonebk": "phonebook",
+        "trad": "traditional",
+        "identic": "identical",
+        "level1": "primary",
+        "level4": "quaternary",
+        "level2": "secondary",
+        "level3": "tertiary",
+        "fwidth": "fullwidth",
+        "hwidth": "halfwidth",
+        "charname": "name",
+        "npinyin": "numericPinyin",
+        "publish": "publishing",
+        "betamets": "beta-metsehaf",
+        "c11": "c",
+        "iesjes": "ies-jes",
+        "prprname": "names",
+        "tekieali": "tekie-alibekit",
+        "uksystem": "imperial",
+        "traditio": "traditional",
+    ]
+
+    static func normalizedLocaleKey(_ key: Substring) -> String {
+        let normalizedKey = key.filter({ $0.isASCII && $0.isLetter }).lowercased()
+        
+        if let legacyKey = legacyKeyMap[normalizedKey] {
+            return legacyKey
+        } else {
+            return normalizedKey
+        }
+    }
+    
+    static func normalizedLocaleKeyValue(_ value: Substring) -> String {
+        let normalizedValue = value.filter({ $0.isASCII && $0.isLetter }).lowercased()
+        
+        if let legacyValue = legacyValueMap[normalizedValue] {
+            return legacyValue
+        } else {
+            return normalizedValue
+        }
     }
 }
 
