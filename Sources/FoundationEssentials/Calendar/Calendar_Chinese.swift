@@ -1037,12 +1037,6 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         }
         return (diff, current)
     }
-
-#if FOUNDATION_FRAMEWORK
-    func bridgeToNSCalendar() -> NSCalendar {
-        _NSSwiftCalendar(calendar: Calendar(inner: self))
-    }
-#endif
 }
 
 // MARK: - Baked table
