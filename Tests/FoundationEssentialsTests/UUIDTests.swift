@@ -187,3 +187,164 @@ fileprivate struct PCGRandomNumberGenerator: RandomNumberGenerator {
     }
 }
 
+#if canImport(RegexBuilder)
+import RegexBuilder
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+@Suite("UUID Regex Support")
+private struct UUIDRegexTests {
+    
+    @Test("UUID RegexComponent basic matching")
+    func uuidRegexComponent() {
+        let validUUIDs = [
+            "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+            "123e4567-e89b-12d3-a456-426614174000",
+            "00000000-0000-0000-0000-000000000000",
+            "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+        ]
+        
+        for uuidString in validUUIDs {
+            let regex = Regex {
+                UUID.regex
+            }
+            
+            #expect(uuidString.firstMatch(of: regex) != nil,
+                   "Should match valid UUID: \(uuidString)")
+        }
+    }
+    
+    @Test("UUID regex in context")
+    func uuidRegexInContext() {
+        let testCases = [
+            ("User ID: E621E1F8-C36C-495A-93FC-0C247A3E6E5F end", "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"),
+            ("Session: 123e4567-e89b-12d3-a456-426614174000 active", "123e4567-e89b-12d3-a456-426614174000"),
+            ("Token 00000000-0000-0000-0000-000000000000 expired", "00000000-0000-0000-0000-000000000000")
+        ]
+        
+        for (input, expectedUUID) in testCases {
+            let regex = Regex {
+                OneOrMore(.word)
+                ": "
+                Capture { UUID.regex }
+                " "
+                OneOrMore(.word)
+            }
+            
+            if let match = input.firstMatch(of: regex) {
+                let capturedUUID = String(match.1)
+                #expect(capturedUUID.uppercased() == expectedUUID.uppercased())
+                #expect(UUID(uuidString: capturedUUID) != nil)
+            } else {
+                Issue.record("Should match UUID in context: \(input)")
+            }
+        }
+    }
+    
+    @Test("UUID parser direct conversion")
+    func uuidParser() throws {
+        let testCases = [
+            "ID: E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+            "UUID: 123e4567-e89b-12d3-a456-426614174000",
+            "Key: 00000000-0000-0000-0000-000000000000"
+        ]
+        
+        for input in testCases {
+            let regex = Regex {
+                OneOrMore(.word)
+                ": "
+                Capture { UUID.parser }
+            }
+            
+            let match = try #require(input.firstMatch(of: regex), 
+                                   "Should parse UUID directly from: \(input)")
+            let uuid: UUID = match.1
+            #expect(input.contains(uuid.uuidString))
+        }
+    }
+    
+    @Test("UUID case insensitive parser")
+    func uuidCaseInsensitiveParser() throws {
+        let testCases = [
+            ("ID: e621e1f8-c36c-495a-93fc-0c247a3e6e5f", "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"),
+            ("UUID: 123E4567-E89B-12D3-A456-426614174000", "123E4567-E89B-12D3-A456-426614174000"),
+            ("Key: FfFfFfFf-FfFf-FfFf-FfFf-FfFfFfFfFfFf", "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")
+        ]
+        
+        for (input, expectedUppercase) in testCases {
+            let regex = Regex {
+                OneOrMore(.word)
+                ": "
+                Capture { UUID.caseInsensitiveParser }
+            }
+            
+            let match = try #require(input.firstMatch(of: regex),
+                                   "Should parse case-insensitive UUID from: \(input)")
+            let uuid: UUID = match.1
+            #expect(uuid.uuidString == expectedUppercase)
+        }
+    }
+    
+    @Test("Invalid UUIDs should not match")
+    func invalidUUIDs() {
+        let invalidUUIDs = [
+            "E621E1F8-C36C-495A-93FC-0C247A3E6E5", // Too short
+            "E621E1F8-C36C-495A-93FC-0C247A3E6E5FF", // Too long
+            "E621E1F8_C36C_495A_93FC_0C247A3E6E5F", // Wrong separator
+            "GGGGGGGG-GGGG-GGGG-GGGG-GGGGGGGGGGGG", // Invalid hex
+            "E621E1F8-C36C-495A-93FC", // Missing parts
+            "E621E1F8-C36C-495A-93FC-0C247A3E6E5F-EXTRA", // Extra parts
+        ]
+        
+        for invalidUUID in invalidUUIDs {
+            let regex = Regex {
+                UUID.regex
+            }
+            
+            #expect(invalidUUID.firstMatch(of: regex) == nil,
+                   "Should not match invalid UUID: \(invalidUUID)")
+        }
+    }
+    
+    @Test("UUID parser graceful failure")
+    func uuidParserFailsGracefully() {
+        let invalidInputs = [
+            "ID: E621E1F8-C36C-495A-93FC", // Incomplete UUID
+            "UUID: GGGGGGGG-GGGG-GGGG-GGGG-GGGGGGGGGGGG", // Invalid hex
+        ]
+        
+        for input in invalidInputs {
+            let regex = Regex {
+                OneOrMore(.word)
+                ": "
+                Capture { UUID.parser }
+            }
+            
+            #expect(input.firstMatch(of: regex) == nil,
+                   "Parser should fail gracefully for invalid UUID: \(input)")
+        }
+    }
+    
+    @Test("Multiple UUIDs in text")
+    func multipleUUIDsInText() {
+        let text = "First: E621E1F8-C36C-495A-93FC-0C247A3E6E5F and Second: 123e4567-e89b-12d3-a456-426614174000 done"
+        
+        let regex = Regex {
+            Capture { UUID.parser }
+        }
+        
+        let matches = text.matches(of: regex)
+        #expect(matches.count == 2)
+        
+        let expectedUUIDs = [
+            "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+            "123E4567-E89B-12D3-A456-426614174000"
+        ]
+        
+        for (index, match) in matches.enumerated() {
+            let uuid: UUID = match.1
+            #expect(uuid.uuidString == expectedUUIDs[index])
+        }
+    }
+}
+#endif
