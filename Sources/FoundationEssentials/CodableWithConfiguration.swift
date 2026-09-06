@@ -114,7 +114,7 @@ public extension KeyedDecodingContainer {
         forKey key: Self.Key,
         configuration: C.Type
     ) throws -> T? where T.DecodingConfiguration == C.DecodingConfiguration {
-        if contains(key) {
+        if contains(key), try !decodeNil(forKey: key) {
             return try self.decode(T.self, forKey: key, configuration: configuration)
         } else {
             return nil
@@ -133,7 +133,7 @@ public extension KeyedDecodingContainer {
         forKey key: Self.Key,
         configuration: T.DecodingConfiguration
     ) throws -> T? {
-        if contains(key) {
+        if contains(key), try !decodeNil(forKey: key) {
             return try self.decode(T.self, forKey: key, configuration: configuration)
         } else {
             return nil

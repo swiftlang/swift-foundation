@@ -47,7 +47,7 @@ extension BufferViewIterator<UInt8> {
         }
     }
             
-    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, range: Range<Int>?, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
         // Consume all leading zeros, parse until we no longer see a digit
         var result = 0
         var count = 0
@@ -86,57 +86,66 @@ extension BufferViewIterator<UInt8> {
             throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
         }
 
+        if let range, !range.contains(result) {
+            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+        }
+        
         return result
     }
     
-
+    mutating func digits(minDigits: Int? = nil, maxDigits: Int? = nil, nanoseconds: Bool = false, input: String, calendar: Calendar, component: Calendar.Component, onFailure: @autoclosure () -> (String), extendedDescription: String? = nil) throws -> Int {
+        
+        let result = try digits(minDigits: minDigits, maxDigits: maxDigits, nanoseconds: nanoseconds, input: input, range: nil, onFailure: onFailure(), extendedDescription: extendedDescription)
+        
+        guard calendar.maximumRange(of: component)!.contains(result) else {
+            throw parseError(input, exampleFormattedString: onFailure(), extendedDescription: extendedDescription)
+        }
+        
+        return result
+    }
 }
 
 // Formatting helpers
-extension OutputBuffer<CChar> {
-    static let asciiZero = CChar(48)
+extension OutputSpan<UTF8.CodeUnit> {
+    static let asciiZero = UInt8(48)
 
     mutating func append(_ i: Int, zeroPad: Int) {
         if i < 10 {
             if zeroPad - 1 > 0 {
-                for _ in 0..<zeroPad-1 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad-1 { self.append(Self.asciiZero) }
             }
-            appendElement(Self.asciiZero + CChar(i))
+            self.append(Self.asciiZero + UInt8(i))
         } else if i < 100 {
             if zeroPad - 2 > 0 {
-                for _ in 0..<zeroPad-2 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad-2 { self.append(Self.asciiZero) }
             }
             let (tens, ones) = i.quotientAndRemainder(dividingBy: 10)
-            appendElement(Self.asciiZero + CChar(tens))
-            appendElement(Self.asciiZero + CChar(ones))
+            self.append(Self.asciiZero + UInt8(tens))
+            self.append(Self.asciiZero + UInt8(ones))
         } else if i < 1000 {
             if zeroPad - 3 > 0 {
-                for _ in 0..<zeroPad-3 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad-3 { self.append(Self.asciiZero) }
             }
             let (hundreds, remainder) = i.quotientAndRemainder(dividingBy: 100)
             let (tens, ones) = remainder.quotientAndRemainder(dividingBy: 10)
-            appendElement(Self.asciiZero + CChar(hundreds))
-            appendElement(Self.asciiZero + CChar(tens))
-            appendElement(Self.asciiZero + CChar(ones))
+            self.append(Self.asciiZero + UInt8(hundreds))
+            self.append(Self.asciiZero + UInt8(tens))
+            self.append(Self.asciiZero + UInt8(ones))
         } else if i < 10000 {
             if zeroPad - 4 > 0 {
-                for _ in 0..<zeroPad-4 { appendElement(Self.asciiZero) }
+                for _ in 0..<zeroPad-4 { self.append(Self.asciiZero) }
             }
             let (thousands, remainder) = i.quotientAndRemainder(dividingBy: 1000)
             let (hundreds, remainder2) = remainder.quotientAndRemainder(dividingBy: 100)
             let (tens, ones) = remainder2.quotientAndRemainder(dividingBy: 10)
-            appendElement(Self.asciiZero + CChar(thousands))
-            appendElement(Self.asciiZero + CChar(hundreds))
-            appendElement(Self.asciiZero + CChar(tens))
-            appendElement(Self.asciiZero + CChar(ones))
+            self.append(Self.asciiZero + UInt8(thousands))
+            self.append(Self.asciiZero + UInt8(hundreds))
+            self.append(Self.asciiZero + UInt8(tens))
+            self.append(Self.asciiZero + UInt8(ones))
         } else {
             // Special case - we don't do zero padding
             var desc = i.numericStringRepresentation
-            desc.withUTF8 {
-                $0.withMemoryRebound(to: CChar.self) { buf in
-                    append(fromContentsOf: buf)
-                }
-            }
+            self._append(copying: desc.utf8SpanMakingContiguous.span)
         }
     }
 

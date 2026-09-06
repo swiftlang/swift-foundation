@@ -30,6 +30,9 @@ fileprivate let _pageSize: Int = {
 #elseif os(WASI)
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
+#elseif os(Emscripten)
+// WebAssembly defines a fixed page size
+fileprivate let _pageSize: Int = 65_536
 #elseif canImport(Android)
 @preconcurrency import Android
 fileprivate let _pageSize: Int = Int(getpagesize())
@@ -47,10 +50,11 @@ import C.strings
 import C
 #endif
 fileprivate let _pageSize: Int = Int(getpagesize())
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras
 internal import _FoundationDarwinExtras._string_runtime.xlocale
 import stdlib_h
+internal import unistd
 
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
@@ -128,7 +132,7 @@ private let _cachedUGIDs: (uid_t, gid_t) = {
 }()
 #endif
 
-#if !os(Windows) && !os(WASI)
+#if !os(Windows) && !os(WASI) && !os(Emscripten)
 extension Platform {
     private static var ROOT_USER: UInt32 { 0 }
     static func getUGIDs(allowEffectiveRootUID: Bool = true) -> (uid: UInt32, gid: UInt32) {
@@ -273,7 +277,7 @@ extension Platform {
         // FIXME: bionic implements this as `return 0;` and does not expose the
         // function via headers. We should be able to shim this and use the call
         // if it is available.
-#if !canImport(Android) && !os(WASI)
+#if !canImport(Android) && !os(WASI) && !os(Emscripten)
         guard issetugid() == 0 else { return nil }
 #endif
         if let value = getenv(name) {
@@ -392,16 +396,16 @@ extension Platform {
 }
 
 extension Platform {
-    #if canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS
+    #if canImport(Darwin) || canImport(_FoundationDarwinExtras)
     private static var cLocale: locale_t? { /* LC_C_LOCALE */ nil }
     #elseif os(Windows)
-    private static var cLocale: _locale_t = {
+    private static let cLocale: _locale_t = {
         _create_locale(LC_ALL, "C")
     }()
     #elseif NO_C_LOCALE
     // No C locale
     #else
-    private static var cLocale: locale_t = {
+    private static let cLocale: locale_t = {
         newlocale(_stringshims_LC_ALL_MASK(), "C", locale_t(bitPattern: 0))!
     }()
     #endif

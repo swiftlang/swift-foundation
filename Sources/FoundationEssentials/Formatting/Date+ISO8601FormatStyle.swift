@@ -34,7 +34,7 @@ extension Date {
     /// ```swift
     /// let now = Date()
     /// print(now.formatted(Date.ISO8601FormatStyle().dateSeparator(.dash)))
-    /// // 2021-06-21T211015Z
+    /// // 2021-06-21T21:10:15Z
     /// ```
     ///
     ///
@@ -184,12 +184,12 @@ extension Date {
         /// ```swift
         /// let aDate = Date()
         /// print(aDate.formatted(Date.ISO8601FormatStyle(dateSeparator: .omitted, dateTimeSeparator: .standard)))
-        /// // 20210622T172132Z
+        /// // 20210622T17:21:32Z
         ///
         /// if let centralStandardTimeZone = TimeZone(identifier: "CST") {
         ///    print(aDate.formatted(Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZone: centralStandardTimeZone)))
         /// }
-        /// // 2021-06-22 122132-0500
+        /// // 2021-06-22 12:21:32-0500
         /// ```
         ///
         /// - Parameters:
@@ -358,12 +358,21 @@ extension Date.ISO8601FormatStyle : FormatStyle {
         }
 
         let secondsFromGMT: Int?
-        let components = componentsFormatStyle._calendar._dateComponents(whichComponents, from: value)
+        var components = componentsFormatStyle._calendar._dateComponents(whichComponents, from: value)
         if fields.contains(.timeZone) {
             secondsFromGMT = timeZone.secondsFromGMT(for: value)
         } else {
             secondsFromGMT = nil
         }
+
+        // A `Date` built from a fractional `TimeInterval` cannot represent that fraction exactly, so the calendar extracts a nanosecond that sits just below the intended value (.123 arrives as 122999906). Truncating that to milliseconds reads back .122. Rounding to the nearest millisecond recovers .123, which is the value the caller asked for.
+        //
+        // The rounding is clamped so it can never carry into the next second. Correcting representation error is the goal, and a fraction genuinely close to a full second (45.9999) should still format as 45.999 rather than advancing the second, minute, or day.
+        if includingFractionalSeconds, let ns = components.nanosecond {
+            let milliseconds = min(Int((Double(ns) / 1_000_000.0).rounded()), 999)
+            components.nanosecond = milliseconds * 1_000_000
+        }
+
         return format(components, appendingTimeZoneOffset: secondsFromGMT)
     }
 

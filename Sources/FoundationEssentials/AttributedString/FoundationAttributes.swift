@@ -497,7 +497,15 @@ extension AttributeScopes.FoundationAttributes {
         public typealias ObjectiveCValue = NSObject
         public static let name = NSAttributedString.Key.inflectionAlternative.rawValue
         public static let markdownName = "inflectionAlternative"
-        
+
+        private struct AllowedAttributes: AttributeScope {
+            let inlinePresentationIntent: InlinePresentationIntentAttribute
+            let link: LinkAttribute
+            let imageURL: ImageURLAttribute
+            let alternateDescription: AlternateDescriptionAttribute
+            let languageIdentifier: LanguageIdentifierAttribute
+        }
+
         public static func decodeMarkdown(from decoder: Decoder) throws -> AttributedString {
             let container = try decoder.singleValueContainer()
             let stringContent = try container.decode(String.self)
@@ -505,12 +513,12 @@ extension AttributeScopes.FoundationAttributes {
         }
         
         public static func objectiveCValue(for value: AttributedString) throws -> NSObject {
-            try NSAttributedString(value, including: \.foundation)
+            try NSAttributedString(value, including: AllowedAttributes.self)
         }
         
         public static func value(for object: NSObject) throws -> AttributedString {
             if let attrString = object as? NSAttributedString {
-                return try AttributedString(attrString, including: \.foundation)
+                return try AttributedString(attrString, including: AllowedAttributes.self)
             } else {
                 throw CocoaError(.coderInvalidValue)
             }

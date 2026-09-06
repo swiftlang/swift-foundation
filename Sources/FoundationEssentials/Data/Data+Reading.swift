@@ -29,6 +29,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK && NO_FILESYSTEM
@@ -366,7 +368,7 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
     let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(fileSize)) : nil
     
     if fileSize == 0 {
-        #if os(Linux) || os(Android)
+        #if os(Linux) || os(Android) || os(WASI)
         // Linux has some files that may report a size of 0 but actually have contents
         let chunkSize = 1024 * 4
         var ptr = malloc(chunkSize)!

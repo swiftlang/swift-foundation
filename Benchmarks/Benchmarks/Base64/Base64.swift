@@ -31,10 +31,12 @@ import Darwin
 #endif
 
 let benchmarks: @Sendable () -> Void = {
+    let metrics: [BenchmarkMetric] = [.cpuTotal, .mallocCountTotal, .instructions, .throughput]
+
     Benchmark(
         "base64-encode-jwtHeader-toString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .kilo,
             maxDuration: .seconds(3)
         )
@@ -49,7 +51,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-encode-1MB-toString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -64,7 +66,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-encode-1MB-toData-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -79,7 +81,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-encode-1MB-toString-lineLength64",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -94,7 +96,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-decode-jwtHeader-fromString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .kilo,
             maxDuration: .seconds(3)
         )
@@ -113,7 +115,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-decode-1MB-fromString-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -132,7 +134,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-decode-1MB-fromData-noOptions",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )
@@ -151,7 +153,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-decode-1MB-fromData-noOptions-invalidAfter257bytes",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .kilo,
             maxDuration: .seconds(3)
         )
@@ -171,7 +173,7 @@ let benchmarks: @Sendable () -> Void = {
     Benchmark(
         "base64-decode-1MB-fromString-lineLength64",
         configuration: Benchmark.Configuration(
-            metrics: [.cpuTotal, .mallocCountTotal, .throughput],
+            metrics: metrics,
             scalingFactor: .one,
             maxDuration: .seconds(3)
         )

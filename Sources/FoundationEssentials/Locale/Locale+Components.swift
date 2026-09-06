@@ -938,1209 +938,1209 @@ package struct ICUCLDRKey : Hashable {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.LanguageCode {
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ainu: Locale.LanguageCode { Locale.LanguageCode("ain") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var albanian: Locale.LanguageCode { Locale.LanguageCode("sq") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var amharic: Locale.LanguageCode { Locale.LanguageCode("am") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var apacheWestern: Locale.LanguageCode { Locale.LanguageCode("apw") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var arabic: Locale.LanguageCode { Locale.LanguageCode("ar") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var armenian: Locale.LanguageCode { Locale.LanguageCode("hy") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var assamese: Locale.LanguageCode { Locale.LanguageCode("as") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var assyrian: Locale.LanguageCode { Locale.LanguageCode("syr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var azerbaijani: Locale.LanguageCode { Locale.LanguageCode("az") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bangla: Locale.LanguageCode { Locale.LanguageCode("bn") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var belarusian: Locale.LanguageCode { Locale.LanguageCode("be") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bodo: Locale.LanguageCode { Locale.LanguageCode("brx") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bulgarian: Locale.LanguageCode { Locale.LanguageCode("bg") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var burmese: Locale.LanguageCode { Locale.LanguageCode("my") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cantonese: Locale.LanguageCode { Locale.LanguageCode("yue") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var catalan: Locale.LanguageCode { Locale.LanguageCode("ca") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cherokee: Locale.LanguageCode { Locale.LanguageCode("chr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var chinese: Locale.LanguageCode { Locale.LanguageCode("zh") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var croatian: Locale.LanguageCode { Locale.LanguageCode("hr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var czech: Locale.LanguageCode { Locale.LanguageCode("cs") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var danish: Locale.LanguageCode { Locale.LanguageCode("da") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var dhivehi: Locale.LanguageCode { Locale.LanguageCode("dv") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var dogri: Locale.LanguageCode { Locale.LanguageCode("doi") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var dutch: Locale.LanguageCode { Locale.LanguageCode("nl") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var dzongkha: Locale.LanguageCode { Locale.LanguageCode("dz") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var english: Locale.LanguageCode { Locale.LanguageCode("en") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var estonian: Locale.LanguageCode { Locale.LanguageCode("et") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var faroese: Locale.LanguageCode { Locale.LanguageCode("fo") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var finnish: Locale.LanguageCode { Locale.LanguageCode("fi") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var french: Locale.LanguageCode { Locale.LanguageCode("fr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var fula: Locale.LanguageCode { Locale.LanguageCode("ff") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var georgian: Locale.LanguageCode { Locale.LanguageCode("ka") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var german: Locale.LanguageCode { Locale.LanguageCode("de") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var greek: Locale.LanguageCode { Locale.LanguageCode("el") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var gujarati: Locale.LanguageCode { Locale.LanguageCode("gu") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hawaiian: Locale.LanguageCode { Locale.LanguageCode("haw") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hebrew: Locale.LanguageCode { Locale.LanguageCode("he") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hindi: Locale.LanguageCode { Locale.LanguageCode("hi") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hungarian: Locale.LanguageCode { Locale.LanguageCode("hu") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var icelandic: Locale.LanguageCode { Locale.LanguageCode("is") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var igbo: Locale.LanguageCode { Locale.LanguageCode("ig") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var indonesian: Locale.LanguageCode { Locale.LanguageCode("id") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var irish: Locale.LanguageCode { Locale.LanguageCode("ga") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var italian: Locale.LanguageCode { Locale.LanguageCode("it") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var japanese: Locale.LanguageCode { Locale.LanguageCode("ja") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kannada: Locale.LanguageCode { Locale.LanguageCode("kn") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kashmiri: Locale.LanguageCode { Locale.LanguageCode("ks") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kazakh: Locale.LanguageCode { Locale.LanguageCode("kk") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var khmer: Locale.LanguageCode { Locale.LanguageCode("km") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var konkani: Locale.LanguageCode { Locale.LanguageCode("kok") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var korean: Locale.LanguageCode { Locale.LanguageCode("ko") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kurdish: Locale.LanguageCode { Locale.LanguageCode("ku") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kurdishSorani: Locale.LanguageCode { Locale.LanguageCode("ckb") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kyrgyz: Locale.LanguageCode { Locale.LanguageCode("ky") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var lao: Locale.LanguageCode { Locale.LanguageCode("lo") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var latvian: Locale.LanguageCode { Locale.LanguageCode("lv") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var lithuanian: Locale.LanguageCode { Locale.LanguageCode("lt") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var macedonian: Locale.LanguageCode { Locale.LanguageCode("mk") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var maithili: Locale.LanguageCode { Locale.LanguageCode("mai") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var malay: Locale.LanguageCode { Locale.LanguageCode("ms") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var malayalam: Locale.LanguageCode { Locale.LanguageCode("ml") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var maltese: Locale.LanguageCode { Locale.LanguageCode("mt") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var manipuri: Locale.LanguageCode { Locale.LanguageCode("mni") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var māori: Locale.LanguageCode { Locale.LanguageCode("mi") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var marathi: Locale.LanguageCode { Locale.LanguageCode("mr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mongolian: Locale.LanguageCode { Locale.LanguageCode("mn") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var navajo: Locale.LanguageCode { Locale.LanguageCode("nv") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var nepali: Locale.LanguageCode { Locale.LanguageCode("ne") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var norwegian: Locale.LanguageCode { Locale.LanguageCode("no") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var norwegianBokmål: Locale.LanguageCode { Locale.LanguageCode("nb") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var norwegianNynorsk: Locale.LanguageCode { Locale.LanguageCode("nn") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var odia: Locale.LanguageCode { Locale.LanguageCode("or") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var pashto: Locale.LanguageCode { Locale.LanguageCode("ps") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var persian: Locale.LanguageCode { Locale.LanguageCode("fa") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var polish: Locale.LanguageCode { Locale.LanguageCode("pl") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var portuguese: Locale.LanguageCode { Locale.LanguageCode("pt") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var punjabi: Locale.LanguageCode { Locale.LanguageCode("pa") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var rohingya: Locale.LanguageCode { Locale.LanguageCode("rhg") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var romanian: Locale.LanguageCode { Locale.LanguageCode("ro") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var russian: Locale.LanguageCode { Locale.LanguageCode("ru") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var samoan: Locale.LanguageCode { Locale.LanguageCode("sm") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sanskrit: Locale.LanguageCode { Locale.LanguageCode("sa") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var santali: Locale.LanguageCode { Locale.LanguageCode("sat") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var serbian: Locale.LanguageCode { Locale.LanguageCode("sr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sindhi: Locale.LanguageCode { Locale.LanguageCode("sd") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sinhala: Locale.LanguageCode { Locale.LanguageCode("si") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var slovak: Locale.LanguageCode { Locale.LanguageCode("sk") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var slovenian: Locale.LanguageCode { Locale.LanguageCode("sl") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var spanish: Locale.LanguageCode { Locale.LanguageCode("es") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var swahili: Locale.LanguageCode { Locale.LanguageCode("sw") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var swedish: Locale.LanguageCode { Locale.LanguageCode("sv") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tagalog: Locale.LanguageCode { Locale.LanguageCode("tl") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tajik: Locale.LanguageCode { Locale.LanguageCode("tg") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tamil: Locale.LanguageCode { Locale.LanguageCode("ta") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var telugu: Locale.LanguageCode { Locale.LanguageCode("te") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var thai: Locale.LanguageCode { Locale.LanguageCode("th") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tibetan: Locale.LanguageCode { Locale.LanguageCode("bo") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tongan: Locale.LanguageCode { Locale.LanguageCode("to") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var turkish: Locale.LanguageCode { Locale.LanguageCode("tr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var turkmen: Locale.LanguageCode { Locale.LanguageCode("tk") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ukrainian: Locale.LanguageCode { Locale.LanguageCode("uk") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var urdu: Locale.LanguageCode { Locale.LanguageCode("ur") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var uyghur: Locale.LanguageCode { Locale.LanguageCode("ug") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var uzbek: Locale.LanguageCode { Locale.LanguageCode("uz") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var vietnamese: Locale.LanguageCode { Locale.LanguageCode("vi") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var welsh: Locale.LanguageCode { Locale.LanguageCode("cy") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var yiddish: Locale.LanguageCode { Locale.LanguageCode("yi") }
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Region {
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var afghanistan: Locale.Region { Locale.Region("AF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ålandIslands: Locale.Region { Locale.Region("AX") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var albania: Locale.Region { Locale.Region("AL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var algeria: Locale.Region { Locale.Region("DZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var americanSamoa: Locale.Region { Locale.Region("AS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var andorra: Locale.Region { Locale.Region("AD") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var angola: Locale.Region { Locale.Region("AO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var anguilla: Locale.Region { Locale.Region("AI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var antarctica: Locale.Region { Locale.Region("AQ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var antiguaBarbuda: Locale.Region { Locale.Region("AG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var argentina: Locale.Region { Locale.Region("AR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var armenia: Locale.Region { Locale.Region("AM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var aruba: Locale.Region { Locale.Region("AW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ascensionIsland: Locale.Region { Locale.Region("AC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var australia: Locale.Region { Locale.Region("AU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var austria: Locale.Region { Locale.Region("AT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var azerbaijan: Locale.Region { Locale.Region("AZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bahamas: Locale.Region { Locale.Region("BS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bahrain: Locale.Region { Locale.Region("BH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bangladesh: Locale.Region { Locale.Region("BD") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var barbados: Locale.Region { Locale.Region("BB") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var belarus: Locale.Region { Locale.Region("BY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var belgium: Locale.Region { Locale.Region("BE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var belize: Locale.Region { Locale.Region("BZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var benin: Locale.Region { Locale.Region("BJ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bermuda: Locale.Region { Locale.Region("BM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bhutan: Locale.Region { Locale.Region("BT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bolivia: Locale.Region { Locale.Region("BO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bosniaHerzegovina: Locale.Region { Locale.Region("BA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var botswana: Locale.Region { Locale.Region("BW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bouvetIsland: Locale.Region { Locale.Region("BV") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var brazil: Locale.Region { Locale.Region("BR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var britishVirginIslands: Locale.Region { Locale.Region("VG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var brunei: Locale.Region { Locale.Region("BN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bulgaria: Locale.Region { Locale.Region("BG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var burkinaFaso: Locale.Region { Locale.Region("BF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var burundi: Locale.Region { Locale.Region("BI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cambodia: Locale.Region { Locale.Region("KH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cameroon: Locale.Region { Locale.Region("CM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var canada: Locale.Region { Locale.Region("CA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var canaryIslands: Locale.Region { Locale.Region("IC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var capeVerde: Locale.Region { Locale.Region("CV") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var caribbeanNetherlands: Locale.Region { Locale.Region("BQ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var caymanIslands: Locale.Region { Locale.Region("KY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var centralAfricanRepublic: Locale.Region { Locale.Region("CF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ceutaMelilla: Locale.Region { Locale.Region("EA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var chad: Locale.Region { Locale.Region("TD") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var chagosArchipelago: Locale.Region { Locale.Region("IO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var chile: Locale.Region { Locale.Region("CL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var chinaMainland: Locale.Region { Locale.Region("CN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var christmasIsland: Locale.Region { Locale.Region("CX") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var clippertonIsland: Locale.Region { Locale.Region("CP") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cocosIslands: Locale.Region { Locale.Region("CC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var colombia: Locale.Region { Locale.Region("CO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var comoros: Locale.Region { Locale.Region("KM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var congoBrazzaville: Locale.Region { Locale.Region("CG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var congoKinshasa: Locale.Region { Locale.Region("CD") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cookIslands: Locale.Region { Locale.Region("CK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var costaRica: Locale.Region { Locale.Region("CR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var côteDIvoire: Locale.Region { Locale.Region("CI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var croatia: Locale.Region { Locale.Region("HR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cuba: Locale.Region { Locale.Region("CU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var curaçao: Locale.Region { Locale.Region("CW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cyprus: Locale.Region { Locale.Region("CY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var czechia: Locale.Region { Locale.Region("CZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var denmark: Locale.Region { Locale.Region("DK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var diegoGarcia: Locale.Region { Locale.Region("DG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var djibouti: Locale.Region { Locale.Region("DJ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var dominica: Locale.Region { Locale.Region("DM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var dominicanRepublic: Locale.Region { Locale.Region("DO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ecuador: Locale.Region { Locale.Region("EC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var egypt: Locale.Region { Locale.Region("EG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var elSalvador: Locale.Region { Locale.Region("SV") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var equatorialGuinea: Locale.Region { Locale.Region("GQ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var eritrea: Locale.Region { Locale.Region("ER") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var estonia: Locale.Region { Locale.Region("EE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var eswatini: Locale.Region { Locale.Region("SZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ethiopia: Locale.Region { Locale.Region("ET") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var falklandIslands: Locale.Region { Locale.Region("FK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var faroeIslands: Locale.Region { Locale.Region("FO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var fiji: Locale.Region { Locale.Region("FJ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var finland: Locale.Region { Locale.Region("FI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var france: Locale.Region { Locale.Region("FR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var frenchGuiana: Locale.Region { Locale.Region("GF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var frenchPolynesia: Locale.Region { Locale.Region("PF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var frenchSouthernTerritories: Locale.Region { Locale.Region("TF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var gabon: Locale.Region { Locale.Region("GA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var gambia: Locale.Region { Locale.Region("GM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var georgia: Locale.Region { Locale.Region("GE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var germany: Locale.Region { Locale.Region("DE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ghana: Locale.Region { Locale.Region("GH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var gibraltar: Locale.Region { Locale.Region("GI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var greece: Locale.Region { Locale.Region("GR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var greenland: Locale.Region { Locale.Region("GL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var grenada: Locale.Region { Locale.Region("GD") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guadeloupe: Locale.Region { Locale.Region("GP") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guam: Locale.Region { Locale.Region("GU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guatemala: Locale.Region { Locale.Region("GT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guernsey: Locale.Region { Locale.Region("GG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guinea: Locale.Region { Locale.Region("GN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guineaBissau: Locale.Region { Locale.Region("GW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var guyana: Locale.Region { Locale.Region("GY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var haiti: Locale.Region { Locale.Region("HT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var heardMcdonaldIslands: Locale.Region { Locale.Region("HM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var honduras: Locale.Region { Locale.Region("HN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hongKong: Locale.Region { Locale.Region("HK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hungary: Locale.Region { Locale.Region("HU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var iceland: Locale.Region { Locale.Region("IS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var india: Locale.Region { Locale.Region("IN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var indonesia: Locale.Region { Locale.Region("ID") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var iran: Locale.Region { Locale.Region("IR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var iraq: Locale.Region { Locale.Region("IQ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ireland: Locale.Region { Locale.Region("IE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var isleOfMan: Locale.Region { Locale.Region("IM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var israel: Locale.Region { Locale.Region("IL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var italy: Locale.Region { Locale.Region("IT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var jamaica: Locale.Region { Locale.Region("JM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var japan: Locale.Region { Locale.Region("JP") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var jersey: Locale.Region { Locale.Region("JE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var jordan: Locale.Region { Locale.Region("JO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kazakhstan: Locale.Region { Locale.Region("KZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kenya: Locale.Region { Locale.Region("KE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kiribati: Locale.Region { Locale.Region("KI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kosovo: Locale.Region { Locale.Region("XK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kuwait: Locale.Region { Locale.Region("KW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kyrgyzstan: Locale.Region { Locale.Region("KG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var laos: Locale.Region { Locale.Region("LA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var latvia: Locale.Region { Locale.Region("LV") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var lebanon: Locale.Region { Locale.Region("LB") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var lesotho: Locale.Region { Locale.Region("LS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var liberia: Locale.Region { Locale.Region("LR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var libya: Locale.Region { Locale.Region("LY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var liechtenstein: Locale.Region { Locale.Region("LI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var lithuania: Locale.Region { Locale.Region("LT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var luxembourg: Locale.Region { Locale.Region("LU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var macao: Locale.Region { Locale.Region("MO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var madagascar: Locale.Region { Locale.Region("MG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var malawi: Locale.Region { Locale.Region("MW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var malaysia: Locale.Region { Locale.Region("MY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var maldives: Locale.Region { Locale.Region("MV") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mali: Locale.Region { Locale.Region("ML") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var malta: Locale.Region { Locale.Region("MT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var marshallIslands: Locale.Region { Locale.Region("MH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var martinique: Locale.Region { Locale.Region("MQ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mauritania: Locale.Region { Locale.Region("MR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mauritius: Locale.Region { Locale.Region("MU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mayotte: Locale.Region { Locale.Region("YT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mexico: Locale.Region { Locale.Region("MX") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var micronesia: Locale.Region { Locale.Region("FM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var moldova: Locale.Region { Locale.Region("MD") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var monaco: Locale.Region { Locale.Region("MC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mongolia: Locale.Region { Locale.Region("MN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var montenegro: Locale.Region { Locale.Region("ME") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var montserrat: Locale.Region { Locale.Region("MS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var morocco: Locale.Region { Locale.Region("MA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var mozambique: Locale.Region { Locale.Region("MZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var myanmar: Locale.Region { Locale.Region("MM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var namibia: Locale.Region { Locale.Region("NA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var nauru: Locale.Region { Locale.Region("NR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var nepal: Locale.Region { Locale.Region("NP") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var netherlands: Locale.Region { Locale.Region("NL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var newCaledonia: Locale.Region { Locale.Region("NC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var newZealand: Locale.Region { Locale.Region("NZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var nicaragua : Locale.Region { Locale.Region("NI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var niger: Locale.Region { Locale.Region("NE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var nigeria: Locale.Region { Locale.Region("NG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var niue: Locale.Region { Locale.Region("NU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var norfolkIsland: Locale.Region { Locale.Region("NF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var northernMarianaIslands: Locale.Region { Locale.Region("MP") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var northMacedonia: Locale.Region { Locale.Region("MK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var norway: Locale.Region { Locale.Region("NO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var oman: Locale.Region { Locale.Region("OM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var pakistan: Locale.Region { Locale.Region("PK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var palau: Locale.Region { Locale.Region("PW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var palestinianTerritories: Locale.Region { Locale.Region("PS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var panama: Locale.Region { Locale.Region("PA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var papuaNewGuinea: Locale.Region { Locale.Region("PG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var paraguay: Locale.Region { Locale.Region("PY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var peru: Locale.Region { Locale.Region("PE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var philippines: Locale.Region { Locale.Region("PH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var pitcairnIslands: Locale.Region { Locale.Region("PN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var poland: Locale.Region { Locale.Region("PL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var portugal: Locale.Region { Locale.Region("PT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var puertoRico: Locale.Region { Locale.Region("PR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var qatar: Locale.Region { Locale.Region("QA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var réunion: Locale.Region { Locale.Region("RE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var romania: Locale.Region { Locale.Region("RO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var russia: Locale.Region { Locale.Region("RU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var rwanda: Locale.Region { Locale.Region("RW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintBarthélemy: Locale.Region { Locale.Region("BL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintHelena: Locale.Region { Locale.Region("SH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintKittsNevis: Locale.Region { Locale.Region("KN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintLucia: Locale.Region { Locale.Region("LC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintMartin: Locale.Region { Locale.Region("MF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintPierreMiquelon: Locale.Region { Locale.Region("PM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saintVincentGrenadines: Locale.Region { Locale.Region("VC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var samoa: Locale.Region { Locale.Region("WS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sanMarino: Locale.Region { Locale.Region("SM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sãoToméPríncipe: Locale.Region { Locale.Region("ST") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var saudiArabia: Locale.Region { Locale.Region("SA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var senegal: Locale.Region { Locale.Region("SN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var serbia: Locale.Region { Locale.Region("RS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var seychelles: Locale.Region { Locale.Region("SC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sierraLeone: Locale.Region { Locale.Region("SL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var singapore: Locale.Region { Locale.Region("SG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sintMaarten: Locale.Region { Locale.Region("SX") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var slovakia: Locale.Region { Locale.Region("SK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var slovenia: Locale.Region { Locale.Region("SI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var solomonIslands: Locale.Region { Locale.Region("SB") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var somalia: Locale.Region { Locale.Region("SO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var southAfrica: Locale.Region { Locale.Region("ZA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var southGeorgiaSouthSandwichIslands: Locale.Region { Locale.Region("GS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var southKorea: Locale.Region { Locale.Region("KR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var southSudan: Locale.Region { Locale.Region("SS") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var spain: Locale.Region { Locale.Region("ES") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sriLanka: Locale.Region { Locale.Region("LK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var suriname: Locale.Region { Locale.Region("SR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var svalbardJanMayen: Locale.Region { Locale.Region("SJ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sweden: Locale.Region { Locale.Region("SE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var switzerland: Locale.Region { Locale.Region("CH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var taiwan: Locale.Region { Locale.Region("TW") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tajikistan: Locale.Region { Locale.Region("TJ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tanzania: Locale.Region { Locale.Region("TZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var thailand: Locale.Region { Locale.Region("TH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var timorLeste: Locale.Region { Locale.Region("TL") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var togo: Locale.Region { Locale.Region("TG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tokelau: Locale.Region { Locale.Region("TK") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tonga: Locale.Region { Locale.Region("TO") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var trinidadTobago: Locale.Region { Locale.Region("TT") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tristanDaCunha: Locale.Region { Locale.Region("TA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tunisia: Locale.Region { Locale.Region("TN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var turkey: Locale.Region { Locale.Region("TR") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var turkmenistan: Locale.Region { Locale.Region("TM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var turksCaicosIslands: Locale.Region { Locale.Region("TC") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tuvalu: Locale.Region { Locale.Region("TV") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var uganda: Locale.Region { Locale.Region("UG") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ukraine: Locale.Region { Locale.Region("UA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var unitedArabEmirates: Locale.Region { Locale.Region("AE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var unitedKingdom: Locale.Region { Locale.Region("GB") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var unitedStates: Locale.Region { Locale.Region("US") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var unitedStatesOutlyingIslands: Locale.Region { Locale.Region("UM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var unitedStatesVirginIslands: Locale.Region { Locale.Region("VI") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var uruguay: Locale.Region { Locale.Region("UY") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var uzbekistan: Locale.Region { Locale.Region("UZ") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var vanuatu: Locale.Region { Locale.Region("VU") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var vaticanCity: Locale.Region { Locale.Region("VA") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var venezuela: Locale.Region { Locale.Region("VE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var vietnam: Locale.Region { Locale.Region("VN") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var wallisFutuna: Locale.Region { Locale.Region("WF") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var westernSahara: Locale.Region { Locale.Region("EH") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var yemen: Locale.Region { Locale.Region("YE") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var zambia: Locale.Region { Locale.Region("ZM") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var zimbabwe: Locale.Region { Locale.Region("ZW") }
 
     // MARK: - Region codes for specifying language variants
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var world: Locale.Region { Locale.Region("001") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var latinAmerica: Locale.Region { Locale.Region("419") }
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Script {
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var adlam: Locale.Script { Locale.Script("Adlm") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var arabic: Locale.Script { Locale.Script("Arab") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var arabicNastaliq: Locale.Script { Locale.Script("Aran") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var armenian: Locale.Script { Locale.Script("Armn") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var bangla: Locale.Script { Locale.Script("Beng") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cherokee: Locale.Script { Locale.Script("Cher") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var cyrillic: Locale.Script { Locale.Script("Cyrl") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var devanagari: Locale.Script { Locale.Script("Deva") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var ethiopic: Locale.Script { Locale.Script("Ethi") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var georgian: Locale.Script { Locale.Script("Geor") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var greek: Locale.Script { Locale.Script("Grek") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var gujarati: Locale.Script { Locale.Script("Gujr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var gurmukhi: Locale.Script { Locale.Script("Guru") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hanifiRohingya: Locale.Script { Locale.Script("Rohg") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hanSimplified: Locale.Script { Locale.Script("Hans") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hanTraditional: Locale.Script { Locale.Script("Hant") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hebrew: Locale.Script { Locale.Script("Hebr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var hiragana: Locale.Script { Locale.Script("Hira") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var japanese: Locale.Script { Locale.Script("Jpan") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var kannada: Locale.Script { Locale.Script("Knda") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var katakana: Locale.Script { Locale.Script("Kana") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var khmer: Locale.Script { Locale.Script("Khmr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var korean: Locale.Script { Locale.Script("Kore") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var lao: Locale.Script { Locale.Script("Laoo") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var latin: Locale.Script { Locale.Script("Latn") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var malayalam: Locale.Script { Locale.Script("Mlym") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var meiteiMayek: Locale.Script { Locale.Script("Mtei") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var myanmar: Locale.Script { Locale.Script("Mymr") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var odia: Locale.Script { Locale.Script("Orya") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var olChiki: Locale.Script { Locale.Script("Olck") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var sinhala: Locale.Script { Locale.Script("Sinh") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var syriac: Locale.Script { Locale.Script("Syrc") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tamil: Locale.Script { Locale.Script("Taml") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var telugu: Locale.Script { Locale.Script("Telu") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var thaana: Locale.Script { Locale.Script("Thaa") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var thai: Locale.Script { Locale.Script("Thai") }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static var tibetan: Locale.Script { Locale.Script("Tibt") }
 }
 

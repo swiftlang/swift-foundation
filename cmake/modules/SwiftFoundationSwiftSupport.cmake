@@ -11,19 +11,25 @@ function(get_swift_host_os result_var_name)
 endfunction()
 
 function(_swift_foundation_install_target module)
-  get_swift_host_os(swift_os)
-  get_target_property(type ${module} TYPE)
+  _swift_foundation_install_target_options(${module} YES)
+endfunction()
 
-  if(type STREQUAL STATIC_LIBRARY)
+function(_swift_foundation_install_target_options module install_binary)
+  get_swift_host_os(swift_os)
+
+  if(NOT BUILD_SHARED_LIBS)
     set(swift swift_static)
   else()
     set(swift swift)
   endif()
 
-  install(TARGETS ${module}
-    ARCHIVE DESTINATION lib/${swift}/${swift_os}
-    LIBRARY DESTINATION lib/${swift}/${swift_os}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  if(install_binary)
+    install(TARGETS ${module}
+      ARCHIVE DESTINATION lib/${swift}/${swift_os}
+      LIBRARY DESTINATION lib/${swift}/${swift_os}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
+
   if(type STREQUAL EXECUTABLE)
     return()
   endif()
