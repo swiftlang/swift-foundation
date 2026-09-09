@@ -23,6 +23,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -532,6 +534,10 @@ enum _FileOperations {
             throw CocoaError.removeFileError(errno, resolve(path: pathStr))
         }
 
+        #if os(Emscripten)
+        // Emscripten doesn't have fts.h; recursive directory removal is not yet supported. The `rmdir` above handles empty directories. For non-empty ones, we need a recursive implementation that doesn't depend on FTS.
+        throw CocoaError.removeFileError(ENOSYS, resolve(path: pathStr))
+        #else
         let seq = _FTSSequence(path, FTS_PHYSICAL | FTS_XDEV | FTS_NOCHDIR | FTS_NOSTAT)
         let iterator = seq.makeIterator()
         var isFirst = true
@@ -580,6 +586,7 @@ enum _FileOperations {
                 }
             }
         }
+        #endif // !os(Emscripten)
     }
     #endif
 #endif
@@ -888,8 +895,7 @@ enum _FileOperations {
         }
         defer { close(dstfd) }
 
-        #if !os(WASI) // WASI doesn't have fchmod for now
-        // Set the file permissions using fchmod() instead of when open()ing to avoid umask() issues
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchmod for now
         let permissions = mode_t(fileInfo.st_mode) & ~S_IFMT
         guard fchmod(dstfd, permissions) == 0 else {
             try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
@@ -932,7 +938,7 @@ enum _FileOperations {
         }
         var current: off_t = 0
         
-        #if os(WASI) || os(OpenBSD)
+        #if os(WASI) || os(OpenBSD) || os(Emscripten)
         // WASI doesn't have sendfile, so we need to do it in user space with read/write
         try withUnsafeTemporaryAllocation(of: UInt8.self, capacity: chunkSize) { buffer in
             while current < total {
@@ -969,7 +975,7 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI) && !os(Android) && !os(OpenBSD)
+        #if !os(WASI) && !os(Android) && !os(OpenBSD) && !os(Emscripten)
         // Copy extended attributes
         #if os(FreeBSD)
         // FreeBSD uses the `extattr_*` calls for setting extended attributes. Unlike like, the namespace for the extattrs are not determined by prefix of the attribute
@@ -1045,7 +1051,7 @@ enum _FileOperations {
         #endif
         var statInfo = stat()
         if fstat(srcFD, &statInfo) == 0 {
-            #if !os(WASI) // WASI doesn't have fchown for now
+            #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchown for now
             // Copy owner/group
             if fchown(dstFD, statInfo.st_uid, statInfo.st_gid) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
@@ -1063,7 +1069,7 @@ enum _FileOperations {
                 }
             }
             
-            #if !os(WASI) // WASI doesn't have fchmod for now
+            #if !os(WASI) && !os(Emscripten) // WASI/Emscripten doesn't have fchmod for now
             // Copy permissions
             if fchmod(dstFD, mode_t(statInfo.st_mode)) != 0 {
                 try delegate.throwIfNecessary(errno, srcPath(), dstPath())
@@ -1106,9 +1112,18 @@ enum _FileOperations {
     }
 
     private static func _linkOrCopyFile(_ srcPtr: UnsafePointer<CChar>, _ dstPtr: UnsafePointer<CChar>, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
+        #if os(Emscripten)
+        // Emscripten doesn't have fts.h; recursive copy/link is not yet supported.
+        throw CocoaError.errorWithFilePath(.featureUnsupported, String(cString: srcPtr))
+        #else
         try withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { buffer in
             let dstLen = Platform.copyCString(dst: buffer.baseAddress!, src: dstPtr, size: FileManager.MAX_PATH_SIZE)
-            let srcLen = strlen(srcPtr)
+            // fts builds the path of a descendant by appending a separator and its name to the source path, but implementations disagree about how the trailing separators of the source path are treated: some drop one of them beforehand and some keep all of them. Ignore them entirely when determining the length of the prefix that the destination path replaces, and re-insert a single separator below.
+            let pathSeparator = CChar(UInt8(ascii: "/"))
+            var srcLen = strlen(srcPtr)
+            while srcLen > 0, srcPtr[srcLen - 1] == pathSeparator {
+                srcLen -= 1
+            }
             let dstAppendPtr = buffer.baseAddress!.advanced(by: dstLen)
             let remainingBuffer = FileManager.MAX_PATH_SIZE - dstLen
             
@@ -1121,8 +1136,18 @@ enum _FileOperations {
                     
                 case let .entry(entry):
                     let fts_path = entry.ftsEnt.fts_path!
-                    let trimmedPathPtr = fts_path.advanced(by: srcLen)
-                    Platform.copyCString(dst: dstAppendPtr, src: trimmedPathPtr, size: remainingBuffer)
+                    var trimmedPathPtr = fts_path.advanced(by: srcLen)
+                    // Skip the separators that fts kept from the source path so that the item's path relative to the source is appended to the destination as a path component
+                    while trimmedPathPtr.pointee == pathSeparator {
+                        trimmedPathPtr += 1
+                    }
+                    if trimmedPathPtr.pointee == 0 {
+                        // The source itself is copied to the destination path as-is
+                        dstAppendPtr.pointee = 0
+                    } else {
+                        dstAppendPtr.pointee = pathSeparator
+                        Platform.copyCString(dst: dstAppendPtr + 1, src: trimmedPathPtr, size: remainingBuffer - 1)
+                    }
                     
                     // we don't want to ask the delegate on the way back -up- the hierarchy if they want to copy a directory they've already seen and therefore already said "YES" to.
                     guard entry.ftsEnt.fts_info == FTS_DP || delegate.shouldPerformOnItemAtPath(String(cString: fts_path), to: String(cString: buffer.baseAddress!)) else {
@@ -1205,8 +1230,9 @@ enum _FileOperations {
                 }
             }
         }
+        #endif // !os(Emscripten)
     }
-    
+
     private static func linkOrCopyFile(_ src: String, dst: String, with fileManager: FileManager, delegate: some LinkOrCopyDelegate) throws {
         try src.withFileSystemRepresentation { srcPtr in
             guard let srcPtr else {

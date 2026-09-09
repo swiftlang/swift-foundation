@@ -18,20 +18,20 @@
 extension Data.WritingOptions {
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     private var fileProtectionPart: RawValue {
         self.rawValue & 0xf0000000
     }
 
     // All non-file protection options use the remaining bits
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     private var optionsPart: RawValue {
         self.rawValue & ~0xf0000000
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func contains(_ member: Data.WritingOptions) -> Bool {
         if member.fileProtectionPart != 0 {
             // If member specifies a file protection level, self must have the exact same level
@@ -43,7 +43,7 @@ extension Data.WritingOptions {
     }
 
     @discardableResult
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func insert(_ newMember: Data.WritingOptions) -> (inserted: Bool, memberAfterInsert: Data.WritingOptions) {
         let inserted = !self.contains(newMember)
         self.formUnion(newMember)
@@ -51,7 +51,7 @@ extension Data.WritingOptions {
     }
 
     @discardableResult
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func remove(_ member: Data.WritingOptions) -> Data.WritingOptions? {
         // Remove the file protection if self has the same protection level as member
         let removeProtection = self.fileProtectionPart == member.fileProtectionPart
@@ -65,7 +65,7 @@ extension Data.WritingOptions {
         }
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func formUnion(_ other: Data.WritingOptions) {
         // It is not possible to combine two different file protection levels; we must select one to keep.
         // To preserve the invariant that x.contains(e) implies x.union(y).contains(e), we keep self's protection.
@@ -74,7 +74,7 @@ extension Data.WritingOptions {
         self = Self(rawValue: newProtection | (self.optionsPart | other.optionsPart))
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func formIntersection(_ other: Data.WritingOptions) {
         let newProtection: RawValue
         if self.fileProtectionPart == other.fileProtectionPart {
@@ -87,7 +87,7 @@ extension Data.WritingOptions {
         self = Self(rawValue: newProtection | (self.optionsPart & other.optionsPart))
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func formSymmetricDifference(_ other: Data.WritingOptions) {
         var newProtection: RawValue
         if self.fileProtectionPart == other.fileProtectionPart {
@@ -106,7 +106,7 @@ extension Data.WritingOptions {
         self = Self(rawValue: newProtection | (self.optionsPart ^ other.optionsPart))
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func isSubset(of other: Data.WritingOptions) -> Bool {
         // If self specifies a file protection, other must have the exact same protection
         // (a specific protection level is not a subset of a different protection level)

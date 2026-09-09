@@ -14,12 +14,12 @@
 // FIXME: The stdlib should expose these as callable entry points.
 
 extension Collection {
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal var _defaultCount: Int {
     distance(from: startIndex, to: endIndex)
   }
   
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal func _defaultDistanceForward(from start: Index, to end: Index) -> Int {
     precondition(start <= end,
                  "Only BidirectionalCollections can have end come before start")
@@ -32,7 +32,7 @@ extension Collection {
     return count
   }
 
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal func _defaultAdvanceForward(_ i: Index, by n: Int) -> Index {
     precondition(n >= 0,
                  "Only BidirectionalCollections can be advanced by a negative amount")
@@ -44,7 +44,7 @@ extension Collection {
     return i
   }
 
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal func _defaultAdvanceForward(
     _ i: Index, by n: Int, limitedBy limit: Index
   ) -> Index? {
@@ -63,7 +63,7 @@ extension Collection {
 }
 
 extension BidirectionalCollection {
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal func _defaultDistance(from start: Index, to end: Index) -> Int {
     var start = start
     var count = 0
@@ -84,7 +84,7 @@ extension BidirectionalCollection {
     return count
   }
 
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal func _defaultIndex(_ i: Index, offsetBy distance: Int) -> Index {
     if distance >= 0 {
       return _defaultAdvanceForward(i, by: distance)
@@ -96,7 +96,7 @@ extension BidirectionalCollection {
     return i
   }
 
-  @_alwaysEmitIntoClient
+  @export(implementation)
   internal func _defaultIndex(
     _ i: Index, offsetBy distance: Int, limitedBy limit: Index
   ) -> Index? {

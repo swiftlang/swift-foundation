@@ -282,6 +282,10 @@ final class ICUDateFormatter : @unchecked Sendable {
         cachedFormatter(for: .init(format))
     }
 
+    static func cachedFormatter(forParsing format: Date.FormatStyle) -> ICUDateFormatter? {
+        cachedFormatter(for: .init(format, forParsing: true))
+    }
+
     static func cachedFormatter(for format: Date.VerbatimFormatStyle) -> ICUDateFormatter? {
         cachedFormatter(for: .init(format))
     }
@@ -293,7 +297,7 @@ final class ICUDateFormatter : @unchecked Sendable {
 }
 
 extension ICUDateFormatter.DateFormatInfo {
-    init(_ format: Date.FormatStyle) {
+    init(_ format: Date.FormatStyle, forParsing: Bool = false) {
         let calendarIdentifier = format.calendar.identifier
         let datePatternOverride: String?
 #if FOUNDATION_FRAMEWORK
@@ -323,6 +327,13 @@ extension ICUDateFormatter.DateFormatInfo {
             }
         }
 
+        let dateFormatPattern: String
+        if forParsing {
+            dateFormatPattern = Self.parsePattern(for: pattern, calendarIdentifier: calendarIdentifier)
+        } else {
+            dateFormatPattern = pattern
+        }
+
         let firstWeekday: Int
         if let forceFirstWeekday = format.locale.forceFirstWeekday(calendarIdentifier) {
             firstWeekday = forceFirstWeekday.icuIndex
@@ -330,7 +341,7 @@ extension ICUDateFormatter.DateFormatInfo {
             firstWeekday = format.calendar.firstWeekday
         }
 
-        self.init(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: pattern, parseLenient: format.parseLenient)
+        self.init(localeIdentifier: format.locale.identifier, timeZoneIdentifier: format.timeZone.identifier, calendarIdentifier: calendarIdentifier, firstWeekday: firstWeekday, minimumDaysInFirstWeek: format.calendar.minimumDaysInFirstWeek, capitalizationContext: format.capitalizationContext, pattern: dateFormatPattern, parseLenient: format.parseLenient)
     }
 
     init(_ format: Date.VerbatimFormatStyle) {
@@ -342,6 +353,65 @@ extension ICUDateFormatter.DateFormatInfo {
         // Currently this always uses `.unknown` for capitalization. We should
         // consider allowing customization with rdar://71815286
         self.init(localeIdentifier: calendar.locale?.identifier, timeZoneIdentifier: calendar.timeZone.identifier, calendarIdentifier: calendar.identifier, firstWeekday: calendar.firstWeekday, minimumDaysInFirstWeek: calendar.minimumDaysInFirstWeek, capitalizationContext: .unknown, pattern: "")
+    }
+
+    static func parsePattern(for pattern: String, calendarIdentifier: Calendar.Identifier) -> String {
+        guard calendarIdentifier == .japanese || calendarIdentifier == .republicOfChina else {
+            return pattern
+        }
+
+        // ICU applies its two-digit year window only to year fields narrower than 3.
+        // Era years are already scoped by the parsed era, so widen only those affected fields for parsing.
+        var containsEra = false
+        var result = ""
+        result.reserveCapacity(pattern.utf8.count)
+        forEachUnquotedFieldRun(in: pattern) { runField, runLength in
+            if runField == "G" {
+                containsEra = true
+            }
+            if runField == "y" && runLength < 3 {
+                result += "yyyy"
+            } else {
+                for _ in 0 ..< runLength {
+                    result.unicodeScalars.append(runField)
+                }
+            }
+        } quotedScalar: { scalar in
+            result.unicodeScalars.append(scalar)
+        }
+        return containsEra ? result : pattern
+    }
+
+    private static func forEachUnquotedFieldRun(in pattern: String, _ body: (Unicode.Scalar, Int) -> Void, quotedScalar: ((Unicode.Scalar) -> Void)? = nil) {
+        // ICU pattern fields and quoting are defined in terms of Unicode scalars.
+        let scalars = pattern.unicodeScalars
+        var index = scalars.startIndex
+        var isInQuote = false
+
+        while index < scalars.endIndex {
+            let scalar = scalars[index]
+            if scalar == "'" {
+                quotedScalar?(scalar)
+                let next = scalars.index(after: index)
+                if next < scalars.endIndex && scalars[next] == "'" {
+                    quotedScalar?(scalars[next])
+                    index = scalars.index(after: next)
+                } else {
+                    isInQuote.toggle()
+                    index = next
+                }
+            } else if isInQuote {
+                quotedScalar?(scalar)
+                index = scalars.index(after: index)
+            } else {
+                var runLength = 0
+                repeat {
+                    runLength += 1
+                    index = scalars.index(after: index)
+                } while index < scalars.endIndex && scalars[index] == scalar
+                body(scalar, runLength)
+            }
+        }
     }
 }
 

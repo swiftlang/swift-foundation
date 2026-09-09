@@ -1051,7 +1051,7 @@ extension Date.FormatStyle : ParseStrategy {
     /// - Parameter value: The string to parse.
     /// - Returns: An instance of `Date` parsed from the input string.
     public func parse(_ value: String) throws -> Date {
-        guard let fm = ICUDateFormatter.cachedFormatter(for: self) else {
+        guard let fm = ICUDateFormatter.cachedFormatter(forParsing: self) else {
             throw CocoaError(CocoaError.formatting, userInfo: [ NSDebugDescriptionErrorKey: "Error creating icu date formatter" ])
         }
 

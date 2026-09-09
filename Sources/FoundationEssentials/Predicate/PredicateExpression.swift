@@ -192,7 +192,7 @@ extension PredicateExpressions {
     
     // A temporary workaround to a compiler bug that changes the ABI when adding the & Sendable constraint
     // Should be removed and the above function should be made public when rdar://131764614 is resolved
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public static func build_KeyPath<Root, Value>(root: Root, keyPath: Swift.KeyPath<Root.Output, Value> & Sendable) -> PredicateExpressions.KeyPath<Root, Value> {
         PredicateExpressions.build_KeyPath(root: root, keyPath: keyPath as Swift.KeyPath<Root.Output, Value>)
     }

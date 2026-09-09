@@ -234,7 +234,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.localizedName(for: style, locale: locale)
     }
 
-    @_alwaysEmitIntoClient @_disfavoredOverload
+    @export(implementation) @_disfavoredOverload
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static var gmt: TimeZone { TimeZone(secondsFromGMT: 0)! }
 
@@ -405,7 +405,7 @@ extension TimeZone {
 
 extension TimeZone {
     internal static func dataFromTZFile(_ name: String) -> Data {
-#if NO_TZFILE || os(Windows) || os(WASI)
+#if NO_TZFILE || os(Windows) || os(WASI) || os(Emscripten)
         return Data()
 #else
         let path = TZDIR + "/" + name

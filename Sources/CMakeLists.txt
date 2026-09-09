@@ -13,5 +13,6 @@
 ##===----------------------------------------------------------------------===##
 
 add_subdirectory(_FoundationCShims)
+add_subdirectory(_FoundationInternationalizationData)
 add_subdirectory(FoundationEssentials)
 add_subdirectory(FoundationInternationalization)

@@ -22,6 +22,8 @@ import Darwin
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !FOUNDATION_FRAMEWORK
@@ -194,6 +196,18 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     /// Returns true if the left hand `Date` is later in time than the right hand `Date`.
     public static func >(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
+    }
+  
+    /// Returns true if the left hand `Date` is earlier in time than or equal to the right hand `Date`.
+    @export(implementation)
+    public static func <=(lhs: Date, rhs: Date) -> Bool {
+        return lhs.timeIntervalSinceReferenceDate <= rhs.timeIntervalSinceReferenceDate
+    }
+
+    /// Returns true if the left hand `Date` is later in time than or equal to the right hand `Date`.
+    @export(implementation)
+    public static func >=(lhs: Date, rhs: Date) -> Bool {
+        return lhs.timeIntervalSinceReferenceDate >= rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns a date with a specified amount of time added to it.

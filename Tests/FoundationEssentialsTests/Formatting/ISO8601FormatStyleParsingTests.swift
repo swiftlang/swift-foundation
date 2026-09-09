@@ -144,7 +144,31 @@ private struct ISO8601FormatStyleParsingTests {
         let parsedY = try iso8601.year().month().day().parse(date.1)
         #expect(parsedWoY == parsedY)
     }
-    
+
+    /// The ISO 8601 day of week (1 is Monday ... 7 is Sunday) is converted to the `DateComponents` weekday (1 is Sunday ... 7 is Saturday).
+    /// The resulting `Date` can hide a mistake in that conversion, because `Calendar` resolves an out of range weekday relative to the rest of the week, so the components are checked as well.
+    @Test(arguments: [
+        ("2022-W01-01", 2, "2022-01-03"), // Monday
+        ("2022-W01-02", 3, "2022-01-04"), // Tuesday
+        ("2022-W01-03", 4, "2022-01-05"), // Wednesday
+        ("2022-W01-04", 5, "2022-01-06"), // Thursday
+        ("2022-W01-05", 6, "2022-01-07"), // Friday
+        ("2022-W01-06", 7, "2022-01-08"), // Saturday
+        ("2022-W01-07", 1, "2022-01-09"), // Sunday
+    ])
+    func weekdayOfWeekOfYear(test: (String, Int, String)) throws {
+        let (parseMe, expectedWeekday, equivalentDate) = test
+
+        let components = try DateComponents.ISO8601FormatStyle().year().weekOfYear().day().parse(parseMe)
+        #expect(components.weekday == expectedWeekday)
+        #expect(components.weekOfYear == 1)
+        #expect(components.yearForWeekOfYear == 2022)
+
+        let parsedWoY = try Date.ISO8601FormatStyle().year().weekOfYear().day().parse(parseMe)
+        let parsedY = try Date.ISO8601FormatStyle().year().month().day().parse(equivalentDate)
+        #expect(parsedWoY == parsedY)
+    }
+
     @Test func zeroLeadingDigits() throws {
         // The parser allows for an arbitrary number of 0 pads in digits, including none.
         let iso8601 = Date.ISO8601FormatStyle()
@@ -254,6 +278,123 @@ expected: \(reference) \(reference.timeIntervalSinceReferenceDate)
 result  : \(parsed != nil ? parsed!.debugDescription : "nil") \(parsed != nil ? parsed!.timeIntervalSinceReferenceDate : 0)
 """)
         }
+    }
+    
+    /// Values which are out of the range of the calendar's field are rejected instead of silently producing a nonsense result.
+    @Test(arguments: [
+        // Year - there is no year 0 in the era, and the calendar has a maximum year. Negative years are not part of the format.
+        "0000-01-28T15:35:46Z",
+        "144684-01-28T15:35:46Z",
+        "1234567890-01-28T15:35:46Z",
+        "-2022-01-28T15:35:46Z",
+        // Month
+        "2022-00-28T15:35:46Z",
+        "2022-13-28T15:35:46Z",
+        "2022-99-28T15:35:46Z",
+        // Day
+        "2022-01-00T15:35:46Z",
+        "2022-01-32T15:35:46Z",
+        "2022-01-99T15:35:46Z",
+        // Hour - note that 24 is allowed, but only as the end of the day
+        "2022-01-28T25:35:46Z",
+        "2022-01-28T99:35:46Z",
+        "2022-01-28T24:35:46Z",
+        "2022-01-28T24:00:01Z",
+        "2022-01-28T24:00:00.500Z",
+        // Minute
+        "2022-01-28T15:60:46Z",
+        "2022-01-28T15:99:46Z",
+        // Second - note that 60 is allowed, for leap seconds
+        "2022-01-28T15:35:61Z",
+        "2022-01-28T15:35:99Z",
+        // Fractional seconds - at most 9 digits of precision
+        "2022-01-28T15:35:46.1234567890Z",
+        // Time zone offset - at most 18 hours from GMT, and the minutes and seconds have the same range as the time
+        "2022-01-28T15:35:46+19:00",
+        "2022-01-28T15:35:46+25:00",
+        "2022-01-28T15:35:46+99:00",
+        "2022-01-28T15:35:46-19:00",
+        "2022-01-28T15:35:46+01:60",
+        "2022-01-28T15:35:46+01:99",
+        "2022-01-28T15:35:46+01:30:61",
+        "2022-01-28T15:35:46+01:30:99",
+    ])
+    func badInputs(bad: String) {
+        #expect(throws: (any Error).self) {
+            try Date(bad, strategy: .iso8601)
+        }
+        #expect(throws: (any Error).self) {
+            try DateComponents(bad, strategy: .iso8601)
+        }
+    }
+
+    /// Out of range values for the week of year format, which is not part of the default style.
+    @Test(arguments: [
+        // Week of year is 1...53
+        "2022-W00-01",
+        "2022-W54-01",
+        "2022-W99-01",
+        // Day of week is 1 (Monday) ... 7 (Sunday)
+        "2022-W01-00",
+        "2022-W01-08",
+        "2022-W01-99",
+    ])
+    func badWeekOfYearInputs(bad: String) {
+        #expect(throws: (any Error).self) {
+            try Date.ISO8601FormatStyle().year().weekOfYear().day().parse(bad)
+        }
+        #expect(throws: (any Error).self) {
+            try DateComponents.ISO8601FormatStyle().year().weekOfYear().day().parse(bad)
+        }
+    }
+
+    /// Out of range values for the ordinal day of year format, which is not part of the default style.
+    @Test(arguments: [
+        // Day of year is 1...366
+        "2022-000T15:35:46",
+        "2022-367T15:35:46",
+        "2022-999T15:35:46",
+    ])
+    func badDayOfYearInputs(bad: String) {
+        #expect(throws: (any Error).self) {
+            try Date.ISO8601FormatStyle().year().day().time(includingFractionalSeconds: false).parse(bad)
+        }
+        #expect(throws: (any Error).self) {
+            try DateComponents.ISO8601FormatStyle().year().day().time(includingFractionalSeconds: false).parse(bad)
+        }
+    }
+
+    /// The values at the edges of the allowed ranges, including those which we adjust instead of rejecting.
+    @Test func inBoundsInputs() throws {
+        let iso8601 = Date.ISO8601FormatStyle()
+
+        // Years past 9999 are allowed, up to the maximum of the calendar
+        #expect(throws: Never.self) {
+            try iso8601.parse("10000-01-28T15:35:46Z")
+        }
+        #expect(throws: Never.self) {
+            try iso8601.parse("144683-01-28T15:35:46Z")
+        }
+
+        #expect(try iso8601.parse("2022-01-01T00:00:00Z") == Date(timeIntervalSinceReferenceDate: 662688000.0))
+        #expect(try iso8601.parse("2022-12-31T23:59:59Z") == Date(timeIntervalSinceReferenceDate: 694223999.0))
+
+        // An hour of 24 means the end of the day, and the rest of the time must be zero
+        #expect(try iso8601.parse("2022-01-28T24:00:00Z") == iso8601.parse("2022-01-29T00:00:00Z"))
+        #expect(try iso8601.parse("2022-01-28T24:00:00.000Z") == iso8601.parse("2022-01-29T00:00:00Z"))
+        #expect(try Date.ISO8601FormatStyle(timeSeparator: .omitted).parse("2022-01-28T240000Z") == iso8601.parse("2022-01-29T00:00:00Z"))
+
+        // Foundation does not support leap seconds, so a second of 60 is adjusted to 59
+        #expect(try iso8601.parse("2022-01-28T15:35:60Z") == iso8601.parse("2022-01-28T15:35:59Z"))
+        #expect(try DateComponents("2022-01-28T15:35:60Z", strategy: .iso8601).second == 59)
+        #expect(try iso8601.parse("2022-01-28T15:35:46+01:30:60") == iso8601.parse("2022-01-28T15:35:46+01:30:59"))
+
+        // The time zone offset can be up to 18 hours from GMT
+        #expect(try DateComponents("2022-01-28T15:35:46+18:00", strategy: .iso8601).timeZone == TimeZone(secondsFromGMT: 18 * 3600))
+        #expect(try DateComponents("2022-01-28T15:35:46-18:00", strategy: .iso8601).timeZone == TimeZone(secondsFromGMT: -18 * 3600))
+
+        // Each value is validated against the range of its own field only. Combinations which do not exist in the calendar, like February 31st, still parse and roll over into the next month.
+        #expect(try iso8601.parse("2022-02-31T15:35:46Z") == iso8601.parse("2022-03-03T15:35:46Z"))
     }
 }
 

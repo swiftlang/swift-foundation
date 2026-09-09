@@ -48,7 +48,7 @@ private struct HTTPFormatStyleFormattingTests {
         "Wed, 20 Jan 2025 23:02:03 GMT",
         "Thu, 20 Jan 2025 01:10:03 GMT",
         "Fri, 20 Jan 2025 01:50:59 GMT",
-        "Sat, 20 Jan 2025 01:50:60 GMT", // 60 is valid, treated as 0
+        "Sat, 20 Jan 2025 01:50:60 GMT", // 60 is valid, adjusted to 59
         "Sun, 20 Jan 2025 01:03:03 GMT",
         "20 Jan 2025 01:02:03 GMT", // Missing weekdays is ok
         "20 Jan 2025 10:02:03 GMT",
@@ -69,6 +69,7 @@ private struct HTTPFormatStyleFormattingTests {
         "Mon, 24 Nov 2025 01:03:03 GMT",
         "Mon, 22 Dec 2025 01:03:03 GMT",
         "Tue, 29 Feb 2028 01:03:03 GMT", // leap day
+        "Mon, 01 Jan 1900 00:00:00 GMT", // the earliest year allowed by the spec
     ])
     func variousInputs(good: String) {
         #expect(throws: Never.self) {
@@ -96,6 +97,17 @@ private struct HTTPFormatStyleFormattingTests {
         "Fri, 17 jan 2025 19:03:05 GMT",
         "Fri, 16 Jan 2025 25:03:05 GMT", // nonsense date
         "Fri, 30 Feb 2025 25:03:05 GMT", // nonsense date
+        "Mon, 00 Jan 2025 19:03:05 GMT", // out of bounds days
+        "Mon, 32 Jan 2025 19:03:05 GMT", // out of bounds days
+        "Mon, 99 Jan 2025 19:03:05 GMT", // out of bounds days
+        "Mon, 01 Jan 1899 19:03:05 GMT", // out of bounds year, the spec allows 1900 or later
+        "Mon, 01 Jan 0000 19:03:05 GMT", // out of bounds year
+        "Mon, 01 Jan 2025 24:03:05 GMT", // out of bounds hours
+        "Mon, 01 Jan 2025 25:03:05 GMT", // out of bounds hours
+        "Mon, 02 Jan 2025 19:60:05 GMT", // out of bounds mins
+        "Mon, 02 Jan 2025 19:62:05 GMT", // out of bounds mins
+        "Mon, 03 Jan 2025 19:03:61 GMT", // out of bounds secs, 60 is allowed for leap seconds
+        "Mon, 03 Jan 2025 19:03:70 GMT", // out of bounds secs
     ])
     func badInputs(bad: String) {
         #expect(throws: (any Error).self) {
@@ -119,16 +131,12 @@ private struct HTTPFormatStyleFormattingTests {
         #expect(parsed.second == 5)
         #expect(parsed.timeZone == TimeZone.gmt)
     }
-    
-    @Test func validatingResultOfParseVsString() throws {
-        // This date will parse correctly, but of course the value of 99 does not correspond to the actual day.
-        let strangeDate = "Mon, 99 Jan 2025 19:03:05 GMT"
-        let date = try Date(strangeDate, strategy: .http)
-        let components = try DateComponents(strangeDate, strategy: .http)
-        
-        let actualDay = Calendar(identifier: .gregorian).component(.day, from: date)
-        let componentDay = try #require(components.day)
-        #expect(actualDay != componentDay)
+
+    @Test func leapSecond() throws {
+        // Foundation does not support leap seconds, so a second of 60 is adjusted to 59
+        let parsed = try DateComponents("Sat, 20 Jan 2025 01:50:60 GMT", strategy: .http)
+        #expect(parsed.second == 59)
+        #expect(try Date("Sat, 20 Jan 2025 01:50:60 GMT", strategy: .http) == Date("Sat, 20 Jan 2025 01:50:59 GMT", strategy: .http))
     }
 }
 

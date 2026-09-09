@@ -20,9 +20,11 @@ import Darwin
 import ucrt
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
@@ -44,7 +46,7 @@ internal final class __DataStorage : @unchecked Sendable {
     #endif
 
     static func allocate(_ size: Int, _ clear: Bool) -> UnsafeMutableRawPointer? {
-#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+#if (canImport(Darwin) || canImport(_FoundationDarwinExtras)) && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         if clear {
@@ -62,7 +64,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
     
     static func reallocate(_ ptr: UnsafeMutableRawPointer, _ newSize: Int) -> UnsafeMutableRawPointer? {
-#if (canImport(Darwin) || HAS_FOUNDATION_DARWIN_EXTRAS)  && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
+#if (canImport(Darwin) || canImport(_FoundationDarwinExtras))  && _pointerBitWidth(_64) && !NO_TYPED_MALLOC
         var typeDesc = malloc_type_descriptor_v0_t()
         typeDesc.summary.layout_semantics.contains_generic_data = true
         return malloc_type_realloc(ptr, newSize, typeDesc.type_id);
@@ -174,7 +176,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     func withUnsafeBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
             return try apply(UnsafeRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
@@ -200,7 +202,7 @@ internal final class __DataStorage : @unchecked Sendable {
 #endif // DATA_LEGACY_ABI
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     func withUnsafeMutableBytes<E, Result: ~Copyable>(in range: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws(E) -> Result) throws(E) -> Result {
         if let _bytes {
             return try apply(UnsafeMutableRawBufferPointer(start: _bytes.advanced(by: range.lowerBound - _offset), count: Swift.min(range.upperBound - range.lowerBound, _length)))
@@ -436,7 +438,7 @@ internal final class __DataStorage : @unchecked Sendable {
     }
     
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     func withUninitializedBytes<Result: ~Copyable, E: Error>(
       extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
@@ -450,6 +452,25 @@ internal final class __DataStorage : @unchecked Sendable {
             outputSpan = OutputRawSpan()
         }
         return try initializer(&outputSpan)
+    }
+
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    func edit<E: Error, R: ~Copyable>(range: inout Range<Int>, _ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes?.advanced(by: range.lowerBound), count: _offset + capacity - range.lowerBound)
+        var span = OutputRawSpan(buffer: buffer, initializedCount: range.count)
+        defer {
+            let updatedInitialized = span.finalize(for: buffer)
+            span = OutputRawSpan()
+            range = Range(uncheckedBounds: (range.lowerBound, range.lowerBound + updatedInitialized))
+            let resultingLength = range.upperBound - _offset
+            if resultingLength > _length {
+                _length = resultingLength
+            } else if resultingLength < _length {
+                setLength(resultingLength)
+            }
+        }
+        return try body(&span)
     }
 
     @inlinable // This is @inlinable despite escaping the __DataStorage boundary layer because it is trivially computed.
@@ -518,7 +539,51 @@ internal final class __DataStorage : @unchecked Sendable {
             setLength(resultingLength)
         }
     }
-    
+
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    func replaceSubrange<E: Error>(
+        _ subrange: Range<Int>,
+        endIndex: inout Int,
+        addingCount newByteCount: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) -> Void {
+        let replacedLength = subrange.upperBound &- subrange.lowerBound
+        var trailingLocation = subrange.lowerBound + newByteCount
+        let trailingLength = _length - (subrange.upperBound - _offset)
+        let resultingLength = _length - replacedLength + newByteCount
+        if resultingLength > _length {
+            ensureUniqueBufferReference(growingTo: resultingLength)
+            _length = resultingLength
+        } else {
+            ensureUniqueBufferReference()
+        }
+        // Make room for the insertion if needed (we don't shrink / shift forward yet to avoid 2 moves if the output span isn't fully filled)
+        if newByteCount > replacedLength {
+            mutableBytes!.advanced(by: trailingLocation).copyMemory(from: mutableBytes!.advanced(by: subrange.upperBound), byteCount: trailingLength)
+        } else {
+            trailingLocation = subrange.upperBound
+        }
+        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: subrange.lowerBound), count: newByteCount)
+        var span = OutputRawSpan(buffer: buffer, initializedCount: 0)
+        defer {
+            let insertedLength = span.finalize(for: buffer)
+            span = OutputRawSpan()
+            let trailingDestination = subrange.lowerBound + insertedLength
+            if trailingLocation != trailingDestination {
+                mutableBytes!.advanced(by: trailingDestination).copyMemory(from: mutableBytes!.advanced(by: trailingLocation), byteCount: trailingLength)
+            }
+            let newLength = trailingDestination - _offset + trailingLength
+            if insertedLength > replacedLength {
+                _length = newLength
+            } else if insertedLength < replacedLength {
+                setLength(newLength)
+            }
+            endIndex += insertedLength - replacedLength
+        }
+        return try initializer(&span)
+    }
+
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     func resetBytes(in range_: Range<Int>) {
         let range = range_.lowerBound - _offset ..< range_.upperBound - _offset

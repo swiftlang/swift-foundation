@@ -538,5 +538,120 @@ func calendarBenchmarks() {
             blackHole(sameDayComparison)
         }
     }
+
+    // MARK: - HebrewCalendar
+
+    let hebrewCal = Calendar(identifier: .hebrew)
+    let hebrewStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
+    let hanukkahComponents = DateComponents(month: 3, day: 25) // Kislev 25 (civil month 3)
+
+    Benchmark("HebrewCalendar-nextThousandHanukkahs") { benchmark in
+        var count = 1000
+        hebrewCal.enumerateDates(startingAfter: hebrewStart, matching: hanukkahComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("HebrewCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .hebrew)
+            let date = cal.date(byAdding: .day, value: 1, to: hebrewStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("HebrewCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .hebrew)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    let hebrewTestDates = {
+        let date = Date(timeIntervalSince1970: 1474666555.0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 86400), since: date))
+        }
+        return dates
+    }()
+
+    Benchmark("HebrewCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in hebrewTestDates {
+            let dc = hebrewCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("HebrewCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in hebrewTestDates {
+            let comps = hebrewCal.dateComponents([.year, .month, .day], from: date)
+            let rt = hebrewCal.date(from: comps)
+            blackHole(rt)
+        }
+    }
+
+    // MARK: - ChineseCalendar
+
+    let chineseCal = Calendar(identifier: .chinese)
+    let chineseStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
+    let chineseNewYearComponents = DateComponents(month: 1, day: 1)
+
+    Benchmark("ChineseCalendar-nextThousandNewYears") { benchmark in
+        var count = 1000
+        chineseCal.enumerateDates(startingAfter: chineseStart, matching: chineseNewYearComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("ChineseCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .chinese)
+            let date = cal.date(byAdding: .day, value: 1, to: chineseStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("ChineseCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .chinese)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    let chineseTestDates = {
+        let date = Date(timeIntervalSince1970: 1474666555.0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 86400), since: date))
+        }
+        return dates
+    }()
+
+    Benchmark("ChineseCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in chineseTestDates {
+            let dc = chineseCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("ChineseCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in chineseTestDates {
+            var comps = chineseCal.dateComponents([.year, .month, .day, .era], from: date)
+            comps.isLeapMonth = chineseCal.dateComponents([.month], from: date).isLeapMonth
+            let rt = chineseCal.date(from: comps)
+            blackHole(rt)
+        }
+    }
 }
 
