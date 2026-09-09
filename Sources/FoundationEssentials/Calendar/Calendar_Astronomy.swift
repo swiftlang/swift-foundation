@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(os)
+// Below is for sin/cos
+
+#if canImport(Darwin)
 internal import os
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
@@ -22,6 +24,8 @@ internal import os
 import CRT
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 /// `Docs/Chinese_Calendar_Math.md` explains how all of this works: the two time scales and delta-T, the solar longitude and new-moon series, how a moment becomes a day, and the precision limits. Shared astronomical and Gregorian day-number toolkit for the non-arithmetic calendars (Chinese today; Islamic and Hindu variants can build on it). Solar/lunar theory follows Reingold & Dershowitz, Calendrical Calculations (built on the Meeus and Bretagnon & Simon series); all APIs are calendar-agnostic.
@@ -262,7 +266,7 @@ internal enum _CalendarAstronomy {
         var correction = -0.00017 * sinDegrees(omega)
         for i in 0..<24 {
             let term = newMoonTerms[i]
-            let ePow = pow(e, abs(term.solar))
+            let ePow = pow(e, term.solar.magnitude)
             let arg = term.solar * solarAnomaly + term.lunar * lunarAnomaly + term.argument * moonArgument
             correction += term.sine * ePow * sinDegrees(arg)
         }
