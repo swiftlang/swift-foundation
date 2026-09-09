@@ -225,7 +225,7 @@ extension Span<UInt8> {
         guard self.count >= prefixLength else { return false }
         // Precondition: self.count > 0
         return withUnsafeBufferPointer { buffer in
-            memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
+            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
         }
     }
 

@@ -101,7 +101,7 @@ extension String {
             let outputCount = bom == nil ? inputCount : inputCount + 1
             
             // Allocate enough memory to hold the UTF16 bytes after conversion. We will pass this off to Data.
-            let utf16Pointer = calloc(outputCount, MemoryLayout<UInt16>.size)!.assumingMemoryBound(to: UInt16.self)
+            let utf16Pointer = Platform.calloc(outputCount, MemoryLayout<UInt16>.size)!.assumingMemoryBound(to: UInt16.self)
             let utf16Buffer = UnsafeMutableBufferPointer<UInt16>(start: utf16Pointer, count: outputCount)
             
             if let bom {

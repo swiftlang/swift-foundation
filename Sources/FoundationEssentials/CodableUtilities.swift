@@ -564,7 +564,7 @@ struct BufferReader {
     @inline(__always)
     func string(at dataIdx: BufferViewIndex<UInt8>, matches ptr: UnsafePointer<UInt8>, length: Int) -> Bool {
         fullBuffer[dataIdx...].withUnsafeRawPointer { bufPtr, _ in
-            memcmp(bufPtr, ptr, length) == 0
+            Platform.memcmp(bufPtr, ptr, length) == 0
         }
     }
 
@@ -697,6 +697,10 @@ package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
 
 extension RawSpan {
     func bytesEqual(to other: RawSpan) -> Bool {
+        if isIdentical(to: other) {
+            return true
+        }
+        
         guard byteCount == other.byteCount else {
             return false
         }
@@ -708,7 +712,7 @@ extension RawSpan {
         
         return withUnsafeBytes { myBytes in
             other.withUnsafeBytes { otherBytes in
-                memcmp(myBytes.baseAddress!, otherBytes.baseAddress!, byteCount) == 0
+                Platform.memcmp(myBytes.baseAddress!, otherBytes.baseAddress!, byteCount) == 0
             }
         }
     }

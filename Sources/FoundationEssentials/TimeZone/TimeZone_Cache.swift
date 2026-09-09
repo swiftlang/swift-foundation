@@ -10,6 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// For tzset, localtime
+
+#if canImport(Android)
+import unistd
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#elseif canImport(ucrt)
+import ucrt
+#endif
+
 #if os(Windows)
 import WinSDK
 #endif

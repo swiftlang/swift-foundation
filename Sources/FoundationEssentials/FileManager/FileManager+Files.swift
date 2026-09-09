@@ -502,7 +502,7 @@ extension _FileManagerImpl {
         // Historically we've omitted extended attribute keys with no associated data value
         guard size > 0 else { return nil }
         // Deallocated below in the Data deallocator
-        let buffer = malloc(size)!
+        let buffer = Platform.malloc(size)!
         #if canImport(Darwin)
         size = getxattr(path, key, buffer, size, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
         #elseif os(FreeBSD)
