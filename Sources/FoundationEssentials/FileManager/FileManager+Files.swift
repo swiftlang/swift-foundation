@@ -513,6 +513,8 @@ extension _FileManagerImpl {
                 guard actualSize != -1 else {
                     throw CocoaError.errorWithFilePath(String(cString: path), errno: errno, reading: true)
                 }
+                
+                initializedCount = actualSize
             }
         }
         
