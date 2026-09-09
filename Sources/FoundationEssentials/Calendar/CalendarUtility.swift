@@ -98,6 +98,30 @@ internal enum _CalendarUtility {
     /// Default weekend range (region 001): Sat–Sun, full day.
     static let defaultWeekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
 
+    // MARK: - hash(into:)
+
+    /// Combines exactly the state that `Calendar`'s `==` compares, so calendars that compare equal always hash equally.
+    ///
+    /// Hashing the stored `firstWeekday` instead of the resolved one breaks that, because an unset value and an explicitly set one that resolves to the same number compare equal.
+    static func hash<CalendarType: _CalendarProtocol>(_ calendar: CalendarType, into hasher: inout Hasher) {
+        hasher.combine(calendar.identifier)
+        hasher.combine(calendar.timeZone)
+        hasher.combine(calendar.firstWeekday)
+        hasher.combine(calendar.minimumDaysInFirstWeek)
+        hasher.combine(calendar.localeIdentifier)
+        hasher.combine(calendar.preferredFirstWeekday)
+        hasher.combine(calendar.preferredMinimumDaysInFirstweek)
+    }
+
+    /// Whether `date` falls in the weekend, for any calendar that can report a weekday and a time of day.
+    static func isDateInWeekend<CalendarType: _CalendarProtocol>(_ date: Date, in calendar: CalendarType) -> Bool {
+        let weekendRange = calendar.locale?.weekendRange ?? defaultWeekendRange
+        let components = calendar.dateComponents([.weekday, .hour, .minute, .second], from: date, in: calendar.timeZone)
+        guard let weekday = components.weekday else { return false }
+        let timeInDay = TimeInterval((components.hour ?? 0) * Calendar._secondsInHour + (components.minute ?? 0) * Calendar._secondsInMinute + (components.second ?? 0))
+        return isDateInWeekend(weekday: weekday, timeInDay: timeInDay, weekendRange: weekendRange)
+    }
+
     // MARK: - Rata die arithmetic (shared by the non-ICU calendars)
 
     /// Rata die of the Foundation reference date (2001-01-01 == RD 730486).
