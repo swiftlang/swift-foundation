@@ -968,7 +968,7 @@ extension JSON5Scanner {
             throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
-    
+
     static func validateLeadingDecimal(
       from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>
     ) throws {
