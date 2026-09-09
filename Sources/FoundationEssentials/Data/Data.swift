@@ -17,6 +17,7 @@
 @usableFromInline let memset = ucrt.memset
 @usableFromInline let memcpy = ucrt.memcpy
 #elseif canImport(Bionic)
+@preconcurrency import Bionic
 @usableFromInline let memcmp = Bionic.memcmp
 @usableFromInline let memset = Bionic.memset
 @usableFromInline let memcpy = Bionic.memcpy

@@ -28,6 +28,7 @@ fileprivate let _pageSize: Int = {
     return Int(sysInfo.dwPageSize)
 }()
 #elseif os(WASI)
+@preconcurrency import WASILibc
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
 #elseif os(Emscripten)
