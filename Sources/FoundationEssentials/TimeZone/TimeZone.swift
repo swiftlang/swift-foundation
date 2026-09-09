@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 internal import _FoundationCShims
 
 /// Information about standard time conventions associated with a specific geopolitical region.

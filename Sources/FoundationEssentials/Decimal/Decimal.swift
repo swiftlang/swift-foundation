@@ -10,14 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(ucrt)
-import ucrt
-#endif
-
 #if !FOUNDATION_FRAMEWORK
 
 /// A structure representing a base-10 number.

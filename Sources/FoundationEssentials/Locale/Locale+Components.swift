@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 extension Locale {
 
     /// A type that represents the components of a locale, for use when creating a locale with specific overrides.

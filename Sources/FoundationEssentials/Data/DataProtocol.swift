@@ -10,22 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(ucrt)
-import ucrt
-#elseif canImport(WASILibc)
-@preconcurrency import WASILibc
-#elseif canImport(EmscriptenLibc)
-@preconcurrency import EmscriptenLibc
-#elseif canImport(stdlib_h)
-import stdlib_h
-#endif
-
 //===--- DataProtocol -----------------------------------------------------===//
 
 /// A protocol that provides consistent data access to the bytes underlying contiguous and noncontiguous data buffers.

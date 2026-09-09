@@ -10,20 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(WASILibc)
-@preconcurrency import WASILibc
-#elseif canImport(EmscriptenLibc)
-@preconcurrency import EmscriptenLibc
-#endif
-
 //===----------------------------------------------------------------------===//
 // Coding Path Node
 //===----------------------------------------------------------------------===//
@@ -707,4 +693,23 @@ package enum DefaultAssociatedValueCodingKeys1: String, CodingKey {
 package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
     case _0
     case _1
+}
+
+extension RawSpan {
+    func bytesEqual(to other: RawSpan) -> Bool {
+        guard byteCount == other.byteCount else {
+            return false
+        }
+        
+        guard byteCount > 0 else {
+            // Both at 0 bytes are equal
+            return true
+        }
+        
+        return withUnsafeBytes { myBytes in
+            other.withUnsafeBytes { otherBytes in
+                memcmp(myBytes.baseAddress!, otherBytes.baseAddress!, byteCount) == 0
+            }
+        }
+    }
 }

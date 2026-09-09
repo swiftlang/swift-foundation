@@ -13,12 +13,6 @@
 internal import _ForSwiftFoundation
 #endif
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 internal import _FoundationCShims
 
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.

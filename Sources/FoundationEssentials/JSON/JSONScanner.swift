@@ -53,12 +53,6 @@
  6. Pass that byte offset + length into the number parser to produce the corresponding Swift Int value.
 */
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#endif // canImport(Darwin)
-
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif

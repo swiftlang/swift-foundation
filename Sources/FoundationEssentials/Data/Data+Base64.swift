@@ -10,27 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-import Bionic
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#elseif os(Windows)
-import CRT
-import WinSDK
-#elseif os(WASI)
-import WASILibc
-#elseif os(Emscripten)
-import EmscriptenLibc
-#elseif canImport(_FoundationDarwinExtras)
-internal import _FoundationDarwinExtras
-#elseif canImport(stdlib_h)
-import stdlib_h
-#endif
-
 #if !FOUNDATION_FRAMEWORK
 extension Data {
     
