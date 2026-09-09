@@ -61,6 +61,10 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 import stdlib_h
 #endif // canImport(Darwin)
 
+#if canImport(Bionic)
+@preconcurrency import Bionic
+#endif
+
 #if FOUNDATION_FRAMEWORK
 internal import CoreFoundation_Private
 #endif
@@ -439,4 +443,60 @@ extension Platform {
         return strtof_l(nptr, endptr, Self.cLocale)
         #endif
     }
+    
+#if canImport(Darwin)
+    static let calloc = Darwin.calloc
+    static let malloc = Darwin.malloc
+    static let free = Darwin.free
+    static let memset = Darwin.memset
+    static let memcpy = Darwin.memcpy
+    static let memcmp = Darwin.memcmp
+#elseif os(Windows)
+    static let calloc = ucrt.calloc
+    static let malloc = ucrt.malloc
+    static let free = ucrt.free
+    static let memset = ucrt.memset
+    static let memcpy = ucrt.memcpy
+    static let memcmp = ucrt.memcmp
+#elseif canImport(Bionic)
+    static let calloc = Bionic.calloc
+    static let malloc = Bionic.malloc
+    static let free = Bionic.free
+    static let memset = Bionic.memset
+    static let memcpy = Bionic.memcpy
+    static let memcmp = Bionic.memcmp
+#elseif canImport(Glibc)
+    static let calloc = Glibc.calloc
+    static let malloc = Glibc.malloc
+    static let free = Glibc.free
+    static let memset = Glibc.memset
+    static let memcpy = Glibc.memcpy
+    static let memcmp = Glibc.memcmp
+#elseif canImport(Musl)
+    static let calloc = Musl.calloc
+    static let malloc = Musl.malloc
+    static let free = Musl.free
+    static let memset = Musl.memset
+    static let memcpy = Musl.memcpy
+    static let memcmp = Musl.memcmp
+#elseif canImport(WASILibc)
+    static let calloc = WASILibc.calloc
+    static let malloc = WASILibc.malloc
+    static let free = WASILibc.free
+    static let memset = WASILibc.memset
+    static let memcpy = WASILibc.memcpy
+    static let memcmp = WASILibc.memcmp
+#elseif canImport(EmscriptenLibc)
+    static let calloc = EmscriptenLibc.calloc
+    static let malloc = EmscriptenLibc.malloc
+    static let free = EmscriptenLibc.free
+    static let memset = EmscriptenLibc.memset
+    static let memcpy = EmscriptenLibc.memcpy
+    static let memcmp = EmscriptenLibc.memcmp
+#elseif canImport(_FoundationDarwinExtras)
+    static let memset = _FoundationDarwinExtras.memset
+    static let memcpy = _FoundationDarwinExtras.memcpy
+    static let memcmp = _FoundationDarwinExtras.memcmp
+#endif
+
 }

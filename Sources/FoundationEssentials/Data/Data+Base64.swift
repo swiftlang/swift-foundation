@@ -653,24 +653,18 @@ extension Base64 {
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
 
-        let pointer = __DataStorage.allocate(outputLength, false)
-        let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
-        let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
-        var length = outputLength
-        do {
-            if options.contains(.ignoreUnknownCharacters) {
-                try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
-            } else {
-                // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
-                // branch prediction?
-                try self._decode(from: inBuffer, into: target, length: &length, options: options)
+        return try Data(capacity: outputLength) { (span) throws(DecodingError) in
+            try span.withUnsafeMutableBytes { (buffer, initializedCount) throws(DecodingError) in
+                let target = buffer.bindMemory(to: UInt8.self)
+                
+                if options.contains(.ignoreUnknownCharacters) {
+                    try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &initializedCount, options: options)
+                } else {
+                    // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
+                    // branch prediction?
+                    try self._decode(from: inBuffer, into: target, length: &initializedCount, options: options)
+                }
             }
-            
-            return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
-        } catch {
-            // Do not leak the malloc on error
-            free(pointer)
-            throw error
         }
     }
 

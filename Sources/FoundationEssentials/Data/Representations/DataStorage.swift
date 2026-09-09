@@ -56,9 +56,9 @@ internal final class __DataStorage : @unchecked Sendable {
         }
 #else
         if clear {
-            return calloc(1, size)
+            return Platform.calloc(1, size)
         } else {
-            return malloc(size)
+            return Platform.malloc(size)
         }
 #endif
     }

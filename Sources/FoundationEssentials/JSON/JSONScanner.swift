@@ -713,7 +713,7 @@ extension JSONScanner {
         mutating func readExpectedString(_ str: StaticString, typeDescriptor: String) throws {
             let cmp = try bytes[unchecked: readIndex..<endIndex].withUnsafeRawPointer { ptr, count in
                 if count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
-                return memcmp(ptr, str.utf8Start, str.utf8CodeUnitCount)
+                return Platform.memcmp(ptr, str.utf8Start, str.utf8CodeUnitCount)
             }
             guard cmp == 0 else {
                 // Figure out the exact character that is wrong.
