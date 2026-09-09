@@ -638,7 +638,7 @@ internal import os
 /// URLs are the preferred way to refer to local files. Most objects that read
 /// data from or write data to a file have methods that accept a URL instead of
 /// a pathname as the file reference. For example, you can get the contents of a
-/// local file URL as `String` by calling `init(contentsOf:encoding:)`, or as a
+/// local file URL as `String` by calling ``Swift/String/init(contentsOf:encoding:)``, or as a
 /// ``Data`` by calling ``Data/init(contentsOf:options:)``.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {

@@ -40,7 +40,7 @@ internal import Synchronization
 /// ```swift
 /// var attributedString = AttributedString("This is a string with empty attributes.")
 /// var container = AttributeContainer()
-/// container[AttributeScopes.FoundationAttributes.LinkAttribute.self] = URL(string:"https://example.com")
+/// container[AttributeScopes.FoundationAttributes.LinkAttribute.self] = URL(string:"https://example.com")!
 /// attributedString.mergeAttributes(container, mergePolicy: .keepNew)
 /// ```
 ///
@@ -48,7 +48,7 @@ internal import Synchronization
 /// an ``AttributeContainer`` and just set the attribute by its type:
 ///
 /// ```swift
-/// attributedString[AttributeScopes.FoundationAttributes.LinkAttribute.self] = URL(string:"https://example.com")
+/// attributedString[AttributeScopes.FoundationAttributes.LinkAttribute.self] = URL(string:"https://example.com")!
 /// ```
 ///
 /// Because an ``AttributedString`` supports dynamic member lookup — as described under
@@ -58,7 +58,7 @@ internal import Synchronization
 /// final form offers a natural way to set an attribute that applies to an entire string:
 ///
 /// ```swift
-/// attributedString.link = URL(string:"https://example.com")
+/// attributedString.link = URL(string:"https://example.com")!
 /// ```
 ///
 /// You can also set an attribute to apply only to part of an attributed string, by applying the
@@ -67,7 +67,7 @@ internal import Synchronization
 /// ```swift
 /// var attributedString = AttributedString("Visit the example site here.")
 /// guard let range = attributedString.range(of: "here") else { return }
-/// attributedString[range].link = URL(string:"https://example.com")
+/// attributedString[range].link = URL(string:"https://example.com")!
 /// ```
 ///
 /// You can access portions of the string with unique combinations of attributes by iterating over
