@@ -35,9 +35,17 @@
 
 ## Writing Style
 
-Write in-line and PR comments, DocC, commit messages, and PR descriptions in [simple English](https://simple.wikipedia.org/wiki/Wikipedia:How_to_write_Simple_English_pages). Use a small, plain vocabulary instead of rare or abstract words.
+Write in-line and PR comments, DocC, commit messages, and PR descriptions in [simple English](https://simple.wikipedia.org/wiki/Wikipedia:How_to_write_Simple_English_pages). 
 
-**Keep sentences short.** One idea per sentence. Break a long sentence into two.
+**Focus on what users want to know**. 
+
+**Stay truthful to the source.** Do not add unverified claims, benefits, or implications.
+
+**Put the main point first.** Say the main point before going into details.
+
+**Omit unneeded words.** Avoid words and abstractions that don't add information. Remove excess modifiers. Avoid stacking nouns phrases.
+
+**Keep sentences and paragraphs short.** One idea per sentence. Break a long sentence into two.
 
 **Prefer active verbs.** Write "the parser reads the header", not "the header is read by the parser". 
 
