@@ -402,7 +402,7 @@ extension KeyPathExprSyntax {
                 }
             case .subscript(let sub):
                 result = ExprSyntax(SubscriptCallExprSyntax(calledExpression: result, arguments: sub.arguments))
-            @unknown default:
+            default:
                 return nil
             }
         }
