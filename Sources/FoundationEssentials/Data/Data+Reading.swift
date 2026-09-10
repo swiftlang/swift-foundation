@@ -69,7 +69,14 @@ private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: 
                     let neededSize = _fgetxattr(fd, keyStr, nil, 0, 0, 0)
                     let data = Data(capacity: neededSize, initializingWith: { span in
                         span.withUnsafeMutableBytes { buffer, initializedBytes in
-                            initializedBytes = _fgetxattr(fd, keyStr, buffer.baseAddress!, neededSize, 0, 0)
+                            let actualSize = _fgetxattr(fd, keyStr, buffer.baseAddress!, neededSize, 0, 0)
+                            guard actualSize != -1 else {
+                                // We had an error result
+                                initializedBytes = 0
+                                return
+                            }
+                            
+                            initializedBytes = actualSize
                         }
                     })
                     

@@ -69,7 +69,7 @@ internal final class __DataStorage : @unchecked Sendable {
         typeDesc.summary.layout_semantics.contains_generic_data = true
         return malloc_type_realloc(ptr, newSize, typeDesc.type_id);
 #else
-        return realloc(ptr, newSize)
+        return Platform.realloc(ptr, newSize)
 #endif
     }
     
