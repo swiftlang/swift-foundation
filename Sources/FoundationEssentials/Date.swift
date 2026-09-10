@@ -198,14 +198,15 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
         return lhs.timeIntervalSinceReferenceDate > rhs.timeIntervalSinceReferenceDate
     }
   
+    // These two symbols are backDeployed; when building with an older SDK users still get the default implementation from Comparable, which isn't quite right (because of NaN), but this lets us make it do the right thing when they recompile with an up-to-date SDK.
     /// Returns true if the left hand `Date` is earlier in time than or equal to the right hand `Date`.
-    @export(implementation)
+    @backDeployed(before: FoundationPreview 6.4.2)
     public static func <=(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate <= rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns true if the left hand `Date` is later in time than or equal to the right hand `Date`.
-    @export(implementation)
+    @backDeployed(before: FoundationPreview 6.4.2)
     public static func >=(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate >= rhs.timeIntervalSinceReferenceDate
     }
