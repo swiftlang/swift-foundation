@@ -73,7 +73,12 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     ///
     /// - Parameter string: The string representation of a UUID, such as `E621E1F8-C36C-495A-93FC-0C247A3E6E5F`.
     public init?(uuidString string: __shared String) {
+#if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
+        var string = string
+        let utf8Span = string.utf8SpanMakingContiguous
+#else
         let utf8Span = string.utf8Span
+#endif
         guard utf8Span.count == 36 else {
             return nil
         }
@@ -84,8 +89,6 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
         let utf8Bytes = utf8Span.span.bytes
         
         var storage = [16 of UInt8](repeating: 0)
-        var mutableSpan = storage.mutableSpan
-        var mutableBytes = mutableSpan.mutableBytes
         
         while charIdx < 36 {
             switch charIdx {
@@ -102,7 +105,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
                 guard let b2 = utf8Bytes[charIdx + 1].hexDigitValue else {
                     return nil
                 }
-                mutableBytes[byteIdx] = b1 << 4 | b2
+                storage[byteIdx] = b1 << 4 | b2
                 byteIdx += 1
                 charIdx += 2
             }
@@ -130,7 +133,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     ///
     /// The closure must write exactly 16 bytes into the output span.
     @available(FoundationPreview 6.5, *)
-    public init<E: Error>(initializingWith initializer: (inout OutputRawSpan) throws(E) -> ()) throws(E) {
+    public init<E: Error>(initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void) throws(E) {
         _storage = try [16 of UInt8](initializingWith: { outputSpan throws(E) -> Void in
             try outputSpan.append(elements: 16) { outputRawSpan throws(E) in
                 try initializer(&outputRawSpan)
@@ -141,36 +144,70 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 
     // Hex lookup tables for UUID string formatting. Each byte is converted to two hex characters via table lookup.
-    private static let _upperHex: StaticString = "0123456789ABCDEF"
-    private static let _lowerHex: StaticString = "0123456789abcdef"
+    private static let _upperHex: [_ of UInt8] = [
+        UInt8(ascii: "0"),
+        UInt8(ascii: "1"),
+        UInt8(ascii: "2"),
+        UInt8(ascii: "3"),
+        UInt8(ascii: "4"),
+        UInt8(ascii: "5"),
+        UInt8(ascii: "6"),
+        UInt8(ascii: "7"),
+        UInt8(ascii: "8"),
+        UInt8(ascii: "9"),
+        UInt8(ascii: "A"),
+        UInt8(ascii: "B"),
+        UInt8(ascii: "C"),
+        UInt8(ascii: "D"),
+        UInt8(ascii: "E"),
+        UInt8(ascii: "F")
+    ]
+    
+    private static let _lowerHex: [_ of UInt8] = [
+        UInt8(ascii: "0"),
+        UInt8(ascii: "1"),
+        UInt8(ascii: "2"),
+        UInt8(ascii: "3"),
+        UInt8(ascii: "4"),
+        UInt8(ascii: "5"),
+        UInt8(ascii: "6"),
+        UInt8(ascii: "7"),
+        UInt8(ascii: "8"),
+        UInt8(ascii: "9"),
+        UInt8(ascii: "a"),
+        UInt8(ascii: "b"),
+        UInt8(ascii: "c"),
+        UInt8(ascii: "d"),
+        UInt8(ascii: "e"),
+        UInt8(ascii: "f")
+    ]
 
     /// Writes the UUID as a 36-character hex string into `buffer` using the given hex digit lookup table. Returns 36.
-    private func _unparse(into buffer: UnsafeMutableBufferPointer<UInt8>, hexTable: StaticString) -> Int {
-        hexTable.withUTF8Buffer { hex in
-            var o = 0
-            for i in 0..<16 {
-                // Insert '-' after bytes 4, 6, 8, 10
-                switch i {
-                case 4, 6, 8, 10:
-                    buffer[o] = UInt8(ascii: "-")
-                    o &+= 1
-                default:
-                    break
-                }
-                let byte = _storage.span.bytes[i]
-                buffer[o] = hex[Int(byte &>> 4)]
-                buffer[o &+ 1] = hex[Int(byte & 0xF)]
-                o &+= 2
+    private func _unparse(into buffer: UnsafeMutableBufferPointer<UInt8>, hexTable: Span<UInt8>) -> Int {
+        assert(buffer.count == 36)
+        var o = 0
+        for i in 0..<16 {
+            // Insert '-' after bytes 4, 6, 8, 10
+            switch i {
+            case 4, 6, 8, 10:
+                buffer[o] = UInt8(ascii: "-")
+                o &+= 1
+            default:
+                break
             }
-            assert(o == 36)
+            let byte = _storage[i]
+            buffer[o] = hexTable[Int(byte &>> 4)]
+            buffer[o &+ 1] = hexTable[Int(byte & 0xF)]
+            o &+= 2
         }
+        assert(o == 36)
         return 36
     }
 
     /// Returns a string created from the UUID, such as "E621E1F8-C36C-495A-93FC-0C247A3E6E5F".
     public var uuidString: String {
         String(unsafeUninitializedCapacity: 36) { buffer in
-            _unparse(into: buffer, hexTable: UUID._upperHex)
+            _unparse(into: buffer, hexTable: UUID._upperHex.span)
         }
     }
 
@@ -178,7 +215,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     @available(FoundationPreview 6.5, *)
     public var lowercasedUUIDString: String {
         String(unsafeUninitializedCapacity: 36) { buffer in
-            _unparse(into: buffer, hexTable: UUID._lowerHex)
+            _unparse(into: buffer, hexTable: UUID._lowerHex.span)
         }
     }
 
@@ -306,12 +343,10 @@ extension UUID {
     /// The version of this UUID, derived from the version bits (bits 48–51) as defined by RFC 9562.
     public var version: Int {
         get {
-            Int(_storage.span.bytes[6] >> 4)
+            Int(_storage[6] >> 4)
         }
         set {
-            var s = _storage.mutableSpan
-            var b = s.mutableBytes
-            b[6] = (b[6] & 0x0F) | (UInt8(newValue & 0x0F) << 4)
+            _storage[6] = (_storage[6] & 0x0F) | (UInt8(newValue & 0x0F) << 4)
         }
     }
 
@@ -332,7 +367,7 @@ extension UUID {
 
     /// The variant of this UUID, derived from the variant bits (bits 64–65) as defined by RFC 9562.
     public var variant: Variant {
-        let byte = _storage.span.bytes[8]
+        let byte = _storage[8]
         if byte & 0x80 == 0 {
             return .ncs
         } else if byte & 0xC0 == 0x80 {
@@ -375,8 +410,7 @@ extension UUID {
         // The remaining 62 bits (`rand_b`, after the variant field) are filled using `generator`.
         let combined: UInt64
         if let date {
-            // Caller-provided date (plus offset): convert to Duration,
-            // no monotonic guard
+            // Caller-provided date (plus offset): convert to Duration, no monotonic guard
             let elapsed = Duration.seconds(date.timeIntervalSince1970) + offset
             let (ms, subMS) = elapsed._uuidTimestampComponents
             combined = ms << 12 | UInt64(subMS)
