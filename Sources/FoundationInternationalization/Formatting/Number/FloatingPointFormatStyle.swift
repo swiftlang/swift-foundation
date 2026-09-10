@@ -606,7 +606,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Double> {
     /// Use this type property when the call point allows the use of ``FloatingPointFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryFloatingPoint`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -617,7 +617,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Float> {
     /// Use this type property when the call point allows the use of ``FloatingPointFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryFloatingPoint`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -628,7 +628,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Double>.Perc
     /// Use this type property when the call point allows the use of ``FloatingPointFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryFloatingPoint`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -639,7 +639,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Float>.Perce
     /// Use this type property when the call point allows the use of ``FloatingPointFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryFloatingPoint`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 
@@ -663,7 +663,7 @@ public extension FormatStyle {
     /// - Parameter code: The currency code to use, such as `EUR` or `JPY`. See ISO-4217 for
     ///   a list of valid codes.
     /// - Returns: A floating-point format style that uses the specified currency code.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static func currency<Value>(code: String) -> Self where Self == FloatingPointFormatStyle<Value>.Currency {
         return Self(code: code)
     }
@@ -677,7 +677,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Float16> {
     /// Use this type property when the call point allows the use of ``FloatingPointFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryFloatingPoint`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var number: Self { Self() }
 }
 
@@ -688,7 +688,7 @@ public extension FormatStyle where Self == FloatingPointFormatStyle<Float16>.Per
     /// Use this type property when the call point allows the use of ``FloatingPointFormatStyle``.
     /// You typically do this when calling the `formatted` methods of types that conform to
     /// `BinaryFloatingPoint`.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     static var percent: Self { Self() }
 }
 #endif

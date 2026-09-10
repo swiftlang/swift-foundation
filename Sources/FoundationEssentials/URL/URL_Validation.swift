@@ -51,6 +51,19 @@ internal func containsInvalidASCII<T: UnsignedInteger & FixedWidthInteger>(
     return false
 }
 
+// Returns true if the host contains a "[" or "]". A non-IP-literal host should not contain these characters.
+internal func containsIPLiteralBracket<T: UnsignedInteger & FixedWidthInteger>(
+    host: borrowing Span<T>
+) -> Bool {
+    for i in host.indices {
+        let codeUnit = host[i]
+        if codeUnit == UInt8(ascii: "[") || codeUnit == UInt8(ascii: "]") {
+            return true
+        }
+    }
+    return false
+}
+
 // Validates the IP literal host portion inside the "[" and "]"
 // A return value of false can be encoded, nil means reject entirely
 @inline(__always)

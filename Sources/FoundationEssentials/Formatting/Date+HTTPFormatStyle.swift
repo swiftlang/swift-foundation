@@ -174,130 +174,121 @@ extension DateComponents {
         
         public func format(_ components: DateComponents) -> String {
             let capacity = 32 // It is believed no HTTP date can exceed this size (max should be 26)
-            return withUnsafeTemporaryAllocation(of: CChar.self, capacity: capacity + 1) { _buffer in
-                var buffer = OutputBuffer(initializing: _buffer.baseAddress!, capacity: _buffer.count)
-                
+            return String(_capacity: capacity + 1) { buffer in
                 switch components.weekday {
                 case 2:
-                    buffer.appendElement(CChar(UInt8(ascii: "M")))
-                    buffer.appendElement(CChar(UInt8(ascii: "o")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
+                    buffer.append(UInt8(ascii: "M"))
+                    buffer.append(UInt8(ascii: "o"))
+                    buffer.append(UInt8(ascii: "n"))
                 case 3:
-                    buffer.appendElement(CChar(UInt8(ascii: "T")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "e")))
+                    buffer.append(UInt8(ascii: "T"))
+                    buffer.append(UInt8(ascii: "u"))
+                    buffer.append(UInt8(ascii: "e"))
                 case 4:
-                    buffer.appendElement(CChar(UInt8(ascii: "W")))
-                    buffer.appendElement(CChar(UInt8(ascii: "e")))
-                    buffer.appendElement(CChar(UInt8(ascii: "d")))
+                    buffer.append(UInt8(ascii: "W"))
+                    buffer.append(UInt8(ascii: "e"))
+                    buffer.append(UInt8(ascii: "d"))
                 case 5:
-                    buffer.appendElement(CChar(UInt8(ascii: "T")))
-                    buffer.appendElement(CChar(UInt8(ascii: "h")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
+                    buffer.append(UInt8(ascii: "T"))
+                    buffer.append(UInt8(ascii: "h"))
+                    buffer.append(UInt8(ascii: "u"))
                 case 6:
-                    buffer.appendElement(CChar(UInt8(ascii: "F")))
-                    buffer.appendElement(CChar(UInt8(ascii: "r")))
-                    buffer.appendElement(CChar(UInt8(ascii: "i")))
+                    buffer.append(UInt8(ascii: "F"))
+                    buffer.append(UInt8(ascii: "r"))
+                    buffer.append(UInt8(ascii: "i"))
                 case 7:
-                    buffer.appendElement(CChar(UInt8(ascii: "S")))
-                    buffer.appendElement(CChar(UInt8(ascii: "a")))
-                    buffer.appendElement(CChar(UInt8(ascii: "t")))
+                    buffer.append(UInt8(ascii: "S"))
+                    buffer.append(UInt8(ascii: "a"))
+                    buffer.append(UInt8(ascii: "t"))
                 case 1:
                     // Sunday, or default / missing
                     fallthrough
                 default:
-                    buffer.appendElement(CChar(UInt8(ascii: "S")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
+                    buffer.append(UInt8(ascii: "S"))
+                    buffer.append(UInt8(ascii: "u"))
+                    buffer.append(UInt8(ascii: "n"))
                 }
                 
-                buffer.appendElement(CChar(UInt8(ascii: ",")))
-                buffer.appendElement(CChar(UInt8(ascii: " ")))
+                buffer.append(UInt8(ascii: ","))
+                buffer.append(UInt8(ascii: " "))
                 
                 let day = components.day ?? 1
                 buffer.append(day, zeroPad: 2)
-                buffer.appendElement(CChar(UInt8(ascii: " ")))
+                buffer.append(UInt8(ascii: " "))
                 
                 switch components.month {
                 case 2:
-                    buffer.appendElement(CChar(UInt8(ascii: "F")))
-                    buffer.appendElement(CChar(UInt8(ascii: "e")))
-                    buffer.appendElement(CChar(UInt8(ascii: "b")))
+                    buffer.append(UInt8(ascii: "F"))
+                    buffer.append(UInt8(ascii: "e"))
+                    buffer.append(UInt8(ascii: "b"))
                 case 3:
-                    buffer.appendElement(CChar(UInt8(ascii: "M")))
-                    buffer.appendElement(CChar(UInt8(ascii: "a")))
-                    buffer.appendElement(CChar(UInt8(ascii: "r")))
+                    buffer.append(UInt8(ascii: "M"))
+                    buffer.append(UInt8(ascii: "a"))
+                    buffer.append(UInt8(ascii: "r"))
                 case 4:
-                    buffer.appendElement(CChar(UInt8(ascii: "A")))
-                    buffer.appendElement(CChar(UInt8(ascii: "p")))
-                    buffer.appendElement(CChar(UInt8(ascii: "r")))
+                    buffer.append(UInt8(ascii: "A"))
+                    buffer.append(UInt8(ascii: "p"))
+                    buffer.append(UInt8(ascii: "r"))
                 case 5:
-                    buffer.appendElement(CChar(UInt8(ascii: "M")))
-                    buffer.appendElement(CChar(UInt8(ascii: "a")))
-                    buffer.appendElement(CChar(UInt8(ascii: "y")))
+                    buffer.append(UInt8(ascii: "M"))
+                    buffer.append(UInt8(ascii: "a"))
+                    buffer.append(UInt8(ascii: "y"))
                 case 6:
-                    buffer.appendElement(CChar(UInt8(ascii: "J")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
+                    buffer.append(UInt8(ascii: "J"))
+                    buffer.append(UInt8(ascii: "u"))
+                    buffer.append(UInt8(ascii: "n"))
                 case 7:
-                    buffer.appendElement(CChar(UInt8(ascii: "J")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "l")))
+                    buffer.append(UInt8(ascii: "J"))
+                    buffer.append(UInt8(ascii: "u"))
+                    buffer.append(UInt8(ascii: "l"))
                 case 8:
-                    buffer.appendElement(CChar(UInt8(ascii: "A")))
-                    buffer.appendElement(CChar(UInt8(ascii: "u")))
-                    buffer.appendElement(CChar(UInt8(ascii: "g")))
+                    buffer.append(UInt8(ascii: "A"))
+                    buffer.append(UInt8(ascii: "u"))
+                    buffer.append(UInt8(ascii: "g"))
                 case 9:
-                    buffer.appendElement(CChar(UInt8(ascii: "S")))
-                    buffer.appendElement(CChar(UInt8(ascii: "e")))
-                    buffer.appendElement(CChar(UInt8(ascii: "p")))
+                    buffer.append(UInt8(ascii: "S"))
+                    buffer.append(UInt8(ascii: "e"))
+                    buffer.append(UInt8(ascii: "p"))
                 case 10:
-                    buffer.appendElement(CChar(UInt8(ascii: "O")))
-                    buffer.appendElement(CChar(UInt8(ascii: "c")))
-                    buffer.appendElement(CChar(UInt8(ascii: "t")))
+                    buffer.append(UInt8(ascii: "O"))
+                    buffer.append(UInt8(ascii: "c"))
+                    buffer.append(UInt8(ascii: "t"))
                 case 11:
-                    buffer.appendElement(CChar(UInt8(ascii: "N")))
-                    buffer.appendElement(CChar(UInt8(ascii: "o")))
-                    buffer.appendElement(CChar(UInt8(ascii: "v")))
+                    buffer.append(UInt8(ascii: "N"))
+                    buffer.append(UInt8(ascii: "o"))
+                    buffer.append(UInt8(ascii: "v"))
                 case 12:
-                    buffer.appendElement(CChar(UInt8(ascii: "D")))
-                    buffer.appendElement(CChar(UInt8(ascii: "e")))
-                    buffer.appendElement(CChar(UInt8(ascii: "c")))
+                    buffer.append(UInt8(ascii: "D"))
+                    buffer.append(UInt8(ascii: "e"))
+                    buffer.append(UInt8(ascii: "c"))
                 case 1:
                     // Jan or default value
                     fallthrough
                 default:
-                    buffer.appendElement(CChar(UInt8(ascii: "J")))
-                    buffer.appendElement(CChar(UInt8(ascii: "a")))
-                    buffer.appendElement(CChar(UInt8(ascii: "n")))
+                    buffer.append(UInt8(ascii: "J"))
+                    buffer.append(UInt8(ascii: "a"))
+                    buffer.append(UInt8(ascii: "n"))
                 }
-                buffer.appendElement(CChar(UInt8(ascii: " ")))
+                buffer.append(UInt8(ascii: " "))
                 
                 let year = components.year ?? 2000
                 buffer.append(year, zeroPad: 4)
-                buffer.appendElement(CChar(UInt8(ascii: " ")))
+                buffer.append(UInt8(ascii: " "))
                 
                 let h = components.hour ?? 0
                 let m = components.minute ?? 0
                 let s = components.second ?? 0 
                 
                 buffer.append(h, zeroPad: 2)
-                buffer.appendElement(CChar(UInt8(ascii: ":")))
+                buffer.append(UInt8(ascii: ":"))
                 buffer.append(m, zeroPad: 2)
-                buffer.appendElement(CChar(UInt8(ascii: ":")))
+                buffer.append(UInt8(ascii: ":"))
                 buffer.append(s, zeroPad: 2)
                 
-                buffer.appendElement(CChar(UInt8(ascii: " ")))
-                buffer.appendElement(CChar(UInt8(ascii: "G")))
-                buffer.appendElement(CChar(UInt8(ascii: "M")))
-                buffer.appendElement(CChar(UInt8(ascii: "T")))
-                
-                // Null-terminate
-                buffer.appendElement(CChar(0))
-                
-                // Make a string
-                let initialized = buffer.relinquishBorrowedMemory()
-                return String(validatingUTF8: initialized.baseAddress!)!
+                buffer.append(UInt8(ascii: " "))
+                buffer.append(UInt8(ascii: "G"))
+                buffer.append(UInt8(ascii: "M"))
+                buffer.append(UInt8(ascii: "T"))
             }
         }
         
@@ -383,7 +374,8 @@ extension DateComponents {
                 try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing space after weekday")
             }
 
-            dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
+            // The spec does not define a range for days, but it uses the gregorian calendar so we limit to 1...31
+            dc.day = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 1..<32, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Missing or malformed day")
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
             // month-name (Jan, Feb, ... Dec)
@@ -422,33 +414,23 @@ extension DateComponents {
 
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
-            dc.year = try it.digits(minDigits: 4, maxDigits: 4, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            dc.year = try it.digits(minDigits: 4, maxDigits: 4, input: inputString, range: nil, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            // From the spec: The year is any numeric year 1900 or later.
+            if let y = dc.year, y < 1900 {
+                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Year out of range")
+            }
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 
-            let hour = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            if hour < 0 || hour > 23 {
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Hour \(hour) is out of bounds")
-            }
-            dc.hour = hour
+            dc.hour = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 0..<24, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Hour is out of bounds")
             
             try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            let minute = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            if minute < 0 || minute > 59 {
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Minute \(minute) is out of bounds")
-            }
-            dc.minute = minute
+            dc.minute = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 0..<60, onFailure: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Minute is out of bounds")
             
             try it.expectCharacter(UInt8(ascii: ":"), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
-            let second = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
+            dc.second = try it.digits(minDigits: 2, maxDigits: 2, input: inputString, range: 0..<61, onFailure: Date.HTTPFormatStyle().format(Date.now))
             // second '60' is supported in the spec for leap seconds, but Foundation does not support leap seconds. 60 is adjusted to 59.
-            if second < 0 || second > 60 {
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Second \(second) is out of bounds")
-            }
-            // Foundation does not support leap seconds. We convert 60 seconds into 59 seconds.
-            if second == 60 {
+            if dc.second == 60 {
                 dc.second = 59
-            } else {
-                dc.second = second
             }
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))
 

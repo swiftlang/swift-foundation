@@ -131,7 +131,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
     /// operation.
     ///
     /// - Complexity: O(*n*)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var count: Int {
     #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
@@ -161,7 +161,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return j
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: AttributedString.Index, offsetBy distance: Int) -> AttributedString.Index {
     #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
@@ -180,7 +180,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return j
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(
         _ i: AttributedString.Index,
         offsetBy distance: Int,
@@ -213,7 +213,7 @@ extension AttributedString.CharacterView: BidirectionalCollection {
         return Index(j, version: _guts.version)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func distance(from start: AttributedString.Index, to end: AttributedString.Index) -> Int {
     #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {

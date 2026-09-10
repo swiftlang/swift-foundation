@@ -55,7 +55,7 @@ Each individual project can also be built via CMake. This is useful when making 
 
 ### How can I invoke a build via this configuration?
 
-_Note: Building via CMake requires that Ninja and CMake (v3.24 or greater) are both pre-installed_
+_Note: Building via CMake requires that Ninja and CMake are both pre-installed, to find the minimum required versions of these tools, check the Swift repo's [update checkout configuration)(https://github.com/swiftlang/swift/blob/main/utils/update_checkout/update-checkout-config.json). If your system does not ship with the required version of CMake, you can download it from [CMake's website](https://cmake.org/download/)._
 
 1. Ensure external dependencies such as dispatch, curl, libxml, etc. are built _(swift-corelibs-foundation only)_
 2. Configure and generate the cmake build via `cmake -B<build folder> -G Ninja -DCMAKE_INSTALL_PREFIX=<install folder>`

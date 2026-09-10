@@ -1470,7 +1470,13 @@ extension _URL {
         guard !path.isEmpty else {
             return nil
         }
-        return _URL(filePath: path.standardizingPath, directoryHint: hasDirectoryPath ? .isDirectory : .notDirectory).url
+        // The file-path initializers don't set .hasDirectoryPath for a trailing "." or ".." component, so re-check the unresolved path here.
+        let isDirectory = hasDirectoryPath || withPathSpan { pathSpan in
+            pathSpan.withUnsafeBufferPointer { buffer in
+                URL.hasDirectoryPath(buffer, pathEnd: buffer.count, pathLength: buffer.count)
+            }
+        }
+        return _URL(filePath: path.standardizingPath, directoryHint: isDirectory ? .isDirectory : .notDirectory).url
     }
 
     func resolvingSymlinksInPath() -> URL? {
