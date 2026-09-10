@@ -215,6 +215,8 @@ private struct UUIDTests {
         #expect(s[15] == t.15)
     }
 
+    // TODO: This is meant to be public (see https://github.com/swiftlang/swift-foundation/blob/main/Proposals/0041-uuid-versions.md), but is not yet public due to a compiler lifetimes bug when using it (186581562).
+    /*
     @available(FoundationPreview 6.5, *)
     @Test func mutableBytes() {
         var uuid = UUID.min
@@ -238,7 +240,8 @@ private struct UUIDTests {
         span[6] = (previousValue & 0x0F) | 0x70
         #expect(uuid.version == 7)
     }
-
+    */
+    
     @available(FoundationPreview 6.5, *)
     @Test func initializingWithOutputSpan() {
         let uuid = UUID { (output: inout OutputRawSpan) in

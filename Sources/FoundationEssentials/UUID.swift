@@ -288,8 +288,8 @@ extension UUID {
         }
     }
 
-    /// A `MutableRawSpan` view of the UUID's 16 bytes.
-    public var mutableBytes: MutableRawSpan {
+    // TODO: This is meant to be public (see https://github.com/swiftlang/swift-foundation/blob/main/Proposals/0041-uuid-versions.md), but is not yet public due to a compiler lifetimes bug when using it.
+    internal /* public */ var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
         mutating get {
             // Will be: _storage.mutableSpan.mutableBytes
