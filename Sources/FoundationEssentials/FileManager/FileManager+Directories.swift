@@ -42,6 +42,11 @@ func _LogSpecialFolderRecreation(_ fileManager: FileManager, _ path: String) {
         Logger().info("*** Application: \(Bundle.main.bundleIdentifier ?? "(null)") just recreated special folder: \(path)")
     }
 }
+
+// Darwin-specific API that is implemented but not declared in any header
+// This function behaves exactly like the public mkpath_np(3) API, but it also returns the first directory it actually created, which helps us make sure we set the given attributes on the right directories.
+@_extern(c)
+func _mkpath_np(_ path: UnsafePointer<CChar>, _ omode: mode_t, _ firstdir: UnsafeMutablePointer<UnsafePointer<CChar>?>) -> Int32
 #endif
 
 extension _FileManagerImpl {

@@ -14,15 +14,7 @@
 #define CSHIMS_PLATFORM_SHIMS
 
 #include "_CShimsTargetConditionals.h"
-#include "_CShimsMacros.h"
 
-#if __has_include(<stddef.h>)
-#include <stddef.h>
-#endif
-
-#if __has_include(<libkern/OSThermalNotification.h>)
-#include <libkern/OSThermalNotification.h>
-#endif
 
 // Workaround for inability to import `security.h` as a module in WinSDK
 #if defined(_WIN32)
@@ -31,44 +23,17 @@
 #include <security.h>
 #endif
 
-INTERNAL char * _Nullable * _Nullable _platform_shims_get_environ(void);
-
-INTERNAL void _platform_shims_lock_environ(void);
-INTERNAL void _platform_shims_unlock_environ(void);
-
 #if __has_include(<mach/vm_page_size.h>)
 #include <mach/vm_page_size.h>
-INTERNAL vm_size_t _platform_shims_vm_size(void);
-#endif
-
-#if __has_include(<mach/mach.h>)
-#include <mach/mach.h>
-INTERNAL mach_port_t _platform_mach_task_self(void);
-#endif
-
-#if __has_include(<libkern/OSThermalNotification.h>)
-typedef enum {
-#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
-    _kOSThermalPressureLevelNominal = kOSThermalPressureLevelNominal,
-    _kOSThermalPressureLevelModerate = kOSThermalPressureLevelModerate,
-    _kOSThermalPressureLevelHeavy = kOSThermalPressureLevelHeavy,
-    _kOSThermalPressureLevelTrapping = kOSThermalPressureLevelTrapping,
-    _kOSThermalPressureLevelSleeping = kOSThermalPressureLevelSleeping
-#else
-    _kOSThermalPressureLevelNominal = kOSThermalPressureLevelNominal,
-    _kOSThermalPressureLevelLight = kOSThermalPressureLevelLight,
-    _kOSThermalPressureLevelModerate = kOSThermalPressureLevelModerate,
-    _kOSThermalPressureLevelHeavy = kOSThermalPressureLevelHeavy,
-    _kOSThermalPressureLevelTrapping = kOSThermalPressureLevelTrapping,
-    _kOSThermalPressureLevelSleeping = kOSThermalPressureLevelSleeping
-#endif
-} _platform_shims_OSThermalPressureLevel;
-
-
-INTERNAL const char * _Nonnull _platform_shims_kOSThermalNotificationPressureLevelName(void);
+static inline vm_size_t _platform_shims_vm_size(void) {
+    // This shim exists because vm_page_size is not marked const, and therefore looks like global mutable state to Swift.
+    return vm_page_size;
+}
 #endif
 
 #if TARGET_OS_WASI
+#include <wasi/libc-environ.h> // for __wasilibc_get_environ
+
 // Define clock id getter shims so that we can use them in Swift
 // even if clock id macros can't be imported through ClangImporter.
 

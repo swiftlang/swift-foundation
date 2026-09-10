@@ -10,27 +10,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CSHIMS_STRING_H
-#define CSHIMS_STRING_H
-
-// This header is not currently included in the Darwin module
-#if __has_include(<xlocale.h>)
-#include <xlocale.h>
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#if !TARGET_OS_WINDOWS && !TARGET_OS_MAC
-#include <locale.h>
-inline static int _stringshims_LC_ALL_MASK() {
-    return LC_ALL_MASK;
-}
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* CSHIMS_STRING_H */
+// This file is intentionally left empty as a placeholder
+// _FoundationCShims must have at least one .c file to produce a library, but it does not currently contain any contents beyond headers. This may change in the future, so this file is left in place to produce an empty library so it is easier to add .c files to this project in the future
