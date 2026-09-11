@@ -18,6 +18,10 @@ import FoundationEssentials
 @preconcurrency import Glibc
 #endif
 
+#if canImport(os)
+internal import os
+#endif
+
 #if canImport(ucrt)
 import ucrt
 #endif
@@ -129,8 +133,20 @@ final class _TimeZoneICU: _TimeZoneProtocol, Sendable {
 
         self.name = name
         lock = Mutex(State())
-        if foundation_swift_ICUResourceTimeZone_feature_enabled(), let timeZoneICUResource = try? _TimeZoneICUResource(identifier: name) {
-            // TODO: add logging for when initializaiton fails
+        
+        //adding logging for when initializaiton fails
+        var timeZoneICUResource: _TimeZoneICUResource?
+        if foundation_swift_ICUResourceTimeZone_feature_enabled() {
+            do {
+                timeZoneICUResource = try _TimeZoneICUResource(identifier: name)
+            } catch {
+#if canImport(os)
+                ICUError.logger.error("Failed to initialize ICU resource time zone for identifier '\(name)': \(error)")
+#endif
+            }
+        }
+        
+        if let timeZoneICUResource {
             self._timeZoneICUResource = timeZoneICUResource
             self._timeZone = nil
         } else {
