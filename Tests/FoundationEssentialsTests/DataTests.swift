@@ -2945,6 +2945,76 @@ extension DataTests {
         }
     }
 
+    // A deliberately simple encoder that that prioritizes readability over performance.
+    func slowBase64Encoded(_ bytes: [UInt8], options: Data.Base64EncodingOptions) -> String {
+        let alphabet = if options.contains(.base64URLAlphabet) {
+            Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".utf8)
+        } else {
+            Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".utf8)
+        }
+        let omitPadding = options.contains(.omitPaddingCharacter)
+        let padding = UInt8(ascii: "=")
+
+        var encoded: [UInt8] = []
+        var index = 0
+        while index + 3 <= bytes.count {
+            let i1 = bytes[index], i2 = bytes[index + 1], i3 = bytes[index + 2]
+            encoded.append(alphabet[Int(i1 >> 2)])
+            encoded.append(alphabet[Int(((i1 & 0x03) << 4) | (i2 >> 4))])
+            encoded.append(alphabet[Int(((i2 & 0x0F) << 2) | (i3 >> 6))])
+            encoded.append(alphabet[Int(i3 & 0x3F)])
+            index += 3
+        }
+
+        switch bytes.count - index {
+        case 2:
+            let i1 = bytes[index], i2 = bytes[index + 1]
+            encoded.append(alphabet[Int(i1 >> 2)])
+            encoded.append(alphabet[Int(((i1 & 0x03) << 4) | (i2 >> 4))])
+            encoded.append(alphabet[Int((i2 & 0x0F) << 2)])
+            if !omitPadding {
+                encoded.append(padding)
+            }
+        case 1:
+            let i1 = bytes[index]
+            encoded.append(alphabet[Int(i1 >> 2)])
+            encoded.append(alphabet[Int((i1 & 0x03) << 4)])
+            if !omitPadding {
+                encoded.append(contentsOf: [padding, padding])
+            }
+        default:
+            break
+        }
+
+        return String(decoding: encoded, as: Unicode.UTF8.self)
+    }
+
+    @Test(
+        arguments: [
+            Data.Base64EncodingOptions.base64URLAlphabet,
+            .omitPaddingCharacter,
+            [.base64URLAlphabet, .omitPaddingCharacter],
+            [],
+        ]
+    )
+    func base64Encode_matchesReferenceEncoderAcrossInputLengths(options: Data.Base64EncodingOptions) {
+        for count in 0..<260 {
+            // Create random-looking bytes
+            let bytes = (0..<count).map { UInt8(truncatingIfNeeded: $0 &* 7 &+ 13) }
+            let data = Data(bytes)
+            let expected = self.slowBase64Encoded(bytes, options: options)
+
+            #expect(
+                data.base64EncodedString(options: options) == expected,
+                "count: \(count), options: \(options.rawValue)"
+            )
+            #expect(
+                data.base64EncodedData(options: options) == Data(expected.utf8),
+                "count: \(count), options: \(options.rawValue)"
+            )
+        }
+    }
+
     @Test func base64Decode_emptyString() {
         #expect(Data() == Data(base64Encoded: ""))
     }
