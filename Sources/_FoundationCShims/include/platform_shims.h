@@ -23,6 +23,13 @@
 #include <security.h>
 #endif
 
+#if TARGET_OS_WINDOWS
+#include <stdlib.h>
+static inline char** _platform_shims__environ(void) {
+    return _environ;
+}
+#endif
+
 #if __has_include(<mach/vm_page_size.h>)
 #include <mach/vm_page_size.h>
 static inline vm_size_t _platform_shims_vm_size(void) {

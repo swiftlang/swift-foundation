@@ -51,7 +51,7 @@ private func getEnviron() -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
     #if canImport(Darwin)
     return _NSGetEnviron()?.pointee
     #elseif os(Windows)
-    return _environ
+    return _platform_shims__environ()
     #elseif os(WASI)
     return __wasilibc_get_environ()
     #else
