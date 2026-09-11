@@ -501,25 +501,28 @@ extension _FileManagerImpl {
         }
         // Historically we've omitted extended attribute keys with no associated data value
         guard size > 0 else { return nil }
-        // Deallocated below in the Data deallocator
-        let buffer = malloc(size)!
-        #if canImport(Darwin)
-        size = getxattr(path, key, buffer, size, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
-        #elseif os(FreeBSD)
-        size = (followSymlinks ? extattr_get_file : extattr_get_link)(path, EXTATTR_NAMESPACE_USER, key, buffer, size)
-        #else
-        size = followSymlinks ? getxattr(path, key, buffer, size) : lgetxattr(path, key, buffer, size)
-        #endif
-        guard size != -1 else {
-            free(buffer)
-            throw CocoaError.errorWithFilePath(String(cString: path), errno: errno, reading: true)
+        let result = try Data(capacity: size) { span in
+            try span.withUnsafeMutableBytes { buffer, initializedCount in
+#if canImport(Darwin)
+                let actualSize = getxattr(path, key, buffer.baseAddress!, size, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
+#elseif os(FreeBSD)
+                let actualSize = (followSymlinks ? extattr_get_file : extattr_get_link)(path, EXTATTR_NAMESPACE_USER, key, buffer.baseAddress!, size)
+#else
+                let actualSize = followSymlinks ? getxattr(path, key, buffer.baseAddress!, size) : lgetxattr(path, key, buffer.baseAddress!, size)
+#endif
+                guard actualSize != -1 else {
+                    throw CocoaError.errorWithFilePath(String(cString: path), errno: errno, reading: true)
+                }
+                
+                initializedCount = actualSize
+            }
         }
-        // Check size again in case something has changed between the two getxattr calls
-        guard size > 0 else {
-            free(buffer)
+        
+        guard result.count > 0 else {
             return nil
         }
-        return Data(bytesNoCopy: buffer, count: size, deallocator: .free)
+        
+        return result
     }
     
     private func _extendedAttributes(at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> [String : Data]? {

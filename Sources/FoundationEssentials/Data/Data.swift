@@ -10,53 +10,37 @@
 //
 //===----------------------------------------------------------------------===//
 
+// These functions are used from inlined methods below
+
 #if os(Windows)
-@usableFromInline let calloc = ucrt.calloc
-@usableFromInline let malloc = ucrt.malloc
-@usableFromInline let free = ucrt.free
+@usableFromInline let memcmp = ucrt.memcmp
 @usableFromInline let memset = ucrt.memset
 @usableFromInline let memcpy = ucrt.memcpy
-@usableFromInline let memcmp = ucrt.memcmp
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
-@usableFromInline let calloc = Bionic.calloc
-@usableFromInline let malloc = Bionic.malloc
-@usableFromInline let free = Bionic.free
+@usableFromInline let memcmp = Bionic.memcmp
 @usableFromInline let memset = Bionic.memset
 @usableFromInline let memcpy = Bionic.memcpy
-@usableFromInline let memcmp = Bionic.memcmp
 #elseif canImport(Glibc)
-@usableFromInline let calloc = Glibc.calloc
-@usableFromInline let malloc = Glibc.malloc
-@usableFromInline let free = Glibc.free
+@usableFromInline let memcmp = Glibc.memcmp
 @usableFromInline let memset = Glibc.memset
 @usableFromInline let memcpy = Glibc.memcpy
-@usableFromInline let memcmp = Glibc.memcmp
 #elseif canImport(Musl)
-@usableFromInline let calloc = Musl.calloc
-@usableFromInline let malloc = Musl.malloc
-@usableFromInline let free = Musl.free
+@usableFromInline let memcmp = Musl.memcmp
 @usableFromInline let memset = Musl.memset
 @usableFromInline let memcpy = Musl.memcpy
-@usableFromInline let memcmp = Musl.memcmp
 #elseif canImport(WASILibc)
-@usableFromInline let calloc = WASILibc.calloc
-@usableFromInline let malloc = WASILibc.malloc
-@usableFromInline let free = WASILibc.free
+@usableFromInline let memcmp = WASILibc.memcmp
 @usableFromInline let memset = WASILibc.memset
 @usableFromInline let memcpy = WASILibc.memcpy
-@usableFromInline let memcmp = WASILibc.memcmp
 #elseif canImport(EmscriptenLibc)
-@usableFromInline let calloc = EmscriptenLibc.calloc
-@usableFromInline let malloc = EmscriptenLibc.malloc
-@usableFromInline let free = EmscriptenLibc.free
+@usableFromInline let memcmp = EmscriptenLibc.memcmp
 @usableFromInline let memset = EmscriptenLibc.memset
 @usableFromInline let memcpy = EmscriptenLibc.memcpy
-@usableFromInline let memcmp = EmscriptenLibc.memcmp
 #elseif canImport(_FoundationDarwinExtras)
+@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
 @usableFromInline let memset = _FoundationDarwinExtras.memset
 @usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
-@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
 #endif
 
 #if !NO_CSHIMS
@@ -1217,6 +1201,7 @@ extension Data {
 
                     // Compare the contents
                     assert(length1 == b2.count)
+                    // Use the inlined memcmp above
                     return memcmp(b1Address, b2Address, length1) == 0
                 }
             }

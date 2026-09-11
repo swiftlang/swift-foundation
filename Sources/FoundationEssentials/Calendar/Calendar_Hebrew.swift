@@ -10,20 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(os)
-internal import os
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#endif
-
 internal import Synchronization
 
 /// Pure-Swift implementation of the Hebrew calendar, derived from the
@@ -34,12 +20,6 @@ internal import Synchronization
 /// Foundation's `_CalendarProtocol` contract does not require the ICU
 /// `ucal_set` / `add` / `roll` eager recalculation semantics.
 internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
-
-#if canImport(os)
-    internal static let logger: Logger = {
-        Logger(subsystem: "com.apple.foundation", category: "hebrew_calendar")
-    }()
-#endif
 
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         // .hebrew is the only identifier this class handles. `gregorianStartDate`
@@ -522,16 +502,16 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             let ti = Double(tz.secondsFromGMT(for: date))
             let time = date.timeIntervalSinceReferenceDate
             var fixedTime = time + ti
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti
             return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
         case .minute:
             // Minute and second don't depend on TZ — float floor on UTC seconds is fine.
             let time = date.timeIntervalSinceReferenceDate
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0), duration: 60.0)
         case .second:
             let time = date.timeIntervalSinceReferenceDate
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: time.rounded(.down)), duration: 1.0)
         case .nanosecond:
             return DateInterval(start: date, duration: 1e-9)
         case .isLeapMonth, .isRepeatedDay, .calendar, .timeZone:

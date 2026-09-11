@@ -36,7 +36,7 @@ extension _FILE_ID_128 /* : @retroactive Equatable */ {
     internal static func _equals(_ lhs: _FILE_ID_128, _ rhs: _FILE_ID_128) -> Bool {
         return withUnsafeBytes(of: lhs.Identifier) { pLHS in
             return withUnsafeBytes(of: rhs.Identifier) { pRHS in
-                return memcmp(pLHS.baseAddress, pRHS.baseAddress, MemoryLayout.size(ofValue: lhs.Identifier)) == 0
+                return Platform.memcmp(pLHS.baseAddress, pRHS.baseAddress, MemoryLayout.size(ofValue: lhs.Identifier)) == 0
             }
         }
     }
@@ -197,7 +197,7 @@ internal struct _FileManagerImpl {
                                     return false
                                 }
 
-                                guard memcmp(pLHSBuffer.baseAddress, pRHSBuffer.baseAddress, Int(dwLHSRead)) == 0 else {
+                                guard Platform.memcmp(pLHSBuffer.baseAddress, pRHSBuffer.baseAddress, Int(dwLHSRead)) == 0 else {
                                     return false
                                 }
 

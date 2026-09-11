@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Android)
+// For tzset, localtime
+
+#if canImport(Android)
 import unistd
 #elseif canImport(Glibc)
 @preconcurrency import Glibc

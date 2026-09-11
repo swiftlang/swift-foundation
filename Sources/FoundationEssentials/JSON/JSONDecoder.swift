@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
@@ -1009,7 +1003,7 @@ extension JSONDecoderImpl: Decoder {
                 var nanString = nanString
                 return stringBuffer.withUnsafeRawPointer { (ptr, count) -> T? in
                     func bytesAreEqual(_ b: UnsafeBufferPointer<UInt8>) -> Bool {
-                        count == b.count && memcmp(ptr, b.baseAddress!, b.count) == 0
+                        count == b.count && Platform.memcmp(ptr, b.baseAddress!, b.count) == 0
                     }
                     if posInfString.withUTF8(bytesAreEqual(_:)) { return T.infinity }
                     if negInfString.withUTF8(bytesAreEqual(_:)) { return -T.infinity }

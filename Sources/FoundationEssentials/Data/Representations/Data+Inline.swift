@@ -12,23 +12,8 @@
 
 #if DATA_LEGACY_ABI
 
-#if canImport(Darwin)
+// Legacy ABI is only enabled on Darwin - other platforms do not use it
 import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(ucrt)
-import ucrt
-#elseif canImport(WASILibc)
-@preconcurrency import WASILibc
-#elseif canImport(EmscriptenLibc)
-@preconcurrency import EmscriptenLibc
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(string_h)
-import string_h
-#endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
