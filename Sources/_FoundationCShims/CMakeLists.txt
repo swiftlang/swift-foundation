@@ -13,8 +13,7 @@
 ##===----------------------------------------------------------------------===##
 
 add_library(_FoundationCShims STATIC
-    platform_shims.c
-    string_shims.c)
+    platform_shims.c)
 
 target_include_directories(_FoundationCShims PUBLIC include)
 
