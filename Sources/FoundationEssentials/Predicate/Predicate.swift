@@ -53,7 +53,7 @@
 /// }
 /// ```
 ///
-/// You can safely encode and decode predicates, pass predicates across concurrency boundaries, and load a predicate from a file. To define a list of types and key paths that are allowed when reading an archived predicate, use ``PredicateCodableConfiguration``.
+/// You can safely encode and decode predicates, pass predicates across concurrency boundaries, and load a predicate from a file.
 ///
 /// You can transform a predicate into another representation — for example, to express a predicate in another query language, or to create a modified predicate — using the ``expression`` property.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)

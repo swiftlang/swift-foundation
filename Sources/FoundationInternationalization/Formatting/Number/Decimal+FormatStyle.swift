@@ -48,38 +48,11 @@ extension Decimal {
         /// An attributed format style based on the decimal format style.
         ///
         /// Use this modifier to create a ``Decimal/FormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         ///
-        /// The following example finds runs of the attributed string that represent different parts
-        /// of a formatted currency, and adds additional attributes like
-        /// ``AttributeScopes/SwiftUIAttributes/foregroundColor`` and
-        /// ``AttributeScopes/FoundationAttributes/inlinePresentationIntent``.
-        ///
-        /// ```swift
-        /// func attributedPrice(price: Decimal) -> AttributedString {
-        ///     var attributedPrice = price.formatted(
-        ///         .currency(code: "USD")
-        ///         .attributed)
-        ///
-        ///     for run in attributedPrice.runs {
-        ///         if run.attributes.numberSymbol == .currency ||
-        ///             run.attributes.numberSymbol == .decimalSeparator {
-        ///             attributedPrice[run.range].foregroundColor = .red
-        ///         }
-        ///         if run.attributes.numberPart == .integer ||
-        ///             run.attributes.numberPart == .fraction {
-        ///             attributedPrice[run.range].inlinePresentationIntent = [.stronglyEmphasized]
-        ///         }
-        ///     }
-        ///     return attributedPrice
-        /// }
-        /// ```
-        ///
-        /// User interface frameworks like SwiftUI can use these attributes when presenting the
-        /// attributed string.
         public var attributed: Attributed {
             return Attributed(style: self)
         }
@@ -344,8 +317,8 @@ extension Decimal.FormatStyle {
         /// An attributed format style based on the decimal percent format style.
         ///
         /// Use this modifier to create a ``Decimal/FormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         public var attributed: Attributed {
@@ -482,8 +455,8 @@ extension Decimal.FormatStyle {
         /// An attributed format style based on the decimal currency format style.
         ///
         /// Use this modifier to create a ``Decimal/FormatStyle/Attributed`` instance, which formats
-        /// values as ``AttributedString`` instances. These attributed strings contain attributes from
-        /// the ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use
+        /// values as `AttributedString` instances. These attributed strings contain attributes from
+        /// the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use
         /// these attributes to determine which runs of the attributed string represent different
         /// parts of the formatted value.
         public var attributed: Attributed {
@@ -609,7 +582,7 @@ extension Decimal.FormatStyle {
     /// a format style of this type.
     ///
     /// The attributed strings that this format style creates contain attributes from the
-    /// ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope. Use these
+    /// `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use these
     /// attributes to determine which runs of the attributed string represent different parts of
     /// the formatted value.
     public struct Attributed : Sendable {
@@ -642,7 +615,7 @@ extension Decimal.FormatStyle {
         /// - Parameter value: The decimal value to format.
         /// - Returns: An attributed string representation of `value`, formatted according to the
         ///   style's configuration. The returned string contains attributes from the
-        ///   ``AttributeScopes/FoundationAttributes/NumberFormatAttributes`` attribute scope to
+        ///   `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope to
         ///   indicate runs formatted by this format style.
         public func format(_ value: Decimal) -> AttributedString {
             switch style {
