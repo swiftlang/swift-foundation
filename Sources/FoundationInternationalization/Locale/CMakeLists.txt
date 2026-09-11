@@ -17,4 +17,5 @@ target_sources(FoundationInternationalization PRIVATE
     Locale+Components_ICU.swift
     Locale_Bridge.swift
     Locale_ICU.swift
+    Locale_Impl.swift
     Locale_ObjC.swift)
