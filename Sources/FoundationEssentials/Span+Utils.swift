@@ -88,3 +88,32 @@ extension Span<UInt8> {
         return false
     }
 }
+
+extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
+    mutating func _append(copying span: Span<Element>) {
+        precondition(self.freeCapacity >= span.count, "Insufficient space to copy the provided span (have space for \(self.freeCapacity) but writing \(span.count))")
+        guard !span.isEmpty else { return }
+        self.withUnsafeMutableBufferPointer { buffer, initializedCount in
+            span.withUnsafeBufferPointer { src in
+                let dstPtr = buffer.baseAddress.unsafelyUnwrapped.advanced(by: initializedCount)
+                dstPtr.initialize(from: src.baseAddress.unsafelyUnwrapped, count: src.count)
+                initializedCount += src.count
+            }
+        }
+    }
+
+    mutating func _append<S: Sequence<Element>>(copying elements: S) {
+        let early: Void? = elements.withContiguousStorageIfAvailable { buffer in
+            self._append(copying: buffer.span)
+        }
+
+        if early == nil {
+            self.withUnsafeMutableBufferPointer { buffer, initializedCount in
+                let uninitialized = UnsafeMutableBufferPointer(rebasing: buffer.suffix(from: initializedCount))
+                var (iterator, idx) = elements._copyContents(initializing: uninitialized)
+                precondition(iterator.next() == nil, "Insufficient space to store contents in OutputSpan")
+                initializedCount += idx - uninitialized.startIndex
+            }
+        }
+    }
+}
