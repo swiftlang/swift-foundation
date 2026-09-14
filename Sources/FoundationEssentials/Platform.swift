@@ -83,7 +83,7 @@ package struct Platform {
     static func copyMemoryPages(_ source: UnsafeRawPointer, _ dest: UnsafeMutableRawPointer, _ length: Int) {
 #if canImport(Darwin)
         if vm_copy(
-            _platform_mach_task_self(),
+            mach_task_self_,
             vm_address_t(UInt(bitPattern: source)),
             vm_size_t(length),
             vm_address_t(UInt(bitPattern: dest))) != KERN_SUCCESS {

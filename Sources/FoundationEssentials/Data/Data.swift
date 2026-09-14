@@ -69,7 +69,7 @@ import Darwin
 
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
     guard vm_deallocate(
-        _platform_mach_task_self(),
+        mach_task_self_,
         vm_address_t(UInt(bitPattern: mem)),
         vm_size_t(length)) == ERR_SUCCESS else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
