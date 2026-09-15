@@ -1521,7 +1521,7 @@ extension Locale {
     /// Returns the identifier conforming to the specified standard for the specified string.
     ///
     /// - Parameters:
-    ///   - type: The identifier type used by `string`, such as ``Locale/IdentifierType/icu`` or ``Locale/IdentifierType/bcp47``.
+    ///   - type: The identifier type used by `string`, such as `Locale.IdentifierType.icu` or `Locale.IdentifierType.bcp47`.
     ///   - string: An identifier string that complies with the standard indicated by `type`.
     /// - Returns: A locale identifier.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
