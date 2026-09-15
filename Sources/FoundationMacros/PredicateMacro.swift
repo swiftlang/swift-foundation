@@ -496,8 +496,29 @@ private class PredicateQueryRewriter: SyntaxRewriter, PredicateSyntaxRewriter {
             return ExprSyntax(node)
         }
         
+        let isNilLHS = lhsOp.is(NilLiteralExprSyntax.self)
+        let isNilRHS = rhsOp.is(NilLiteralExprSyntax.self)
+        
+        if isNilLHS && isNilRHS {
+            let builder: String? = switch opSyntax.operator.text {
+            case "==": "build_Equal"
+            case "!=": "build_NotEqual"
+            default: nil
+            }
+            if let builder {
+                return """
+                \(raw: indent)PredicateExpressions.\(raw: moduleName())::\(raw: builder)(
+                \(raw: indent + indentWidth)lhs: PredicateExpressions.\(raw: moduleName())::build_NilLiteral() as PredicateExpressions.\(raw: moduleName())::NilLiteral<Swift.Bool>,
+                \(raw: indent + indentWidth)rhs: PredicateExpressions.\(raw: moduleName())::build_NilLiteral()
+                \(raw: indent))
+                """
+            }
+        }
+        
         let (lhsLabel, rhsLabel) = switch opSyntax.operator.text {
         case "...", "..<": ("lower", "upper")
+        case "==" where isNilRHS, "!=" where isNilRHS: ("lhs", "nilLiteral")
+        case "==" where isNilLHS, "!=" where isNilLHS: ("nilLiteral", "rhs")
         default: ("lhs", "rhs")
         }
         
