@@ -1459,11 +1459,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         return (diff, current)
     }
 
-#if FOUNDATION_FRAMEWORK
-    func bridgeToNSCalendar() -> NSCalendar {
-        fatalError("TODO: bridgeToNSCalendar")
-    }
-#endif
 }
 
 // MARK: - Hebrew calendrical arithmetic (Reingold & Dershowitz)
