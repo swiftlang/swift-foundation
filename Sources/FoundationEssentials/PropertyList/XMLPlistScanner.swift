@@ -285,7 +285,7 @@ class XMLPlistMap : PlistDecodingMap {
                 return self.withBuffer(for: region) { bufferView, _ in
                     bufferView.withUnsafeRawPointer { ptr, _ in
                         cfuid.withUTF8Buffer { cfuidBuf in
-                            memcmp(ptr, cfuidBuf.baseAddress!, cfuid.utf8CodeUnitCount) == 0
+                            Platform.memcmp(ptr, cfuidBuf.baseAddress!, cfuid.utf8CodeUnitCount) == 0
                         }
                     }
                 }
