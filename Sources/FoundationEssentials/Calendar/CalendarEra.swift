@@ -28,21 +28,17 @@ internal struct _CalendarEraEntry: Sendable {
     let startMonth: Int
     let startDay: Int
     let direction: _CalendarEraDirection
-    /// True when the era labels dates before its boundary too. The Buddhist era does this: 1000 BCE gets a Buddhist year, but no era interval, since the era has no start to measure from.
-    let labelsEveryDate: Bool
 
-    init(code: Int, anchorYear: Int, startMonth: Int, startDay: Int, direction: _CalendarEraDirection, labelsEveryDate: Bool = false) {
+    init(code: Int, anchorYear: Int, startMonth: Int, startDay: Int, direction: _CalendarEraDirection) {
         self.code = code
         self.anchorYear = anchorYear
         self.startMonth = startMonth
         self.startDay = startDay
         self.direction = direction
-        self.labelsEveryDate = labelsEveryDate
     }
 
     /// Whether this era labels the given date, expressed as an extended Gregorian year plus a month and day.
     func labels(extendedYear year: Int, month: Int, day: Int) -> Bool {
-        if labelsEveryDate { return true }
         let isAtOrAfterBoundary = (year, month, day) >= (anchorYear, startMonth, startDay)
         return direction == .forward ? isAtOrAfterBoundary : !isAtOrAfterBoundary
     }
@@ -80,17 +76,31 @@ internal struct _CalendarEraTable: Sendable {
     /// True when an era can end as well as begin, so one era can cover a single year. The Japanese eras do. The Buddhist and Minguo eras run on without limit.
     let erasCanEnd: Bool
 
+    /// True when this table numbers every date itself, so no date falls through to an inherited Gregorian era.
+    ///
+    /// One forward era with no backward partner has nothing to fall through to, so it has to cover everything. The Buddhist era numbers 1000 BCE as year -456, counting back past its own start.
+    ///
+    /// Japanese has five forward eras, so a pre-Meiji date inherits instead. Gregorian and ROC each pair a forward era with a backward one that already covers the early side.
+    let coversEveryDate: Bool
+
     init(_ entries: [_CalendarEraEntry]) {
         self.entries = entries
         self.highestCode = entries.map(\.code).max() ?? 0
         self.defaultCode = entries.first?.code ?? 0
         self.newestAnchorYear = entries.first?.anchorYear ?? 0
-        self.erasCanEnd = entries.filter { $0.direction == .forward && !$0.labelsEveryDate }.count > 1
+        let forwardEraCount = entries.filter { $0.direction == .forward }.count
+        let hasBackwardEra = entries.contains { $0.direction == .backward }
+        self.erasCanEnd = forwardEraCount > 1
+        self.coversEveryDate = forwardEraCount == 1 && !hasBackwardEra
     }
 
-    /// The era labeling the given date, or nil when the date falls before every era in the table.
+    /// The era labeling the given date, or nil when the date falls before every era and the calendar inherits one instead.
     func entry(extendedYear year: Int, month: Int, day: Int) -> _CalendarEraEntry? {
-        entries.first { $0.labels(extendedYear: year, month: month, day: day) }
+        if let match = entries.first(where: { $0.labels(extendedYear: year, month: month, day: day) }) {
+            return match
+        }
+        // Older than every era. A table that covers every date has one era, which numbers this date too.
+        return coversEveryDate ? entries.last : nil
     }
 
     func entry(code: Int) -> _CalendarEraEntry? {
@@ -115,9 +125,9 @@ extension _CalendarEraTable {
         _CalendarEraEntry(code: 0, anchorYear: 1, startMonth: 1, startDay: 1, direction: .backward),
     ])
 
-    /// One era, which labels every date. 1 CE is 544 BE.
+    /// One era, which numbers every date. 1 CE is 544 BE.
     static let buddhist = _CalendarEraTable([
-        _CalendarEraEntry(code: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward, labelsEveryDate: true)
+        _CalendarEraEntry(code: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward)
     ])
 
     /// The five modern eras, newest first, with ICU's numbering (Meiji 232 through Reiwa 236).
