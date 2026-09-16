@@ -76,22 +76,18 @@ internal struct _CalendarEraTable: Sendable {
     /// True when an era can end as well as begin, so one era can cover a single year. The Japanese eras do. The Buddhist and Minguo eras run on without limit.
     let erasCanEnd: Bool
 
-    /// True when this table numbers every date itself, so no date falls through to an inherited Gregorian era.
+    /// True when this table numbers every date itself, so no date falls back to an inherited Gregorian era.
     ///
-    /// One forward era with no backward partner has nothing to fall through to, so it has to cover everything. The Buddhist era numbers 1000 BCE as year -456, counting back past its own start.
-    ///
-    /// Japanese has five forward eras, so a pre-Meiji date inherits instead. Gregorian and ROC each pair a forward era with a backward one that already covers the early side.
+    /// Only the Buddhist table does this. It numbers 1000 BCE as year -456, counting back past its own start. Japanese leaves dates before Meiji to the Gregorian era, and Gregorian and ROC have a backward era covering the early side.
     let coversEveryDate: Bool
 
-    init(_ entries: [_CalendarEraEntry]) {
+    init(_ entries: [_CalendarEraEntry], erasCanEnd: Bool = false, coversEveryDate: Bool = false) {
         self.entries = entries
         self.highestCode = entries.map(\.code).max() ?? 0
         self.defaultCode = entries.first?.code ?? 0
         self.newestAnchorYear = entries.first?.anchorYear ?? 0
-        let forwardEraCount = entries.filter { $0.direction == .forward }.count
-        let hasBackwardEra = entries.contains { $0.direction == .backward }
-        self.erasCanEnd = forwardEraCount > 1
-        self.coversEveryDate = forwardEraCount == 1 && !hasBackwardEra
+        self.erasCanEnd = erasCanEnd
+        self.coversEveryDate = coversEveryDate
     }
 
     /// The era labeling the given date, or nil when the date falls before every era and the calendar inherits one instead.
@@ -125,10 +121,10 @@ extension _CalendarEraTable {
         _CalendarEraEntry(code: 0, anchorYear: 1, startMonth: 1, startDay: 1, direction: .backward),
     ])
 
-    /// One era, which numbers every date. 1 CE is 544 BE.
+    /// One era, which numbers every date, including those before its own start. 1 CE is 544 BE.
     static let buddhist = _CalendarEraTable([
         _CalendarEraEntry(code: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward)
-    ])
+    ], coversEveryDate: true)
 
     /// The five modern eras, newest first, with ICU's numbering (Meiji 232 through Reiwa 236).
     ///
@@ -141,7 +137,7 @@ extension _CalendarEraTable {
         _CalendarEraEntry(code: 234, anchorYear: 1926, startMonth: 12, startDay: 25, direction: .forward),
         _CalendarEraEntry(code: 233, anchorYear: 1912, startMonth: 7, startDay: 30, direction: .forward),
         _CalendarEraEntry(code: 232, anchorYear: 1868, startMonth: 9, startDay: 8, direction: .forward),
-    ])
+    ], erasCanEnd: true)
 
     /// Two eras sharing the 1912 boundary, with ICU's numbering from `taiwncal.h` (Before-Minguo 0, Minguo 1).
     static let republicOfChina = _CalendarEraTable([
