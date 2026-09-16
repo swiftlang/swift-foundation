@@ -3194,13 +3194,6 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
         return dc
     }
-
-#if FOUNDATION_FRAMEWORK
-    package func bridgeToNSCalendar() -> NSCalendar {
-        _NSSwiftCalendar(calendar: Calendar(inner: self))
-    }
-#endif
-
 }
 
 
