@@ -116,6 +116,23 @@ extension OutputRawSpan {
             }
         }
     }
+
+    mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
+        of type: T.Type,
+        _ body: (inout OutputSpan<T>) throws(E) -> R
+    ) throws(E) -> R {
+        let stride = MemoryLayout<T>.stride
+        return try self.withUnsafeMutableBytes { buffer, initializedCount throws(E) in
+            precondition(initializedCount % stride == 0, "Initialized prefix of \(initializedCount) bytes is not a whole number of \(T.self)")
+            let typedBuffer = buffer.bindMemory(to: T.self)
+            var output = OutputSpan<T>(buffer: typedBuffer, initializedCount: initializedCount / stride)
+            defer {
+                initializedCount = output.finalize(for: typedBuffer) * stride
+                output = OutputSpan<T>()
+            }
+            return try body(&output)
+        }
+    }
 }
 
 extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
