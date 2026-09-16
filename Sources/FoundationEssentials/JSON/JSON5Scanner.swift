@@ -10,23 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Android)
-@preconcurrency import Android
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(Windows)
-import CRT
-import WinSDK
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif canImport(string_h)
-import string_h
-#endif
-
 internal struct JSON5Scanner {
     let options: Options
     var reader: DocumentReader
@@ -627,7 +610,7 @@ extension JSON5Scanner {
         mutating func readExpectedString(_ str: StaticString, typeDescriptor: String) throws {
             let cmp = try bytes[unchecked: readIndex..<endIndex].withUnsafeRawPointer { ptr, count in
                 if count < str.utf8CodeUnitCount { throw JSONError.unexpectedEndOfFile }
-                return memcmp(ptr, str.utf8Start, str.utf8CodeUnitCount)
+                return Platform.memcmp(ptr, str.utf8Start, str.utf8CodeUnitCount)
             }
             guard cmp == 0 else {
                 // Figure out the exact character that is wrong.
@@ -975,24 +958,14 @@ extension JSON5Scanner {
     }
 
     static func validateInfinity(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) throws {
-        try jsonBytes.withUnsafeRawPointer { ptr, count in
-            guard count >= _json5Infinity.utf8CodeUnitCount else {
-                throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
-            }
-            guard strncmp(ptr, _json5Infinity.utf8Start, _json5Infinity.utf8CodeUnitCount) == 0 else {
-                throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
-            }
+        if !jsonBytes.bytes.bytesEqual(to: _json5Infinity.span.bytes) {
+            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
 
     static func validateNaN(from jsonBytes: BufferView<UInt8>, fullSource: BufferView<UInt8>) throws {
-        try jsonBytes.withUnsafeRawPointer { ptr, count in
-            guard count >= _json5NaN.utf8CodeUnitCount else {
-                throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
-            }
-            guard strncmp(ptr, _json5NaN.utf8Start, _json5NaN.utf8CodeUnitCount) == 0 else {
-                throw JSONError.invalidSpecialValue(expected: "\(_json5NaN)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
-            }
+        if !jsonBytes.bytes.bytesEqual(to: _json5NaN.span.bytes) {
+            throw JSONError.invalidSpecialValue(expected: "\(_json5Infinity)", location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
     }
 
@@ -1214,8 +1187,22 @@ internal extension UInt8 {
     static var _dot: UInt8 { UInt8(ascii: ".") }
 }
 
-var _json5Infinity: StaticString { "Infinity" }
-var _json5NaN: StaticString { "NaN" }
+let _json5Infinity: InlineArray<_, UInt8> = [
+    UInt8(ascii: "I"),
+    UInt8(ascii: "n"),
+    UInt8(ascii: "f"),
+    UInt8(ascii: "i"),
+    UInt8(ascii: "n"),
+    UInt8(ascii: "i"),
+    UInt8(ascii: "t"),
+    UInt8(ascii: "y")
+]
+
+let _json5NaN: InlineArray<_, UInt8> = [
+    UInt8(ascii: "N"),
+    UInt8(ascii: "a"),
+    UInt8(ascii: "N")
+]
 
 extension UnicodeScalar {
 
