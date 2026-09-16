@@ -1675,8 +1675,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
            let boundary = eraBoundary(of: backward) {
             return DateInterval(start: boundary - Calendar._maxDateIntervalDuration, end: boundary)
         }
-        // A table that labels every date has no era to inherit, so there is nothing to report before its first era.
-        if eraTable.entries.contains(where: { $0.labelsEveryDate }) { return nil }
+        // A table that numbers every date has no era to inherit, so there is nothing to report before its first era.
+        if eraTable.coversEveryDate { return nil }
 
         // For a date older than every era in the table, the inherited era interval cut short where the oldest era begins.
         let time = date.timeIntervalSinceReferenceDate
