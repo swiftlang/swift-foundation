@@ -62,9 +62,9 @@ private enum GregorianCalendarFamily: String, Sendable, CaseIterable, CustomTest
 private struct GregorianFamilyProbe: Sendable, CustomTestStringConvertible {
     let label: String
     let era, year, month, day: Int
-    /// True for dates the Japanese calendar deliberately labels differently from the bundled ICU.
+    /// True for dates the Japanese calendar deliberately labels differently, so they are pinned by golden values instead of compared.
     let isPreMeiji: Bool
-    /// True where our Japanese era ends at the next era's real start rather than where ICU's era-field arithmetic lands.
+    /// True where the Japanese era ends at the next era's start, which `_CalendarICU` reports differently.
     let endsInsideABoundedJapaneseEra: Bool
 
     init(_ label: String, era: Int, year: Int, month: Int, day: Int, isPreMeiji: Bool = false, endsInsideABoundedJapaneseEra: Bool = false) {
@@ -110,15 +110,17 @@ private let gregorianFamilyProbes: [GregorianFamilyProbe] = [
     GregorianFamilyProbe("1000 BCE", era: 0, year: 1000, month: 5, day: 5, isPreMeiji: true),
 ]
 
-/// Parity tests for the three Gregorian-family calendars against ICU. They share one era-table engine, so a divergence in any one of them usually means the engine is wrong rather than the calendar.
+/// Parity tests for the three Gregorian-family calendars against `_CalendarICU`.
+///
+/// They share one era-table engine, so a divergence in any one of them usually means the engine is wrong rather than the calendar.
 ///
 /// The Japanese calendar labels two sets of dates differently on purpose, so those dates are skipped here and pinned by golden values in `JapaneseGregorianEraInheritanceTests` instead.
 ///
-/// It drops the pre-Meiji eras (unicode-org/icu#4019, ICU-23341), and it ends an era where the next era really starts.
+/// It does not list the pre-Meiji eras, and it ends an era where the next era starts.
 @Suite("Gregorian Family Calendar Parity")
 private struct GregorianFamilyCalendarParityTests {
 
-    /// Reading the era and year off a date must match ICU, including dates before the Common Era.
+    /// Reading the era and year off a date must match `_CalendarICU`, including dates before the Common Era.
     ///
     /// The Buddhist year is an offset from the extended Gregorian year, not from the year counted inside the era.
     @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
@@ -132,11 +134,11 @@ private struct GregorianFamilyCalendarParityTests {
         #expect(ours.day == icu.day)
     }
 
-    /// Building a date from this calendar's own era and year must match ICU.
+    /// Building a date from this calendar's own era and year must match `_CalendarICU`.
     @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
     func dateFromComponentsMatchesICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) {
         guard !(family == .japanese && probe.isPreMeiji) else { return }
-        // Read the native era and year off ICU, then ask both calendars to rebuild the date from them.
+        // Read the native era and year off `_CalendarICU`, then ask both calendars to rebuild the date from them.
         let native = family.icu.dateComponents([.era, .year, .month, .day], from: probe.date)
         var components = DateComponents()
         components.era = native.era; components.year = native.year
@@ -235,7 +237,7 @@ private struct ROCBackwardEraTests {
     }
 }
 
-/// Parity for the `DateComponents` forms that PR #2165 found broken in the Hebrew and Chinese calendars.
+/// Parity for the `DateComponents` forms that were previously broken in the Hebrew and Chinese calendars.
 ///
 /// Those forms are the week-year one, `range(of: .day, in: .weekOfMonth)`, a month roll past the end of the year, the year-anchored forms, and a missing year.
 ///
@@ -261,7 +263,7 @@ private struct GregorianFamilyComponentFormParityTests {
         return date
     }
 
-    /// ICU leaves `.yearForWeekOfYear` as the Gregorian year even where it relabels `.year`, so a Buddhist date reports year 2568 next to yearForWeekOfYear 2025. Odd, but it is what ICU does.
+    /// `.yearForWeekOfYear` stays the Gregorian year even where `.year` is relabelled, so a Buddhist date reports year 2568 next to yearForWeekOfYear 2025.
     @Test(arguments: GregorianCalendarFamily.allCases, dates)
     func weekYearFieldsMatchICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let ours = family.ours.dateComponents([.yearForWeekOfYear, .weekOfYear, .weekday], from: probe.date)
@@ -271,7 +273,7 @@ private struct GregorianFamilyComponentFormParityTests {
         #expect(ours.weekday == icu.weekday)
     }
 
-    /// The week-year form of `date(from:)`, which #2165 fixed for Hebrew and Chinese.
+    /// The week-year form of `date(from:)`, previously broken for Hebrew and Chinese.
     @Test(arguments: GregorianCalendarFamily.allCases, dates)
     func dateFromWeekYearFormMatchesICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let native = family.icu.dateComponents([.era, .yearForWeekOfYear, .weekOfYear, .weekday], from: probe.date)
@@ -281,7 +283,7 @@ private struct GregorianFamilyComponentFormParityTests {
         #expect(family.ours.date(from: components) == family.icu.date(from: components))
     }
 
-    /// `range(of: .day, in: .weekOfMonth)` returned nil for Chinese before #2165.
+    /// `range(of: .day, in: .weekOfMonth)` previously returned nil for Chinese.
     @Test(arguments: GregorianCalendarFamily.allCases, dates)
     func rangeOfDayInWeekOfMonthMatchesICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         let ours = family.ours.range(of: .day, in: .weekOfMonth, for: probe.date)
@@ -289,7 +291,7 @@ private struct GregorianFamilyComponentFormParityTests {
         #expect(ours != nil)
     }
 
-    /// Rolling `.month` past December carried into the year for Chinese before #2165. A roll must stay inside the year.
+    /// Rolling `.month` past December previously carried into the year for Chinese. A roll must stay inside the year.
     @Test(arguments: GregorianCalendarFamily.allCases, dates)
     func rollingMonthMatchesICU(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
         for amount in [1, -1, 5] {
@@ -327,7 +329,7 @@ private struct GregorianFamilyComponentFormParityTests {
 @Suite("Gregorian Family Era Ordinality Parity")
 private struct GregorianFamilyEraOrdinalityParityTests {
 
-    /// The week-based units are left out on purpose. ICU's week count inside an era is not a function of the day count inside that era.
+    /// The week-based units are left out on purpose. `_CalendarICU`'s week count inside an era is not a function of the day count inside that era.
     ///
     /// Two Buddhist dates with the same weekday and the same day-in-era remainder get answers one apart, so there is no formula to match. `weekInEraAdvancesOneWeekAtATime` pins what we do instead.
     static let units: [Calendar.Component] = [.year, .yearForWeekOfYear, .quarter, .month, .day, .hour, .minute, .second]
@@ -362,7 +364,7 @@ private struct GregorianFamilyEraOrdinalityParityTests {
 
     /// Our week count inside an era rises by exactly one per week, never repeating or skipping.
     ///
-    /// ICU's differs by one in some cases. We do not follow it, because a self-consistent count is more useful than an inconsistent match.
+    /// `_CalendarICU` differs by one in some cases. We do not follow it, because a self-consistent count is more useful than an inconsistent match.
     ///
     @Test(arguments: GregorianCalendarFamily.allCases)
     func weekInEraAdvancesOneWeekAtATime(_ family: GregorianCalendarFamily) throws {

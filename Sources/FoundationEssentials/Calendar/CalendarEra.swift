@@ -21,7 +21,7 @@ internal struct _GregorianFamilyCalendarEra: Sendable {
         case backward
     }
 
-    /// The value `DateComponents.era` carries for this era. CLDR assigns these numbers, so Meiji is 232 rather than a count from the start of this table.
+    /// The value `DateComponents.era` carries for this era. These are assigned numbers rather than positions in this table, so Meiji is 232.
     let eraNumber: Int
     /// The extended Gregorian year holding this era's boundary. A forward era numbers that year 1. A backward era counts down from it.
     let anchorYear: Int
@@ -79,22 +79,18 @@ internal struct _GregorianFamilyCalendarEras: Sendable {
 
     /// True when this table numbers every date itself, so no date falls back to an inherited Gregorian era.
     ///
-    /// Only the Buddhist table does this. It numbers 1000 BCE as year -456, counting back past its own start.
-    ///
-    /// Japanese leaves dates before Meiji to the Gregorian era. Gregorian and ROC have a backward era covering the early side.
+    /// Only Buddhist does this. It numbers 1000 BCE as year -456, counting back past its own start.
     let coversEveryDate: Bool
 
     /// The number of the era that counts its years backward, when the table has one. Gregorian BCE and ROC Before-Minguo are the only ones.
-    ///
-    /// Read from `entries` rather than declared, because it is a plain fact about the data and cannot disagree with it.
     let backwardEraNumber: Int?
 
-    /// Whether era number 0 comes from the inherited Gregorian eras rather than from this table. When it does, a caller asking for era 0 means BCE, which is how Japanese reads a pre-Meiji date.
+    /// Whether era number 0 comes from the inherited Gregorian eras rather than from this table. A caller asking for era 0 then means BCE.
     let eraNumberZeroIsInherited: Bool
 
-    /// Every era indexed by its number, offset by `lowestEraNumber`, so a lookup by number is one array read rather than a search.
+    /// Every era indexed by its number, offset by `lowestEraNumber`, so a lookup by number is one array read.
     ///
-    /// CLDR numbers a calendar's eras consecutively, so this stays small. Japanese holds five slots and the rest hold one or two.
+    /// Era numbers run consecutively, so this holds five slots for Japanese and one or two for the rest.
     private let erasByNumber: [_GregorianFamilyCalendarEra?]
 
     /// The offset applied to an era number before indexing `erasByNumber`.
@@ -140,9 +136,7 @@ internal struct _GregorianFamilyCalendarEras: Sendable {
     }
 }
 
-/// The era tables themselves, one per calendar that `_CalendarGregorian` serves.
-///
-/// These are stored properties, so each table is built once for the process. A function returning a fresh table would allocate on every calendar copy.
+/// The era tables, one per calendar that `_CalendarGregorian` serves. Stored properties, so each is built once rather than on every calendar copy.
 extension _GregorianFamilyCalendarEras {
 
     /// Gregorian and ISO8601. CE counts forward from year 1, and BCE counts backward from it.
@@ -156,11 +150,11 @@ extension _GregorianFamilyCalendarEras {
         _GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward)
     ], coversEveryDate: true)
 
-    /// The five modern eras, newest first, with ICU's numbering (Meiji 232 through Reiwa 236).
+    /// The five modern eras, newest first, numbered Meiji 232 through Reiwa 236.
     ///
-    /// CLDR and ICU dropped the pre-Meiji eras (unicode-org/icu#4019, ICU-23341), so earlier dates keep the Gregorian era and numbers 2 through 231 are unused.
+    /// Earlier eras are not listed, so a date before Meiji reports the inherited Gregorian era. Numbers 2 through 231 are unused.
     ///
-    /// Meiji starts 1868-09-08 to match Apple's runtime ICU, where the CLDR canonical date is 1868-10-23.
+    /// Meiji starts 1868-09-08. Some sources date it to 1868-10-23 instead, so the tests pin this boundary.
     static let japanese = _GregorianFamilyCalendarEras([
         _GregorianFamilyCalendarEra(eraNumber: 236, anchorYear: 2019, startMonth: 5, startDay: 1, direction: .forward),
         _GregorianFamilyCalendarEra(eraNumber: 235, anchorYear: 1989, startMonth: 1, startDay: 8, direction: .forward),
@@ -169,7 +163,7 @@ extension _GregorianFamilyCalendarEras {
         _GregorianFamilyCalendarEra(eraNumber: 232, anchorYear: 1868, startMonth: 9, startDay: 8, direction: .forward),
     ], erasCanEnd: true)
 
-    /// Two eras sharing the 1912 boundary, with ICU's numbering from `taiwncal.h` (Before-Minguo 0, Minguo 1).
+    /// Two eras sharing the 1912 boundary, numbered Before-Minguo 0 and Minguo 1.
     static let republicOfChina = _GregorianFamilyCalendarEras([
         _GregorianFamilyCalendarEra(eraNumber: 1, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .forward),
         _GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .backward),

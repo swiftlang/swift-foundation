@@ -19,13 +19,13 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-/// Golden-value tests for the era the Japanese calendar reports before Meiji (unicode-org/icu#4019, ICU-23341). A pre-Meiji date reports the Gregorian era instead of a pre-Meiji Japanese era.
+/// Golden-value tests for the era the Japanese calendar reports before Meiji. A pre-Meiji date reports the inherited Gregorian era rather than a pre-Meiji Japanese era.
 ///
-/// These values are not compared against ICU, because only unreleased ICU behaves this way. The bundled ICU still carries the old 237-era data.
+/// These are pinned values rather than a comparison, so they do not depend on which era data the platform calendar carries.
 @Suite("Japanese Gregorian Era Inheritance")
 private struct JapaneseGregorianEraInheritanceTests {
 
-    // Era index constants (ICU numbering).
+    // Era number constants.
     static let bce = 0, ce = 1, meiji = 232, taisho = 233, showa = 234, heisei = 235, reiwa = 236
 
     private static func japanese() -> Calendar {
@@ -49,7 +49,7 @@ private struct JapaneseGregorianEraInheritanceTests {
     }
 
     static let eraCases: [EraCase] = [
-        // Modern eras keep ICU numbering 232…236.
+        // The modern eras are numbered 232 through 236.
         EraCase(label: "Reiwa 2020", sourceEra: ce, year: 2020, month: 6, day: 15, expectedEra: reiwa, expectedYear: 2),
         EraCase(label: "Heisei start 1989-01-08", sourceEra: ce, year: 1989, month: 1, day: 8, expectedEra: heisei, expectedYear: 1),
         EraCase(label: "Meiji start 1868-09-08", sourceEra: ce, year: 1868, month: 9, day: 8, expectedEra: meiji, expectedYear: 1),
@@ -71,7 +71,7 @@ private struct JapaneseGregorianEraInheritanceTests {
     }
 
     @Test func prolepticEraYearRollsIntoGregorian() throws {
-        // ICU JapaneseTest.Test5345: setting Meiji year 1, Jan 1 resolves to CE, because Meiji 1 Jan 1 = Gregorian 1868-01-01, before Meiji's Sept 8 start.
+        // Setting Meiji year 1, Jan 1 resolves to CE, because Meiji 1 Jan 1 is Gregorian 1868-01-01, which falls before Meiji's September 8 start.
         let calendar = Self.japanese()
         var components = DateComponents()
         components.era = Self.meiji; components.year = 1; components.month = 1; components.day = 1; components.hour = 12
