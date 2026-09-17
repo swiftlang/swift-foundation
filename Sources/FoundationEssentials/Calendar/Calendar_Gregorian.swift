@@ -71,7 +71,7 @@ enum ResolvedDateComponents {
     case weekOfMonth(year: Int, month: Int, weekOfMonth: Int, weekday: Int?)
 
     // Pick the year field between yearForWeekOfYear and year and resolves era
-    static func yearOrYearForWOYAdjustingEra(from components: DateComponents, eraTable: _GregorianFamilyCalendarEras) -> (year: Int, month: Int) {
+    static func yearOrYearForWOYAdjustingEra(from components: DateComponents, eraTable: GregorianFamilyCalendarEras) -> (year: Int, month: Int) {
         var rawYear: Int
         // Don't adjust for era if week is also specified
         var adjustEra = true
@@ -124,7 +124,7 @@ enum ResolvedDateComponents {
         return (year,  month)
     }
 
-    init(dateComponents components: DateComponents, eraTable: _GregorianFamilyCalendarEras) {
+    init(dateComponents components: DateComponents, eraTable: GregorianFamilyCalendarEras) {
         let (year, month) = Self.yearOrYearForWOYAdjustingEra(from: components, eraTable: eraTable)
         let minWeekdayOrdinal = 1
 
@@ -345,7 +345,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     /// How this calendar labels eras and numbers years inside them. The tables live in `CalendarEra.swift`.
     ///
     /// The five identifiers this class serves differ only by this table, the way ISO8601 differs from Gregorian only by its defaults.
-    let eraTable: _GregorianFamilyCalendarEras
+    let eraTable: GregorianFamilyCalendarEras
 
     // Returns the range of a component in Gregorian Calendar.
     // When there are multiple possible upper bounds, the smallest one is returned.
@@ -1649,7 +1649,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return eraNumber == 0 && eraTable.eraNumberZeroIsInherited
     }
 
-    func eraBoundary(of entry: _GregorianFamilyCalendarEra) -> Date? {
+    func eraBoundary(of entry: GregorianFamilyCalendarEra) -> Date? {
         // The CE and BCE boundary is a proleptic 0001-01-01. `date(from:)` is Julian-cutover aware and would land two days earlier, so keep the reference instant.
         if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
             return Date(timeIntervalSinceReferenceDate: -63113904000.0)
@@ -1694,7 +1694,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK:
 
-    static func isComponentsInSupportedRange(_ components: DateComponents, eraTable: _GregorianFamilyCalendarEras) -> Bool {
+    static func isComponentsInSupportedRange(_ components: DateComponents, eraTable: GregorianFamilyCalendarEras) -> Bool {
         // `Date.validCalendarRange` supports approximately from year -4713 to year 506713. These valid ranges were chosen as if representing the entire supported date range in one calendar unit.
         // The era bound comes from the table, because the Japanese era numbers run up to 236 where Gregorian only uses 0 and 1.
         let validEra = -10...max(10, eraTable.maxEraNumber)
@@ -1876,7 +1876,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return julianDay
     }
 
-    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, eraTable: _GregorianFamilyCalendarEras? = nil, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, eraTable: GregorianFamilyCalendarEras? = nil, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
 
         let resolvedComponents = ResolvedDateComponents(dateComponents: components, eraTable: eraTable ?? self.eraTable)
 
