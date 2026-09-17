@@ -41,9 +41,9 @@ Write in-line and PR comments, DocC, commit messages, and PR descriptions in [si
 
 **Stay truthful to the source.** Do not add unverified claims, benefits, or implications.
 
-**Put the main point first.** Say the main point before going into details.
+**Put the main point first before going into details.** 
 
-**Omit unneeded words.** Avoid words and abstractions that don't add information. Remove excess modifiers. Avoid stacking nouns phrases.
+**Omit unneeded words such as excessive modifiers or stack nouns.**
 
 **Keep sentences and paragraphs short.** One idea per sentence. Break a long sentence into two.
 
@@ -55,7 +55,7 @@ Write in-line and PR comments, DocC, commit messages, and PR descriptions in [si
 
 **Give direct instructions.** In steps and guidance, use the imperative: "call `reset()` first", not "you should call `reset()` first".
 
-**Use lists and tables when they help.** Use lists and tables when they are clearer than a paragraph.
+**Use lists and tables when they are clearer than a paragraph.** 
 
 ---
 
