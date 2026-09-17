@@ -2867,6 +2867,27 @@ extension JSONEncoderTests {
         // Optional Decimals should encode the same way.
         _testRoundTrip(of: Optional(decimal), expectedJSON: expectedJSON)
     }
+    
+    @Test func decodeDecimalInfinityAndNaN() throws {
+        let decoder = JSONDecoder()
+        decoder.allowsJSON5 = true
+        
+        let nanData = "NaN".data(using: .utf8)!
+        let nanDecimal = try decoder.decode(Decimal.self, from: nanData)
+        #expect(nanDecimal.isNaN)
+        
+        let infinityData = "Infinity".data(using: .utf8)!
+        #expect(throws: (any Error).self) {
+            try decoder.decode(Decimal.self, from: infinityData)
+        }
+        
+        let negativeInfinityData = "-Infinity".data(using: .utf8)!
+        #expect(throws: (any Error).self) {
+            try decoder.decode(Decimal.self, from: negativeInfinityData)
+        }
+    }
+    
+    
 
     @Test func hugeNumbers() throws {
         let json = "23456789012000000000000000000000000000000000000000000000000000000000000000000 "
