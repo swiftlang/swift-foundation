@@ -118,7 +118,9 @@ private let gregorianFamilyProbes: [GregorianFamilyProbe] = [
 @Suite("Gregorian Family Calendar Parity")
 private struct GregorianFamilyCalendarParityTests {
 
-    /// Reading the era and year off a date must match ICU, including dates before the Common Era. The Buddhist year is an offset from the extended Gregorian year, not from the year counted inside the era.
+    /// Reading the era and year off a date must match ICU, including dates before the Common Era.
+    ///
+    /// The Buddhist year is an offset from the extended Gregorian year, not from the year counted inside the era.
     @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyProbes)
     func eraAndYearMatchICU(_ family: GregorianCalendarFamily, _ probe: GregorianFamilyProbe) {
         guard !(family == .japanese && probe.isPreMeiji) else { return }

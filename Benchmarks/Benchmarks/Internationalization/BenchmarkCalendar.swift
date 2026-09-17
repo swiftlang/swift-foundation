@@ -294,6 +294,21 @@ func calendarBenchmarks() {
     }
     gmtCalendr.timeZone = gmtTimeZone // use gmt-based time zone so the result doesn't get overshadowed by TimeZone API
 
+    // Adding and rolling a year are the paths that consult the era table, so they are measured separately from the day and time paths above.
+    Benchmark("GregorianCalendar-date-byAdding-year", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let next = gmtCalendr.date(byAdding: .year, value: 1, to: date)
+            blackHole(next)
+        }
+    }
+
+    Benchmark("GregorianCalendar-date-rolling-year", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let rolled = gmtCalendr.date(byAdding: .year, value: 1, to: date, wrappingComponents: true)
+            blackHole(rolled)
+        }
+    }
+
     Benchmark("GregorianCalendar-dateComponents-yearMonthBasedComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
         for date in testDates {
             let dc = gmtCalendr.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
