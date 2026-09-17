@@ -19,7 +19,7 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-/// Compares `recurrences(of:)` sequences between the ICU-backed calendar and `_CalendarGregorian` for the three Gregorian-family calendars. Covers each one's era transition where it has one.
+/// Compares `recurrences(of:)` sequences between `_CalendarICU` and `_CalendarGregorian` for the three Gregorian-family calendars. Covers each one's era transition where it has one.
 @Suite("Gregorian Family RecurrenceRule Parity Probe")
 private struct GregorianFamilyRecurrenceRuleParityProbe {
 
