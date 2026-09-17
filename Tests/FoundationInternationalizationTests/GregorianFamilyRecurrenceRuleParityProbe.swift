@@ -122,9 +122,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         return failures
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: Family.allCases)
-    private func yearly_christmas(_ family: Family) {
+    private func yearlyChristmas(_ family: Family) {
         let (icu, ours) = family.pair
         var failures: [String] = []
         for (label, anchor) in family.anchors {
@@ -139,9 +138,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: Family.allCases)
-    private func monthly_firstOfMonth(_ family: Family) {
+    private func monthlyFirstOfMonth(_ family: Family) {
         let (icu, ours) = family.pair
         var failures: [String] = []
         for (label, anchor) in family.anchors {
@@ -157,9 +155,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
     }
 
     /// Only Buddhist and ROC carry this test. The original Japanese probe never had a weekly case.
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: [Family.buddhist, .roc])
-    private func weekly_mondays(_ family: Family) {
+    private func weeklyMondays(_ family: Family) {
         let (icu, ours) = family.pair
         var failures: [String] = []
         for (label, anchor) in family.anchors {
@@ -175,8 +172,7 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
     }
 
     /// Only the Buddhist probe carried this shape.
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-    @Test func yearly_thanksgivingShape_buddhist() {
+    @Test func yearlyThanksgivingShapeForBuddhist() {
         let (icu, ours) = Family.buddhist.pair
         var failures: [String] = []
         for (label, anchor) in Family.buddhist.anchors {
@@ -192,8 +188,7 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
     }
 
     /// Only the Japanese probe carried this shape.
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-    @Test func yearly_constitutionDay_japanese() {
+    @Test func yearlyConstitutionDayForJapanese() {
         let (icu, ours) = Family.japanese.pair
         var failures: [String] = []
         for (label, anchor) in Family.japanese.anchors {
@@ -208,9 +203,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: boundaryCases)
-    private func monthly_acrossEraBoundary(_ boundary: BoundaryCase) {
+    private func monthlyAcrossEraBoundary(_ boundary: BoundaryCase) {
         let (icu, ours) = boundary.family.pair
         let anchor = Self.gregorianDate(boundary.monthlyAnchor.year, boundary.monthlyAnchor.month, boundary.monthlyAnchor.day)
         var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .monthly, end: .afterOccurrences(24))
@@ -223,9 +217,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         #expect(failures.isEmpty, "\(failures.count) divergences across the \(boundary.boundaryLabel) boundary")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: boundaryCases)
-    private func yearly_acrossEraBoundary(_ boundary: BoundaryCase) {
+    private func yearlyAcrossEraBoundary(_ boundary: BoundaryCase) {
         let (icu, ours) = boundary.family.pair
         var failures: [String] = []
         for anchorComponents in boundary.yearlyAnchors {
@@ -241,9 +234,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     @Test(arguments: boundaryCases)
-    private func daily_acrossEraBoundary(_ boundary: BoundaryCase) {
+    private func dailyAcrossEraBoundary(_ boundary: BoundaryCase) {
         let (icu, ours) = boundary.family.pair
         let anchor = Self.gregorianDate(boundary.dailyAnchor.year, boundary.dailyAnchor.month, boundary.dailyAnchor.day)
         let icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .daily, end: .afterOccurrences(60))
