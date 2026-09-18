@@ -587,6 +587,15 @@ extension Decimal : Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let exponent = try container.decode(CInt.self, forKey: .exponent)
         let length = try container.decode(CUnsignedInt.self, forKey: .length)
+        // _length takes only 4 bits even though it is encoded as CUnsignedInt
+        guard length <= Decimal.maxSize else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "length field exceeds max value 8"
+                )
+            )
+        }
         let isNegative = try container.decode(Bool.self, forKey: .isNegative)
         let isCompact = try container.decode(Bool.self, forKey: .isCompact)
 

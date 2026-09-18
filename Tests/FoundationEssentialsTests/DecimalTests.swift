@@ -1245,4 +1245,29 @@ private struct DecimalTests {
         }
 
     }
+
+    @Test func testDecodingLengthOverflowThrows() throws {
+        let xmlString =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>exponent</key><integer>0</integer>
+            <key>length</key><integer>15</integer>
+            <key>isNegative</key><false/>
+            <key>isCompact</key><true/>
+            <key>mantissa</key>
+            <array>
+                <integer>1</integer><integer>2</integer><integer>3</integer><integer>4</integer>
+                <integer>5</integer><integer>6</integer><integer>7</integer><integer>8</integer>
+            </array>
+        </dict>
+        </plist>
+        """
+        let decoder = PropertyListDecoder()
+        #expect(throws: DecodingError.self) {
+            _ = try decoder.decode(Decimal.self, from: Data(xmlString.utf8))
+        }
+    }
 }
