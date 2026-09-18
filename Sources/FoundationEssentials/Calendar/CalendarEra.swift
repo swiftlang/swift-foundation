@@ -10,17 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// One era of a Gregorian-family calendar.
 internal struct GregorianFamilyCalendarEra: Sendable {
 
-    /// The value `DateComponents.era` carries for this era. These are assigned numbers rather than positions in this table, so Meiji is 232.
+    /// The value `DateComponents.era` carries. These are assigned numbers rather than positions in a table, so Meiji is 232.
     let eraNumber: Int
-    /// The extended Gregorian year holding this era's boundary. A forward era numbers that year 1. A backward era counts down from it.
+
+    /// The extended Gregorian year holding this era's boundary. A forward era numbers that year 1, and a backward era counts down from it.
     let anchorYear: Int
-    /// Month and day of the boundary within `anchorYear`.
+
     let startMonth: Int
     let startDay: Int
-    /// Whether years count up from the anchor year, as every Japanese era and the Buddhist and Minguo eras do, or down from it, as ROC's Before-Minguo era does.
     let direction: Calendar.SearchDirection
 
     init(eraNumber: Int, anchorYear: Int, startMonth: Int, startDay: Int, direction: Calendar.SearchDirection) {
@@ -31,13 +30,11 @@ internal struct GregorianFamilyCalendarEra: Sendable {
         self.direction = direction
     }
 
-    /// Whether this era labels the given date, expressed as an extended Gregorian year plus a month and day.
     func labels(extendedYear year: Int, month: Int, day: Int) -> Bool {
         let isAtOrAfterBoundary = (year, month, day) >= (anchorYear, startMonth, startDay)
         return direction == .forward ? isAtOrAfterBoundary : !isAtOrAfterBoundary
     }
 
-    /// This era's year number for a date in the given extended Gregorian year.
     func eraYear(fromExtendedYear year: Int) -> Int {
         switch direction {
         case .forward: return year - anchorYear + 1
@@ -45,7 +42,6 @@ internal struct GregorianFamilyCalendarEra: Sendable {
         }
     }
 
-    /// The extended Gregorian year for a year number in this era.
     func extendedYear(fromEraYear year: Int) -> Int {
         switch direction {
         case .forward: return year + anchorYear - 1
@@ -58,35 +54,24 @@ internal struct GregorianFamilyCalendarEra: Sendable {
 internal struct GregorianFamilyCalendarEras: Sendable {
     let entries: [GregorianFamilyCalendarEra]
 
-    /// The highest era number. Era ranges run from 0 up to this value, because 0 and 1 stay reserved for the Gregorian BCE and CE eras a calendar inherits.
+    /// Era ranges run from 0 up to this value, because 0 and 1 stay reserved for the Gregorian eras a calendar inherits.
     let maxEraNumber: Int
 
-    /// The era number to assume when `DateComponents.era` is absent, which is the newest era in the table.
+    /// Used when `DateComponents.era` is absent.
     let defaultEraNumber: Int
 
-    /// The anchor year of the newest era, which limits how high a year number can go once years are era-relative.
+    /// Limits how high a year number can go once years are counted inside an era.
     let newestAnchorYear: Int
 
-    /// True when an era can end as well as begin, so one era can cover a single year. The Japanese eras do. The Buddhist and Minguo eras run on without limit.
+    /// True when an era can end as well as begin, so year numbers restart. The Japanese eras do, and the Buddhist and Minguo eras run on without limit.
     let erasCanEnd: Bool
 
-    /// True when this table numbers every date itself, so no date falls back to an inherited Gregorian era.
-    ///
-    /// Only Buddhist does this. It numbers 1000 BCE as year -456, counting back past its own start.
+    /// True when this table numbers every date itself, so nothing falls back to an inherited Gregorian era. Only Buddhist does, numbering 1000 BCE as year -456.
     let coversEveryDate: Bool
 
-    /// The number of the era that counts its years backward, when the table has one. Gregorian BCE and ROC Before-Minguo are the only ones.
-    let backwardEraNumber: Int?
-
-    /// Whether era number 0 comes from the inherited Gregorian eras rather than from this table. A caller asking for era 0 then means BCE.
-    let eraNumberZeroIsInherited: Bool
-
-    /// Every era indexed by its number, offset by `lowestEraNumber`, so a lookup by number is one array read.
-    ///
     /// Era numbers run consecutively, so this holds five slots for Japanese and one or two for the rest.
     private let erasByNumber: [GregorianFamilyCalendarEra?]
 
-    /// The offset applied to an era number before indexing `erasByNumber`.
     private let lowestEraNumber: Int
 
     init(_ entries: [GregorianFamilyCalendarEra], erasCanEnd: Bool = false, coversEveryDate: Bool = false) {
@@ -96,8 +81,6 @@ internal struct GregorianFamilyCalendarEras: Sendable {
         self.newestAnchorYear = entries.first?.anchorYear ?? 0
         self.erasCanEnd = erasCanEnd
         self.coversEveryDate = coversEveryDate
-        self.backwardEraNumber = entries.first { $0.direction == .backward }?.eraNumber
-        self.eraNumberZeroIsInherited = !entries.contains { $0.eraNumber == 0 }
 
         let lowest = entries.map(\.eraNumber).min() ?? 0
         self.lowestEraNumber = lowest
@@ -112,40 +95,63 @@ internal struct GregorianFamilyCalendarEras: Sendable {
         }
     }
 
-    /// The era labeling the given date, or nil when the date falls before every era and the calendar inherits one instead.
     func entry(extendedYear year: Int, month: Int, day: Int) -> GregorianFamilyCalendarEra? {
         if let match = entries.first(where: { $0.labels(extendedYear: year, month: month, day: day) }) {
             return match
         }
-        // Older than every era. A table that covers every date has one era, which numbers this date too.
+        // Older than every era, so only a table covering every date has one to offer.
         return coversEveryDate ? entries.last : nil
     }
 
-    /// The era with the given number, or nil when this table does not define it.
     func entry(eraNumber: Int) -> GregorianFamilyCalendarEra? {
-        let index = eraNumber - lowestEraNumber
-        guard erasByNumber.indices.contains(index) else { return nil }
-        return erasByNumber[index]
+        // `DateComponents.era` is public, so a caller can pass any Int and plain subtraction would crash near Int.min.
+        let index = eraNumber.subtractingReportingOverflow(lowestEraNumber)
+        guard !index.overflow, erasByNumber.indices.contains(index.partialValue) else { return nil }
+        return erasByNumber[index.partialValue]
     }
 }
 
-/// The era tables, one per calendar that `_CalendarGregorian` serves. Stored properties, so each is built once rather than on every calendar copy.
 extension GregorianFamilyCalendarEras {
 
-    /// Gregorian and ISO8601. CE counts forward from year 1, and BCE counts backward from it.
+    /// The era a `DateComponents.era` value refers to, which may be one this table lists or one of the Gregorian eras it inherits.
+    enum ResolvedEra: Sendable {
+        case listed(GregorianFamilyCalendarEra)
+        /// A number this table does not list. 0 is BCE and anything else is CE.
+        case inheritedGregorian(isBCE: Bool)
+        case absent
+
+        /// Adding or wrapping a year has to move opposite the requested amount when this is true.
+        var countsBackward: Bool {
+            switch self {
+            case .listed(let era): return era.direction == .backward
+            case .inheritedGregorian(let isBCE): return isBCE
+            case .absent: return false
+            }
+        }
+    }
+
+    func era(numbered eraNumber: Int?) -> ResolvedEra {
+        guard let eraNumber else { return .absent }
+        if let listed = entry(eraNumber: eraNumber) { return .listed(listed) }
+        return .inheritedGregorian(isBCE: eraNumber == 0)
+    }
+}
+
+/// One table per calendar that `_CalendarGregorian` serves. Stored properties, so each is built once rather than on every calendar copy.
+extension GregorianFamilyCalendarEras {
+
+    /// Gregorian and ISO8601.
     static let gregorian = GregorianFamilyCalendarEras([
         GregorianFamilyCalendarEra(eraNumber: 1, anchorYear: 1, startMonth: 1, startDay: 1, direction: .forward),
         GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: 1, startMonth: 1, startDay: 1, direction: .backward),
     ])
 
-    /// One era, which numbers every date, including those before its own start. 1 CE is 544 BE.
+    /// One era covering every date. 1 CE is 544 BE.
     static let buddhist = GregorianFamilyCalendarEras([
         GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward)
     ], coversEveryDate: true)
 
-    /// The five modern eras, newest first, numbered Meiji 232 through Reiwa 236.
-    ///
-    /// Earlier eras are not listed, so a date before Meiji reports the inherited Gregorian era. Numbers 2 through 231 are unused.
+    /// The five modern eras. Earlier ones are not listed, so a date before Meiji reports the inherited Gregorian era and numbers 2 through 231 are unused.
     ///
     /// Meiji starts 1868-09-08. Some sources date it to 1868-10-23 instead, so the tests pin this boundary.
     static let japanese = GregorianFamilyCalendarEras([
@@ -156,16 +162,15 @@ extension GregorianFamilyCalendarEras {
         GregorianFamilyCalendarEra(eraNumber: 232, anchorYear: 1868, startMonth: 9, startDay: 8, direction: .forward),
     ], erasCanEnd: true)
 
-    /// Two eras sharing the 1912 boundary, numbered Before-Minguo 0 and Minguo 1.
+    /// Before-Minguo and Minguo, sharing the 1912 boundary.
     static let republicOfChina = GregorianFamilyCalendarEras([
         GregorianFamilyCalendarEra(eraNumber: 1, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .forward),
         GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .backward),
     ])
 
-    /// An empty table, used to build a date from a year that is already extended so no era conversion applies.
+    /// Builds a date from a year that is already extended, so no era conversion applies.
     static let noRelabeling = GregorianFamilyCalendarEras([])
 
-    /// The table an identifier labels its eras with. Anything other than the three era-relabeling calendars uses the Gregorian eras.
     static func forCalendar(_ identifier: Calendar.Identifier) -> GregorianFamilyCalendarEras {
         switch identifier {
         case .buddhist: return .buddhist

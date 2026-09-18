@@ -1639,16 +1639,6 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Era lookup
 
-    /// Whether this era counts its years down instead of up, like BCE or ROC's Before-Minguo. Adding or wrapping a year has to move opposite the requested amount in that case.
-    ///
-    /// A code this calendar's own table does not list, like Japanese reading a pre-Meiji date, is an inherited Gregorian era: code 0 is BCE and counts backward, code 1 or absent is CE.
-    func eraCountsBackward(_ eraNumber: Int?) -> Bool {
-        guard let eraNumber else { return false }
-        if eraNumber == eraTable.backwardEraNumber { return true }
-        // A number this table does not list is an inherited Gregorian era, where 0 is BCE.
-        return eraNumber == 0 && eraTable.eraNumberZeroIsInherited
-    }
-
     func eraBoundary(of entry: GregorianFamilyCalendarEra) -> Date? {
         // The CE and BCE boundary is a proleptic 0001-01-01. `date(from:)` is Julian-cutover aware and would land two days earlier, so keep the reference instant.
         if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
@@ -1679,7 +1669,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         // A table that numbers every date has no era to inherit, so there is nothing to report before its first era.
         if eraTable.coversEveryDate { return nil }
 
-        // For a date older than every era in the table, the inherited era interval cut short where the oldest era begins.
+        // Older than every era in the table, so the inherited interval is cut short where the oldest era begins.
         let time = date.timeIntervalSinceReferenceDate
         let ceStart = Date(timeIntervalSinceReferenceDate: -63113904000.0)
         let inherited = time < ceStart.timeIntervalSinceReferenceDate
@@ -2443,7 +2433,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .yearForWeekOfYear:
             var dc = dateComponents(weekBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if eraCountsBackward(dc.era) {
+            if eraTable.era(numbered: dc.era).countsBackward {
                 amount = -amount
             }
 
@@ -2464,7 +2454,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .year:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if eraCountsBackward(dc.era) {
+            if eraTable.era(numbered: dc.era).countsBackward {
                 amount = -amount
             }
 
@@ -2623,8 +2613,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
             }
             var amount = amount
-            if eraCountsBackward(dc.era) {
-                // A backward-counting era, like BCE, moves opposite the amount.
+            if eraTable.era(numbered: dc.era).countsBackward {
                 amount = -amount
             }
 
@@ -2884,8 +2873,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
 
             var amount = amount
-            if eraCountsBackward(dc.era) {
-                // A backward-counting era, like BCE, moves opposite the amount.
+            if eraTable.era(numbered: dc.era).countsBackward {
                 amount = -amount
             }
 
