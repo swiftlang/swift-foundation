@@ -1168,7 +1168,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
             ucal_set(ucalendar, UCAL_IS_REPEATED_DAY, 0)
 #endif
-            ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
+            // ICU resolves the day-of-month and week-of-month ambiguity in favor of day-of-month, so defaulting the day to 1 would ignore week-of-month entirely.
+            if components.day == nil, let value = components.weekOfMonth {
+                ucal_set(ucalendar, UCAL_WEEK_OF_MONTH, Int32(truncatingIfNeeded: value))
+            } else {
+                ucal_set(ucalendar, UCAL_DAY_OF_MONTH, 1)
+            }
             ucal_set(ucalendar, UCAL_HOUR_OF_DAY, 0)
             ucal_set(ucalendar, UCAL_MINUTE, 0)
             ucal_set(ucalendar, UCAL_SECOND, 0)
@@ -1180,7 +1185,6 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if let value = components.year { ucal_set(ucalendar, UCAL_YEAR, Int32(truncatingIfNeeded: value)) }
             // quarter is unsupported
             if let value = components.weekOfYear { ucal_set(ucalendar, UCAL_WEEK_OF_YEAR, Int32(truncatingIfNeeded: value)) }
-            if let value = components.weekOfMonth { ucal_set(ucalendar, UCAL_WEEK_OF_MONTH, Int32(truncatingIfNeeded: value)) }
             if let value = components.yearForWeekOfYear { ucal_set(ucalendar, UCAL_YEAR_WOY, Int32(truncatingIfNeeded: value)) }
             if let value = components.weekday { ucal_set(ucalendar, UCAL_DAY_OF_WEEK, Int32(truncatingIfNeeded: value)) }
             if let value = components.weekdayOrdinal { ucal_set(ucalendar, UCAL_DAY_OF_WEEK_IN_MONTH, Int32(truncatingIfNeeded: value)) }
