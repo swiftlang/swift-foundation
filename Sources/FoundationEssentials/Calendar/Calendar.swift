@@ -885,7 +885,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - parameter date1: A date to compare.
     /// - parameter date2: A date to compare.
-    /// - parameter: component: A granularity to compare. For example, pass `.hour` to check if two dates are in the same hour.
+    /// - parameter component: A granularity to compare. For example, pass `.hour` to check if two dates are in the same hour.
     @available(iOS 8.0, *)
     public func compare(_ date1: Date, to date2: Date, toGranularity component: Component) -> ComparisonResult {
         // Fallback option for out-of-range or other exceptional results

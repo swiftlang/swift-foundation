@@ -52,17 +52,17 @@ extension URL.Template {
 
 @available(FoundationPreview 6.2, *)
 extension URL.Template.Value {
-    /// A text value to be used with a ``URL.Template``.
+    /// A text value to be used with a `URL.Template`.
     public static func text(_ text: String) -> URL.Template.Value {
         URL.Template.Value(underlying: .text(text))
     }
 
-    /// A list value (an array of `String`s) to be used with a ``URL.Template``.
+    /// A list value (an array of `String`s) to be used with a `URL.Template`.
     public static func list(_ list: some Sequence<String>) -> URL.Template.Value {
         URL.Template.Value(underlying: .list(Array(list)))
     }
 
-    /// An associative list value (ordered key-value pairs) to be used with a ``URL.Template``.
+    /// An associative list value (ordered key-value pairs) to be used with a `URL.Template`.
     public static func associativeList(_ list: some Sequence<(key: String, value: String)>) -> URL.Template.Value {
         URL.Template.Value(underlying: .associativeList(OrderedDictionary(uniqueKeysWithValues: list)))
     }
