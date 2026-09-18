@@ -514,13 +514,13 @@ private struct LocaleTests {
         func verify(id: String, languageCode: String?, scriptCode: String?, regionCode: String?, variantCode: String?, roundTripID: String, sourceLocation: SourceLocation = #_sourceLocation) {
             let loc = Locale(identifier:id)
             #expect(loc.language.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
-//            #expect(loc.language.script?.identifier == scriptCode, sourceLocation:sourceLocation) // TODO: Put this back in once we've implemented the default-script logic!
+            #expect(loc.language.script?.identifier == scriptCode, sourceLocation:sourceLocation)
             #expect(loc.language.region?.identifier == regionCode, sourceLocation:sourceLocation)
             #expect(loc.region?.identifier == regionCode, sourceLocation:sourceLocation) // for this test, loc.region and loc.language.region should always be the same
             #expect(loc.variant?.identifier == variantCode, sourceLocation:sourceLocation)
             #expect(loc.identifier == roundTripID, sourceLocation:sourceLocation)
 
-            // Locale.Components(identifier:) should produce the same results as Locale(identifier:), except that it won't fill in a default script if the original identifier didn't specify a script and it won't automatically fill in the region from languageComponents.region
+            // Locale.Components(identifier:) should produce the same results as Locale(identifier:), except that it won't fill in a default script if the original identifier didn't specify a script
             let cmp = Locale.Components(identifier:id)
             #expect(cmp.languageComponents.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
             #expect(cmp.languageComponents.script == nil || cmp.languageComponents.script?.identifier == scriptCode, sourceLocation:sourceLocation)
@@ -593,7 +593,62 @@ private struct LocaleTests {
         verify(id: "en_Latn-US-POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en_Latn-US-POSIX")
     }
     
-    // TODO: Add tests for the key-value pairs!
+    @Test func keyValueNormalization() {
+        func verify(id: String, normalizedID: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let locImpl = _LocaleImpl(identifier: id)
+            #expect(locImpl._normalizedIdentifier == normalizedID, sourceLocation:sourceLocation)
+            
+            let comps = Locale.Components(identifier: id)
+            let newID = comps.icuIdentifier.replacing("-", with: "_") // Locale.Components.icuIdentifier puts a "-" before the script code (e.g., "en-Latn_US"), and I didn't want to change that
+            #expect(newID == normalizedID, sourceLocation:sourceLocation)
+        }
+
+        // quick check to make sure case and delimiter normalization on regular locale IDs works right
+        verify(id: "en-latn-us", normalizedID: "en_Latn_US")
+        
+        // check that we're normalizing the BCP47 identifiers back to the legacy identifiers
+        verify(id: "en_US@calendar=gregorian", normalizedID: "en_US@calendar=gregorian")
+        verify(id: "en_US@ca=gregory",         normalizedID: "en_US@calendar=gregorian")
+        
+        // check correct handling of multiple key-value pairs, normalization of BCP47 identifiers, and sorting of key-value pairs
+        verify(id: "en_US@calendar=gregorian;hours=h12;numbers=latn", normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@ca=gregory;hc=h12;nu=latn",                 normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@numbers=latn;hours=h12;calendar=gregorian", normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@nu=latn;hc=h12;ca=gregory",                 normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        
+        // verify that if the same key appears twice, the first one wins
+        verify(id: "en_US@numbers=arabext;calendar=islamic;numbers=latn;calendar=gregorian", normalizedID: "en_US@calendar=islamic;numbers=arabext")
+        
+        // verify case and whitespace normalization, and that malformed key-value pairs get filtered out
+        verify(id: "en_US@HOURS=H23;calendar=gregorian=islamic;rg;;numbers = arab ; 123=456;#$%=%^&;sd=;=goo;rg=GBzzzz", normalizedID: "en_US@hours=h23;numbers=arab;rg=gbzzzz")
+        
+        // verify correct handling of misplaced or extra @ signs
+        verify(id: "en_US@",                                normalizedID: "en_US")
+        verify(id: "en_US@;;;;;",                           normalizedID: "en_US")
+        verify(id: "en_US@numbers=latn@calendar=gregorian", normalizedID: "en_US")
+    }
+    
+    @Test func complexComponentsFromIdentifier() {
+        func verify(id: String, language: String? = nil, script: String? = nil, languageRegion: String? = nil, region: String? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+            let loc = Locale(identifier:id)
+            if let language { #expect(loc.language.languageCode?.identifier == language, sourceLocation:sourceLocation) }
+            if let script { #expect(loc.language.script?.identifier == script, sourceLocation:sourceLocation) }
+            if let languageRegion { #expect(loc.language.region?.identifier == languageRegion, sourceLocation:sourceLocation) }
+            if let region { #expect(loc.region?.identifier == region, sourceLocation:sourceLocation) }
+
+//            // Locale.Components(identifier:) should produce the same results as Locale(identifier:), except that it won't fill in a default script if the original identifier didn't specify a script
+//            let cmp = Locale.Components(identifier:id)
+//            #expect(cmp.languageComponents.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
+//            #expect(cmp.languageComponents.script == nil || cmp.languageComponents.script?.identifier == scriptCode, sourceLocation:sourceLocation)
+//            #expect(cmp.languageComponents.region?.identifier == regionCode, sourceLocation:sourceLocation)
+//            #expect(cmp.variant?.identifier == variantCode, sourceLocation:sourceLocation)
+        }
+        
+        verify(id: "en_US",           language: "en", languageRegion: "US", region: "US")
+        verify(id: "en@rg=uszzzz",    language: "en", languageRegion: nil,  region: "US")
+        verify(id: "en_US@rg=gbzzzz", language: "en", languageRegion: "US", region: "GB")
+        verify(id: "en_GB@rg=uszzzz", language: "en", languageRegion: "GB", region: "US")
+    }
 }
 
 @Suite("Locale Properties")
