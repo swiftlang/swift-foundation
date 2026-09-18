@@ -482,11 +482,11 @@ extension _CharacterSet {
     private static let allOnesCached = Data(capacity: __kCFBitmapSize) { outputSpan in
         outputSpan.append(repeating: 0xFF, count: __kCFBitmapSize, as: UInt8.self)
     }
-
+    
     private static let allZerosCached = Data(capacity: __kCFBitmapSize) { outputSpan in
         outputSpan.append(repeating: 0x00, count: __kCFBitmapSize, as: UInt8.self)
     }
-
+    
     static func allOnes(count: Int = __kCFBitmapSize) -> Data {
         if count == __kCFBitmapSize {
             return allOnesCached
@@ -495,7 +495,7 @@ extension _CharacterSet {
             outputSpan.append(repeating: 0xFF, count: count, as: UInt8.self)
         }
     }
-
+    
     static func allZeros(count: Int = __kCFBitmapSize) -> Data {
         if count == __kCFBitmapSize {
             return allZerosCached
