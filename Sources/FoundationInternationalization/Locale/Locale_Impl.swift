@@ -230,13 +230,18 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
 #endif
     
     var calendar: Calendar {
-        // TODO: FILL IN!!!
-        Calendar.current
+        // TODO: This is going to need to be updated to handle the stuff in the _prefs object
+        Calendar(identifier: self.calendarIdentifier)
     }
     
     var calendarIdentifier: Calendar.Identifier {
-        // TODO: FILL IN!!!
-        .gregorian
+        let identifierStr = getKeywordValue("calendar")
+        
+        if let identifierStr, let identifier = Calendar.Identifier(identifierString: identifierStr) {
+            return identifier
+        } else {
+            return Self.defaultCalendar(forRegion: self.region?.identifier)
+        }
     }
     
     var collationIdentifier: String? {
@@ -305,8 +310,14 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     var numberingSystem: Locale.NumberingSystem {
-        // TODO: FILL IN!!!
-        .latn
+        let identifierStr = getKeywordValue("numbers")
+        
+        if let identifierStr {
+            return Locale.NumberingSystem(identifierStr)
+        } else {
+            let (language, script, region, _) = Self.parseBaseLocaleID(_normalizedIdentifier)
+            return Locale.NumberingSystem(Self.defaultNumberingSystem(forLanguage: language.map({String($0)}), script: script.map({String($0)}), region: region.map({String($0)})))
+        }
     }
     
     var availableNumberingSystems: [Locale.NumberingSystem] {
@@ -632,7 +643,7 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
     }
     
     static func normalizedLocaleKeyValue(_ value: Substring) -> String {
-        let normalizedValue = value.filter({ $0.isASCII && ($0.isLetter || $0.isNumber) }).lowercased()
+        let normalizedValue = value.filter({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }).lowercased()
         
         return legacyValueMap[normalizedValue] ?? normalizedValue
     }
@@ -747,6 +758,74 @@ internal final class _LocaleImpl : _LocaleProtocol, @unchecked Sendable {
         case "ii": return "Yiii"
         case "us": return nil   // TODO: This is a HACK to make my unit test pass.  Fixing this means changing defaultScript(forLanguage:) to have entries for all valid language codes, rather than defaulting to "Latn" for everything it doesn't explicitly list.
         default: return "Latn"
+        }
+    }
+    
+    static func defaultCalendar(forRegion region: String?) -> Calendar.Identifier {
+        // TODO: This needs to be mechanically generated from the calendarPreferenceData in CLDR's supplementalData.xml.
+        // calendarPreferenceData gives ordered lists of calendars for all the locales, and we'll probably need that for other APIs, but we only need the first one in the list here
+        switch region {
+        case "AF", "IR": return .persian
+        case "SA": return .islamicUmmAlQura
+        case "TH": return .buddhist
+        default: return .gregorian
+        }
+    }
+    
+    static func defaultNumberingSystem(forLanguage language: String?, script: String?, region: String?) -> String {
+        // Expects normalized subtags: lowercase language, title-case script, uppercase region.
+        // Cases are consolidated by result and ordered alphabetically by numbering system, with two
+        // exceptions forced by match precedence: mni_Mtei must precede the mni fallback, and
+        // sat_Deva must precede the sat fallback.
+        switch (language, script, region) {
+        case ("ff", "Adlm", _):
+            return "adlm"
+
+        case ("ar", _, "BH"), ("ar", _, "DJ"), ("ar", _, "EG"), ("ar", _, "ER"),
+             ("ar", _, "IL"), ("ar", _, "IQ"), ("ar", _, "JO"), ("ar", _, "KM"),
+             ("ar", _, "KW"), ("ar", _, "LB"), ("ar", _, "MR"), ("ar", _, "OM"),
+             ("ar", _, "PS"), ("ar", _, "QA"), ("ar", _, "SA"), ("ar", _, "SD"),
+             ("ar", _, "SO"), ("ar", _, "SS"), ("ar", _, "SY"), ("ar", _, "TD"),
+             ("ar", _, "YE"),
+             ("ckb", _, _), ("sd", _, _), ("sdh", _, _):
+            return "arab"
+
+        case ("az", "Arab", _), ("pa", "Arab", _), ("uz", "Arab", _),
+             ("bgn", _, _), ("fa", _, _), ("ks", _, _), ("lrc", _, _), ("mzn", _, _), ("ps", _, _):
+            return "arabext"
+
+        // mtei must precede beng so mni_Mtei isn't shadowed by the mni fallback.
+        case ("mni", "Mtei", _):
+            return "mtei"
+
+        case ("as", _, _), ("mni", _, _):
+            return "beng"
+
+        case ("ccp", _, _):
+            return "cakm"
+
+        case ("sat", "Deva", _),
+             ("bgc", _, _), ("bho", _, _), ("ne", _, _), ("raj", _, _), ("sa", _, _):
+            return "deva"
+
+        // olck must follow deva so sat_Deva isn't shadowed by the sat fallback.
+        case ("sat", _, _):
+            return "olck"
+
+        case ("hnj", _, _), ("mww", _, _):
+            return "hmnp"
+
+        case ("my", _, _):
+            return "mymr"
+
+        case ("nqo", _, _):
+            return "nkoo"
+
+        case ("dz", _, _):
+            return "tibt"
+
+        default:
+            return "latn"
         }
     }
 }

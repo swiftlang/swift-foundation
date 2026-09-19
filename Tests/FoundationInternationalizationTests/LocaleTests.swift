@@ -629,25 +629,66 @@ private struct LocaleTests {
     }
     
     @Test func complexComponentsFromIdentifier() {
-        func verify(id: String, language: String? = nil, script: String? = nil, languageRegion: String? = nil, region: String? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
-            let loc = Locale(identifier:id)
-            if let language { #expect(loc.language.languageCode?.identifier == language, sourceLocation:sourceLocation) }
-            if let script { #expect(loc.language.script?.identifier == script, sourceLocation:sourceLocation) }
-            if let languageRegion { #expect(loc.language.region?.identifier == languageRegion, sourceLocation:sourceLocation) }
-            if let region { #expect(loc.region?.identifier == region, sourceLocation:sourceLocation) }
-
-//            // Locale.Components(identifier:) should produce the same results as Locale(identifier:), except that it won't fill in a default script if the original identifier didn't specify a script
-//            let cmp = Locale.Components(identifier:id)
-//            #expect(cmp.languageComponents.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
-//            #expect(cmp.languageComponents.script == nil || cmp.languageComponents.script?.identifier == scriptCode, sourceLocation:sourceLocation)
-//            #expect(cmp.languageComponents.region?.identifier == regionCode, sourceLocation:sourceLocation)
-//            #expect(cmp.variant?.identifier == variantCode, sourceLocation:sourceLocation)
+        struct XR { // short for "expected result"
+            let value: String?
+            let showsInComponents: Bool
+            
+            init(_ value: String?, showsInComponents: Bool = true) { self.value = value; self.showsInComponents = showsInComponents }
         }
         
-        verify(id: "en_US",           language: "en", languageRegion: "US", region: "US")
-        verify(id: "en@rg=uszzzz",    language: "en", languageRegion: nil,  region: "US")
-        verify(id: "en_US@rg=gbzzzz", language: "en", languageRegion: "US", region: "GB")
-        verify(id: "en_GB@rg=uszzzz", language: "en", languageRegion: "GB", region: "US")
+        func verify(id: String, language: XR? = nil, script: XR? = nil, languageRegion: XR? = nil, region: XR? = nil, calendar: XR? = nil, numberingSystem: XR? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+            let loc = Locale(identifier:id)
+            if let language = language?.value { #expect(loc.language.languageCode?.identifier == language, sourceLocation:sourceLocation) }
+            if let script = script?.value { #expect(loc.language.script?.identifier == script, sourceLocation:sourceLocation) }
+            if let languageRegion = languageRegion?.value { #expect(loc.language.region?.identifier == languageRegion, sourceLocation:sourceLocation) }
+            if let region = region?.value { #expect(loc.region?.identifier == region, sourceLocation:sourceLocation) }
+            if let calendar = calendar?.value { #expect(loc._calendarIdentifier.cldrIdentifier == calendar, sourceLocation:sourceLocation) }
+            if let numberingSystem = numberingSystem?.value { #expect(loc.numberingSystem.identifier == numberingSystem, sourceLocation:sourceLocation) }
+
+            let cmp = Locale.Components(identifier:id)
+            if let language, language.showsInComponents { #expect(cmp.languageComponents.languageCode?.identifier == language.value, sourceLocation:sourceLocation) }
+            if let script, script.showsInComponents { #expect(cmp.languageComponents.script == nil || cmp.languageComponents.script?.identifier == script.value, sourceLocation:sourceLocation) }
+            if let languageRegion, languageRegion.showsInComponents { #expect(cmp.languageComponents.region?.identifier == languageRegion.value, sourceLocation:sourceLocation) }
+            if let region, region.showsInComponents { #expect(cmp.region?.identifier == region.value, sourceLocation:sourceLocation) }
+            if let calendar, calendar.showsInComponents { #expect(cmp.calendar?.cldrIdentifier == calendar.value, sourceLocation:sourceLocation) }
+            if let numberingSystem, numberingSystem.showsInComponents { #expect(cmp.numberingSystem?.identifier == numberingSystem.value, sourceLocation:sourceLocation) }
+        }
+        
+        verify(id: "en_US",           language: XR("en"), languageRegion: XR("US"), region: XR("US", showsInComponents: false))
+        verify(id: "en@rg=uszzzz",    language: XR("en"), languageRegion: nil,      region: XR("US"))
+        verify(id: "en_US@rg=gbzzzz", language: XR("en"), languageRegion: XR("US"), region: XR("GB"))
+        verify(id: "en_GB@rg=uszzzz", language: XR("en"), languageRegion: XR("GB"), region: XR("US"))
+        
+        verify(id: "en_US",                           language: XR("en"), languageRegion: XR("US"), calendar: XR("gregorian", showsInComponents: false))
+        verify(id: "en_US@calendar=gregorian",        language: XR("en"), languageRegion: XR("US"), calendar: XR("gregorian"))
+        verify(id: "en_US@calendar=buddhist",         language: XR("en"), languageRegion: XR("US"), calendar: XR("buddhist"))
+        verify(id: "ar_SA",                           language: XR("ar"), languageRegion: XR("SA"), calendar: XR("islamic-umalqura", showsInComponents: false))
+        verify(id: "ar_SA@calendar=islamic-umalqura", language: XR("ar"), languageRegion: XR("SA"), calendar: XR("islamic-umalqura"))
+        verify(id: "ar_SA@calendar=gregorian",        language: XR("ar"), languageRegion: XR("SA"), calendar: XR("gregorian"))
+
+        // Default numbering system derived from the language/script/region (not present in the
+        // identifier, so it never shows up in Locale.Components).
+        verify(id: "en_US",   language: XR("en"),  numberingSystem: XR("latn",    showsInComponents: false)) // default fallback
+        verify(id: "ff_Adlm", language: XR("ff"),  numberingSystem: XR("adlm",    showsInComponents: false)) // script-specific
+        verify(id: "az_Arab", language: XR("az"),  numberingSystem: XR("arabext", showsInComponents: false)) // script-specific
+        verify(id: "ar_BH",   language: XR("ar"),  numberingSystem: XR("arab",    showsInComponents: false)) // region-specific
+        verify(id: "ar_SA",   language: XR("ar"),  numberingSystem: XR("arab",    showsInComponents: false)) // region-specific
+        verify(id: "ar_AE",   language: XR("ar"),  numberingSystem: XR("latn",    showsInComponents: false)) // region not listed -> default
+        verify(id: "ckb",     language: XR("ckb"), numberingSystem: XR("arab",    showsInComponents: false)) // language-only
+        verify(id: "fa",      language: XR("fa"),  numberingSystem: XR("arabext", showsInComponents: false)) // language-only
+        verify(id: "ccp",     language: XR("ccp"), numberingSystem: XR("cakm",    showsInComponents: false)) // language-only
+        verify(id: "my",      language: XR("my"),  numberingSystem: XR("mymr",    showsInComponents: false)) // language-only
+        verify(id: "nqo",     language: XR("nqo"), numberingSystem: XR("nkoo",    showsInComponents: false)) // language-only
+        verify(id: "dz",      language: XR("dz"),  numberingSystem: XR("tibt",    showsInComponents: false)) // language-only
+
+        // Match-precedence pairs: the script-specific default must win over the language-only fallback.
+        verify(id: "mni",      language: XR("mni"), numberingSystem: XR("beng", showsInComponents: false))
+        verify(id: "mni_Mtei", language: XR("mni"), numberingSystem: XR("mtei", showsInComponents: false))
+        verify(id: "sat",      language: XR("sat"), numberingSystem: XR("olck", showsInComponents: false))
+        verify(id: "sat_Deva", language: XR("sat"), numberingSystem: XR("deva", showsInComponents: false))
+
+        // An explicit numbering system in the identifier overrides the derived default (and shows up in Components).
+        verify(id: "ff_Adlm@numbers=latn", language: XR("ff"), numberingSystem: XR("latn"))
     }
 }
 
