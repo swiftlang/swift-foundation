@@ -50,14 +50,28 @@ func localeBenchmarks() {
 
     let identifiers = Locale.availableIdentifiers
     let allComponents = identifiers.map { Locale.Components(identifier: $0) }
+//    let allLocales = identifiers.map { Locale(identifier: $0) }
     Benchmark("LocaleInitFromComponents") { benchmark in
         for components in allComponents {
             let locale = Locale(components: components)
-            let components2 = Locale.Components(locale: locale)
-            let locale2 = Locale(components: components2) // cache hit
+//            let components2 = Locale.Components(locale: locale)
+//            let locale2 = Locale(components: components2) // cache hit
         }
     }
 
+    Benchmark("LocaleInitFromIdentifier") { benchmark in
+        for identifier in identifiers {
+            let locale = Locale(identifier: identifier)
+        }
+    }
+    
+    Benchmark("LocaleInitFromIdentifierAndGetLanguage") { benchmark in
+        for identifier in identifiers {
+            let locale = Locale(identifier: identifier)
+            let language = locale.language
+        }
+    }
+    
     Benchmark("LocaleComponentsInitIdentifer") { benchmark in
         for identifier in identifiers {
             let components = Locale.Components(identifier: identifier)

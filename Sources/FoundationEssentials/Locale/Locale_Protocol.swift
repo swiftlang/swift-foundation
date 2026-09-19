@@ -16,6 +16,14 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     init(identifier: String, prefs: LocalePreferences?)
     init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool)
     init(components: Locale.Components)
+
+    /// Parses a locale identifier into its constituent components.
+    ///
+    /// This is the inverse of `Locale.Components.icuIdentifier` and provides the implementation of
+    /// `Locale.Components.init(identifier:)`. It is `static` because most callers are parsing a bare
+    /// identifier string and have no `Locale` in hand — several of them are parsing an identifier
+    /// while a `Locale` is being constructed.
+    static func components(forIdentifier identifier: String) -> Locale.Components
         
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol
     
@@ -99,7 +107,14 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
 }
 
 extension _LocaleProtocol {
-    
+
+    // Only the implementations that can actually parse an identifier override this. For the others it is
+    // unreachable in practice: `Locale.Components.init(identifier:)` is only available in
+    // FoundationInternationalization, and `_localeICUClass()` never returns them from that module.
+    package static func components(forIdentifier identifier: String) -> Locale.Components {
+        Locale.Components()
+    }
+
     package var regionCode: String? {
         region?.identifier
     }

@@ -98,10 +98,10 @@ extension Locale {
             if let id = calendar?.cldrIdentifier { keywords.append((Calendar.Identifier.legacyKeywordKey, id)) }
             if let id = collation?._normalizedIdentifier { keywords.append((Locale.Collation.legacyKeywordKey, id)) }
             if let id = currency?._normalizedIdentifier { keywords.append((Locale.Currency.legacyKeywordKey, id)) }
-            if let id = numberingSystem?._normalizedIdentifier { keywords.append((Locale.NumberingSystem.legacyKeywordKey, id)) }
             if let id = firstDayOfWeek?.rawValue { keywords.append((Locale.Weekday.legacyKeywordKey, id)) }
             if let id = hourCycle?.rawValue { keywords.append((Locale.HourCycle.legacyKeywordKey, id)) }
             if let id = measurementSystem?._normalizedIdentifier { keywords.append((Locale.MeasurementSystem.legacyKeywordKey, id)) }
+            if let id = numberingSystem?._normalizedIdentifier { keywords.append((Locale.NumberingSystem.legacyKeywordKey, id)) }
             // No need for redundant region keyword
             if let region = region, region != languageComponents.region {
                 // rg keyword value is actually a subdivision code

@@ -711,6 +711,7 @@ public struct Locale : Hashable, Equatable, Sendable {
 
     /// Constructs an identifier from a dictionary of components.
     public static func identifier(fromComponents components: [String : String]) -> String {
+        // TODO: Reimplement this function on top of the new code in _LocaleImpl
         // Holds remaining keywords after we remove the CF-specific ones
         var keywords = components
         var result = ""
