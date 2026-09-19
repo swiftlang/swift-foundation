@@ -133,11 +133,11 @@ private final class DataIOTests {
         // Data doesn't have a direct API to write with attributes, but our I/O code has it. Use it via @testable interface here.
         
         let writeAttrs: [String : Data] = [FileAttributeKey.hfsCreatorCode.rawValue : "abcd".data(using: .ascii)!]
-        try writeToFile(path: .url(url), buffer: writeData.bytes, options: [], attributes: writeAttrs)
+        try writeToFile(path: url, buffer: writeData.bytes, options: [], attributes: writeAttrs)
         
         // Verify attributes
         var readAttrs: [String : Data] = [:]
-        let readData = try readDataFromFile(path: .url(url), reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
+        let readData = try readDataFromFile(path: url, reportProgress: false, options: [], attributesToRead: [FileAttributeKey.hfsCreatorCode.rawValue], attributes: &readAttrs)
         
         #expect(writeData == readData)
         #expect(writeAttrs == readAttrs)
@@ -211,16 +211,46 @@ private final class DataIOTests {
         let readData = try Data(contentsOf: url, options: [])
         #expect(readData == data)
     }
+
+    // Atomic writes must succeed when the destination is read-only.
+    // On POSIX this is the behavior of rename(2). On Windows, SetFileInformationByHandle with FileRenameInfoEx returns ERROR_ACCESS_DENIED for a FILE_ATTRIBUTE_READONLY destination even with FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS. So the read-only attribute is cleared and the rename is retried.
+    // The resulting file retains the read-only attribute. (Not yet on Windows).
+    @Test
+    func atomicWriteReplacesReadOnlyDestination() throws {
+        let initial = Data("initial".utf8)
+        let next = Data("next".utf8)
+
+        try initial.write(to: url)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o400], // Read-only for owner
+            ofItemAtPath: url.path
+        )
+
+        try next.write(to: url, options: [.atomic])
+
+        let read = try Data(contentsOf: url)
+        #expect(read == next)
+
+#if !os(Windows)
+        // Check mode bits directly. Testing by expecting `try later.write(to: url)` to throw would fail for root (e.g. in Linux CI containers), since root bypasses permission checks even on a read-only file.
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let mode = attributes[.posixPermissions] as? UInt ?? 0
+        #expect(mode == 0o400)
+#endif
+    }
 }
 
 extension LargeDataTests {
     // This test is placed in the LargeDataTests suite since it allocates an extremely large amount of memory for some devices
-#if !os(watchOS)
     @Test func readLargeFile() throws {
         let url = URL.temporaryDirectory.appendingPathComponent("testfile-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: url) }
-        // More than 2 GB
+        // More than 2 GB, if not 32-bit
+        #if _pointerBitWidth(_32)
+        let size = 0x7FFFFFFF
+        #else
         let size = 0x80010000
+        #endif
         
         let data = generateTestData(count: size)
         
@@ -236,6 +266,5 @@ extension LargeDataTests {
         #expect(data.count == readNS.count)
 #endif
     }
-#endif
 }
 

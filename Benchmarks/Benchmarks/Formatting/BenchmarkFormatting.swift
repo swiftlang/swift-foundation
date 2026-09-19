@@ -21,7 +21,7 @@ import FoundationInternationalization
 import Foundation
 #endif
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxIterations = 1_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
@@ -94,4 +94,6 @@ let benchmarks = {
     }
 
     #endif // swift(>=6)
+
+    listFormatBenchmarks()
 }

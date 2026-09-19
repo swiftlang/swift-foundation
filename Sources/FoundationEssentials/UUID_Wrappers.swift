@@ -119,7 +119,7 @@ internal class __NSConcreteUUID : _NSUUIDBridge, @unchecked Sendable {
     }
 
     override func encode(with coder: NSCoder) {
-        _storage.withUUIDBytes { buffer in
+        _storage.bytes.withUnsafeBytes { buffer in
             coder.encodeBytes(buffer.baseAddress, length: buffer.count, forKey: "NS.uuidbytes")
         }
     }
@@ -148,8 +148,10 @@ internal class __NSConcreteUUID : _NSUUIDBridge, @unchecked Sendable {
     }
 
     override open func getBytes(_ bytes: UnsafeMutablePointer<UInt8>) {
-        _storage.withUUIDBytes { buffer in
-            bytes.initialize(from: buffer.baseAddress!, count: buffer.count)
+        _storage.bytes.withUnsafeBytes { buffer in
+            buffer.withMemoryRebound(to: UInt8.self) { buffer in
+                bytes.initialize(from: buffer.baseAddress!, count: buffer.count)
+            }
         }
     }
 

@@ -28,12 +28,14 @@ import class Foundation.Bundle
 final internal class Canary { }
 #endif
 
-func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) -> Data? {
+func testData(forResource resource: String, withExtension ext: String, subdirectory: String? = nil) throws -> Data {
 #if FOUNDATION_FRAMEWORK
     guard let url = Bundle(for: Canary.self).url(forResource: resource, withExtension: ext, subdirectory: subdirectory) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile, userInfo: [
+            NSDebugDescriptionErrorKey: "Unable to find test resource named \(resource) with extension \(ext) in subdirectory \(subdirectory ?? "<none>") within bundle \(Bundle(for: Canary.self).bundlePath)"
+        ])
     }
-    return try? Data(contentsOf: url)
+    return try Data(contentsOf: url)
 #else
 #if os(macOS)
     let subdir: String
@@ -44,30 +46,36 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
     }
 
     guard let url = Bundle.module.url(forResource: resource, withExtension: ext, subdirectory: subdir) else {
-        return nil
+        throw CocoaError(.fileReadNoSuchFile, userInfo: [
+            NSDebugDescriptionErrorKey: "Unable to find test resource named \(resource) with extension \(ext) in subdirectory \(subdir) within bundle \(Bundle.module.bundlePath)"
+        ])
     }
     
     let essentialsURL = FoundationEssentials.URL(filePath: url.path)
 
-    return try? Data(contentsOf: essentialsURL)
+    return try Data(contentsOf: essentialsURL)
 #else
     // swiftpm drops the resources next to the executable, at:
-    // ./swift-foundation_FoundationEssentialsTests.resources/Resources/
+    // ./swift-foundation_FoundationEssentialsTests.{resources|bundle}/Resources/
     // Hard-coding the path is unfortunate, but a temporary need until we have a better way to handle this
 
-    var toolsResourcesDir = URL(filePath: ProcessInfo.processInfo.arguments[0])
+    let execDir = URL(filePath: ProcessInfo.processInfo.arguments[0])
         .deletingLastPathComponent()
-        .appending(component: "swift-foundation_FoundationEssentialsTests-tool.resources", directoryHint: .isDirectory)
 
-    // On Linux the tests are built for the "host" because there are macro tests, on Windows
-    // the tests are only built for the "target" so we need to figure out whether `-tools`
-    // resources exist and if so, use them.
-    let resourcesDir = if FileManager.default.fileExists(atPath: toolsResourcesDir.path) {
-        toolsResourcesDir
-    } else {
-        URL(filePath: ProcessInfo.processInfo.arguments[0])
-            .deletingLastPathComponent()
-            .appending(component: "swift-foundation_FoundationEssentialsTests.resources", directoryHint: .isDirectory)
+    // Check for -tool variants first (used when macros are present with --build-system native), then non-tool variants.
+    // Check both .resources (--build-system native) and .bundle (--build-system swiftbuild) extensions.
+    let candidates = [
+        "swift-foundation_FoundationEssentialsTests-tool.resources",
+        "swift-foundation_FoundationEssentialsTests.resources",
+        "swift-foundation_FoundationEssentialsTests.bundle",
+    ]
+
+    guard let resourcesDir = candidates
+        .map({ execDir.appending(component: $0, directoryHint: .isDirectory) })
+        .first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+        throw CocoaError(.fileReadNoSuchFile, userInfo: [
+            NSDebugDescriptionErrorKey: "Unable to find any test resource candidate directories in \(execDir.path)"
+        ])
     }
 
     var path = resourcesDir.appending(component: "Resources", directoryHint: .isDirectory)
@@ -75,7 +83,7 @@ func testData(forResource resource: String, withExtension ext: String, subdirect
         path.append(path: subdirectory, directoryHint: .isDirectory)
     }
     path.append(component: resource + "." + ext, directoryHint: .notDirectory)
-    return try? Data(contentsOf: path)
+    return try Data(contentsOf: path)
 #endif
 #endif
 }

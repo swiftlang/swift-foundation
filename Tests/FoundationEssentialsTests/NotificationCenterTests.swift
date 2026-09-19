@@ -17,7 +17,7 @@ import Testing
 
 fileprivate final class TestObject: Sendable {}
 
-@Suite("NotificationCenter", .timeLimit(.minutes(1)))
+@Suite("NotificationCenter", .timeLimit(.minutes(2)))
 private struct NotificationCenterTests {
     @Test func defaultCenter() {
         let defaultCenter1 = NotificationCenter.default

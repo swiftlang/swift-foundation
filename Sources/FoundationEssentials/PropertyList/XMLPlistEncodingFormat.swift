@@ -735,7 +735,7 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
             }
             
             append(Self.header)
-            append(ref)
+            try append(ref)
             append("</plist>\n")
             
             flush()
@@ -773,18 +773,18 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
             }
         }
         
-        mutating func append(_ ref: Reference, indentation: Int = 0) {
+        mutating func append(_ ref: Reference, indentation: Int = 0) throws {
             appendIndents(indentation)
             
             switch ref {
             case let .string(val):
                 appendOpen(.string)
-                appendEscaped(val)
+                try appendEscaped(val)
                 appendClose(.string)
             case let .array(box):
-                appendArray(box.boxed, indentation: indentation)
+                try appendArray(box.boxed, indentation: indentation)
             case let .dictionary(box):
-                appendDictionary(box.boxed, indentation: indentation)
+                try appendDictionary(box.boxed, indentation: indentation)
             case let .data(val):
                 appendOpen(.data, withNewLine: true)
                 appendBase64(val, indentation: indentation)
@@ -864,17 +864,21 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
             }
         }
         
-        mutating func appendEscaped(_ str: String) {
+        mutating func appendEscaped(_ str: String) throws {
             var mutableStr = str
-            mutableStr.withUTF8 {
+            try mutableStr.withUTF8 {
                 var ptr = $0.baseAddress!
                 let end = ptr + $0.count
                 while ptr < end {
                     let subBuffer = UnsafeBufferPointer(start: ptr, count: end - ptr)
-                    let nextToEscapeIdx = subBuffer.firstIndex {
+                    let nextToEscapeIdx = try subBuffer.firstIndex {
                         switch $0 {
                         case ._openangle, ._closeangle, ._ampersand:
                             return true
+                        case 0x00:
+                            throw CocoaError(.propertyListWriteInvalid, userInfo: [
+                                NSDebugDescriptionErrorKey: "Property list strings cannot contain embedded null characters in XML format."
+                            ])
                         default:
                             return false
                         }
@@ -1020,20 +1024,20 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
             append(str)
         }
         
-        mutating func appendArray(_ array: ContiguousArray<Reference>, indentation: Int) {
+        mutating func appendArray(_ array: ContiguousArray<Reference>, indentation: Int) throws {
             if array.isEmpty {
                 appendEmpty(.array)
             } else {
                 appendOpen(.array, withNewLine: true)
                 for val in array {
-                    append(val, indentation: indentation + 1)
+                    try append(val, indentation: indentation + 1)
                 }
                 appendIndents(indentation)
                 appendClose(.array)
             }
         }
         
-        mutating func appendDictionary(_ dictionary: [Reference:Reference], indentation: Int) {
+        mutating func appendDictionary(_ dictionary: [Reference:Reference], indentation: Int) throws {
             if dictionary.isEmpty {
                 appendEmpty(.dict)
             } else {
@@ -1041,10 +1045,10 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
                 for (key, value) in dictionary.sorted(by: { $0.key < $1.key }) {
                     appendIndents(indentation+1)
                     appendOpen(.key)
-                    appendEscaped(key.string)
+                    try appendEscaped(key.string)
                     appendClose(.key)
                     
-                    append(value, indentation: indentation + 1)
+                    try append(value, indentation: indentation + 1)
                 }
                 appendIndents(indentation)
                 appendClose(.dict)

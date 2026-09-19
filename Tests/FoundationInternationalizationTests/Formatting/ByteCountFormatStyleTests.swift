@@ -186,6 +186,18 @@ private struct ByteCountFormatStyleTests {
         #expect(Int64(4_200_000_000).formatted(.byteCount(style: .file, includesActualByteCount: true).locale(.init(identifier: "en_US")).attributed) == expected.attributedString)
     }
 
+    @Test func concurrentZeroFormatting() async {
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 {
+                group.addTask {
+                    for _ in 0..<50 {
+                        _ = 0.formatted(.byteCount(style: .binary).locale(Locale(identifier: "en_US")))
+                    }
+                }
+            }
+        }
+    }
+
 #if !_pointerBitWidth(_32)
     @Test func testEveryAllowedUnit() {
         // 84270854: The largest unit supported currently is pb

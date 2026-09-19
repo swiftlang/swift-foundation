@@ -19,19 +19,25 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Android)
+import Android
 #elseif os(WASI)
 import WASILibc
 #elseif os(Windows)
 import CRT
 #endif
 
-@Suite("DateComponents")
+@Suite("DateComponents", .tags(.calendar))
 private struct DateComponentsTests {
 
     @Test func isValidDate() {

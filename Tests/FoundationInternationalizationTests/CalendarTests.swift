@@ -95,7 +95,7 @@ extension DateComponents {
     }
 }
 
-@Suite("Calendar")
+@Suite("Calendar", .tags(.calendar))
 private struct CalendarTests {
     @Test func localeIsCached() {
         let c = Calendar(identifier: .gregorian)
@@ -200,6 +200,21 @@ private struct CalendarTests {
         #expect(Calendar.self == type(of: anyHashables[2].base))
         #expect(anyHashables[0] != anyHashables[1])
         #expect(anyHashables[1] == anyHashables[2])
+    }
+    
+    @Test func longInitializer() throws {
+        let locale = Locale(identifier: "en_AU")
+        let timeZone = try #require(TimeZone(identifier: "Australia/Sydney"))
+
+        var configuredCalendar = Calendar(identifier: .gregorian)
+        configuredCalendar.locale = locale
+        configuredCalendar.timeZone = timeZone
+        configuredCalendar.firstWeekday = 2
+        configuredCalendar.minimumDaysInFirstWeek = 2
+
+        let initializedCalendar = Calendar(identifier: .gregorian, timeZone: timeZone, locale: locale, firstWeekday: 2, minimumDaysInFirstWeek: 2)
+
+        #expect(configuredCalendar == initializedCalendar)
     }
 
     func decodeHelper(_ l: Calendar) throws -> Calendar {
@@ -499,8 +514,8 @@ private struct CalendarTests {
         }
 
         #expect(!loopedForever)
-        // Expected 1126-10-18 07:52:58 +0000
-        #expect(foundDate?.timeIntervalSinceReferenceDate == -27586714022)
+        // Expected 1107-10-18 07:52:58 +0000.
+        #expect(foundDate?.timeIntervalSinceReferenceDate == -28186330022)
     }
 
     @Test func dateFromComponentsNearDSTTransition() {
@@ -509,6 +524,50 @@ private struct CalendarTests {
         cal.timeZone = TimeZone(abbreviation: "PDT")!
         let result = cal.date(from: comps)
         #expect(result?.timeIntervalSinceReferenceDate == 657967500)
+    }
+
+    /// Matches 01:20:00 on the day daylight saving time ends in Los Angeles, when that local time occurs twice: once at -0700 and again an hour later at -0800.
+    private func firstDateMatchingRepeatedHour(nanosecond: Int?, _ repeatedTimePolicy: Calendar.RepeatedTimePolicy, _ direction: Calendar.SearchDirection = .forward) throws -> Date? {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+
+        // 2024-11-02T01:26:40-0700 going forward, 2024-11-04T01:20:00-0800 going backward. Both are outside the repeated hour, so the first match lands inside it either way.
+        let start = Date(timeIntervalSince1970: direction == .forward ? 1730536000.0 : 1730712000.0)
+
+        var dc = DateComponents()
+        dc.hour = 1
+        dc.minute = 20
+        dc.second = 0
+        dc.nanosecond = nanosecond
+
+        var iterator = cal.dates(byMatching: dc, startingAt: start, matchingPolicy: .strict, repeatedTimePolicy: repeatedTimePolicy, direction: direction).makeIterator()
+        return iterator.next()
+    }
+
+    /// `nanosecond` must not change which occurrence is selected, and a non-zero value must be applied on top of it rather than truncated away. The `nil` case already behaved correctly and guards against regressing it.
+    @Test(arguments: [(nil as Int?, 0.0), (0, 0.0), (500_000_000, 0.5)])
+    func datesByMatchingRepeatedTimePolicyWithNanosecond(nanosecond: Int?, fraction: TimeInterval) throws {
+        let earlier = Date(timeIntervalSince1970: 1730622000.0) // 2024-11-03T01:20:00-0700
+        let later = Date(timeIntervalSince1970: 1730625600.0)   // 2024-11-03T01:20:00-0800
+
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nanosecond, .first) == earlier + fraction)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nanosecond, .last) == later + fraction)
+    }
+
+    /// Which occurrence each policy selects when searching backwards is existing behavior that this test deliberately does not pin down. What it does require is that setting `nanosecond` never changes the answer.
+    @Test(arguments: [Calendar.RepeatedTimePolicy.first, .last])
+    func datesByMatchingRepeatedTimePolicyWithNanosecondBackward(policy: Calendar.RepeatedTimePolicy) throws {
+        let reference = try #require(try firstDateMatchingRepeatedHour(nanosecond: nil, policy, .backward))
+
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: 0, policy, .backward) == reference)
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: 500_000_000, policy, .backward) == reference + 0.5)
+    }
+
+    /// Guards the backward test against passing vacuously: the two policies must actually disagree, otherwise no repeated hour was involved.
+    @Test func datesByMatchingRepeatedTimePolicyDiffersByPolicyBackward() throws {
+        let first = try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .backward)
+        let last = try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .backward)
+        #expect(first != last)
     }
 
     @Test func dayInWeekOfMonth() {
@@ -669,12 +728,14 @@ private struct CalendarTests {
 #if FOUNDATION_FRAMEWORK // FIXME: https://github.com/swiftlang/swift-foundation-icu/issues/62
     @Test func test_isRepeatedDayProperty() throws {
         var c = Calendar(identifier: .vikram)
-        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        c.timeZone = TimeZone(identifier: "GMT")!
 
-        // Gregorian 2025-04-13 is the first Vikram 2082-02-01
-        // Gregorian 2025-04-14 is the second Vikram 2082-02-01 (repeated lunar day, a.k.a. "adhika tithi")
-        let d1 = try Date("2025-04-13 12:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
-        let d2 = try Date("2025-04-14 12:00:00 UTC", strategy: .iso8601.dateTimeSeparator(.space))
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        // Gregorian 2025-04-14 is the first Vikram 2082-02-02
+        // Gregorian 2025-04-15 is the second Vikram 2082-02-02 (repeated lunar day, a.k.a. "adhika tithi")
+        let d1 = try Date("2025-04-14 12:00:00 GMT", strategy: .iso8601.dateTimeSeparator(.space))
+        let d2 = try Date("2025-04-15 12:00:00 GMT", strategy: .iso8601.dateTimeSeparator(.space))
         
         var components = DateComponents()
         components.isRepeatedDay = true
@@ -687,18 +748,20 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_YMD_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
         comps.year = 2082
         comps.month = 3
-        comps.day = 27
+        comps.day = 28
 
         let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
         #expect(normalDate == expectedNormalDate)
@@ -711,17 +774,19 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_MD_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+        let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
         comps.month = 3
-        comps.day = 27
+        comps.day = 28
 
         let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
         #expect(normalDate == expectedNormalDate)
@@ -734,16 +799,18 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_D_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedNormalDate = try Date("2025-06-07 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (the first occurrence)
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        let expectedNormalDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (the first occurrence)
 
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
-        comps.day = 27
+        comps.day = 28
 
         let normalDate = cal.nextDate(after: startDate, matching: comps, matchingPolicy: .strict)
         #expect(normalDate == expectedNormalDate)
@@ -756,11 +823,13 @@ private struct CalendarTests {
 
     @Test func test_isRepeatedDay_nextDate_strict() throws {
         var cal = Calendar(identifier: .vikram)
-        cal.timeZone = TimeZone(identifier: "UTC")!
+        cal.timeZone = TimeZone(identifier: "GMT")!
 
         let startDate = try Date("2025-05-20 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space))
         
-        let expectedRepeatedDate = try Date("2025-06-08 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 27 (repeated)
+        // Note that the Vikram dates are location dependent,
+        // the dates below line up for London.
+        let expectedRepeatedDate = try Date("2025-06-09 00:00:00 +0000", strategy: .iso8601.dateTimeSeparator(.space)) // 2082 Jyeshtha 28 (repeated)
 
         var comps = DateComponents()
         comps.isRepeatedDay = true
@@ -1436,6 +1505,18 @@ private struct CalendarTests {
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
     }
 
+    @Test func testDateComponentsTimeZone() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+
+        var components = DateComponents(year:2021, month: 6, day: 10, hour: 23, minute: 59, second: 59)
+        let tz = try #require(TimeZone(identifier: "UTC+9"))
+        components.timeZone = tz
+
+        let date = try #require(calendar.date(from: components))
+        #expect(date.timeIntervalSinceReferenceDate == 645029999)
+    }
+
 #if _pointerBitWidth(_64) // These tests assumes Int is Int64
     @Test func dateFromComponentsOverflow() {
         let calendar = Calendar(identifier: .gregorian)
@@ -1505,6 +1586,67 @@ private struct CalendarTests {
             _ = calendar.date(from: dc)
         }
     }
+    
+    @Test func fuzzingOverflow() throws {
+        do {
+            let date = Date(timeIntervalSinceReferenceDate: 794031595.396801)
+            let date2 = Date(timeIntervalSinceReferenceDate: -1.0)
+            let calendar = Calendar(identifier: .gregorian)
+            let components = DateComponents(era: 792633534417207295, year: -1, month: -1, day: -1, hour: -1, minute: -1, second: -1, nanosecond: -1)
+            let value = -1052266987521
+            
+            _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
+            _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
+            _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
+            
+            let allComponents: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+            for component in allComponents {
+                _ = calendar.date(byAdding: component, value: value, to: date)
+                _ = calendar.component(component, from: date)
+                _ = calendar.compare(date, to: date2, toGranularity: component)
+            }
+            
+            _ = calendar.date(from: components)
+            _ = calendar.startOfDay(for: date)
+            _ = calendar.dateComponents(allComponents, from: date)
+            _ = calendar.dateComponents(allComponents, from: date, to: date2)
+            
+            _ = calendar.isDateInWeekend(date)
+            _ = calendar.dateIntervalOfWeekend(containing: date)
+            _ = calendar.nextWeekend(startingAfter: date)
+            _ = calendar.nextWeekend(startingAfter: date, direction: .backward)
+        }
+        
+        do {
+            let date = Date(timeIntervalSinceReferenceDate: -81791149.49856305)
+            let date2 = Date(timeIntervalSinceReferenceDate: 875823360.0)
+            let calendar = Calendar(identifier: .gregorian)
+            let components = DateComponents(era: 3761688987579986996, year: 3761688987579986996, month: 3761688987579986996, day: 3761688987579987508, hour: 3761688987579986996, minute: 4698437710073050164, second: 3765348162277225524, nanosecond: 3761688987579986996)
+            let value = 14694359600739380
+            
+            _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTime)
+            _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
+            _ = calendar.nextDate(after: date, matching: components, matchingPolicy: .previousTimePreservingSmallerComponents)
+            
+            let allComponents: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second, .nanosecond, .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .yearForWeekOfYear]
+            for component in allComponents {
+                _ = calendar.dateInterval(of: component, for: date)
+                _ = calendar.date(byAdding: component, value: value, to: date)
+                _ = calendar.component(component, from: date)
+                _ = calendar.compare(date, to: date2, toGranularity: component)
+            }
+            
+            _ = calendar.date(from: components)
+            _ = calendar.startOfDay(for: date)
+            _ = calendar.dateComponents(allComponents, from: date)
+            _ = calendar.dateComponents(allComponents, from: date, to: date2)
+            
+            _ = calendar.isDateInWeekend(date)
+            _ = calendar.dateIntervalOfWeekend(containing: date)
+            _ = calendar.nextWeekend(startingAfter: date)
+            _ = calendar.nextWeekend(startingAfter: date, direction: .backward)
+        }
+    }
 
 #endif
 
@@ -1512,7 +1654,7 @@ private struct CalendarTests {
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
-@Suite("Calendar Bridging")
+@Suite("Calendar Bridging", .tags(.calendar))
 private struct CalendarBridgingTests {
     @Test func AnyHashableCreatedFromNSCalendar() {
         let values: [NSCalendar] = [
@@ -1532,7 +1674,7 @@ private struct CalendarBridgingTests {
 
 
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
-@Suite("GregorianCalendar Compatibility", .disabled("These tests are extensive and have long runtimes to validate full compatibility, they can be enabled locally to validate changes"))
+@Suite("GregorianCalendar Compatibility", .disabled("These tests are extensive and have long runtimes to validate full compatibility, they can be enabled locally to validate changes"), .tags(.calendar))
 private struct GregorianCalendarCompatibilityTests {
 
     @Test func dateFromComponentsCompatibility() {

@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationCShims
+internal import Synchronization
 
 #if canImport(Darwin)
 import Darwin
+import Darwin.crt_externs
 #elseif canImport(Android)
 @preconcurrency import Bionic
 import unistd
@@ -25,23 +27,51 @@ import unistd
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if !NO_PROCESS
 
+#if canImport(DarwinPrivate.libc)
+internal import DarwinPrivate.libc
+
+private func lockEnviron() {
+    environ_lock_np()
+}
+private func unlockEnviron() {
+    environ_unlock_np()
+}
+#else
+private func lockEnviron() { /* noop */ }
+private func unlockEnviron() { /* noop */ }
+#endif
+
+private func getEnviron() -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>? {
+    #if canImport(Darwin)
+    return _NSGetEnviron()?.pointee
+    #elseif os(Windows)
+    return _platform_shims__environ()
+    #elseif os(WASI)
+    return __wasilibc_get_environ()
+    #else
+    return environ
+    #endif
+}
+
 final class _ProcessInfo: Sendable {
     static let processInfo: _ProcessInfo = _ProcessInfo()
 
-    private let state: LockedState<State>
+    private let state: Mutex<State>
     // Host name resolution CAN take infinite time,
     // so at the bare min do not share the lock with the
     // rest of the state
-    private let _hostName: LockedState<String?>
+    private let _hostName: Mutex<String?>
 
     internal init() {
         let state: State = State()
-        self.state = LockedState(initialState: state)
-        self._hostName = LockedState(initialState: nil)
+        self.state = Mutex(state)
+        self._hostName = Mutex(nil)
     }
 
     var arguments: [String] {
@@ -114,10 +144,9 @@ final class _ProcessInfo: Sendable {
         }
 #else
         // This lock is taken by calls to getenv, so we want as few callouts to other code as possible here.
-        _platform_shims_lock_environ()
-        guard let environments: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> =
-                _platform_shims_get_environ() else {
-            _platform_shims_unlock_environ()
+        lockEnviron()
+        guard let environments = getEnviron() else {
+            unlockEnviron()
             return body([])
         }
         var curr = environments
@@ -125,7 +154,7 @@ final class _ProcessInfo: Sendable {
             values.append(strdup(value))
             curr = curr.advanced(by: 1)
         }
-        _platform_shims_unlock_environ()
+        unlockEnviron()
 #endif
         defer { values.forEach { free($0) } }
         return body(values)
@@ -156,7 +185,7 @@ final class _ProcessInfo: Sendable {
 
     var processIdentifier: Int32 {
 #if os(Windows)
-        return Int32(bitPattern: UInt32(GetProcessId(GetCurrentProcess())))
+        return Int32(bitPattern: UInt32(GetCurrentProcessId()))
 #else
         return Int32(getpid())
 #endif
@@ -188,8 +217,8 @@ final class _ProcessInfo: Sendable {
             return username
         }
         return ""
-#elseif os(WASI)
-        // WASI does not have user concept
+#elseif os(WASI) || os(Emscripten)
+        // WASI/Emscripten does not have user concept
         return ""
 #elseif os(Windows)
         var dwSize: DWORD = 0
@@ -222,7 +251,7 @@ final class _ProcessInfo: Sendable {
             return fullName
         }
         return ""
-#elseif os(WASI)
+#elseif os(WASI) || os(Emscripten)
         return ""
 #elseif os(Windows)
         var ulLength: ULONG = 0
@@ -359,6 +388,8 @@ extension _ProcessInfo {
         return "Haiku"
 #elseif os(WASI)
         return "WASI"
+#elseif os(Emscripten)
+        return "Emscripten"
 #else
         // On other systems at least return something.
         return "Unknown"

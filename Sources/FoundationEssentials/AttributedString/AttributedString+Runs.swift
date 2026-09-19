@@ -20,6 +20,7 @@ internal import _FoundationCollections
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString {
+    /// An iterable view into segments of the attributed string, each of which indicates where a run of identical attributes begins or ends.
     public struct Runs: Sendable {
         internal typealias _InternalRun = AttributedString._InternalRun
         internal typealias _AttributeStorage = AttributedString._AttributeStorage
@@ -43,6 +44,19 @@ extension AttributedString {
         
         internal init(_ guts: Guts, in bounds: Range<BigString.Index>) {
             self.init(guts, in: RangeSet(bounds))
+        }
+
+        internal init(_ guts: Guts) {
+            _guts = guts
+            let strStart = _guts.string.unicodeScalars.startIndex
+            let strEnd = _guts.string.unicodeScalars.endIndex
+            _strBounds = RangeSet(strStart ..< strEnd)
+            _isDiscontiguous = false
+
+            let start = Index(_runIndex: _guts.runs.startIndex, startStringIndex: strStart, stringIndex: strStart, rangeOffset: 0, withinDiscontiguous: false)
+
+            let end = Index(_runIndex: _guts.runs.endIndex, startStringIndex: strEnd, stringIndex: strEnd, rangeOffset: 1, withinDiscontiguous: false)
+            self._bounds = start ..< end
         }
 
         internal init(_ guts: Guts, in bounds: RangeSet<BigString.Index>) {
@@ -90,8 +104,12 @@ extension AttributedString {
         }
     }
 
+    /// The attributed runs of the attributed string, as a view into the underlying string.
+    ///
+    /// Runs begin and end when the attributes for the characters change. Use this property to
+    /// iterate over the runs with `for`-`in` syntax.
     public var runs: Runs {
-        Runs(_guts, in: _guts.string.startIndex ..< _guts.string.endIndex)
+        Runs(_guts)
     }
 }
 
@@ -122,7 +140,7 @@ extension AttributedString.Runs: Equatable {
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedString.Runs: CustomStringConvertible {
     public var description: String {
-        _guts.description(in: _strBounds)
+        AttributedString.Guts._description(in: self)
     }
 }
 
@@ -330,9 +348,9 @@ extension AttributedString.Runs: BidirectionalCollection {
         }
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func distance(from start: Index, to end: Index) -> Int {
-        #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) {
             _distance(from: start, to: end)
         } else {
@@ -358,9 +376,9 @@ extension AttributedString.Runs: BidirectionalCollection {
         return dist
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-    #if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
@@ -390,7 +408,7 @@ extension AttributedString.Runs: BidirectionalCollection {
         return idx
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: Index, offsetBy distance: Int, limitedBy limit: Index) -> Index? {
         // This is the stdlib's default implementation for RandomAccessCollection types.
         // (It's _far_ more efficient than the O(n) algorithm that used to apply here by default,

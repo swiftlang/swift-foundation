@@ -126,30 +126,37 @@ internal import _FoundationCShims
 #elseif os(WASI)
 @preconcurrency import WASILibc
 internal import _FoundationCShims
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 // MARK: Directory Iteration
 
-// No FTS support in wasi-libc for now (https://github.com/WebAssembly/wasi-libc/issues/520)
-#if !os(WASI)
-
+#if !os(Emscripten) // Emscripten doesn't have fts.h
 struct _FTSSequence: Sequence {
     enum Element {
         struct SwiftFTSENT {
-            fileprivate let ptr: UnsafeMutablePointer<FTSENT>
-            
+            private let ptr: UnsafeMutablePointer<FTSENT>
+
             var ftsEnt: FTSENT { ptr.pointee }
-            var name: String {
-                // FTSENT incorrectly represents the `fts_name` property so we must access it directly via the pointer rather than the pointee struct value
-                let nameOffset = MemoryLayout<FTSENT>.offset(of: \.fts_name)!
-                let len = Int(ptr.pointee.fts_namelen)
-                return UnsafeRawPointer(ptr).advanced(by: nameOffset).withMemoryRebound(to: UTF8.CodeUnit.self, capacity: len) { namePtr in
-                    String(decoding: UnsafeBufferPointer(start: namePtr, count: len), as: UTF8.self)
+
+            var name: Span<UInt8> {
+                @_lifetime(borrow self)
+                get {
+                    // FTSENT incorrectly represents the `fts_name` property so we must access it directly via the pointer rather than the pointee struct value
+                    let nameOffset = MemoryLayout<FTSENT>.offset(of: \.fts_name)!
+                    let len = Int(ptr.pointee.fts_namelen)
+                    let span = Span<UInt8>(_unsafeStart: UnsafeRawPointer(ptr).advanced(by: nameOffset), byteCount: len)
+                    return _overrideLifetime(span, borrowing: self)
                 }
             }
             
             init(_ ptr: UnsafeMutablePointer<FTSENT>) {
                 self.ptr = ptr
+            }
+
+            func skip(in fts: UnsafeMutablePointer<FTS>) {
+                _ = fts_set(fts, ptr, FTS_SKIP)
             }
         }
         case entry(SwiftFTSENT)
@@ -203,9 +210,10 @@ struct _FTSSequence: Sequence {
         private func _shouldFilter(_ swiftEnt: Element.SwiftFTSENT) -> Bool {
             let ent = swiftEnt.ftsEnt
             let ftsName = swiftEnt.name
-            
+            let nameStartsWithDotUnderscore = ftsName.count >= 2 && ftsName[0] == ._dot && ftsName[1] == ._underscore
+
             // If we're being requested to iterate a directory that begins with a ._ we should do it.
-            if lastDeviceInode == 0 && ftsName.hasPrefix("._") {
+            if lastDeviceInode == 0 && nameStartsWithDotUnderscore {
                 return false
             }
             
@@ -233,7 +241,7 @@ struct _FTSSequence: Sequence {
                 lastDeviceInode = currentDev
             }
             
-            if shouldFilterUnderbars && ftsName.hasPrefix("._") {
+            if shouldFilterUnderbars && nameStartsWithDotUnderscore {
                 // Don't report ._ files on filesystems that require them.
                 return true
             }
@@ -273,7 +281,7 @@ struct _FTSSequence: Sequence {
         
         func skipDescendants(of entry: Element.SwiftFTSENT, skipPostProcessing: Bool = false) {
             guard case .stream(let fts) = state else { return }
-            _ = fts_set(fts, entry.ptr, FTS_SKIP)
+            entry.skip(in: fts)
             if skipPostProcessing {
                 assert(Int32(entry.ftsEnt.fts_info) == FTS_D)
                 _ = self.next() // Skip the FTS_DP entry for this directory
@@ -328,13 +336,12 @@ extension Sequence<_FTSSequence.Element> {
         }
     }
 }
-
-#endif // !os(WASI)
+#endif // !os(Emscripten)
 
 struct _POSIXDirectoryContentsSequence: Sequence {
     #if canImport(Darwin)
     typealias DirectoryEntryPtr = UnsafeMutablePointer<DIR>
-    #elseif canImport(Android) || canImport(Glibc) || canImport(Musl) || os(WASI)
+    #elseif canImport(Android) || canImport(Glibc) || canImport(Musl) || os(WASI) || os(Emscripten)
     typealias DirectoryEntryPtr = OpaquePointer
     #endif
     

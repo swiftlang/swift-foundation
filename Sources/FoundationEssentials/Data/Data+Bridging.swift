@@ -83,6 +83,7 @@ internal final class __NSSwiftData : NSData {
 
 extension Data {
     internal func _bridgeToObjectiveCImpl() -> AnyObject {
+        #if DATA_LEGACY_ABI
         switch _representation {
         case .empty: return NSData()
         case .inline(let inline):
@@ -94,6 +95,9 @@ extension Data {
         case .large(let slice):
             return slice.storage.bridgedReference(slice.range)
         }
+        #else
+        return _representation._storage.bridgedReference(_representation._slice)
+        #endif
     }
     
     internal static func _bridgeFromObjectiveCAdoptingNativeStorageOf(_ source: AnyObject) -> Data? {
@@ -103,15 +107,32 @@ extension Data {
         let range = swiftData._range!
         let originalBacking = swiftData._backing!
         
-        // (rdar://162776451) Some clients assume that the double-bridged Data's start index is 0 due to historical behavior. We need to make sure the created Data's indices begin at 0 rather than preserving the original offset/slice range here. This requires creating a new __DataStorage instead of using the existing one.
-        // (rdar://121865256) We also need to make sure that we don't create a new __DataStorage that holds on to the original via the deallocator. If a value is double bridged repeatedly (as is the case in some clients), unwinding in the dealloc can cause a stack overflow. This requires either using the existing __DataStorage, or creating a new one with a copy of the bytes to avoid a deallocator chain.
-        // Based on the two constraints above, we perform a copy here. Ideally in the future if we remove the first constraint we could re-use the existing originalBacking to avoid the copy.
-        let newBacking = __DataStorage(bytes: originalBacking.mutableBytes?.advanced(by: range.lowerBound), length: range.count)
-        
-        if InlineSlice.canStore(count: newBacking.length) {
-            return Data(representation: .slice(InlineSlice(newBacking, count: newBacking.length)))
+        // (rdar://121865256) We need to make sure that we don't create a new __DataStorage that holds on to the original via the deallocator. If a value is double bridged repeatedly (as is the case in some clients), unwinding in the dealloc can cause a stack overflow. This requires either using the existing __DataStorage, or creating a new one with a copy of the bytes to avoid a deallocator chain.
+
+        if range.lowerBound == 0 {
+            // When the range lower bound is 0, we reuse the existing __DataStorage here to avoid copying the bytes
+            #if DATA_LEGACY_ABI
+            if InlineSlice.canStore(count: range.count) {
+                return Data(representation: .slice(InlineSlice(originalBacking, range: range)))
+            } else {
+                return Data(representation: .large(LargeSlice(originalBacking, range: range)))
+            }
+            #else
+            return Data(representation: _Representation(originalBacking, count: range.count))
+            #endif
         } else {
-            return Data(representation: .large(LargeSlice(newBacking, count: newBacking.length)))
+            // Otherwise, we make an eager copy of the bytes. This ensures that we preserve the existing behavior that NSData --> Data bridging always produces a Data with startIndex == 0. In the future, we can investigate avoiding this copy as well if we determine that allowing bridged Datas to be a slice does not break any existing clients
+            let newBacking = __DataStorage(bytes: originalBacking.mutableBytes?.advanced(by: range.lowerBound), length: range.count)
+
+            #if DATA_LEGACY_ABI
+            if InlineSlice.canStore(count: newBacking.length) {
+                return Data(representation: .slice(InlineSlice(newBacking, count: newBacking.length)))
+            } else {
+                return Data(representation: .large(LargeSlice(newBacking, count: newBacking.length)))
+            }
+            #else
+            return Data(representation: _Representation(newBacking, count: range.count))
+            #endif
         }
     }
 }

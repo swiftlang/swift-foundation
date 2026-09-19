@@ -65,7 +65,7 @@ extension String.Encoding : Hashable {
         return rawValue.hashValue
     }
 
-    @_alwaysEmitIntoClient // Introduced in 5.1
+    @export(implementation) // Introduced in 5.1
     public func hash(into hasher: inout Hasher) {
         // Note: `hash(only:)` is only defined here because we also define
         // `hashValue`.

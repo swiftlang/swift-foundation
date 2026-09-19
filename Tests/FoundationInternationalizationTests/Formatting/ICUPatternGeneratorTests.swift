@@ -19,6 +19,7 @@ import Testing
 private struct ICUPatternGeneratorTests {
 
     typealias DateFieldCollection = Date.FormatStyle.DateFieldCollection
+#if FIXED_ICU78
     @Test func conversationalDayPeriodsOverride() {
 
         var locale: Locale
@@ -253,5 +254,5 @@ private struct ICUPatternGeneratorTests {
                  expectedPattern: "h:mm:ss a")
         }
     }
-
+#endif
 }

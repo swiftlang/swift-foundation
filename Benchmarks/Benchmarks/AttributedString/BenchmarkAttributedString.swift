@@ -56,7 +56,7 @@ class AttributedStringBox {
     }
 }
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.warmupIterations = 0
     Benchmark.defaultConfiguration.maxDuration = .seconds(1)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
@@ -456,7 +456,7 @@ let benchmarks = {
     }
     
     struct TestAttribute : AttributedStringKey {
-        static var name = "0"
+        nonisolated(unsafe) static var name = "0"
         typealias Value = Int
     }
     var hashAttributeContainer = AttributeContainer()
@@ -512,6 +512,16 @@ let benchmarks = {
     
     Benchmark("range(of:)") { benchmark in
         longString.range(of: "cccc")
+    }
+
+    Benchmark("runs") {benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(manyAttributesString.runs)
+        }
+    }
+
+    Benchmark("stringConversion") { benchmark in
+        blackHole(String(longString.characters))
     }
 }
 

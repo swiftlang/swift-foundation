@@ -17,4 +17,6 @@ target_sources(FoundationInternationalization PRIVATE
     TimeZone_Bridge.swift
     TimeZone_GMTICU.swift
     TimeZone_ICU.swift
-    TimeZone_ObjC.swift)
+    TimeZone_ICUResource.swift
+    TimeZone_ObjC.swift
+    TimeZone_SingleDSTRule.swift)

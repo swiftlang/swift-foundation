@@ -1,8 +1,8 @@
 import Benchmark
 
 
-#if os(macOS) && USE_PACKAGE
-let benchmarks = {
+#if !FOUNDATION_FRAMEWORK
+let benchmarks: @Sendable () -> Void = {
     calendarBenchmarks()
     localeBenchmarks()
     timeZoneBenchmarks()

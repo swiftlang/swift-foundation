@@ -70,6 +70,17 @@ private struct DateTests {
         #expect(distantFuture.timeIntervalSince(currentDate) >
                               3600.0 * 24 * 365 * 100) /* ~1 century in seconds */
     }
+  
+    @Test func nan() {
+        let nan = Date(timeIntervalSince1970: .nan)
+        for other in [Date(timeIntervalSince1970: 0), .distantPast, .distantFuture] {
+            #expect(!(nan < other))
+            #expect(!(nan <= other))
+            #expect(!(nan >= other))
+            #expect(!(nan > other))
+            #expect(!(nan == other))
+        }
+    }
 
     @Test func now() {
         let date1 : Date = .now

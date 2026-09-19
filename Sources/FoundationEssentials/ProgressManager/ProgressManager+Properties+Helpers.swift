@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Synchronization)
 internal import Synchronization
-#endif
 
 @available(FoundationPreview 6.4, *)
 extension ProgressManager {

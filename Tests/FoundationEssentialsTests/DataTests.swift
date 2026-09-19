@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2023 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -11,6 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 import Testing
+
+#if canImport(TestSupport)
+import TestSupport
+#endif
 
 #if canImport(Darwin)
 import Darwin
@@ -46,6 +50,38 @@ extension Data {
     }
 }
 
+// A box that holds a pointer which may no longer reference valid memory
+// It cannot be dereferenced and may only be used for comparison to other pointers
+struct SafePointerComparison: Equatable {
+    private let pointer: UnsafeRawPointer?
+
+    init(_ pointer: UnsafeRawPointer?) {
+        self.pointer = pointer
+    }
+}
+
+extension Data {
+    var allocationForComparison: SafePointerComparison {
+        #if DATA_LEGACY_ABI
+        switch _representation {
+        case .empty, .inline:
+            preconditionFailure("Data does not have an allocation")
+        default: break
+        }
+        #endif
+        // It is safe to escape the pointer from this closure because SafePointerComparison guarantees it will never be dereferenced
+        return self.withUnsafeBytes { SafePointerComparison($0.baseAddress) }
+    }
+}
+
+#if FOUNDATION_FRAMEWORK
+extension NSData {
+    var allocationForComparison: SafePointerComparison {
+        SafePointerComparison(self.bytes)
+    }
+}
+#endif
+
 @Suite("Data")
 private final class DataTests {
 
@@ -63,11 +99,9 @@ private final class DataTests {
     // String of course has its own way to get data, but this way tests our own data struct
     func dataFrom(_ string : String) -> Data {
         // Create a Data out of those bytes
-        return string.utf8CString.withUnsafeBufferPointer { (ptr) in
-            ptr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: ptr.count) {
-                // Subtract 1 so we don't get the null terminator byte. This matches NSString behavior.
-                return Data(bytes: $0, count: ptr.count - 1)
-            }
+        var string = string
+        return string.withUTF8 { (ptr) in
+            return Data(buffer: ptr)
         }
     }
 
@@ -162,6 +196,74 @@ private final class DataTests {
             let data5 = Data(buffer: tupleBuffer)
             #expect(data5 == Data([0xFF, 0x00, 0xFE, 0x00, 0xFD, 0x00, 0xFC, 0x00]))
         }
+    }
+
+    @Test func initializationWithOutputRawSpan() throws {
+        struct LocalError: Error, Equatable {}
+
+        // Initialize the inline representation
+        var data = Data(capacity: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(42)
+        }
+        expectInlineIfLegacyABI(data)
+        #expect(data.count == 1)
+
+        data = Data(capacity: 0) {
+            #expect($0.freeCapacity == 0)
+        }
+        expectEmptyRepresentation(data)
+        #expect(data.count == 0)
+
+        #expect(throws: LocalError()) {
+            data = try Data(capacity: 2) {
+                $0.append(42)
+                throw LocalError()
+            }
+            Issue.record("Reached unreachable code.")
+        }
+
+        let anInlineSliceSize = 96
+        // Initialize an "inline slice"
+        data = Data(capacity: anInlineSliceSize) {
+            #expect($0.freeCapacity == anInlineSliceSize)
+            $0.append(42)
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 1)
+    }
+
+    @Test func initializationWithRawSpan() async throws {
+        var d = Data(copying: RawSpan())
+        #expect(d.count == 0)
+        d.edit {
+            // Empty datas are special cased and shouldn't have an allocation
+            #expect($0.freeCapacity == 0)
+        }
+
+        d = Data(copying: Array<UInt8>(repeating: 1, count: 3).span.bytes)
+        #expect(d.count == 3)
+        #expect(d == Data([1, 1, 1]))
+
+        d = Data(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes)
+        #expect(d.count == 100)
+        #expect(d == Data(Array<UInt8>(repeating: 1, count: 100)))
+
+        d = Data(capacity: 10, copying: Array<UInt8>(repeating: 1, count: 3).span.bytes)
+        #expect(d.count == 3)
+        #expect(d == Data([1, 1, 1]))
+        d.edit {
+            #expect($0.freeCapacity >= 7)
+        }
+
+        #if FOUNDATION_EXIT_TESTS
+        await #expect(processExitsWith: .failure) {
+            _ = Data(capacity: -1, copying: RawSpan())
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = Data(capacity: 1, copying: Array<UInt8>(repeating: 1, count: 3).span.bytes)
+        }
+        #endif
     }
 
     @Test func mutableData() {
@@ -281,6 +383,12 @@ private final class DataTests {
         #expect(Data([1, 9, 8, 4, 5]) == d)
     }
 
+    @Test func replaceSubrangeEmptyBuffer() {
+        var d = Data([1, 2, 3, 4])
+        d.replaceSubrange(1 ..< 3, with: UnsafeBufferPointer<Int>(start: nil, count: 0))
+        #expect(d == Data([1, 4]))
+    }
+
     @Test func insertData() {
         let hello = dataFrom("Hello")
         let world = dataFrom(" World")
@@ -291,6 +399,87 @@ private final class DataTests {
         helloWorld.replaceSubrange(0..<0, with: hello)
 
         #expect(helloWorld == expected)
+    }
+
+    @Test func insertWithOutputRawSpan() {
+        struct LocalError: Error, Equatable {}
+        let insertedValue: UInt8 = (7..<252).randomElement()!
+
+        // Insert in the inline representation
+        var data = Data()
+        data.insert(addingCount: 8, at: 0) {
+            #expect($0.freeCapacity == 8)
+        }
+        expectEmptyRepresentation(data)
+        #expect(data.count == 0)
+
+        data = Data()
+        try? data.insert(addingCount: 1, at: 0) {
+            #expect($0.freeCapacity == 1)
+            $0.append(insertedValue)
+            throw LocalError()
+        }
+        expectInlineIfLegacyABI(data)
+        #expect(data.count == 1)
+        #expect(data[0] == insertedValue)
+
+        data = Data(0..<4)
+        let count0 = data.count
+        data.insert(addingCount: 20, at: 2) {
+            #expect($0.freeCapacity == 20)
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == count0)
+
+        try? data.insert(addingCount: 20, at: 2) {
+            #expect($0.freeCapacity == 20)
+            $0.append(repeating: insertedValue, count: 20, as: UInt8.self)
+            let full = $0.isFull
+            #expect(full)
+            throw LocalError()
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 24)
+        #expect(data[2] == insertedValue)
+        #expect(data.last == 3)
+
+        // Insert into the `InlineSlice` representation
+        data = Data(0..<23)
+        data.insert(addingCount: 20, at: 20) {
+            $0.append(insertedValue)
+        }
+        #expect(data.count == 24)
+        #expect(data[20] == insertedValue)
+        #expect(data.last == 22)
+        try? data.insert(addingCount: 1, at: 2) {
+            $0.append(insertedValue)
+            throw LocalError()
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 25)
+        #expect(data[2] == insertedValue)
+    }
+
+    @Test func insertWithRawSpan() {
+        var d = Data()
+        d.insert(copying: RawSpan(), at: 0)
+        #expect(d.count == 0)
+        d.edit {
+            #expect($0.freeCapacity == 0)
+        }
+
+        d.insert(copying: CollectionOfOne<UInt8>(1).span.bytes, at: 0)
+        #expect(d.count == 1)
+        #expect(d[0] == 1)
+
+        d.insert(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes, at: 0)
+        #expect(d.count == 101)
+        #expect(d.allSatisfy { $0 == 1 })
+
+        d = Data()
+        d.insert(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes, at: 0)
+        #expect(d.count == 100)
+        #expect(d.allSatisfy { $0 == 1 })
     }
 
     @Test func loops() {
@@ -459,6 +648,54 @@ private final class DataTests {
         }
         
         #expect(destination == [3, 5, 8, 8])
+    }
+
+    @Test func copyBytesFromBytesSource_happyRange() {
+        let source = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 32)
+        _ = source.initialize(fromContentsOf: 0..<32)
+        defer { source.deallocate() }
+        let rawSource = UnsafeRawBufferPointer(source)
+
+        let destination = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 10)
+        destination.initialize(repeating: 0)
+        defer { destination.deallocate() }
+
+        rawSource.copyBytes(to: destination, from: 4..<9)
+
+        for i in 0..<5 {
+            #expect(destination[i] == UInt8(i + 4))
+        }
+        for i in 5..<10 {
+            #expect(destination[i] == 0)
+        }
+    }
+
+    @Test func copyBytesFromTypedSource_noOverflow() {
+        let source = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 32)
+        source.initialize(repeating: 0x32)
+        defer { source.deallocate() }
+
+        let buffer = UnsafeMutableRawBufferPointer.allocate(
+            byteCount: 10*MemoryLayout<UInt32>.stride,
+            alignment: MemoryLayout<UInt32>.alignment
+        )
+        buffer.initializeMemory(as: UInt32.self, repeating: 0x12121212)
+        defer { buffer.deallocate() }
+
+        let zone = 2*MemoryLayout<UInt32>.stride..<8*MemoryLayout<UInt32>.stride
+        buffer[zone].withMemoryRebound(to: UInt32.self) { destination in
+          // 32-byte source range, with lower-capacity destination
+          let source = UnsafeBufferPointer(source)
+          source.copyBytes(to: destination, from: 0..<32)
+        }
+
+        for i in buffer.indices {
+            if zone.contains(i) {
+                #expect(buffer[i] == 0x32)
+            } else {
+                #expect(buffer[i] == 0x12)
+            }
+        }
     }
 
     @Test func genericBuffers() {
@@ -823,6 +1060,205 @@ private final class DataTests {
         var d2 = Data()
         d2.append(slice)
         #expect(Data([1]) == slice)
+    }
+
+    @Test func appendToSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: 80)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
+    }
+
+    @Test func reserveCapacitySlices() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: 80)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
+        }
+    }
+
+    @Test func appendWithOutputRawSpan() {
+        struct LocalError: Error, Equatable {}
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        // Append to the inline representation
+        var data = Data()
+        data.append(addingCount: 8) {
+            #expect($0.freeCapacity == 8)
+        }
+        expectEmptyRepresentation(data)
+        #expect(data.count == 0)
+
+        data = Data()
+        try? data.append(addingCount: 1) {
+            #expect($0.freeCapacity == 1)
+            $0.append(appendedValue)
+            throw LocalError()
+        }
+        expectInlineIfLegacyABI(data)
+        #expect(data.count == 1)
+        #expect(data[0] == appendedValue)
+
+        data = Data(0..<4)
+        let count0 = data.count
+        data.append(addingCount: 20) {
+            #expect($0.freeCapacity == 20)
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == count0)
+
+        try? data.append(addingCount: 20) {
+            #expect($0.freeCapacity == 20)
+            $0.append(repeating: appendedValue, count: 20, as: UInt8.self)
+            let full = $0.isFull
+            #expect(full)
+            throw LocalError()
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 24)
+        #expect(data.last == appendedValue)
+
+        // Append to the `InlineSlice` representation
+        data = Data(0..<23)
+        data.append(addingCount: 20) {
+          $0.append(appendedValue)
+        }
+        #expect(data.count == 24)
+        #expect(data.last == appendedValue)
+        try? data.append(addingCount: 1) {
+            $0.append(appendedValue)
+            throw LocalError()
+        }
+        expectSliceIfLegacyABI(data)
+        #expect(data.count == 25)
+        #expect(data.last == appendedValue)
+    }
+
+    @Test func appendWithRawSpan() {
+        var d = Data()
+        d.append(copying: RawSpan())
+        #expect(d.count == 0)
+        d.edit {
+            #expect($0.freeCapacity == 0)
+        }
+
+        d.append(copying: CollectionOfOne<UInt8>(1).span.bytes)
+        #expect(d.count == 1)
+        #expect(d[0] == 1)
+
+        d.append(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes)
+        #expect(d.count == 101)
+        #expect(d.allSatisfy { $0 == 1 })
+
+        d = Data()
+        d.append(copying: Array<UInt8>(repeating: 1, count: 100).span.bytes)
+        #expect(d.count == 100)
+        #expect(d.allSatisfy { $0 == 1 })
+    }
+
+    @Test func appendToSlicedInlineSlicesWithOutputRawSpan() {
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        let data = Data(0..<100)
+        #expect(data.count <= capacity(data))
+        var slice = data[20..<80]
+        #expect(slice.count <= capacity(slice))
+        slice.append(addingCount: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+
+        slice = data[20..<80]
+        _ = consume data
+        slice.append(addingCount: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+    }
+
+    @Test func appendWithOutputRawSpanExtendSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: 80)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(addingCount: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
+                #expect($0.isFull == true)
+            }
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: 80)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(addingCount: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
+                #expect($0.isFull == true)
+            }
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
     }
 
     // This test uses `repeatElement` to produce a sequence -- the produced sequence reports its actual count as its `.underestimatedCount`.
@@ -1451,15 +1887,12 @@ private final class DataTests {
         }
         
         var data2 = Data(count: 32)
-        // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
-        
+        let originalPointer = data2.allocationForComparison
+
         var bytes = data2.mutableBytes
         bytes.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
-        }
+        #expect(data2.allocationForComparison == originalPointer)
     }
     
     @Test func validateMutation_cow_mutableSpan() {
@@ -1474,13 +1907,72 @@ private final class DataTests {
         
         var data2 = Data(count: 32)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        let originalPointer = data2.allocationForComparison
         
         var bytes = data2.mutableSpan
         bytes[0] = 1
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
+        #expect(data2.allocationForComparison == originalPointer)
+    }
+
+    private struct Value: ~Copyable {
+        var stored: Int
+        init(_ value: Int) { stored = value }
+    }
+
+    private enum LocalError: Error, Equatable { case error }
+
+    @Test func validateGeneralizedParameters_withUnsafeBytes() {
+        var data: Data
+
+        data = Data(repeating: 2, count: 12)
+        let value1 = data.withUnsafeBytes {
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value1.stored == 24)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+
+        data = Data(repeating: 1, count: 128)
+        let value2 = data.withUnsafeBytes {
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value2.stored == 128)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+    }
+
+    @Test func validateGeneralizedParameters_withUnsafeMutableBytes() {
+        var data: Data
+
+        data = Data(count: 12)
+        let value1 = data.withUnsafeMutableBytes {
+            $0.withMemoryRebound(to: UInt8.self) {
+                for i in $0.indices { $0[i] = 2 }
+            }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value1.stored == 24)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
+        }
+
+        data = Data(count: 128)
+        let value2 = data.withUnsafeMutableBytes {
+            $0.withMemoryRebound(to: UInt8.self) {
+                for i in $0.indices { $0[i] = 1 }
+            }
+            let sum = $0.withMemoryRebound(to: UInt8.self) { Int($0.reduce(0,+)) }
+            return Value(sum)
+        }
+        #expect(value2.stored == 128)
+        #expect(throws: LocalError.error) {
+            try data.withUnsafeMutableBytes { _ throws(LocalError) in throw(LocalError.error) }
         }
     }
 
@@ -1731,7 +2223,7 @@ private final class DataTests {
         #expect(span.count == count)
         let v = UInt8.random(in: 10..<100)
         span[i] = v
-        var sub = span.extracting(i ..< i+1)
+        var sub = span._mutatingExtracting(i ..< i+1)
         sub.update(repeating: v)
         #expect(source[i] == v)
 #endif
@@ -1745,7 +2237,7 @@ private final class DataTests {
         var span = source.mutableSpan
         #expect(span.count == count)
         let i = try #require(span.indices.randomElement())
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.update(repeating: .max)
         #expect(source[i] == .max)
 #endif
@@ -1767,7 +2259,7 @@ private final class DataTests {
         let byteCount = span.byteCount
         #expect(byteCount == count)
         let v = UInt8.random(in: 10..<100)
-        var sub = span.extracting(i..<i+1)
+        var sub = span._mutatingExtracting(i..<i+1)
         sub.storeBytes(of: v, as: UInt8.self)
         #expect(source[i] == v)
     }
@@ -1797,6 +2289,11 @@ private final class DataTests {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.replaceSubrange(5..<200, with: Data())
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data.replaceSubrange(-1..<1, with: Data())
         }
     }
     
@@ -1833,8 +2330,33 @@ private final class DataTests {
     
     @Test func bounding_failure_reset_range() async {
         await #expect(processExitsWith: .failure) {
+            var data = Data()
+            data.resetBytes(in: -1..<0)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data()
+            data.resetBytes(in: 2..<3)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data.resetBytes(in: -1..<2)
+        }
+
+        await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data.resetBytes(in: 100..<200)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: 128)
+            data.resetBytes(in: -1..<2)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: 128)
+            data.resetBytes(in: 200..<201)
         }
     }
     
@@ -1856,6 +2378,59 @@ private final class DataTests {
         await #expect(processExitsWith: .failure) {
             var data = try #require("Hello World".data(using: .utf8))
             data[100] = 4
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[-1] = 4
+        }
+
+        await #expect(processExitsWith: .failure) {
+            let data = try #require("Hello World".data(using: .utf8))
+            _ = data[-1 ..< 2]
+        }
+
+        await #expect(processExitsWith: .failure) {
+            let data = try #require("Hello World".data(using: .utf8))
+            _ = data[2 ..< 100]
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[-1 ..< 2] = Data()
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = try #require("Hello World".data(using: .utf8))
+            data[2 ..< 100] = Data()
+        }
+    }
+
+    @Test func bounding_failure_copyBytesSourceOverflow() async {
+        await #expect(processExitsWith: .failure) {
+            let backing = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 64)
+            backing.initialize(repeating: 0x32)
+
+            let typedSource = UnsafeBufferPointer(rebasing: backing.prefix(32))
+
+            let destination = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 64)
+            destination.initialize(repeating: 0x12)
+
+            typedSource.copyBytes(to: destination, from: 0..<64)
+        }
+    }
+
+    @Test func bounding_failure_copyBytesSourceUnderflow() async {
+        await #expect(processExitsWith: .failure) {
+            let backing = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 64)
+            backing.initialize(repeating: 0x32)
+
+            let typedSource = UnsafeBufferPointer(rebasing: backing.suffix(32))
+
+            let destination = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: 10)
+            destination.initialize(repeating: 0x12)
+
+            typedSource.copyBytes(to: destination, from: -1..<5)
         }
     }
     #endif
@@ -1926,6 +2501,180 @@ private final class DataTests {
         #expect(dataToEncode.count == offsets[1], "composing two dispatch_data should enumerate as structural data with the first offset as the location of the region")
     }
     #endif
+
+    @Test func emptyDataPointerAlignment() {
+        var d = Data()
+        d.withUnsafeBytes {
+            if let ptr = $0.baseAddress {
+                #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            }
+            #expect($0.isEmpty)
+        }
+        d.withUnsafeMutableBytes {
+            if let ptr = $0.baseAddress {
+                #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            }
+            #expect($0.isEmpty)
+        }
+    }
+
+    @Test func inlineDataPointerAlignment() throws {
+        var d = Data(count: 5)
+        try d.withUnsafeBytes {
+            let ptr = try #require($0.baseAddress)
+            #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            #expect($0.count == 5)
+        }
+        try d.withUnsafeMutableBytes {
+            let ptr = try #require($0.baseAddress)
+            #expect(ptr.alignedUp(for: UInt64.self) == ptr)
+            #expect($0.count == 5)
+        }
+    }
+
+    @Test func edit() {
+        var d = Data()
+        d.edit {
+            #expect($0.byteCount == 0)
+            #expect($0.freeCapacity == 0)
+        }
+
+        d = Data([1])
+        var didAppend = d.edit {
+            #expect($0.byteCount == 1)
+            if !$0.isFull {
+                $0.append(2)
+                return true
+            }
+            return false
+        }
+        if didAppend {
+            #expect(d.count == 2)
+            #expect(d == Data([1, 2]))
+        }
+
+        d = Data([1])
+        d.edit {
+            $0.removeAll()
+        }
+        #expect(d.isEmpty)
+        d.edit {
+            // Editing does not shrink allocation
+            #expect($0.byteCount == 0)
+            #expect($0.freeCapacity > 0)
+        }
+
+        d = Data(repeating: 1, count: 100)
+        didAppend = d.edit {
+            #expect($0.byteCount == 100)
+            if !$0.isFull {
+                $0.append(2)
+                return true
+            }
+            return false
+        }
+        if didAppend {
+            #expect(d.count == 101)
+            #expect(d.last == 2)
+            d.withUnsafeBytes { #expect($0.count == 101) }
+            d.replaceSubrange(100 ..< 101, copying: RawSpan())
+            #expect(d.count == 100)
+        }
+
+        d = Data(repeating: 1, count: 100)
+        d.edit {
+            $0.removeLast(20)
+        }
+        #expect(d.count == 80)
+        d.edit {
+            #expect($0.byteCount == 80)
+            #expect($0.freeCapacity >= 20)
+            $0.removeAll()
+        }
+        #expect(d.isEmpty)
+        d.edit {
+            // Editing does not shrink allocation
+            #expect($0.byteCount == 0)
+            #expect($0.freeCapacity > 0)
+        }
+
+        d = Data(repeating: 1, count: 10)
+        #expect(throws: CocoaError.self) {
+            try d.edit {
+                var ms = $0.mutableBytes
+                ms[0] = 2
+                $0.removeLast()
+                throw CocoaError(.featureUnsupported)
+            }
+        }
+        #expect(d.count == 9)
+        #expect(d[0] == 2)
+
+        d = Data(repeating: 1, count: 100)
+        #expect(throws: CocoaError.self) {
+            try d.edit {
+                var ms = $0.mutableBytes
+                ms[0] = 2
+                $0.removeLast()
+                throw CocoaError(.featureUnsupported)
+            }
+        }
+        #expect(d.count == 99)
+        #expect(d[0] == 2)
+    }
+
+    @Test func replaceSubrangeOutputRawSpan() {
+        var d = Data()
+        try? d.replaceSubrange(0 ..< 0, addingCount: 0) {
+            #expect($0.freeCapacity == 0)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 0)
+        d.edit {
+            #expect($0.freeCapacity == 0)
+        }
+
+        try? d.replaceSubrange(0 ..< 0, addingCount: 5) {
+            #expect($0.freeCapacity == 5)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 0)
+        expectEmptyRepresentation(d)
+
+        try? d.replaceSubrange(0 ..< 0, addingCount: 5) {
+            $0.append(2)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 1)
+        #expect(d[0] == 2)
+
+
+        d = Data(repeating: 2, count: 10)
+        try? d.replaceSubrange(1 ..< 4, addingCount: 100) {
+            $0.append(3)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 8)
+        #expect(d[0] == 2)
+        #expect(d[1] == 3)
+        #expect(d[2] == 2)
+
+        d = Data(repeating: 2, count: 10)
+        try? d.replaceSubrange(1 ..< 4, addingCount: 100) {
+            $0.append(repeating: 4, count: 20, as: UInt8.self)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 27)
+        #expect(d[0] == 2)
+        #expect(d[1] == 4)
+
+        d = Data(repeating: 2, count: 20)
+        try? d.replaceSubrange(1 ..< 6, addingCount: 5) {
+            $0.append(repeating: 4, count: 5, as: UInt8.self)
+            throw CocoaError(.featureUnsupported)
+        }
+        #expect(d.count == 20)
+    }
 }
 
 // MARK: - Base64 Encode/Decode Tests
@@ -2132,6 +2881,70 @@ extension DataTests {
 
     }
 
+    @Test func base64Encode_omitPaddingWithLineBreaks() {
+        #expect(
+            Data(repeating: 0xFF, count: 1).base64EncodedString(options: [.lineLength76Characters, .omitPaddingCharacter]) ==
+            "/w"
+        )
+        #expect(
+            Data(repeating: 0xFF, count: 2).base64EncodedString(options: [.lineLength76Characters, .omitPaddingCharacter]) ==
+            "//8"
+        )
+        #expect(
+            Data(repeating: 0xFF, count: 3).base64EncodedString(options: [.lineLength76Characters, .omitPaddingCharacter]) ==
+            "////"
+        )
+
+        // a full first line followed by a partial last line that needs padding
+        #expect(
+            Data(repeating: 0, count: 49).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
+            """
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+            AA
+            """
+        )
+        #expect(
+            Data(repeating: 0, count: 50).base64EncodedString(options: [.lineLength64Characters, .omitPaddingCharacter]) ==
+            """
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n\
+            AAA
+            """
+        )
+    }
+
+    @Test func base64Encode_omitPaddingWithLineBreaksMatchesUnbrokenOutput() {
+        let lineLengthOptions: [Data.Base64EncodingOptions] = [.lineLength64Characters, .lineLength76Characters]
+        let lineEndOptions: [Data.Base64EncodingOptions] = [
+            [], .endLineWithCarriageReturn, .endLineWithLineFeed, [.endLineWithCarriageReturn, .endLineWithLineFeed]
+        ]
+
+        for count in 0..<260 {
+            let data = Data((0..<count).map { UInt8($0 % 256) })
+
+            for lineLength in lineLengthOptions {
+                for lineEnd in lineEndOptions {
+                    let options: Data.Base64EncodingOptions = [lineLength, lineEnd, .omitPaddingCharacter]
+                    let padded = data.base64EncodedString(options: [lineLength, lineEnd])
+                    let expected = String(padded.filter { $0 != "=" })
+
+                    let string = data.base64EncodedString(options: options)
+                    #expect(string == expected, "count: \(count), options: \(options.rawValue)")
+
+                    // `base64EncodedData` keeps the full allocated capacity, so a mismatch here
+                    // means the computed capacity did not match what was actually written.
+                    let encodedData = data.base64EncodedData(options: options)
+                    #expect(encodedData == Data(expected.utf8), "count: \(count), options: \(options.rawValue)")
+                    #expect(encodedData.count == string.utf8.count, "count: \(count), options: \(options.rawValue)")
+
+                    #expect(
+                        data.base64EncodedData(options: [lineLength, lineEnd]) == Data(padded.utf8),
+                        "count: \(count), options: \(options.rawValue)"
+                    )
+                }
+            }
+        }
+    }
+
     @Test func base64Decode_emptyString() {
         #expect(Data() == Data(base64Encoded: ""))
     }
@@ -2295,6 +3108,89 @@ extension DataTests {
         #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBA    UG", options: .ignoreUnknownCharacters))
         #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAU    G", options: .ignoreUnknownCharacters))
         #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG    ", options: .ignoreUnknownCharacters))
+    }
+
+    @Test func base64Decode_testOmittingPaddingCharacters() {
+        #expect(Data(base64Encoded: "AQIDBA==", options: [.omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "AQIDBAU=", options: [.omitPaddingCharacter]) == nil)
+
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: .omitPaddingCharacter))
+
+        #expect(Data(base64Encoded: "AQIDBA") == nil)
+        #expect(Data(base64Encoded: "AQIDBAU") == nil)
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG"))
+
+        #expect(Data([1, 2, 3, 4]) == Data(base64Encoded: "AQIDBA", options: .omitPaddingCharacter))
+        #expect(Data([1, 2, 3, 4, 5]) == Data(base64Encoded: "AQIDBAU", options: .omitPaddingCharacter))
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: .omitPaddingCharacter))
+
+        // `omitPaddingCharacter` is ignored, if `ignoreUnknownCharacters` is set at the same time
+        #expect(Data([1, 2, 3, 4]) == Data(base64Encoded: "AQIDBA==", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        #expect(Data([1, 2, 3, 4, 5]) == Data(base64Encoded: "AQIDBAU=", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: [.omitPaddingCharacter, .ignoreUnknownCharacters]))
+    }
+
+    @Test func base64Decode_base64URLAlphabet() {
+        // `-` and `_` replace `+` and `/`. Bytes chosen so that the encoded form uses them.
+        #expect(Data([251, 255]) == Data(base64Encoded: "-_8=", options: .base64URLAlphabet))
+        #expect(Data([251, 255, 254]) == Data(base64Encoded: "-__-", options: .base64URLAlphabet))
+        #expect(Data([255, 255, 255, 251, 255]) == Data(base64Encoded: "____-_8=", options: .base64URLAlphabet))
+
+        // The standard alphabet decodes the same payloads spelled with `+` and `/`.
+        #expect(Data([251, 255]) == Data(base64Encoded: "+/8="))
+        #expect(Data([251, 255, 254]) == Data(base64Encoded: "+//+"))
+        #expect(Data([255, 255, 255, 251, 255]) == Data(base64Encoded: "////+/8="))
+
+        // The alphabets are mutually exclusive: each rejects the other's characters.
+        #expect(Data(base64Encoded: "-_8=") == nil)
+        #expect(Data(base64Encoded: "-__-") == nil)
+        #expect(Data(base64Encoded: "+/8=", options: .base64URLAlphabet) == nil)
+        #expect(Data(base64Encoded: "+//+", options: .base64URLAlphabet) == nil)
+
+        // Characters shared by both alphabets decode identically.
+        #expect(Data([1, 2, 3, 4, 5, 6]) == Data(base64Encoded: "AQIDBAUG", options: .base64URLAlphabet))
+        #expect(Data([1, 2, 3, 4]) == Data(base64Encoded: "AQIDBA==", options: .base64URLAlphabet))
+        #expect(Data([1, 2, 3, 4, 5]) == Data(base64Encoded: "AQIDBAU=", options: .base64URLAlphabet))
+    }
+
+    @Test func base64Decode_base64URLAlphabetOmittingPaddingCharacters() {
+        #expect(Data([251, 255]) == Data(base64Encoded: "-_8", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+        #expect(Data([251, 255, 254]) == Data(base64Encoded: "-__-", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+        #expect(Data([255, 255, 255, 251, 255]) == Data(base64Encoded: "____-_8", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+        #expect(Data([251]) == Data(base64Encoded: "-w", options: [.base64URLAlphabet, .omitPaddingCharacter]))
+
+        // Padding is rejected when `omitPaddingCharacter` is set.
+        #expect(Data(base64Encoded: "-_8=", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "-w==", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "____-_8=", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+
+        // ... and required when it is not.
+        #expect(Data(base64Encoded: "-_8", options: .base64URLAlphabet) == nil)
+        #expect(Data(base64Encoded: "____-_8", options: .base64URLAlphabet) == nil)
+
+        // A single trailing character can never be a valid encoding.
+        #expect(Data(base64Encoded: "-", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+        #expect(Data(base64Encoded: "-__--", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+
+        // Standard alphabet characters remain invalid.
+        #expect(Data(base64Encoded: "+/8", options: [.base64URLAlphabet, .omitPaddingCharacter]) == nil)
+    }
+
+    @Test func base64Encode_base64URLAlphabetRoundTrip() {
+        for count in 0 ..< 32 {
+            let data = Data((0 ..< count).map { UInt8(($0 &* 37 &+ 211) % 256) })
+
+            let urlEncoded = data.base64EncodedString(options: .base64URLAlphabet)
+            #expect(!urlEncoded.contains("+"))
+            #expect(!urlEncoded.contains("/"))
+            #expect(Data(base64Encoded: urlEncoded, options: .base64URLAlphabet) == data)
+
+            let urlEncodedUnpadded = data.base64EncodedString(options: [.base64URLAlphabet, .omitPaddingCharacter])
+            #expect(!urlEncodedUnpadded.contains("="))
+            #expect(
+                Data(base64Encoded: urlEncodedUnpadded, options: [.base64URLAlphabet, .omitPaddingCharacter]) == data
+            )
+        }
     }
 
     @Test func base64Decode_test1MBDataGoing0to255OverAndOver() {
@@ -2470,9 +3366,107 @@ extension DataTests {
         #expect(error.filePath == "/foo/bar")
     }
     #endif
+
+    @Test func dataInitDataElideCopy() {
+        do {
+            let data = Data(0 ..< 100)
+
+            // Initializing one Data from another should not copy the bytes
+            let data2 = Data(data)
+            #expect(data.allocationForComparison == data2.allocationForComparison)
+        }
+
+        do {
+            let data = Data(0 ..< 100)
+
+            // Initializing one Data from another should not copy the bytes, even when sliced as a prefix
+            let data2 = Data(data.prefix(upTo: 50))
+            #expect(data2.startIndex == 0)
+            #expect(data.allocationForComparison == data2.allocationForComparison)
+        }
+
+        do {
+            let data = Data(0 ..< 100)
+
+            // Initializing one Data from another should copy the bytes when the slice does not begin at 0
+            let data2 = Data(data[20 ..< 80])
+            #expect(data2.startIndex == 0)
+            #expect(data.allocationForComparison != data2.allocationForComparison)
+        }
+
+        do {
+            withUnsafeTemporaryAllocation(of: UInt8.self, capacity: 20) { stackBuffer in
+                let stackPointer = SafePointerComparison(stackBuffer.baseAddress)
+                let data = Data(bytesNoCopy: stackBuffer.baseAddress!, count: 20, deallocator: .none)
+                #expect(data.allocationForComparison == stackPointer)
+                #expect(data.startIndex == 0)
+
+                // Initializing one Data from another should copy the bytes when no-copy initialized
+                let data2 = Data(data)
+                #expect(data.allocationForComparison != data2.allocationForComparison)
+            }
+        }
+    }
+
+    @Test func writingOptionsSetAlgebra() {
+        var elements: [Data.WritingOptions] = [
+            .atomic, .withoutOverwriting,
+            .noFileProtection, .completeFileProtection,
+            .completeFileProtectionUnlessOpen, .completeFileProtectionUntilFirstUserAuthentication,
+            .fileProtectionMask
+        ]
+#if FOUNDATION_FRAMEWORK && !os(macOS)
+        elements.append(.completeFileProtectionWhenUserInactive)
+#endif
+
+        Data.WritingOptions.validateConformance(
+            elements: elements,
+            groupings: [
+                [.atomic],
+                [.withoutOverwriting],
+                [.noFileProtection],
+                [.completeFileProtection],
+                [.completeFileProtectionUnlessOpen],
+                [.completeFileProtectionUntilFirstUserAuthentication],
+                [.noFileProtection, .atomic],
+                [.completeFileProtection, .atomic],
+                [.completeFileProtectionUnlessOpen, .withoutOverwriting],
+                [.completeFileProtectionUntilFirstUserAuthentication, .atomic],
+            ]
+        )
+
+        #expect(Data.WritingOptions.completeFileProtection.contains(.completeFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtection.contains(.noFileProtection))
+        #expect(!Data.WritingOptions.noFileProtection.contains(.completeFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtectionUnlessOpen.contains(.noFileProtection))
+        #expect(!Data.WritingOptions.completeFileProtectionUnlessOpen.contains(.completeFileProtection))
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).contains(.completeFileProtection))
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).contains(.atomic))
+        #expect(!Data.WritingOptions([.completeFileProtection, .atomic]).contains(.noFileProtection))
+        #expect(!Data.WritingOptions([.completeFileProtection, .atomic]).contains(.withoutOverwriting))
+
+        #expect(Data.WritingOptions([.completeFileProtection, .atomic]).intersection(.noFileProtection) == [])
+        #expect(Data.WritingOptions([.noFileProtection, .withoutOverwriting]).intersection(.noFileProtection) == .noFileProtection)
+        #expect(Data.WritingOptions.atomic.intersection(.fileProtectionMask) == [])
+
+        // Verify that remove() works correctly
+        var opts: Data.WritingOptions = [.completeFileProtection, .atomic]
+        let removed = opts.remove(.completeFileProtection)
+        #expect(removed == .completeFileProtection)
+        #expect(opts == .atomic)
+
+        var opts2: Data.WritingOptions = [.completeFileProtection, .atomic]
+        let notRemoved = opts2.remove(.noFileProtection)
+        #expect(notRemoved == nil)
+        #expect(opts2 == [.completeFileProtection, .atomic])
+
+        var opts3: Data.WritingOptions = [.noFileProtection, .atomic, .withoutOverwriting]
+        let removedOpts = opts3.remove(.atomic)
+        #expect(removedOpts == .atomic)
+        #expect(opts3 == [.noFileProtection, .withoutOverwriting])
+    }
 }
 
-#if FOUNDATION_FRAMEWORK // FIXME: Re-enable tests once range(of:) is implemented
 extension DataTests {
     @Test func range() {
         let helloWorld = dataFrom("Hello World")
@@ -2495,6 +3489,43 @@ extension DataTests {
         }
     }
 
+    @Test func rangeBoyerMoore() {
+        let haystack = dataFrom("abcxxxabcxxxxabc")
+        let needle = dataFrom("abc")
+
+        #expect(haystack.range(of: needle) == 0..<3)
+        #expect(haystack.range(of: needle, options: .backwards) == 13..<16)
+        #expect(haystack.range(of: needle, in: 1..<haystack.count) == 6..<9)
+        #expect(haystack.range(of: needle, options: .backwards, in: 0..<12) == 6..<9)
+    }
+
+    @Test func rangeBoyerMooreOverlaps() {
+        let repeated = dataFrom("aaaaa")
+        let tripleA = dataFrom("aaa")
+        let prefix = dataFrom("aab")
+        let suffix = dataFrom("baa")
+        let doubleA = dataFrom("aa")
+
+        #expect(repeated.range(of: tripleA) == 0..<3)
+        #expect(repeated.range(of: tripleA, options: .backwards) == 2..<5)
+
+        #expect(prefix.range(of: doubleA) == 0..<2)
+        #expect(prefix.range(of: doubleA, options: .backwards) == 0..<2)
+
+        #expect(suffix.range(of: doubleA) == 1..<3)
+        #expect(suffix.range(of: doubleA, options: .backwards) == 1..<3)
+    }
+
+    @Test func rangeAnchored() {
+        let haystack = dataFrom("xxabcxxabc")
+        let needle = dataFrom("abc")
+
+        #expect(haystack.range(of: needle, options: .anchored) == nil)
+        #expect(haystack.range(of: needle, options: [.anchored], in: 2..<haystack.count) == 2..<5)
+        #expect(haystack.range(of: needle, options: [.backwards, .anchored]) == 7..<10)
+        #expect(haystack.range(of: needle, options: [.backwards, .anchored], in: 0..<5) == 2..<5)
+    }
+
     @Test func replaceSubrange2() {
         let hello = dataFrom("Hello")
         let world = dataFrom(" World")
@@ -2509,7 +3540,13 @@ extension DataTests {
         }
         #expect(mutateMe == expected)
     }
-    
+
+    @Test func emptyDataRemoveSubrange() {
+        var empty = Data()
+        empty.removeSubrange(0 ..< 0)
+        #expect(empty.count == 0)
+    }
+
     @Test func rangeOfSlice() throws {
         let data = try #require("FooBar".data(using: .ascii))
         let slice = data[3...] // Bar
@@ -2518,7 +3555,6 @@ extension DataTests {
         #expect(range == 4..<5 as Range<Data.Index>)
     }
 }
-#endif // FOUNDATION_FRAMEWORK
 
 #if FOUNDATION_FRAMEWORK // Bridging is not available in the FoundationPreview package
 extension DataTests {
@@ -2527,9 +3563,7 @@ extension DataTests {
         
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .free)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
-        data.withUnsafeBytes { buffer in
-            #expect(buffer.baseAddress == copy.bytes)
-        }
+        #expect(data.allocationForComparison == copy.allocationForComparison)
     }
     
     @Test func noCopy_uaf_bridge() {
@@ -2538,24 +3572,42 @@ extension DataTests {
         
         let data: Data = Data(bytesNoCopy: bytes.baseAddress!, count: bytes.count, deallocator: .none)
         let copy = data._bridgeToObjectiveC().copy() as! NSData
-        data.withUnsafeBytes { buffer in
-            #expect(buffer.baseAddress != copy.bytes)
-        }
+        #expect(data.allocationForComparison != copy.allocationForComparison)
         bytes.deallocate()
     }
 }
 #endif
 
-// These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
-@Suite("Large Data Tests", .serialized)
-struct LargeDataTests {
 #if _pointerBitWidth(_64)
-    let largeCount = Int(Int32.max)
+let largeCount = Int(Int32.max)
 #elseif _pointerBitWidth(_32)
-    let largeCount = Int(Int16.max)
+let largeCount = Int(Int16.max)
 #else
 #error("This test needs updating")
 #endif
+
+private var availableMemory: UInt64 {
+    #if canImport(Darwin) && !os(macOS)
+    // If the system has imposed memory limits on this process, provide the remaining memory within that limit
+    let remainingWithinLimits = UInt64(os_proc_available_memory())
+    if remainingWithinLimits != 0 {
+        return remainingWithinLimits
+    }
+    #endif
+    // Otherwise, provide the total memory available to the system
+    return ProcessInfo.processInfo.physicalMemory
+}
+
+// These tests require allocating an extremely large amount of data and are serialized to prevent the test runner from using all available memory at once
+@Suite("Large Data Tests",
+   .serialized, // Tests are serialized to avoid allocating large amounts of data concurrently
+   .enabled(if: // Tests can create up to two large datas, require space for at least 3 to ensure we have sufficient room
+        availableMemory > (largeCount * 3),
+        "This device does not have sufficient memory to run large data tests (\(availableMemory) bytes available, \(largeCount * 3) bytes required)"
+    )
+)
+struct LargeDataTests {
+
     @Test
     func largeSliceDataSpan() throws {
         let source = Data(repeating: 0, count: largeCount).dropFirst()
@@ -2606,14 +3658,12 @@ struct LargeDataTests {
         
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        let originalPointer = data2.allocationForComparison
         
         var bytes2 = data2.mutableBytes
         bytes2.storeBytes(of: 1, toByteOffset: 0, as: UInt8.self)
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
-        }
+        #expect(data2.allocationForComparison == originalPointer)
     }
     
     @Test func validateMutation_cow_largeMutableSpan() {
@@ -2630,13 +3680,315 @@ struct LargeDataTests {
         
         var data2 = Data(count: largeCount)
         // Escape the pointer to compare after a mutation without dereferencing the pointer
-        let originalPointer = data2.withUnsafeBytes { $0.baseAddress }
+        let originalPointer = data2.allocationForComparison
         
         var bytes2 = data2.mutableSpan
         bytes2[0] = 1
         #expect(data2[0] == 1)
-        data2.withUnsafeBytes {
-            #expect($0.baseAddress == originalPointer)
+        #expect(data2.allocationForComparison == originalPointer)
+    }
+
+    @Test func largeRepresentationOutputRawSpanInitAndAppend() throws {
+        struct LocalError: Error, Equatable {}
+
+        var data = Data(capacity: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
         }
+        expectLargeIfLegacyABI(data)
+        #expect(data.count == largeCount)
+
+        // exercise `LargeSlice.append()`
+        data.append(addingCount: 20) {
+            #expect($0.freeCapacity == 20)
+            $0.append(51)
+        }
+        #expect(data.count == largeCount+1)
+        #expect(data.last == 51)
+        try? data.append(addingCount: 10) {
+            #expect($0.freeCapacity == 10)
+            $0.append(52)
+            throw LocalError()
+        }
+        #expect(data.count == largeCount+2)
+        #expect(data.last == 52)
+
+        // transform from the `InlineData` form to the `LargeSlice` form
+        data = Data([1, 2, 3])
+        data.append(addingCount: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
+        }
+        expectLargeIfLegacyABI(data)
+        #expect(data.count == largeCount + 3)
+
+        // transform from the `InlineSlice` form to the `LargeSlice` form
+        data = Data(0..<24)
+        data.append(addingCount: largeCount) {
+            #expect($0.freeCapacity == largeCount)
+            $0.append(repeating: .max, count: $0.freeCapacity, as: UInt8.self)
+        }
+        expectLargeIfLegacyABI(data)
+        #expect(data.count == largeCount + 24)
+    }
+
+    @Test
+    func appendToSlicedLargeSlicesWithOutputRawSpan() {
+        let appendedValue: UInt8 = (7..<252).randomElement()!
+
+        let data = Data(count: largeCount + 1000)
+        #expect(data.count <= capacity(data))
+        var slice = data.dropFirst(100).dropLast(100)
+        #expect(slice.count <= capacity(slice))
+        slice.append(addingCount: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+
+        slice = data.dropFirst(100).dropLast(100)
+        _ = consume data
+        slice.append(addingCount: 2) {
+            $0.append(appendedValue)
+        }
+        #expect(slice.last == appendedValue)
+    }
+
+    @Test
+    func appendToLargeSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: largeCount)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: largeCount)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
+    }
+
+    @Test
+    func reserveCapacityLargeSlices() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: largeCount)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: largeCount)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            // 25 is smaller than the original capacity, but requires re-allocation to provide
+            // space for 25 bytes after the existing byte at index 79
+            slice.reserveCapacity(25)
+            #expect(capacity(slice) != startCapacity, "Reserving capacity did not reallocate")
+            let reservedPointer = slice.allocationForComparison
+            slice.append(Data(repeating: 1, count: 25))
+            #expect(slice.allocationForComparison == reservedPointer, "Appending within reserved capacity triggered a reallocation")
+        }
+    }
+
+    @Test
+    func appendWithOutputRawSpanExtendLargeSlice() {
+        // Test behavior when the contents should get copied (non-unique)
+        do {
+            let original = Data(count: largeCount)
+            var slice = original.suffix(1)
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(addingCount: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
+                #expect($0.isFull == true)
+            }
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+            _fixLifetime(original) // Ensure original lives beyond the mutations above
+        }
+
+        // Test behavior when a copy is not required since contents are unique
+        do {
+            var slice: Data
+            do {
+                let original = Data(count: largeCount)
+                slice = original.suffix(1)
+            }
+            #expect(slice.count == 1)
+            let startCapacity = capacity(slice)
+            slice.append(addingCount: 25) {
+                #expect($0.freeCapacity == 25)
+                $0.append(repeating: 1, count: 25, as: UInt8.self)
+                #expect($0.isFull == true)
+            }
+            #expect(capacity(slice) != startCapacity, "Appending did not trigger a reallocation")
+            #expect(slice.count == 26)
+        }
+    }
+
+    @Test func downgradeLargeToInline() {
+        var large = Data(capacity: largeCount)
+        large.append(0xAA)
+        #expect(large.count == 1)
+        #expect(large[0] == 0xAA)
+
+        large = Data(count: largeCount)
+        large[large.count - 1] = 0xCC
+        large[0] = 0xAA
+        large.replaceSubrange(1 ..< large.count - 1, with: CollectionOfOne(0xBB))
+        #expect(large.count == 3)
+        #expect(large[0] == 0xAA)
+        #expect(large[1] == 0xBB)
+        #expect(large[2] == 0xCC)
+    }
+
+    #if FOUNDATION_EXIT_TESTS
+    @Test func resetBytesBounds() async {
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: largeCount)
+            data.resetBytes(in: -1..<2)
+        }
+
+        await #expect(processExitsWith: .failure) {
+            var data = Data(count: largeCount)
+            data.resetBytes(in: (data.endIndex + 1) ..< (data.endIndex + 2))
+        }
+    }
+    #endif
+}
+
+private func expectLargeIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty:
+        Issue.record("Expected data to be large but was empty", sourceLocation: sourceLocation)
+    case .inline:
+        Issue.record("Expected data to be large but was inline of count \(data.count)", sourceLocation: sourceLocation)
+    case .slice:
+        Issue.record("Expected data to be large but was slice of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        return
+    }
+    #endif
+}
+
+private func expectSliceIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty:
+        Issue.record("Expected data to be slice but was empty", sourceLocation: sourceLocation)
+    case .inline:
+        Issue.record("Expected data to be slice but was inline of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        Issue.record("Expected data to be slice but was large of count \(data.count)", sourceLocation: sourceLocation)
+    case .slice:
+        return
+    }
+    #endif
+}
+
+private func expectInlineIfLegacyABI(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty:
+        Issue.record("Expected data to be inline but was empty", sourceLocation: sourceLocation)
+    case .slice:
+        Issue.record("Expected data to be inline but was slice of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        Issue.record("Expected data to be inline but was large of count \(data.count)", sourceLocation: sourceLocation)
+    case .inline:
+        return
+    }
+    #endif
+}
+
+private func expectEmptyRepresentation(_ data: Data, sourceLocation: SourceLocation = #_sourceLocation) {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .inline:
+        Issue.record("Expected data to be empty but was inline of count \(data.count)", sourceLocation: sourceLocation)
+    case .slice:
+        Issue.record("Expected data to be empty but was slice of count \(data.count)", sourceLocation: sourceLocation)
+    case .large:
+        Issue.record("Expected data to be empty but was large of count \(data.count)", sourceLocation: sourceLocation)
+    case .empty:
+        return
+    }
+    #else
+    #expect(data._representation._storage === __DataStorage.empty, "Expected data to be empty singleton but was not (count \(data.count))", sourceLocation: sourceLocation)
+    #endif
+}
+
+private func capacity(_ data: consuming Data) -> Int {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty: 0
+    case .inline: Data.InlineData.maximumCapacity
+    case .slice(let slice): slice.capacity
+    case .large(let slice): slice.capacity
+    }
+    #else
+    data._representation._storage.capacity
+    #endif
+}
+
+// MARK: - WritingOptions SetAlgebra Tests
+
+extension Data.WritingOptions: TestableOptionSet {
+    public var _description: String {
+        let protectionPart = Self(rawValue: self.rawValue & Self.fileProtectionMask.rawValue)
+        let protectionString = switch protectionPart {
+        case .noFileProtection: "noProtection"
+        case .completeFileProtection: "complete"
+        case .completeFileProtectionUnlessOpen: "unlessOpen"
+        case .completeFileProtectionUntilFirstUserAuthentication: "untilFirstAuth"
+#if FOUNDATION_FRAMEWORK && !os(macOS)
+        case .completeFileProtectionWhenUserInactive: "whenUserInactive"
+#endif
+        case []: "<none>"
+        default: "unknown (0x\(String(protectionPart.rawValue, radix: 16)))"
+        }
+
+        var options = [String]()
+        if self.rawValue & Self.atomic.rawValue != 0 {
+            options.append("atomic")
+        }
+        if self.rawValue & Self.withoutOverwriting.rawValue != 0 {
+            options.append("withoutOverwriting")
+        }
+        if options.isEmpty {
+            options.append("<none>")
+        }
+        return "(protection: \(protectionString), options: \(options.joined(separator: ", ")))"
     }
 }

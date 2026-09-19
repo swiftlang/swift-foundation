@@ -27,6 +27,7 @@ import WinSDK
 #endif
 
 internal import _FoundationCShims
+internal import Synchronization
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
@@ -138,8 +139,8 @@ struct TimeZoneCache : Sendable, ~Copyable {
                     return TimeZone(inner: result)
                 }
             }
-#elseif os(WASI)
-            // WASI doesn't provide a way to get the current timezone for now, so
+#elseif os(WASI) || os(Emscripten)
+            // WASI/Emscripten doesn't provide a way to get the current timezone for now, so
             // just return the default GMT timezone.
 #else
             let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: Int(PATH_MAX + 1))
@@ -227,6 +228,10 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 return offsetFixed(0)
             } else if let cached = fixedTimeZones[identifier] {
                 return cached
+            } else if let innerTZ = _timeZoneGMTClass().init(identifier: identifier) {
+                // Identifier takes a form of GMT offset such as "GMT+8"
+                fixedTimeZones[identifier] = innerTZ
+                return innerTZ
             } else {
                 if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
                     fixedTimeZones[identifier] = innerTz
@@ -349,15 +354,31 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 bridgedFixedTimeZones[identifier] = bridged
                 return bridged
             }
-#if canImport(_FoundationICU)
-            if let innerTz = _TimeZoneICU(identifier: identifier) {
-                // In this case, the identifier is unique and we need to cache it (in two places)
-                fixedTimeZones[identifier] = innerTz
-                let bridgedTz = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
-                bridgedFixedTimeZones[identifier] = bridgedTz
-                return bridgedTz
+
+            if identifier == "GMT" {
+                return bridgedOffsetFixed(0)
             }
-#endif
+
+            let bridgedTZ: _NSSwiftTimeZone?
+            if let innerTZ = _timeZoneGMTClass().init(identifier: identifier) {
+                // Identifier takes a form of GMT offset such as "GMT+8" or UTC
+                fixedTimeZones[identifier] = innerTZ
+                bridgedTZ = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTZ))
+            } else {
+                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
+                    fixedTimeZones[identifier] = innerTz
+                    bridgedTZ = _NSSwiftTimeZone(timeZone: TimeZone(inner: innerTz))
+                } else {
+                    bridgedTZ = nil
+                }
+            }
+
+            if let bridgedTZ {
+                // In this case, the identifier is unique and we need to cache it, both in `fixedTimeZones` and `bridgedFixedTimeZones`
+                bridgedFixedTimeZones[identifier] = bridgedTZ
+                return bridgedTZ
+            }
+
             return nil
         }
 
@@ -371,11 +392,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 bridgedOffsetTimeZones[offset] = bridged
                 return bridged
             }
-#if canImport(_FoundationICU)
-            let maybeInnerTz = _TimeZoneGMTICU(secondsFromGMT: offset)
-#else
-            let maybeInnerTz = _TimeZoneGMT(secondsFromGMT: offset)
-#endif
+            let maybeInnerTz = _timeZoneGMTClass().init(secondsFromGMT: offset)
             if let innerTz = maybeInnerTz {
                 // In order to avoid bloating a cache with weird time zones, only cache values that are 30min offsets (including 1hr offsets).
                 let doCache = abs(offset) % 1800 == 0
@@ -394,12 +411,12 @@ struct TimeZoneCache : Sendable, ~Copyable {
 #endif // FOUNDATION_FRAMEWORK
     }
 
-    let lock: LockedState<State>
+    let lock: Mutex<State>
 
     static let cache = TimeZoneCache()
 
     fileprivate init() {
-        lock = LockedState(initialState: State())
+        lock = Mutex(State())
     }
 
     func reset() -> TimeZone? {

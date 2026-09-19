@@ -47,6 +47,12 @@
 #define TARGET_OS_WASI 0
 #endif
 
+#if defined(__EMSCRIPTEN__)
+#define TARGET_OS_EMSCRIPTEN 1
+#else
+#define TARGET_OS_EMSCRIPTEN 0
+#endif
+
 #if defined(__ANDROID__)
 #define TARGET_OS_ANDROID 1
 #else

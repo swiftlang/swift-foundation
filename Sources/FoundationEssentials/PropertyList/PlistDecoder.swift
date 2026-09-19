@@ -11,16 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 internal import _FoundationCShims
+internal import Synchronization
 
 //===----------------------------------------------------------------------===//
 // Plist Decoder
 //===----------------------------------------------------------------------===//
 
-/// `PropertyListDecoder` facilitates the decoding of property list values into semantic `Decodable` types.
 // NOTE: older overlays had Foundation.PropertyListDecoder as the ObjC
 // name. The two must coexist, so it was renamed. The old name must not
 // be used in the new runtime. _TtC10Foundation20_PropertyListDecoder
 // is the mangled name for Foundation._PropertyListDecoder.
+
+/// An object that decodes instances of data types from a property list.
 #if FOUNDATION_FRAMEWORK
 @_objcRuntimeName(_TtC10Foundation20_PropertyListDecoder)
 #endif
@@ -37,26 +39,27 @@ open class PropertyListDecoder {
 #endif
     // MARK: Options
 
-    /// Contextual user-provided information for use during decoding.
+    /// A dictionary you use to customize decoding by providing contextual
+    /// information.
     @preconcurrency
     open var userInfo: [CodingUserInfoKey : any Sendable] {
         get {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             return options.userInfo
         }
         _modify {
-            optionsLock.lock()
+            optionsLock._unsafeLock()
             var value = options.userInfo
             defer {
                 options.userInfo = value
-                optionsLock.unlock()
+                optionsLock._unsafeUnlock()
             }
             yield &value
         }
         set {
-            optionsLock.lock()
-            defer { optionsLock.unlock() }
+            optionsLock._unsafeLock()
+            defer { optionsLock._unsafeUnlock() }
             options.userInfo = newValue
         }
     }
@@ -68,16 +71,17 @@ open class PropertyListDecoder {
 
     /// The options set on the top-level decoder.
     fileprivate var options = _Options()
-    fileprivate let optionsLock = LockedState<Void>()
+    fileprivate let optionsLock = Mutex<Void>(())
 
     // MARK: - Constructing a Property List Decoder
 
-    /// Initializes `self` with default strategies.
+    /// Creates a new, reusable property list decoder.
     public init() {}
 
     // MARK: - Decoding Values
 
-    /// Decodes a top-level value of the given type from the given property list representation.
+    /// Returns a value of the specified type by decoding a property list using
+    /// the default property list format.
     ///
     /// - parameter type: The type of the value to decode.
     /// - parameter data: The data to decode from.
@@ -89,7 +93,8 @@ open class PropertyListDecoder {
         return try decode(type, from: data, format: &format)
     }
 
-    /// Decodes a top-level value of the given type from the given property list representation.
+    /// Returns a value of the specified type by decoding a property list using
+    /// the supplied format.
     ///
     /// - parameter type: The type of the value to decode.
     /// - parameter data: The data to decode from.
@@ -231,7 +236,7 @@ open class PropertyListDecoder {
         }
         
         return try buffer[unchecked: baseIdx..<idx].withUnsafePointer { ptr, encodingLength in
-            if encodingLength == 5, _stringshims_strncasecmp_clocale(ptr, "utf-8", 5) == 0 {
+            if encodingLength == 5, Platform.strncasecmp_clocale(ptr, "utf-8", 5) == 0 {
                 return .utf8
             }
             

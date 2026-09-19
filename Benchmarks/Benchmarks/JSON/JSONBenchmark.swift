@@ -72,7 +72,7 @@ func path(forResource name: String) -> _URL? {
     return _URL(fileURLWithPath: url.path)
 }
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
@@ -85,6 +85,10 @@ let benchmarks = {
     let twitterPath = path(forResource: "twitter.json")
     let twitterData = try! _Data(contentsOf: twitterPath!)
     let twitter = try! _JSONDecoder().decode(TwitterArchive.self, from: twitterData)
+
+    let arrayPath = path(forResource: "array.json")
+    let arrayData = try! _Data(contentsOf: arrayPath!)
+    let array = try! _JSONDecoder().decode([Int].self, from: arrayData)
 
     Benchmark("Canada-decodeFromJSON") { benchmark in
         let result = try _JSONDecoder().decode(FeatureCollection.self, from: canadaData)
@@ -105,5 +109,9 @@ let benchmarks = {
         let result = try _JSONEncoder().encode(twitter)
         blackHole(result)
     }
-}
 
+    Benchmark("IntArray-encodeToJSON") { benchmark in
+        let result = try _JSONEncoder().encode(array)
+        blackHole(result)
+    }
+}

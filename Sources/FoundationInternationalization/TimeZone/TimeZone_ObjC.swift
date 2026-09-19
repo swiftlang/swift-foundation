@@ -15,6 +15,7 @@
 internal import _ForSwiftFoundation
 import CoreFoundation
 internal import os
+internal import Synchronization
 
 @objc
 extension NSTimeZone {
@@ -136,11 +137,11 @@ final class _NSSwiftTimeZone: _NSTimeZoneBridge, @unchecked Sendable {
         var data: Data?
     }
 
-    let lock: LockedState<State>
+    let lock: Mutex<State>
 
     init(timeZone: TimeZone, data: Data? = nil) {
         self.timeZone = timeZone
-        lock = LockedState(initialState: State(data: data))
+        lock = Mutex(State(data: data))
         super.init()
     }
     

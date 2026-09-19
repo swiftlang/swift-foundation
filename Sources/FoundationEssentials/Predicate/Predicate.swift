@@ -10,8 +10,55 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A logical condition used to test a set of input values for searching or filtering.
+///
+/// A predicate is a logical condition that evaluates to a Boolean value (true or false). You use predicates for operations like filtering a collection or searching for matching elements.
+///
+/// To create a predicate, use the `Predicate(_:)` macro. For example:
+///
+/// ```swift
+/// let messagePredicate = #Predicate<Message> { message in
+///     message.length < 100 && message.sender == "Jeremy"
+/// }
+/// ```
+///
+/// In the example above, the closure that contains the predicate's conditions takes one argument — the value being tested. Even though you write the predicate using a closure, the macro transforms that closure into a predicate when you compile. The code in the closure isn't run as part of your program.
+///
+/// In the predicate's definition, you can use the following operations:
+///
+/// - Arithmetic (`+`, `-`, `*`, `/`, `%`)
+/// - Unary minus (`-`)
+/// - Range (`...`, `..<`)
+/// - Comparison (`<`, `<=`, `>`, `>=`, `==`, `!=`)
+/// - Ternary conditional (`?:`)
+/// - Conditional expressions
+/// - Boolean logic (`&&`, `||`, `!`)
+/// - Swift optionals (`?`, `??`, `!`, `flatMap(_:)`, `if`-`let` expressions)
+/// - Types (`as`, `as?`, `as!`, `is`)
+/// - Sequence operations (`allSatisfy()`, `filter()`, `contains()`, `contains(where:)`, `starts(with:)`, `max()`, `min()`)
+/// - Subscript and member access (`[]`, `.`)
+/// - String comparisons (`contains(_:)`, `localizedStandardContains(_:)`, `caseInsensitiveCompare(_:)`, `localizedCompare(_:)`)
+///
+/// A predicate can't contain any nested declarations, use any flow control such as `for` loops,
+/// or modify variables from its enclosing scope. However, it can refer to constants that are in
+/// scope.
+///
+/// To express more complex queries, you can nest expressions in the predicate:
+///
+/// ```swift
+/// let messagePredicate = #Predicate<Message> { message in
+///     message.recipients.contains {
+///         $0.firstName == message.sender.firstName
+///     }
+/// }
+/// ```
+///
+/// You can safely encode and decode predicates, pass predicates across concurrency boundaries, and load a predicate from a file. To define a list of types and key paths that are allowed when reading an archived predicate, use ``PredicateCodableConfiguration``.
+///
+/// You can transform a predicate into another representation — for example, to express a predicate in another query language, or to create a modified predicate — using the ``expression`` property.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 public struct Predicate<each Input> : Sendable {
+    /// The component expressions of the predicate.
     public let expression : any StandardPredicateExpression<Bool>
     public let variable: (repeat PredicateExpressions.Variable<each Input>)
     
@@ -49,8 +96,62 @@ extension Predicate {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
+@available(FoundationPreview 6.4, *)
+extension Predicate {
+    public init(all subpredicates: some BidirectionalCollection<Self>) {
+        var iterator = subpredicates.reversed().makeIterator()
+        
+        if let guarded = iterator.next() {
+            self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
+                let condition = PredicateExpressions.Value(guarded)
+                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
+                
+                while let next = iterator.next() {
+                    pieces = Self.meet(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
+                }
+                
+                return pieces
+            })
+        } else {
+            self.init(value: true)
+        }
+    }
+    
+    public init(any subpredicates: some BidirectionalCollection<Self>) {
+        var iterator = subpredicates.reversed().makeIterator()
+        
+        if let guarded = iterator.next() {
+            self.init({ (input: repeat PredicateExpressions.Variable<each Input>) in
+                let condition = PredicateExpressions.Value(guarded)
+                var pieces: any StandardPredicateExpression<Bool> = PredicateExpressions.build_evaluate(condition, repeat each input)
+                
+                while let next = iterator.next() {
+                    pieces = Self.join(PredicateExpressions.build_evaluate(PredicateExpressions.build_Arg(next), repeat each input), pieces)
+                }
+                
+                return pieces
+            })
+        } else {
+            self.init(value: false)
+        }
+    }
+    
+    fileprivate static func meet<T: StandardPredicateExpression<Bool>, U: StandardPredicateExpression<Bool>>(_ lhs: T, _ rhs: U) -> any StandardPredicateExpression<Bool> {
+        PredicateExpressions.build_Conjunction(lhs: lhs, rhs: rhs)
+    }
+    
+    fileprivate static func join<T: StandardPredicateExpression<Bool>, U: StandardPredicateExpression<Bool>>(_ lhs: T, _ rhs: U) -> any StandardPredicateExpression<Bool> {
+        PredicateExpressions.build_Disjunction(lhs: lhs, rhs: rhs)
+    }
+}
+#endif
 
 // Namespace for operator expressions
+/// The expressions that make up a predicate.
+///
+/// Don't use this type directly. When you call the `Predicate(_:)` macro in
+/// your code, the expansion of that macro produces these values.
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @frozen public enum PredicateExpressions {}
 

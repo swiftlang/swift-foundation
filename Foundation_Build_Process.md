@@ -55,7 +55,7 @@ Each individual project can also be built via CMake. This is useful when making 
 
 ### How can I invoke a build via this configuration?
 
-_Note: Building via CMake requires that Ninja and CMake (v3.24 or greater) are both pre-installed_
+_Note: Building via CMake requires that Ninja and CMake are both pre-installed, to find the minimum required versions of these tools, check the Swift repo's [update checkout configuration)(https://github.com/swiftlang/swift/blob/main/utils/update_checkout/update-checkout-config.json). If your system does not ship with the required version of CMake, you can download it from [CMake's website](https://cmake.org/download/)._
 
 1. Ensure external dependencies such as dispatch, curl, libxml, etc. are built _(swift-corelibs-foundation only)_
 2. Configure and generate the cmake build via `cmake -B<build folder> -G Ninja -DCMAKE_INSTALL_PREFIX=<install folder>`
@@ -122,11 +122,21 @@ The swift-foundation project is also built internally within Apple as part of th
 
 ## Benchmarks
 
-Benchmarks for `swift-foundation` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
+Benchmarks for `swift-foundation` are in a separate Swift Package in the `Benchmarks` subfolder of this repository.
 They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
-Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
-An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
+Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics. An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark
+
+Install `jemalloc` before running benchmarks:
+- **macOS:** `brew install jemalloc`
+- **Ubuntu:** `sudo apt-get install -y libjemalloc-dev`
+
 Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
 ```
 swift package benchmark
 ```
+
+If `jemalloc` is not available, disable it by setting `BENCHMARK_DISABLE_JEMALLOC=1`:
+```shell
+BENCHMARK_DISABLE_JEMALLOC=1 swift package benchmark
+```
+

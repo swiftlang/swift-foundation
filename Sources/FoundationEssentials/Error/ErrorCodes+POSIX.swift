@@ -23,6 +23,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -141,7 +143,7 @@ extension POSIXError {
         return .EFAULT
     }
 
-    #if !os(Windows) && !os(WASI)
+    #if !os(Windows) && !os(WASI) && !os(Emscripten)
     /// Block device required.
     public static var ENOTBLK: POSIXErrorCode {
         return .ENOTBLK
@@ -304,7 +306,7 @@ extension POSIXError {
         return .EPROTONOSUPPORT
     }
 
-    #if !os(WASI)
+    #if !os(WASI) && !os(Emscripten)
     /// Socket type not supported.
     public static var ESOCKTNOSUPPORT: POSIXErrorCode {
         return .ESOCKTNOSUPPORT
@@ -320,7 +322,7 @@ extension POSIXError {
     #endif
 
     #if !os(Windows)
-    #if !os(WASI)
+    #if !os(WASI) && !os(Emscripten)
     /// Protocol family not supported.
     public static var EPFNOSUPPORT: POSIXErrorCode {
         return .EPFNOSUPPORT
@@ -386,7 +388,7 @@ extension POSIXError {
         return .ENOTCONN
     }
 
-    #if !os(WASI)
+    #if !os(WASI) && !os(Emscripten)
     /// Can't send after socket shutdown.
     public static var ESHUTDOWN: POSIXErrorCode {
         return .ESHUTDOWN
@@ -420,7 +422,7 @@ extension POSIXError {
     }
 
     #if !os(Windows)
-    #if !os(WASI)
+    #if !os(WASI) && !os(Emscripten)
     /// Host is down.
     public static var EHOSTDOWN: POSIXErrorCode {
         return .EHOSTDOWN
@@ -448,7 +450,7 @@ extension POSIXError {
     #endif
     
     #if !os(Windows)
-    #if !os(WASI)
+    #if !os(WASI) && !os(Emscripten)
     /// Too many users.
     public static var EUSERS: POSIXErrorCode {
         return .EUSERS
@@ -469,7 +471,7 @@ extension POSIXError {
         return .ESTALE
     }
 
-    #if !os(WASI)
+    #if !os(WASI) && !os(Emscripten)
     /// Too many levels of remote in path.
     public static var EREMOTE: POSIXErrorCode {
         return .EREMOTE
@@ -623,7 +625,7 @@ extension POSIXError {
         return .EMULTIHOP
     }
 
-    #if !os(WASI) && !os(FreeBSD)
+    #if !os(WASI) && !os(FreeBSD) && !os(Emscripten)
     /// No message available on STREAM.
     public static var ENODATA: POSIXErrorCode {
         return .ENODATA
@@ -635,7 +637,7 @@ extension POSIXError {
         return .ENOLINK
     }
 
-    #if !os(WASI) && !os(FreeBSD)
+    #if !os(WASI) && !os(FreeBSD) && !os(Emscripten)
     /// No STREAM resources.
     public static var ENOSR: POSIXErrorCode {
         return .ENOSR
@@ -653,7 +655,7 @@ extension POSIXError {
         return .EPROTO
     }
 
-    #if !os(OpenBSD) && !os(WASI) && !os(FreeBSD)
+    #if !os(OpenBSD) && !os(WASI) && !os(FreeBSD) && !os(Emscripten)
     /// STREAM ioctl timeout.
     public static var ETIME: POSIXErrorCode {
         return .ETIME

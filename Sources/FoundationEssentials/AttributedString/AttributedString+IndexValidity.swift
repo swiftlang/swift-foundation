@@ -10,30 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Synchronization)
 internal import Synchronization
-#endif
 
 extension AttributedString.Guts {
     typealias Version = UInt
-    
-    #if canImport(Synchronization)
+
     private static let _nextVersion = Atomic<Version>(0)
-    #else
-    private static let _nextVersion = LockedState<Version>(initialState: 0)
-    #endif
     
     static func createNewVersion() -> Version {
-        #if canImport(Synchronization)
         _nextVersion.wrappingAdd(1, ordering: .relaxed).oldValue
-        #else
-        _nextVersion.withLock { value in
-            defer {
-                value &+= 1
-            }
-            return value
-        }
-        #endif
     }
     
     func incrementVersion() {

@@ -20,11 +20,72 @@ typealias CalendarComponentAndValue = (component: Calendar.Component, value: Int
 
 extension Date {
 
+    /// A format style that forms locale-aware string representations of a relative date or time.
+    ///
+    /// Use the strings that the format style produces, such as "1 hour ago", "in 2 weeks", "yesterday", and "tomorrow" as standalone strings. Embedding them in other strings may not be grammatically correct.
+    ///
+    /// Express relative date formats in either ``Date/RelativeFormatStyle/Presentation/numeric`` or ``Date/RelativeFormatStyle/Presentation/named`` styles. For example:
+    ///
+    /// ```swift
+    /// if let past = Calendar.current.date(byAdding: .day, value: -7, to: Date()) {
+    /// var formatStyle = Date.RelativeFormatStyle()
+    ///
+    /// formatStyle.presentation = .numeric
+    /// past.formatted(formatStyle) // "1 week ago"
+    ///
+    /// formatStyle.presentation = .named
+    /// past.formatted(formatStyle) // "last week"
+    /// }
+    /// ```
+    ///
+    ///
+    /// Use the convenient static factory method ``FormatStyle/relative(presentation:unitsStyle:)`` to shorten the syntax when applying presentation and units style modifiers to customize the format. For example:
+    ///
+    /// ```swift
+    /// if let past = Calendar.current.date(byAdding: .day, value: 7, to: Date()) {
+    ///
+    /// past.formatted(.relative(presentation: .numeric)) // "in 1 week"
+    /// past.formatted(.relative(presentation: .named)) // "next week"
+    ///
+    /// past.formatted(.relative(presentation: .named, unitsStyle: .wide)) // "next week"
+    /// past.formatted(.relative(presentation: .named, unitsStyle: .narrow)) // "next wk."
+    /// past.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)) // "next wk."
+    /// past.formatted(.relative(presentation: .named, unitsStyle: .spellOut)) // "next week"
+    /// past.formatted(.relative(presentation: .numeric, unitsStyle: .wide)) // "in 1 week"
+    /// past.formatted(.relative(presentation: .numeric, unitsStyle: .narrow)) // "in 1 wk."
+    /// past.formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated)) // "in 1 wk."
+    /// past.formatted(.relative(presentation: .numeric, unitsStyle: .spellOut)) // "in one week"
+    /// }
+    /// ```
+    ///
+    ///
+    /// The ``FormatStyle/format(_:)`` instance method generates a string from the provided relative date. Once you create a style, you can use it to format relative dates multiple times.
+    ///
+    /// The following example applies a format style repeatedly to produce string representations of relative dates:
+    ///
+    /// ```swift
+    /// if let pastWeek = Calendar.current.date(byAdding: .day, value: -7, to: Date()),
+    /// let pastDay = Calendar.current.date(byAdding: .day, value: -1, to: Date()) {
+    ///
+    /// let formatStyle = Date.RelativeFormatStyle(
+    /// presentation: .named,
+    /// unitsStyle: .spellOut,
+    /// locale: Locale(identifier: "en_GB"),
+    /// calendar: Calendar.current,
+    /// capitalizationContext: .beginningOfSentence)
+    ///
+    /// formatStyle.format(pastDay) // "Yesterday"
+    /// formatStyle.format(pastWeek) // "Last week"
+    /// }
+    /// ```
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
     public struct RelativeFormatStyle : Codable, Hashable, Sendable {
         @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public typealias Field = Date.ComponentsFormatStyle.Field
 
+        /// A type that represents the style to use when formatting the units of relative dates.
+        ///
+        /// Cases include ``wide``, ``narrow``, ``abbreviated`` and ``spellOut``.
         public struct UnitsStyle : Codable, Hashable, Sendable {
             enum Option : Int, Codable, Hashable {
                 case wide
@@ -74,6 +135,7 @@ extension Date {
             public static var narrow: Self { .init(option: .narrow) }
         }
 
+        /// A type that represents the style to use when formatting relative dates, such as "1 week ago" or "last week".
         public struct Presentation : Codable, Hashable, Sendable {
             enum Option : Int, Codable, Hashable {
                 case numeric
@@ -88,10 +150,55 @@ extension Date {
             public static var named: Self { .init(option: .named) }
         }
 
+        /// Specifies the style to use when describing a relative date, such as "1 day ago" or "yesterday".
+        ///
+        /// Express relative date formats in either `numeric` or `named` styles.
+        /// For example:
+        ///
+        /// ```swift
+        /// if let past = Calendar.current.date(byAdding: .day, value: -7, to: Date()) {
+        ///     var formatStyle = Date.RelativeFormatStyle()
+        ///
+        ///     formatStyle.presentation = .numeric
+        ///     past.formatted(formatStyle) // "1 week ago"
+        ///
+        ///     formatStyle.presentation = .named
+        ///     past.formatted(formatStyle) // "last week"
+        /// }
+        /// ```
         public var presentation: Presentation
+        /// The style to use when formatting the quantity or the name of the unit, such as "1 day ago" or "one day ago".
+        ///
+        /// Express relative date format units in either `wide`, `narrow`,
+        /// `abbreviated`, or `spellOut` styles. For example:
+        ///
+        /// ```swift
+        /// if let past = Calendar.current.date(byAdding: .day, value: -14, to: Date()) {
+        ///     past.formatted(.relative(presentation: .named, unitsStyle: .wide)) // "2 weeks ago"
+        ///     past.formatted(.relative(presentation: .named, unitsStyle: .narrow)) // "2 wk. ago"
+        ///     past.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)) // "2 wk. ago"
+        ///     past.formatted(.relative(presentation: .named, unitsStyle: .spellOut)) // "two weeks ago"
+        /// }
+        /// ```
         public var unitsStyle: UnitsStyle
+        /// The capitalization context to use when formatting the relative dates.
+        ///
+        /// Setting the capitalization context to `beginningOfSentence` sets the
+        /// first word of the relative date string to upper-case. A capitalization
+        /// context set to `middleOfSentence` keeps all words in the string
+        /// lower-cased.
+        ///
+        /// If you set this property to `nil`, the format style resets to using `unknown`.
         public var capitalizationContext: FormatStyleCapitalizationContext
+        /// The locale to use when formatting the relative date.
+        ///
+        /// The default value is `autoupdatingCurrent`. If you set this property
+        /// to `nil`, the format style resets to using `autoupdatingCurrent`.
         public var locale: Locale
+        /// The calendar to use when formatting relative dates.
+        ///
+        /// Defaults to `autoupdatingCurrent`. If you set this property to `nil`,
+        /// the format style resets to using `autoupdatingCurrent`.
         public var calendar: Calendar
 
         /// The fields that can be used in the formatted output.
@@ -116,6 +223,30 @@ extension Date {
             case _allowedFields = "allowedFields"
         }
 
+        /// Creates a relative date format style with the specified presentation, units, locale, calendar, and capitalization context.
+        ///
+        /// The following example creates a format style applied to a relative
+        /// date to create a string representation.
+        ///
+        /// ```swift
+        /// if let past = Calendar.current.date(byAdding: .day, value: -7, to: Date()) {
+        ///     let formatStyle = Date.RelativeFormatStyle(
+        ///         presentation: .named,
+        ///         unitsStyle: .abbreviated,
+        ///         locale: Locale(identifier: "en_US"),
+        ///         calendar: Calendar.current,
+        ///         capitalizationContext: .beginningOfSentence)
+        ///
+        ///     print(past.formatted(formatStyle)) // "Last wk."
+        /// }
+        /// ```
+        ///
+        /// - Parameters:
+        ///   - presentation: The style to use when describing a relative date, such as "1 day ago" or "yesterday".
+        ///   - unitsStyle: The style to use when formatting the quantity or the name of the unit, such as "1 day ago" or "one day ago".
+        ///   - locale: The locale to use when formatting the relative date.
+        ///   - calendar: The calendar to use when formatting the relative date.
+        ///   - capitalizationContext: The capitalization context to use when formatting the relative date.
         public init(presentation: Presentation = .numeric, unitsStyle: UnitsStyle = .wide, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
             self.presentation = presentation
             self.unitsStyle = unitsStyle
@@ -137,10 +268,36 @@ extension Date {
 
         // MARK: - FormatStyle conformance
 
+        /// Creates a locale-aware string representation from a relative date value.
+        ///
+        /// Once you create a style, you can use it to format relative dates
+        /// multiple times.
+        ///
+        /// ```swift
+        /// if let pastWeek = Calendar.current.date(byAdding: .day, value: -7, to: Date()),
+        ///    let pastDay = Calendar.current.date(byAdding: .day, value: -1, to: Date()) {
+        ///     let formatStyle = Date.RelativeFormatStyle(
+        ///         presentation: .named,
+        ///         unitsStyle: .spellOut,
+        ///         locale: Locale(identifier: "en_GB"),
+        ///         calendar: Calendar.current,
+        ///         capitalizationContext: .beginningOfSentence)
+        ///
+        ///     formatStyle.format(pastDay) // "Yesterday"
+        ///     formatStyle.format(pastWeek) // "Last week"
+        /// }
+        /// ```
+        ///
+        /// - Parameter destDate: The date to format.
+        /// - Returns: A string representation of the relative date.
         public func format(_ destDate: Date) -> String {
             return _format(destDate, refDate: Date.now)
         }
 
+        /// Modifies the relative date format style to use the specified locale.
+        ///
+        /// - Parameter locale: The locale to use when formatting relative dates.
+        /// - Returns: A relative date format style with the provided locale.
         public func locale(_ locale: Locale) -> Self {
             var new = self
             new.locale = locale
@@ -320,6 +477,30 @@ extension DateComponents {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension FormatStyle where Self == Date.RelativeFormatStyle {
+    /// Returns a style for formatting a date as relative to the current date.
+    ///
+    /// Use this static method when the call point allows the use of
+    /// ``Date/RelativeFormatStyle``. You typically do this when calling the
+    /// ``Date/formatted(_:)`` method of ``Date``.
+    ///
+    /// The following example shows the relative format style with two different presentations.
+    ///
+    /// ```swift
+    /// if let past = Calendar.current.date(byAdding: .day, value: -7, to: Date()) {
+    ///     let formattedNumeric = past.formatted(
+    ///         .relative(presentation: .numeric)) // "1 week ago"
+    ///     let formattedNamed = past.formatted(
+    ///         .relative(presentation: .named)) // "last week"
+    /// }
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - presentation: The style to use when describing a relative date; for example,
+    ///     "1 day ago" or "yesterday".
+    ///   - unitsStyle: The style to use when formatting the quantity or the name of the unit;
+    ///     for example, "1 day ago" or "one day ago".
+    /// - Returns: A relative date format style customized with the specified presentation and
+    ///   unit styles.
     static func relative(presentation: Date.RelativeFormatStyle.Presentation, unitsStyle: Date.RelativeFormatStyle.UnitsStyle = .wide) -> Self {
             .init(presentation: presentation, unitsStyle: unitsStyle)
     }

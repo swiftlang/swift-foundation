@@ -17,6 +17,7 @@ target_sources(FoundationEssentials PRIVATE
     BuiltInUnicodeScalarSet.swift
     IANACharsetNames.swift
     RegexPatternCache.swift
+    Span+Path.swift
     String+Bridging.swift
     String+Comparison.swift
     String+Encoding.swift
@@ -27,6 +28,7 @@ target_sources(FoundationEssentials PRIVATE
     String+Internals.swift
     String+Path.swift
     StringBlocks.swift
+    StringEncodingMappingData.swift
     StringProtocol+Essentials.swift
     StringProtocol+Stub.swift
     UnicodeScalar.swift)

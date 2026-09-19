@@ -679,7 +679,7 @@ extension AttributedString.Runs {
         init(runs: Runs) {
             self.runs = runs
             // FIXME: ☠️ Get these from a proper cache in runs._guts.
-            _names = [T.name, U.name, V.name, W.name]
+            _names = [T.name, U.name, V.name, W.name, X.name]
             _constraints = [
                 T.runBoundaries,
                 U.runBoundaries,

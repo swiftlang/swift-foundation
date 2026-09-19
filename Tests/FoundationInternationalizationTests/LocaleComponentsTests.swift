@@ -19,7 +19,7 @@ import Testing
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-@Suite("Locale.Components")
+@Suite("Locale.Components", .tags(.locale))
 private struct LocaleComponentsTests {
 
     @Test func regions() {
@@ -328,7 +328,7 @@ private struct LocaleComponentsTests {
     }
 }
 
-@Suite("Locale Codable")
+@Suite("Locale Codable", .tags(.locale))
 private struct LocaleCodableTests {
 
     // Test types that used to encode both `identifier` and `normalizdIdentifier` now only encodes `identifier`

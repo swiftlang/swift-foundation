@@ -28,7 +28,7 @@ project(SwiftFoundation
     LANGUAGES C Swift)
 
 if(NOT SWIFT_SYSTEM_NAME)
-  if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(SWIFT_SYSTEM_NAME macosx)
   else()
     set(SWIFT_SYSTEM_NAME "$<LOWER_CASE:${CMAKE_SYSTEM_NAME}>")
@@ -37,7 +37,7 @@ endif()
 
 # Don't enable WMO on Windows hosts due to linker failures, and the use of swift's
 # old driver from build.ps1 when building for windows/android on a windows host.
-if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
+if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     # Enable whole module optimization for release builds & incremental for debug builds
     if(POLICY CMP0157)
         set(CMAKE_Swift_COMPILATION_MODE "$<IF:$<CONFIG:Release>,wholemodule,incremental>")
@@ -46,7 +46,7 @@ if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL Windows)
     endif()
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Pass -fno-omit-frame-pointer while compiling for better backtraces
     add_compile_options(
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fno-omit-frame-pointer>"
@@ -93,8 +93,8 @@ FetchContent_MakeAvailable(SwiftFoundationICU SwiftCollections)
 list(APPEND CMAKE_MODULE_PATH ${SwiftFoundation_SOURCE_DIR}/cmake/modules)
 
 # Availability Macros (only applies to FoundationEssentials and FoundationInternationalization)
-set(_SwiftFoundation_BaseAvailability "macOS 15, iOS 18, tvOS 18, watchOS 11")
-set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000")
+set(_SwiftFoundation_BaseAvailability "macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26")
+set(_SwiftFoundation_FutureAvailability "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000, visionOS 10000")
 
 # All versions to define for each availability name
 list(APPEND _SwiftFoundation_versions
@@ -103,6 +103,8 @@ list(APPEND _SwiftFoundation_versions
     "6.2"
     "6.3"
     "6.4"
+    "6.4.2"
+    "6.5"
     )
 
 # Each availability name to define

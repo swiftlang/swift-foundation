@@ -13,21 +13,45 @@
 import SwiftSyntax
 import SwiftSyntaxMacros
 internal import SwiftSyntaxBuilder
+internal import SwiftDiagnostics
+internal import SwiftIfConfig
+
+private struct BundleExpansionDiagnostic: DiagnosticMessage {
+    let message: String
+    let severity: DiagnosticSeverity
+    let diagnosticID: MessageID = .init(domain: "FoundationMacros", id: "BundleDiagnostic")
+
+    init(_ message: String, severity: DiagnosticSeverity = .error) {
+        self.message = message
+        self.severity = severity
+    }
+}
+
+extension DiagnosticsError {
+    fileprivate init(bundleDiagnostic: String, on node: SyntaxProtocol) {
+        self.init(diagnostics: [
+            Diagnostic(node: node, message: BundleExpansionDiagnostic(bundleDiagnostic))
+        ])
+    }
+}
 
 public struct BundleMacro: SwiftSyntaxMacros.ExpressionMacro, Sendable {
     public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> ExprSyntax {
-        """
-        {
-            #if SWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE
-                return Bundle.module
-            #elseif SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE
-                #error("No resource bundle is available for this module. If resources are included elsewhere, specify the bundle manually.")
-            #elseif SWIFT_BUNDLE_LOOKUP_HELPER_AVAILABLE
-                return Bundle(for: __BundleLookupHelper.self)
-            #else
-                return unsafe Bundle(_dsoHandle: #dsohandle) ?? .main
-            #endif
-        }()
-        """
+        guard let config = context.buildConfiguration else {
+            throw DiagnosticsError(bundleDiagnostic: "#bundle was not provided a build configuration.", on: node)
+        }
+
+        if try config.isCustomConditionSet(name: "SWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE") {
+            if try config.isCustomConditionSet(name: "SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE") {
+                throw DiagnosticsError(bundleDiagnostic: "Both SWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE and SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE cannot be set when using #bundle.", on: node)
+            }
+            return "Bundle.module"
+        } else if try config.isCustomConditionSet(name: "SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE") {
+            throw DiagnosticsError(bundleDiagnostic: "No resource bundle is available for this module. If resources are included elsewhere, specify the bundle manually.", on: node)
+        } else if try config.isCustomConditionSet(name: "SWIFT_BUNDLE_LOOKUP_HELPER_AVAILABLE") {
+            return "Bundle(for: __BundleLookupHelper.self)"
+        } else {
+            return "unsafe Bundle(_dsoHandle: #dsohandle) ?? .main"
+        }
     }
 }

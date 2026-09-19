@@ -70,10 +70,7 @@ extension UnkeyedDecodingContainer {
     public mutating func decodePredicateExpression<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var container = try self.nestedContainer(keyedBy: PredicateExpressionCodingKeys.self)
         let (expr, variable) = try container._decode(input: repeat each input, output: Bool.self, predicateConfiguration: predicateConfiguration)
-        guard let casted = expr as? any PredicateExpression<Bool> else {
-            throw DecodingError.dataCorruptedError(in: self, debugDescription: "This expression has an unsupported output type of \(_typeName(type(of: expr).outputType)) (expected Bool)")
-        }
-        return (casted, variable)
+        return (expr as any PredicateExpression<Bool>, variable)
     }
     
     public mutating func decodePredicateExpressionIfPresent<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>))? {

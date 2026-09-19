@@ -23,6 +23,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -273,11 +275,11 @@ internal struct _FileManagerImpl {
                                 if read(fd2, buf2.baseAddress!, quantum) != readBytes {
                                     return false
                                 }
-                                if !buf1.elementsEqual(buf2) {
+                                if !buf1.prefix(readBytes).elementsEqual(buf2.prefix(readBytes)) {
                                     return false
                                 }
                             }
-                            if readBytes < -1 { return false }
+                            if readBytes == -1 { return false }
                             return true
                         }
                     }

@@ -19,7 +19,11 @@ import Testing
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
-@Suite("Locale")
+extension Testing.Tag {
+    @Tag static var locale: Self
+}
+
+@Suite("Locale", .tags(.locale))
 private struct LocaleTests {
 
     @Test func equality() {
@@ -511,7 +515,7 @@ private struct LocaleTests {
     }
 }
 
-@Suite("Locale Properties")
+@Suite("Locale Properties", .tags(.locale))
 private struct LocalePropertiesTests {
 
     func _verify(locale: Locale, expectedLanguage language: Locale.LanguageCode? = nil, script: Locale.Script? = nil, languageRegion: Locale.Region? = nil, region: Locale.Region? = nil, subdivision: Locale.Subdivision? = nil, measurementSystem: Locale.MeasurementSystem? = nil, calendar: Calendar.Identifier? = nil, hourCycle: Locale.HourCycle? = nil, currency: Locale.Currency? = nil, numberingSystem: Locale.NumberingSystem? = nil, numberingSystems: Set<Locale.NumberingSystem> = [], firstDayOfWeek: Locale.Weekday? = nil, collation: Locale.Collation? = nil, variant: Locale.Variant? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -722,12 +726,24 @@ private struct LocalePropertiesTests {
         let x = Locale.keywordValue(identifier: "ar_EG@vt=kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", key: "vt")
         #expect(x == "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
     }
+
+    @Test func hourCycle() {
+        let frHourCycle = Locale(identifier: "fr_FR").hourCycle
+        #expect(frHourCycle == .zeroToTwentyThree)
+
+        // special case where fr_CA differs from CA
+        let frCAHourCycle = Locale(identifier: "fr_CA").hourCycle
+        #expect(frCAHourCycle == .zeroToTwentyThree)
+
+        let enCAHourCycle = Locale(identifier: "en_CA").hourCycle
+        #expect(enCAHourCycle == .oneToTwelve)
+    }
 }
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
 
-@Suite("Locale Bridging")
+@Suite("Locale Bridging", .tags(.locale))
 private struct LocaleBridgingTests {
     
     @available(macOS, deprecated: 13)
@@ -936,178 +952,94 @@ extension LocaleTests {
     }
 }
 
-#endif // FOUNDATION_FRAMEWORK
-
-// MARK: - Disabled Tests
+// These tests require bundle language matching to be implemented
 extension LocaleTests {
-    // TODO: Below can use @testable export of _Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages, preferredLocaleID)
-    /*
-#if FIXED_37256779 // The tests here depend on `_CFLocaleCreateLocaleIdentifierForAvailableLocalizations` being exposed for unit testing; however, that is not currently possible.
-- (void)testLocaleBundleMatching_modernLproj
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"fr", @"en", @"de" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"en-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
+    @Test func localeBundleMatching_modernLproj() {
+        let result = Locale.localeIdentifierForCanonicalizedLocalizations(["fr", "en", "de"], preferredLanguages: ["pa-IN", "en-IN"], preferredLocaleID: "pa_IN")
+        // Since `pa` is not in `localizations`, the locale should be an `en` locale based on `en` being in `localizations`
+        #expect(result == "en_IN")
+    }
 
-    NSString *expected = @"en_IN";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since `pa` is not in `localizations`, the locale should be an `en` locale based on `en` being in `localizations`.");
-    if (actual) { CFRelease(actual); }
+    @Test func localeBundleMatching_en_US() {
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(["de", "en", "es", "fr", "zh-Hans"], preferredLanguages: ["en-US", ], preferredLocaleID: "en_US")
+        #expect(actual == "en_US", "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
+    }
+
+    @Test func localeBundleMatching_zh_CN() {
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(["de", "en", "es", "fr", "zh-Hans", "zh-Hant"], preferredLanguages: ["zh-Hans-CN"], preferredLocaleID: "zh_CN")
+        #expect(actual == "zh_CN", "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
+    }
+
+    @Test func localeBundleMatching_zh_MO() {
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(["de", "en", "es", "fr", "zh-Hans", "zh-Hant"], preferredLanguages: ["zh-Hant-MO"], preferredLocaleID: "zh_MO")
+        #expect(actual == "zh_MO", "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
+    }
+
+    @Test func localeBundleMatching_zh_MO_2() {
+        let localizations = ["de", "en", "es", "fr", "zh_CN", "zh_TW"]
+        let preferredLanguages = ["zh-Hant-MO"]
+        let preferredLocaleID = "zh_MO"
+        
+        let expected = preferredLocaleID
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == expected, "`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.")
+    }
+
+    @Test func localeBundleMatching_th_TH() {
+        let localizations = ["de", "en", "es", "fr", "zh_CN", "zh_TW"]
+        let preferredLanguages = ["th-TH"]
+        let preferredLocaleID = "th_TH"
+        
+        let expected = "en_TH"
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == expected, "Since `th` is not in `localizations`, the locale should be an `en` locale based on `en` being in `localizations` and being hard-coded as a default for such cases.")
+    }
+
+    @Test func localeBundleMatching_modernLproj_noOverlap() {
+        let localizations = ["fr", "en", "de"]
+        let preferredLanguages = ["pa-IN", "hi-IN"]
+        let preferredLocaleID = "pa_IN"
+        
+        let expected = "en_IN"
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == expected, "Since neither `pa` nor `hi` are in `localizations`, the locale should be an `en` locale based on `en` being in `localizations` and being hard-coded as a default for such cases.")
+    }
+
+    @Test func localeBundleMatching_modernLproj_noOverlap_noEnglish() {
+        let localizations = ["fr", "de"]
+        let preferredLanguages = ["pa-IN", "hi-IN"]
+        let preferredLocaleID = "pa_IN"
+        
+        let expected = "fr_IN"
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == expected, "Since neither `pa` nor `hi` are in `localizations`, the locale should be an `fr` locale based on `fr` being #1 in `localizations` and `en` (the hard-coded default) not being present.")
+    }
+
+    @Test func localeBundleMatching_nullOrEmptyArguments_1() {
+        let localizations: [String] = []
+        let preferredLanguages = ["pa-IN", "en-IN"]
+        let preferredLocaleID = "pa_IN"
+        
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == nil, "Empty localizations should return nil")
+    }
+
+    @Test func localeBundleMatching_nullOrEmptyArguments_2() {
+        let localizations: [String] = []
+        let preferredLanguages: [String] = []
+        let preferredLocaleID = ""
+        
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == nil, "Empty arrays should return nil")
+    }
+
+    @Test func localeBundleMatching_emptyPreferredLocaleID() {
+        let localizations = ["en", "fr", "de"]
+        let preferredLanguages = ["pa-IN", "hi-IN"]
+        let preferredLocaleID = ""
+        
+        let actual = Locale.localeIdentifierForCanonicalizedLocalizations(localizations, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocaleID)
+        #expect(actual == nil, "Empty preferred locale ID should return nil")
+    }
 }
-
-- (void)testLocaleBundleMatching_en_US
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"de", @"en", @"es", @"fr", @"zh-Hans" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"en-US" ];
-    CFStringRef preferredLocaleID = CFSTR("en_US");
-
-    NSString *expected = (NSString *)preferredLocaleID;
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_zh_CN
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"de", @"en", @"es", @"fr", @"zh-Hans", @"zh-Hant" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"zh-Hans-CN" ];
-    CFStringRef preferredLocaleID = CFSTR("zh_CN");
-
-    NSString *expected = (NSString *)preferredLocaleID;
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_zh_MO
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"de", @"en", @"es", @"fr", @"zh-Hans", @"zh-Hant" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"zh-Hant-MO" ];
-    CFStringRef preferredLocaleID = CFSTR("zh_MO");
-
-    NSString *expected = (NSString *)preferredLocaleID;
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_zh_MO_2
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"de", @"en", @"es", @"fr", @"zh_CN", @"zh_TW" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"zh-Hant-MO" ];
-    CFStringRef preferredLocaleID = CFSTR("zh_MO");
-
-    NSString *expected = (NSString *)preferredLocaleID;
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"`actual` should be same as `preferredLocaleID`, since the preferred language has a localization.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_th_TH
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"de", @"en", @"es", @"fr", @"zh_CN", @"zh_TW" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"th-TH" ];
-    CFStringRef preferredLocaleID = CFSTR("th_TH");
-
-    NSString *expected = @"en_TH";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since `th` is not in `localizations`, the locale should be an `en` locale based on `en` being in `localizations` and being hard-coded as a default for such cases.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_modernLproj_noOverlap
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"fr", @"en", @"de" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"hi-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
-
-    NSString *expected = @"en_IN";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since neither `pa` nor `hi` are in `localizations`, the locale should be an `en` locale based on `en` being in `localizations` and being hard-coded as a default for such cases.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_modernLproj_noOverlap_noEnglish
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"fr", @"de" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"hi-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
-
-    NSString *expected = @"fr_IN";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since neither `pa` nor `hi` are in `localizations`, the locale should be an `fr` locale based on `fr` being #1 in `localizations` and `en` (the hard-coded default) not being present.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_legacyLproj
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"French", @"English", @"German" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"en-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
-
-    NSString *expected = @"en_IN";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since `pa` is not in `localizations`, the locale should be an `en` locale based on `English` being in `localizations`.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_legacyLproj_noOverlap
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"French", @"English", @"German" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"hi-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
-
-    NSString *expected = @"en_IN";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since `pa` is not in `localizations`, the locale should be an `en` locale based on `English` being in `localizations` and being hard-coded as a default for such cases.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_legacyLproj_noOverlap_noEnglish
-{
-    CFArrayRef localizations = (CFArrayRef)@[ @"German", @"French" ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"hi-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
-
-    NSString *expected = @"de_IN";
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertEqualObjects((NSString *)actual, expected, @"Since neither `pa` nor `hi` are in `localizations`, the locale should be a `de` locale based on `German` being #1 in `localizations` and `en` (the hard-coded default) not being present.");
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_nullOrEmptyArguments_1
-{
-    CFArrayRef localizations = (CFArrayRef)@[ ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ @"pa-IN", @"en-IN" ];
-    CFStringRef preferredLocaleID = CFSTR("pa_IN");
-
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertNil((NSString *)actual);
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_nullOrEmptyArguments_2
-{
-    CFArrayRef localizations = (CFArrayRef)@[ ];
-    CFArrayRef preferredLanguages = (CFArrayRef)@[ ];
-    CFStringRef preferredLocaleID = CFSTR("");
-
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertNil((NSString *)actual);
-    if (actual) { CFRelease(actual); }
-}
-
-- (void)testLocaleBundleMatching_nullOrEmptyArguments_3
-{
-    CFArrayRef localizations = NULL;
-    CFArrayRef preferredLanguages = NULL;
-    CFStringRef preferredLocaleID = NULL;
-
-    CFStringRef actual = _CFLocaleCreateLocaleIdentifierForAvailableLocalizations(localizations, preferredLanguages, preferredLocaleID);
-    XCTAssertNil((NSString *)actual);
-    if (actual) { CFRelease(actual); }
-}
-
-#endif
-     */
-}
+#endif // FOUNDATION_FRAMEWORK

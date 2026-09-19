@@ -549,6 +549,24 @@ private struct TestIndexPath {
         #expect(ip1.count == 2)
     }
     
+    @Test func rangeReplacementPairInsertInMiddle() {
+        var ip = IndexPath(indexes: [1, 2])
+        ip[1..<1] = IndexPath(indexes: [10])
+        #expect(ip == IndexPath(indexes: [1, 10, 2]))
+
+        var ip2 = IndexPath(indexes: [1, 2])
+        ip2[1..<1] = IndexPath(indexes: [])
+        #expect(ip2 == IndexPath(indexes: [1, 2]))
+
+        var ip3 = IndexPath(indexes: [1, 2])
+        ip3[1..<1] = IndexPath(indexes: [10, 20])
+        #expect(ip3 == IndexPath(indexes: [1, 10, 20, 2]))
+
+        var ip4 = IndexPath(indexes: [1, 2])
+        ip4[1..<1] = IndexPath(indexes: [10, 20, 30])
+        #expect(ip4 == IndexPath(indexes: [1, 10, 20, 30, 2]))
+    }
+
     @Test func moreRanges() {
         var ip = IndexPath(indexes: [1, 2, 3])
         let ip2 = IndexPath(indexes: [5, 6, 7, 8, 9, 10])

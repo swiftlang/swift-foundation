@@ -11,9 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 import Observation
-#if canImport(Synchronization)
 internal import Synchronization
-#endif
 
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
@@ -280,7 +278,7 @@ internal import _FoundationCollections
     /// If the `Subprogress` is not converted into a `ProgressManager` (for example, due to an error or early return),
     /// then the assigned count is marked as completed in the parent `ProgressManager`.
     ///
-    /// - Parameter count: The portion of `totalCount` to be delegated to the `Subprogress`.
+    /// - Parameter portionOfParentTotal: The portion of `totalCount` to be delegated to the `Subprogress`.
     /// - Returns: A `Subprogress` instance.
     public func subprogress(assigningCount portionOfParentTotal: Int) -> Subprogress {
         precondition(portionOfParentTotal > 0, "Giving out zero units is not a valid operation.")
@@ -388,6 +386,10 @@ internal import _FoundationCollections
         if let parents = parents {
             markSelfDirty(parents: parents)
         }
+        self.withMutation(keyPath: \.completedCount) {}
+        #if FOUNDATION_FRAMEWORK
+        notifyInteropObserversOfChildUpdate()
+        #endif
     }
     
     internal func updatedProgressFraction() -> ProgressFraction {
@@ -425,32 +427,30 @@ internal import _FoundationCollections
     
     //MARK: Parent - Child Relationship Methods
     internal func addChild(childManager: ProgressManager, assignedCount: Int, childFraction: ProgressFraction) -> Int {
-        self.withMutation(keyPath: \.completedCount) {
-            let (index, parents) = state.withLock { state in
-                let child = Child(manager: childManager,
-                                  assignedCount: assignedCount,
-                                  fraction: childFraction,
-                                  isFractionDirty: true,
-                                  totalFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
-                                  completedFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
-                                  totalByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
-                                  completedByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
-                                  throughputSummary: PropertyStateUInt64Array(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
-                                  estimatedTimeRemainingSummary: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
-                                  customPropertiesIntSummary: [:],
-                                  customPropertiesUInt64Summary: [:],
-                                  customPropertiesDoubleSummary: [:],
-                                  customPropertiesStringSummary: [:],
-                                  customPropertiesURLSummary: [:],
-                                  customPropertiesUInt64ArraySummary: [:],
-                                  customPropertiesDurationSummary: [:])
-                state.children.append(child)
-                return (state.children.count - 1, state.parents)
-            }
-            // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
-            markSelfDirty(parents: parents)
-            return index
+        let (index, parents) = state.withLock { state in
+            let child = Child(manager: childManager,
+                              assignedCount: assignedCount,
+                              fraction: childFraction,
+                              isFractionDirty: true,
+                              totalFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.TotalFileCount.defaultSummary, isDirty: false),
+                              completedFileCountSummary: PropertyStateInt(value: ProgressManager.Properties.CompletedFileCount.defaultSummary, isDirty: false),
+                              totalByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.TotalByteCount.defaultSummary, isDirty: false),
+                              completedByteCountSummary: PropertyStateUInt64(value: ProgressManager.Properties.CompletedByteCount.defaultSummary, isDirty: false),
+                              throughputSummary: PropertyStateUInt64Array(value: ProgressManager.Properties.Throughput.defaultSummary, isDirty: false),
+                              estimatedTimeRemainingSummary: PropertyStateDuration(value: ProgressManager.Properties.EstimatedTimeRemaining.defaultSummary, isDirty: false),
+                              customPropertiesIntSummary: [:],
+                              customPropertiesUInt64Summary: [:],
+                              customPropertiesDoubleSummary: [:],
+                              customPropertiesStringSummary: [:],
+                              customPropertiesURLSummary: [:],
+                              customPropertiesUInt64ArraySummary: [:],
+                              customPropertiesDurationSummary: [:])
+            state.children.append(child)
+            return (state.children.count - 1, state.parents)
         }
+        // Mark dirty all the way up to the root so that if the branch was marked not dirty right before this it will be marked dirty again (for optimization to work)
+        markSelfDirty(parents: parents)
+        return index
     }
     
     internal func addParent(parentManager: ProgressManager, positionInParent: Int) {

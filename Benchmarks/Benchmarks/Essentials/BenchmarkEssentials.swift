@@ -19,14 +19,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     Benchmark.defaultConfiguration.maxIterations = 1_000_000_000
     Benchmark.defaultConfiguration.maxDuration = .seconds(3)
     Benchmark.defaultConfiguration.scalingFactor = .kilo
     Benchmark.defaultConfiguration.metrics = [.cpuTotal, .wallClock, .throughput]
     
     // MARK: UUID
-    
+
     Benchmark("UUIDEqual", configuration: .init(scalingFactor: .mega)) { benchmark in
         let u1 = UUID()
         let u2 = UUID()
@@ -34,91 +34,30 @@ let benchmarks = {
             assert(u1 != u2)
         }
     }
-    
-    // MARK: Data
-    
-    func createSomeData(_ length: Int) -> Data {
-        var d = Data(repeating: 42, count: length)
-        // Set a byte to be another value just so we know we have a unique pointer to the backing
-        // For maximum inefficiency in the not equal case, set the last byte
-        d[length - 1] = UInt8.random(in: UInt8.min..<UInt8.max)
-        return d
-    }
-    
-    /// A box `Data`. Intentionally turns the value type into a reference, so we can make a promise that the inner value is not copied due to mutation during a test of insertion or replacing.
-    class TwoDatasBox {
-        var d1: Data
-        var d2: Data
-        
-        init(d1: Data, d2: Data) {
-            self.d1 = d1
-            self.d2 = d2
+
+    Benchmark("UUIDCreate") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(UUID())
         }
     }
-    
-    // MARK: -
-    
-    Benchmark("DataEqualEmpty", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = Data()
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
 
-    Benchmark("DataEqualInline", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(12) // Less than size of InlineData.Buffer
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-    
-    Benchmark("DataNotEqualInline", closure: { benchmark, box in
-        blackHole(box.d1 != box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(12) // Less than size of InlineData.Buffer
-        let d2 = createSomeData(12)
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-    
-    Benchmark("DataEqualLarge", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 8)
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-    
-    Benchmark("DataNotEqualLarge", closure: { benchmark, box in
-        blackHole(box.d1 != box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 8)
-        let d2 = createSomeData(1024 * 8)
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
+    Benchmark("UUIDCreateTimeOrdered") { benchmark in
+        for _ in benchmark.scaledIterations {
+            blackHole(UUID.version7())
+        }
+    }
 
-    Benchmark("DataEqualReallyLarge", closure: { benchmark, box in
-        blackHole(box.d1 == box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 1024 * 8)
-        let d2 = d1
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
+    Benchmark("UUIDString") { benchmark in
+        let uuid = UUID()
+        for _ in benchmark.scaledIterations {
+            blackHole(uuid.uuidString)
+        }
+    }
 
-    Benchmark("DataNotEqualReallyLarge", closure: { benchmark, box in
-        blackHole(box.d1 != box.d2)
-    }, setup: { () -> TwoDatasBox in
-        let d1 = createSomeData(1024 * 1024 * 8)
-        let d2 = createSomeData(1024 * 1024 * 8)
-        let box = TwoDatasBox(d1: d1, d2: d2)
-        return box
-    })
-
+    Benchmark("UUIDStringLower") { benchmark in
+        let uuid = UUID()
+        for _ in benchmark.scaledIterations {
+            blackHole(uuid.lowercasedUUIDString)
+        }
+    }
 }

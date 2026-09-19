@@ -207,9 +207,62 @@ private struct ISO8601FormatStyleFormattingTests {
     }
     
     @Test func rounding() {
-        // Date is: "1970-01-01 15:35:45.9999"
+        // Date is: "1970-01-01 15:35:45.9999". Rounding to the nearest millisecond is clamped so it never carries into the next second, so a fraction this close to a full second still formats as .999 rather than advancing to 15:35:46.000.
         let date = Date(timeIntervalSinceReferenceDate: -978251054.0 - 0.0001)
         let str = Date.ISO8601FormatStyle().timeZone(separator: .colon).time(includingFractionalSeconds: true).timeSeparator(.colon).format(date)
         #expect(str == "15:35:45.999Z")
+    }
+
+    @Test func fractionalSecondsRoundToNearestMillisecond() throws {
+        // A `Date` built from a fractional `TimeInterval` at a present-day magnitude cannot represent the value exactly, so the extracted nanosecond lands just below the intended value (e.g. 122999906 for .123). The milliseconds field must round to the nearest millisecond rather than truncating toward zero, otherwise it is reported one millisecond too low.
+        let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
+
+        // 1674036251.123 -> "2023-01-18T10:04:11.123" (previously ".122")
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_251.123)) == "2023-01-18T10:04:11.123")
+
+        // Every millisecond from a present-day base must round-trip through the formatted string.
+        let base = 1_674_036_251.0
+        for ms in 0..<1000 {
+            let formatted = style.format(Date(timeIntervalSince1970: base + Double(ms) / 1000.0))
+            let padded = "00\(ms)".suffix(3)
+            let suffix = ".\(padded)"
+            #expect(formatted.hasSuffix(suffix), "ms=\(ms) formatted as \(formatted)")
+        }
+
+        // A sub-millisecond remainder close enough to a full second is clamped rather than carried, so .9996 at second 11 still reads as second 11 with the largest representable fraction.
+        #expect(style.format(Date(timeIntervalSince1970: base + 0.9996)) == "2023-01-18T10:04:11.999")
+    }
+
+    @Test func fractionalSecondsDoNotCarryAtSecondBoundary() throws {
+        // Rounding here exists to undo binary representation error, not to advance the instant. A time like HH:MM:59.9996 must stay in that second and format as HH:MM:59.999 rather than rolling the second, the minute, and potentially the day forward.
+        let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
+
+        // 1674036299.0 is 2023-01-18T10:04:59, so the .9996 remainder must not reach 10:05:00.000.
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_299.0 + 0.9996)) == "2023-01-18T10:04:59.999")
+
+        // 0.9999s is likewise clamped instead of carrying.
+        #expect(style.format(Date(timeIntervalSince1970: 1_674_036_251.0 + 0.9999)) == "2023-01-18T10:04:11.999")
+    }
+
+    @Test func fractionalSecondsDoNotCarryAcrossDSTBoundary() throws {
+        // Because rounding never carries across a second, it also cannot push a time across a
+        // daylight saving transition. Use US Pacific, where 2023-03-12 01:59:59.9996 local sits in
+        // the last second before the spring-forward gap and must stay there.
+        guard let pacific = TimeZone(identifier: "America/Los_Angeles") else { return }
+        let style = Date.ISO8601FormatStyle(timeZone: pacific).year().month().day().time(includingFractionalSeconds: true).timeZone(separator: .colon)
+
+        // 1678615199.0 is 2023-03-12T01:59:59 Pacific (PST, -08:00). The output keeps that wall
+        // clock and offset instead of jumping to 03:00:00 PDT.
+        let formatted = style.format(Date(timeIntervalSince1970: 1_678_615_199.0 + 0.9996))
+        #expect(formatted == "2023-03-12T01:59:59.999-08:00")
+    }
+
+    @Test func fractionalSecondsRoundTripParseThenFormat() throws {
+        // Parsing a millisecond-precision string and formatting it back must be stable: the
+        // formatted value should match the parsed input, not drift by a millisecond.
+        let style = Date.ISO8601FormatStyle.iso8601.year().month().day().time(includingFractionalSeconds: true)
+        let input = "2023-01-18T10:04:11.123"
+        let date = try style.parse(input)
+        #expect(style.format(date) == input)
     }
 }

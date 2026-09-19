@@ -36,6 +36,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if os(Windows)
@@ -178,7 +180,7 @@ extension _FileManagerImpl {
         #endif
     }
 
-#if !os(Windows) && !os(WASI) && !os(OpenBSD)
+#if !os(Windows) && !os(WASI) && !os(OpenBSD) && !os(Emscripten)
     static func _setAttribute(_ key: UnsafePointer<CChar>, value: Data, at path: UnsafePointer<CChar>, followSymLinks: Bool) throws {
         try value.withUnsafeBytes { buffer in
             #if canImport(Darwin)

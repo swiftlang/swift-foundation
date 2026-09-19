@@ -216,6 +216,14 @@ private struct FileManagerTests {
         #endif
     }
     
+    private static var isLinux: Bool {
+        #if os(Linux)
+        true
+        #else
+        false
+        #endif
+    }
+    
     private func randomData(count: Int = 10000) -> Data {
         Data((0 ..< count).map { _ in UInt8.random(in: .min ..< .max) })
     }
@@ -272,6 +280,27 @@ private struct FileManagerTests {
             #expect(!$0.contentsEqual(atPath: "symlinks/LinkToFoo", andPath: "EmptyFile"), "Symbolic link should not be equal to an empty file")
             #expect(!$0.contentsEqual(atPath: "symlinks/LinkToFoo", andPath: "EmptyDirectory"), "Symbolic link should not be equal to an empty directory")
             #expect(!$0.contentsEqual(atPath: "symlinks/EmptyDirectory", andPath: "EmptyFile"), "Empty directory should not be equal to empty file")
+        }
+    }
+
+    /// Regression test: contentsEqual must compare only the bytes actually read,
+    /// not the entire buffer. Files not aligned to the 8KB buffer would fail.
+    @Test func contentsEqualPartialBufferRead() async throws {
+        // Create files with sizes that are NOT multiples of 8KB (the internal buffer size)
+        // This exercises the case where the last read returns fewer bytes than the buffer size.
+        let sizes = [1, 100, 1000, 8191, 8193, 10000, 16385]
+        
+        for size in sizes {
+            let data = Data((0..<size).map { _ in UInt8.random(in: .min ... .max) })
+            try await FilePlayground {
+                File("file1", contents: data)
+                File("file2", contents: data)
+            }.test { fileManager in
+                #expect(
+                    fileManager.contentsEqual(atPath: "file1", andPath: "file2"),
+                    "Files of size \(size) should be equal"
+                )
+            }
         }
     }
 
@@ -591,6 +620,28 @@ private struct FileManagerTests {
         }
     }
 
+    @Test(arguments: ["dir/", "dir//"]) func copyItemAtPathWithTrailingSlash(_ source: String) async throws {
+        try await FilePlayground {
+            Directory("dir") {
+                Directory("subdir") {
+                    "file"
+                }
+                "foo"
+            }
+        }.test(captureDelegateCalls: true) { fileManager in
+            // Trailing separators on the source path must not be absorbed into the names of the copied items
+            try fileManager.copyItem(atPath: source, toPath: "dir2")
+            #expect(try fileManager.subpathsOfDirectory(atPath: ".").sorted() == [
+                "dir", "dir/foo", "dir/subdir", "dir/subdir/file",
+                "dir2", "dir2/foo", "dir2/subdir", "dir2/subdir/file",
+            ])
+            // The destination paths must be well formed no matter how many of the source path's trailing separators the platform's fts reports for descendants
+            #expect(fileManager.delegateCaptures.shouldCopy.compactMap(\.dst).sorted() == [
+                "dir2", "dir2/foo", "dir2/subdir", "dir2/subdir/file",
+            ])
+        }
+    }
+
     @Test func removeItemAtPath() async throws {
         try await FilePlayground {
             Directory("dir") {
@@ -778,6 +829,27 @@ private struct FileManagerTests {
             }
         }
     }
+    
+    @Test(.enabled(if: isDarwin || isLinux))
+    func fileExtendedAttributes() async throws {
+        try await FilePlayground {
+            "Foo"
+        }.test {
+            #if os(Linux)
+            let key = "user.org.swift.foundation.testattribute"
+            #else
+            let key = "org.swift.foundation.testattribute"
+            #endif
+            let value = Data("Hello, world".utf8)
+            let initialAttrs = try $0.attributesOfItem(atPath: "Foo")
+            let initialCount = (initialAttrs[._extendedAttributes] as? [String : Data])?.count ?? 0
+            try $0.setAttributes([._extendedAttributes : [key : value]], ofItemAtPath: "Foo")
+            let attrs = try $0.attributesOfItem(atPath: "Foo")
+            let xattrs = try #require(attrs[._extendedAttributes] as? [String : Data])
+            #expect(xattrs.count == initialCount + 1)
+            #expect(xattrs[key] == value)
+        }
+    }
 
     @Test func currentWorkingDirectory() async throws {
         try await FilePlayground {
@@ -835,6 +907,27 @@ private struct FileManagerTests {
                 // Manually clean up attributes so removal does not fail
                 try $0.setAttributes([.immutable: false, .appendOnly: false], ofItemAtPath: test.path)
             }
+        }
+    }
+
+    @Test func testSetAttributesModificationDate() async throws {
+        try await FilePlayground {
+            "testFile"
+            Directory("testDir") {}
+        }.test { fileManager in
+            // Test setAttributes with modificationDate on files
+            let fileTestDate = Date(timeIntervalSince1970: 1234567890)
+            try fileManager.setAttributes([.modificationDate: fileTestDate], ofItemAtPath: "testFile")
+            let fileAttrs = try fileManager.attributesOfItem(atPath: "testFile")
+            let fileModDate = try #require(fileAttrs[.modificationDate] as? Date)
+            #expect(abs(fileModDate.timeIntervalSince1970 - fileTestDate.timeIntervalSince1970) < 2.0, "File modification date should be set correctly")
+
+            // Test setAttributes with modificationDate on directories
+            let dirTestDate = Date(timeIntervalSince1970: 1234567890)
+            try fileManager.setAttributes([.modificationDate: dirTestDate], ofItemAtPath: "testDir")
+            let directoryAttrs = try fileManager.attributesOfItem(atPath: "testDir")
+            let directoryModDate = try #require(directoryAttrs[.modificationDate] as? Date)
+            #expect(abs(directoryModDate.timeIntervalSince1970 - dirTestDate.timeIntervalSince1970) < 2.0, "Directory modification date should be set correctly")
         }
     }
 
@@ -1003,6 +1096,41 @@ private struct FileManagerTests {
         assertSearchPaths([.itemReplacementDirectory], exists: false)
     }
 
+    @Test(arguments: [false, true])
+    func itemReplacementDirectory(create: Bool) async throws {
+        try await FilePlayground {
+            Directory("Documents") {}
+        }.test { fileManager in
+            let reference = URL.currentDirectory()
+                .appending(component: "Documents", directoryHint: .isDirectory)
+            let replacementDirectory = try fileManager.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: reference, create: create)
+            let secondReplacementDirectory = try fileManager.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: reference, create: create)
+            defer {
+                try? fileManager.removeItem(at: replacementDirectory)
+                try? fileManager.removeItem(at: secondReplacementDirectory)
+            }
+
+            #if FOUNDATION_FRAMEWORK
+            var isDir: ObjCBool = false
+            func isDirBool() -> Bool {
+                isDir.boolValue
+            }
+            #else
+            var isDir: Bool = false
+            func isDirBool() -> Bool {
+                isDir
+            }
+            #endif
+            #expect(fileManager.fileExists(atPath: replacementDirectory.path, isDirectory: &isDir))
+            #expect(isDirBool())
+            isDir = false
+            #expect(fileManager.fileExists(atPath: secondReplacementDirectory.path, isDirectory: &isDir))
+            #expect(isDirBool())
+            #expect(replacementDirectory != reference)
+            #expect(secondReplacementDirectory != replacementDirectory)
+        }
+    }
+
     #if !canImport(Darwin) && !os(Windows)
     @Test(.disabled(if: ProcessInfo.processInfo.environment.keys.contains(where: { $0.starts(with: "XDG") }), "Skipping due to presence of XDG environment variables which may affect this test"))
     func searchPaths_XDGEnvironmentVariables() async throws {
@@ -1133,6 +1261,12 @@ private struct FileManagerTests {
             let fileName = UUID().uuidString
             let cwd = fileManager.currentDirectoryPath
 
+            #expect(fileManager.changeCurrentDirectoryPath(cwd))
+            #expect(cwd == fileManager.currentDirectoryPath)
+
+            let nearLimitDir = cwd + "/" + String(repeating: "A", count: 255 - cwd.count)
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: nearLimitDir), withIntermediateDirectories: false) }
+
             #expect(fileManager.createFile(atPath: dirName + "/" + fileName, contents: nil))
 
             let dirURL = URL(filePath: dirName, directoryHint: .checkFileSystem)
@@ -1171,12 +1305,6 @@ private struct FileManagerTests {
 
             #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir1"), withIntermediateDirectories: false) }
 
-            // SHCreateDirectoryExW's path argument is limited to 248 characters, and the \\?\ prefix doesn't help.
-            // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shcreatedirectoryexw
-            #expect(throws: (any Error).self) {
-                try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: true)
-            }
-
             // SetCurrentDirectory seems to be limited to MAX_PATH unconditionally, counter to the documentation.
             // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setcurrentdirectory
             // https://github.com/MicrosoftDocs/feedback/issues/1441
@@ -1195,8 +1323,12 @@ private struct FileManagerTests {
 
             #expect((cwd + "/" + dirName + "/" + "lnk").resolvingSymlinksInPath == (cwd + "/" + dirName + "/" + fileName).resolvingSymlinksInPath)
 
-            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2"), withIntermediateDirectories: false) }
-            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: false) }
+            #expect(throws: Never.self) {
+                try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3"), withIntermediateDirectories: true)
+            }
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir4"), withIntermediateDirectories: false) }
+            #expect(throws: Never.self) { try fileManager.createDirectory(at: URL(fileURLWithPath: dirName + "/" + "subdir4" + "/" + "subdir5"), withIntermediateDirectories: false) }
+
             #expect(throws: Never.self) { try Data().write(to: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile")) }
             #expect(throws: Never.self) { try Data().write(to: URL(fileURLWithPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile2")) }
             #expect(throws: Never.self) { try fileManager.moveItem(atPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile2", toPath: dirName + "/" + "subdir2" + "/" + "subdir3" + "/" + "somefile3") }
