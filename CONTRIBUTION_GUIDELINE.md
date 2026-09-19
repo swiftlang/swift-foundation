@@ -12,8 +12,9 @@
 - Merely explain what the implementation does
 - Reference the PR or bug that motivated the change (belongs in the PR description)
 - Repeat information accessible from `git blame`
+- Reference other projects (ICU, CLDR, another library's headers, issues, or tests). Describe our own behavior and the reason for it, not what another codebase does. Comments like these don't age well as future readers can't easily verify these.
 
-**Let clear names replace comments.** Review the names of your functions and their arguments. If a name is clear on its own, drop any comment that only restates what it does. If you need a comment to explain what the code is doing, improve the name instead of adding the comment.
+**Replace comments with clear names.** Review the names of your functions and their arguments. If a name is clear on its own, drop any comment that only restates what it does. If you need a comment to explain what the code is doing, improve the name instead of adding the comment.
 
 **Using TODOs:** Remove stale TODOs when addressing them. For future refactoring opportunities you are *not* addressing in this PR, use `// TODO:`.
 
@@ -27,6 +28,8 @@
 
 **Avoid C-style prefixes on constant names** (e.g. `_kMyConstant`). Use descriptive names instead.
 
+**Do not prefix internal types with an underscore.** Swift's access control already conveys visibility. A leading `_` is redundant.
+
 **Keep type names and file names in sync.** If a file defines a single primary type, name the file after that type.
 
 **Use the `if let` shorthand when unwrapping to a non-optional.** When the only purpose is to bind a non-`nil` optional to a non-optional of the same name, write `if let value` rather than `if let value = value`. This applies to each binding in a comma-separated condition list too.
@@ -35,9 +38,17 @@
 
 ## Writing Style
 
-Write in-line and PR comments, DocC, commit messages, and PR descriptions in [simple English](https://simple.wikipedia.org/wiki/Wikipedia:How_to_write_Simple_English_pages). Use a small, plain vocabulary instead of rare or abstract words.
+Write in-line and PR comments, DocC, commit messages, and PR descriptions in [simple English](https://simple.wikipedia.org/wiki/Wikipedia:How_to_write_Simple_English_pages). 
 
-**Keep sentences short.** One idea per sentence. Break a long sentence into two.
+**Focus on what users want to know**. 
+
+**Stay truthful to the source.** Do not add unverified claims, benefits, or implications.
+
+**Put the main point first before going into details.** 
+
+**Omit unneeded words such as excessive modifiers or stack nouns.**
+
+**Keep sentences and paragraphs short.** One idea per sentence. Break a long sentence into two.
 
 **Prefer active verbs.** Write "the parser reads the header", not "the header is read by the parser". 
 
@@ -47,7 +58,7 @@ Write in-line and PR comments, DocC, commit messages, and PR descriptions in [si
 
 **Give direct instructions.** In steps and guidance, use the imperative: "call `reset()` first", not "you should call `reset()` first".
 
-**Use lists and tables when they help.** Use lists and tables when they are clearer than a paragraph.
+**Use lists and tables when they are clearer than a paragraph.** 
 
 ---
 
@@ -120,6 +131,10 @@ Write in-line and PR comments, DocC, commit messages, and PR descriptions in [si
 **Do not force unwrap in tests.** Use `try`/`#require`. A crash aborts the entire suite rather than reporting a failure.
 
 **Do not `print` in tests.** `print` output is buried in CI logs. Use assertions or remove them.
+
+**Do not add `@available` to a test function unless the test itself calls an API that requires it.**
+
+**Verify results against fixed, known-correct expected values.** Do not compare output only against another in-repo implementation since that does not prove correctness unless that reference implementation is itself independently verified.
 
 **Tests must be relevant to the code path changed.** Add a test that fails before the fix and passes after. Additional tests are welcome as long as they exercise the changed behavior.
 
