@@ -395,8 +395,7 @@ internal struct BuiltInUnicodeScalarSet {
                 return isInverted ? .bitmapAll : .bitmapEmpty
             }
             let nonFillValue: UInt8 = isInverted ? 0xFF : 0x00
-            assert(destination.count >= Self.byteCount)
-            for i in 0..<Self.byteCount {
+            for i in 0..<destination.count {
                 apply(&destination[unchecked: i], nonFillValue)
             }
             if charset == .whitespaceAndNewline || charset == .newline {
@@ -413,6 +412,31 @@ internal struct BuiltInUnicodeScalarSet {
             return .bitmapFilled
         }
         return isInverted ? .bitmapAll : .bitmapEmpty
+    }
+
+    internal func appendBitmap(forPlane plane: Int, isInverted: Bool, byteCount: Int = Self.byteCount, to output: inout OutputSpan<UInt8>) -> BitmapResult {
+        precondition(byteCount > 0 && byteCount <= Self.byteCount && byteCount <= output.freeCapacity)
+
+        if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
+            let shouldInvert = invertBitmapData ? !isInverted : isInverted
+            if shouldInvert {
+                for i in 0..<byteCount {
+                    output.append(~src[i])
+                }
+            } else {
+                output._append(copying: src.extracting(0..<byteCount))
+            }
+            return .bitmapFilled
+        }
+
+        output.append(repeating: 0x00, count: byteCount)
+        var mutableSpan = output.mutableSpan
+        var appended = mutableSpan._mutatingExtracting(last: byteCount)
+        let result = bitmap(forPlane: plane, isInverted: isInverted, into: &appended) { $0 = $1 }
+        if result != .bitmapFilled {
+            output.removeLast(byteCount)
+        }
+        return result
     }
 
     // CFUniCharGetNumberOfPlanes
