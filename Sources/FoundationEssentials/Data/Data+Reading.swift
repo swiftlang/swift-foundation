@@ -67,22 +67,12 @@ private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: 
                     // ERANGE indicates that the buffer was too small
                     // Get its needed size (passing nil buffer)
                     let neededSize = _fgetxattr(fd, keyStr, nil, 0, 0, 0)
-                    let data = Data(capacity: neededSize, initializingWith: { span in
-                        span.withUnsafeMutableBytes { buffer, initializedBytes in
-                            let actualSize = _fgetxattr(fd, keyStr, buffer.baseAddress!, neededSize, 0, 0)
-                            guard actualSize != -1 else {
-                                // We had an error result
-                                initializedBytes = 0
-                                return
-                            }
-                            
-                            initializedBytes = actualSize
-                        }
-                    })
-                    
-                    // Verify we got everything we needed
-                    if data.count == neededSize {
-                        output[key] = data
+                    let fullBuffer = Platform.malloc(neededSize)!
+                    if _fgetxattr(fd, keyStr, fullBuffer, neededSize, 0, 0) != neededSize {
+                        // If still an error, then give up
+                        free(fullBuffer)
+                    } else {
+                        output[key] = Data(bytesNoCopy: fullBuffer, count: neededSize, deallocator: .free)
                     }
                 }
             }

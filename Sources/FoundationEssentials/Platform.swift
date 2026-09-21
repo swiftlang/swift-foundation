@@ -28,7 +28,6 @@ fileprivate let _pageSize: Int = {
     return Int(sysInfo.dwPageSize)
 }()
 #elseif os(WASI)
-@preconcurrency import WASILibc
 // WebAssembly defines a fixed page size
 fileprivate let _pageSize: Int = 65_536
 #elseif os(Emscripten)
@@ -498,6 +497,13 @@ extension Platform {
     static let memset = _FoundationDarwinExtras.memset
     static let memcpy = _FoundationDarwinExtras.memcpy
     static let memcmp = _FoundationDarwinExtras.memcmp
+#elseif !NO_CSHIMS
+    // Fall back to the imported C headers
+    static let calloc = _FoundationCShims.calloc
+    static let malloc = _FoundationCShims.malloc
+    static let free = _FoundationCShims.free
+    static let memset = _FoundationCShims.memset
+    static let memcpy = _FoundationCShims.memcpy
+    static let memcmp = _FoundationCShims.memcmp
 #endif
-
 }

@@ -13,7 +13,7 @@
 // Below is for sin/cos
 
 #if canImport(Darwin)
-import Darwin
+internal import os
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #elseif canImport(Glibc)
