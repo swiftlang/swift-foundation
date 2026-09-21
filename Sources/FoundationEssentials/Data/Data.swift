@@ -1130,16 +1130,28 @@ extension Data {
 
 #if os(Windows)
 @usableFromInline let memcmp = ucrt.memcmp
+@usableFromInline let memset = ucrt.memset
+@usableFromInline let memcpy = ucrt.memcpy
 #elseif canImport(Bionic)
 @usableFromInline let memcmp = Bionic.memcmp
+@usableFromInline let memset = Bionic.memset
+@usableFromInline let memcpy = Bionic.memcpy
 #elseif canImport(Glibc)
 @usableFromInline let memcmp = Glibc.memcmp
+@usableFromInline let memset = Glibc.memset
+@usableFromInline let memcpy = Glibc.memcpy
 #elseif canImport(Musl)
 @usableFromInline let memcmp = Musl.memcmp
+@usableFromInline let memset = Musl.memset
+@usableFromInline let memcpy = Musl.memcpy
 #elseif canImport(WASILibc)
 @usableFromInline let memcmp = WASILibc.memcmp
+@usableFromInline let memset = WASILibc.memset
+@usableFromInline let memcpy = WASILibc.memcpy
 #elseif canImport(EmscriptenLibc)
 @usableFromInline let memcmp = EmscriptenLibc.memcmp
+@usableFromInline let memset = EmscriptenLibc.memset
+@usableFromInline let memcpy = EmscriptenLibc.memcpy
 #elseif canImport(_FoundationDarwinExtras)
 @usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
 @usableFromInline let memset = _FoundationDarwinExtras.memset
