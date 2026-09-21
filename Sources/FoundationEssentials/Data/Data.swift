@@ -37,16 +37,39 @@ internal func malloc_good_size(_ size: Int) -> Int {
 
 #if canImport(Glibc)
 @preconcurrency import Glibc
+@usableFromInline let memcmp = Glibc.memcmp
+@usableFromInline let memset = Glibc.memset
+@usableFromInline let memcpy = Glibc.memcpy
 #elseif canImport(Musl)
 @preconcurrency import Musl
+@usableFromInline let memcmp = Musl.memcmp
+@usableFromInline let memset = Musl.memset
+@usableFromInline let memcpy = Musl.memcpy
 #elseif canImport(ucrt)
 import ucrt
+@usableFromInline let memcmp = ucrt.memcmp
+@usableFromInline let memset = ucrt.memset
+@usableFromInline let memcpy = ucrt.memcpy
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+@usableFromInline let memcmp = WASILibc.memcmp
+@usableFromInline let memset = WASILibc.memset
+@usableFromInline let memcpy = WASILibc.memcpy
 #elseif canImport(EmscriptenLibc)
 @preconcurrency import EmscriptenLibc
+@usableFromInline let memcmp = EmscriptenLibc.memcmp
+@usableFromInline let memset = EmscriptenLibc.memset
+@usableFromInline let memcpy = EmscriptenLibc.memcpy
 #elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras.POSIX.sys.mman
+@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
+@usableFromInline let memset = _FoundationDarwinExtras.memset
+@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+@usableFromInline let memcmp = Bionic.memcmp
+@usableFromInline let memset = Bionic.memset
+@usableFromInline let memcpy = Bionic.memcpy
 #elseif canImport(string_h)
 import string_h
 #endif
@@ -1126,37 +1149,6 @@ extension Data {
         _representation.hash(into: &hasher)
     }
 }
-
-
-#if os(Windows)
-@usableFromInline let memcmp = ucrt.memcmp
-@usableFromInline let memset = ucrt.memset
-@usableFromInline let memcpy = ucrt.memcpy
-#elseif canImport(Bionic)
-@usableFromInline let memcmp = Bionic.memcmp
-@usableFromInline let memset = Bionic.memset
-@usableFromInline let memcpy = Bionic.memcpy
-#elseif canImport(Glibc)
-@usableFromInline let memcmp = Glibc.memcmp
-@usableFromInline let memset = Glibc.memset
-@usableFromInline let memcpy = Glibc.memcpy
-#elseif canImport(Musl)
-@usableFromInline let memcmp = Musl.memcmp
-@usableFromInline let memset = Musl.memset
-@usableFromInline let memcpy = Musl.memcpy
-#elseif canImport(WASILibc)
-@usableFromInline let memcmp = WASILibc.memcmp
-@usableFromInline let memset = WASILibc.memset
-@usableFromInline let memcpy = WASILibc.memcpy
-#elseif canImport(EmscriptenLibc)
-@usableFromInline let memcmp = EmscriptenLibc.memcmp
-@usableFromInline let memset = EmscriptenLibc.memset
-@usableFromInline let memcpy = EmscriptenLibc.memcpy
-#elseif canImport(_FoundationDarwinExtras)
-@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
-@usableFromInline let memset = _FoundationDarwinExtras.memset
-@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
-#endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
