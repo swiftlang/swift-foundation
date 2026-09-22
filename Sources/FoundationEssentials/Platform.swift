@@ -57,16 +57,18 @@ import stdlib_h
 internal import unistd
 
 fileprivate let _pageSize: Int = Int(getpagesize())
-#elseif canImport(WASILibc)
-@preconcurrency import WASILibc
-#elseif canImport(EmscriptenLibc)
-@preconcurrency import EmscriptenLibc
 #elseif canImport(stdlib_h)
 import stdlib_h
 #endif // canImport(Darwin)
 
 #if canImport(Bionic)
 @preconcurrency import Bionic
+#endif
+#if canImport(WASILibc)
+@preconcurrency import WASILibc
+#endif
+#if canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
