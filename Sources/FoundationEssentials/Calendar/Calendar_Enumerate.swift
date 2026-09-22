@@ -695,7 +695,9 @@ extension Calendar {
                 let dateDay = component(.day, from: date)
                 // We need to make sure we don't surpass the day we want
                 if comps.day ?? Int.max >= dateDay {
-                    let tempDate = self.date(byAdding: .month, value: -1, to: date)! // TODO: Check force unwrap here
+                    guard let tempDate = self.date(byAdding: .month, value: -1, to: date) else {
+                         return adjusted
+                    }
                     adjusted.month = component(.month, from: tempDate)
                 } else {
                     // adjusted is the date components we're trying to match against; dateDay is the current day of the current search date.
