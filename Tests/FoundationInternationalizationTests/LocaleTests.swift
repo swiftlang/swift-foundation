@@ -36,7 +36,7 @@ private struct LocaleTests {
 
         #expect(autoupdating != current)
     }
-
+    
     @Test func localizedStringFunctions() {
         let locale = Locale(identifier: "en")
 
@@ -512,6 +512,187 @@ private struct LocaleTests {
         #expect(nilLanguage.languageCode == nil)
         #expect(nilLanguage.script == nil)
         #expect(nilLanguage.region == nil)
+    }
+    
+    @Test func simpleComponentsFromIdentifier() {
+        func verify(id: String, languageCode: String?, scriptCode: String?, regionCode: String?, variantCode: String?, roundTripID: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let loc = Locale(identifier:id)
+            #expect(loc.language.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
+            #expect(loc.language.script?.identifier == scriptCode, sourceLocation:sourceLocation)
+            #expect(loc.language.region?.identifier == regionCode, sourceLocation:sourceLocation)
+            #expect(loc.region?.identifier == regionCode, sourceLocation:sourceLocation) // for this test, loc.region and loc.language.region should always be the same
+            #expect(loc.variant?.identifier == variantCode, sourceLocation:sourceLocation)
+            #expect(loc.identifier == roundTripID, sourceLocation:sourceLocation)
+
+            // Locale.Components(identifier:) should produce the same results as Locale(identifier:), except that it won't fill in a default script if the original identifier didn't specify a script
+            let cmp = Locale.Components(identifier:id)
+            #expect(cmp.languageComponents.languageCode?.identifier == languageCode, sourceLocation:sourceLocation)
+            #expect(cmp.languageComponents.script == nil || cmp.languageComponents.script?.identifier == scriptCode, sourceLocation:sourceLocation)
+            #expect(cmp.languageComponents.region?.identifier == regionCode, sourceLocation:sourceLocation)
+            #expect(cmp.variant?.identifier == variantCode, sourceLocation:sourceLocation)
+        }
+        
+        // test empty and malformed language codes
+        verify(id: "",                           languageCode: nil,    scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: "")
+        verify(id: " ",                          languageCode: " ",    scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: " ") // should the language code be " " here?
+        verify(id: "und",                        languageCode: "und",  scriptCode: "Latn", regionCode: nil, variantCode: nil, roundTripID: "und") // should the language code be "und" here? should the script code be "Latn" here?
+        verify(id: "root",                       languageCode: "root", scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: "root") // should the language code be "root" here?
+        verify(id: "#$%^#$^%",                   languageCode: "#$%^#$^%", scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: "#$%^#$^%")
+        verify(id: "1234",                       languageCode: "1234", scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: "1234") // should the language code be "1234" here?
+        verify(id: "abcdefghijklmnopqrstuvwxyz", languageCode: nil,    scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: "abcdefghijklmnopqrstuvwxyz")
+        verify(id: "_",                          languageCode: nil,    scriptCode: nil,    regionCode: nil, variantCode: nil, roundTripID: "_")
+        
+        // test various combinations of fields (and formats for fields, and malformed fields)
+        verify(id: "en",                         languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: nil,           roundTripID: "en") // why don't we fill in the region code?
+//        verify(id: "eng",                        languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: nil,           roundTripID: "eng") // TODO: Put this back in when we have the 3-to-2 mapping implemented!
+        verify(id: "fil",                        languageCode: "fil",  scriptCode: "Latn", regionCode: nil,  variantCode: nil,           roundTripID: "fil")
+        verify(id: "iw",                         languageCode: "iw",   scriptCode: "Hebr", regionCode: nil,  variantCode: nil,           roundTripID: "iw") // should we be normalizing "iw" to "he"?
+        verify(id: "xxx",                        languageCode: "xxx",  scriptCode: nil,    regionCode: nil,  variantCode: nil,           roundTripID: "xxx") // should we allow an invalid language code?
+        verify(id: "en_Latn",                    languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: nil,           roundTripID: "en_Latn")
+        verify(id: "zh_Hant",                    languageCode: "zh",   scriptCode: "Hant", regionCode: nil,  variantCode: nil,           roundTripID: "zh_Hant")
+        verify(id: "en_US",                      languageCode: "en",   scriptCode: "Latn", regionCode: "US", variantCode: nil,           roundTripID: "en_US")
+        verify(id: "zh_CN",                      languageCode: "zh",   scriptCode: "Hans", regionCode: "CN", variantCode: nil,           roundTripID: "zh_CN")
+        verify(id: "zh_TW",                      languageCode: "zh",   scriptCode: "Hant", regionCode: "TW", variantCode: nil,           roundTripID: "zh_TW")
+        verify(id: "en_Latn_US",                 languageCode: "en",   scriptCode: "Latn", regionCode: "US", variantCode: nil,           roundTripID: "en_Latn_US")
+        verify(id: "zh_Hant_CN",                 languageCode: "zh",   scriptCode: "Hant", regionCode: "CN", variantCode: nil,           roundTripID: "zh_Hant_CN")
+        verify(id: "zh_Hans_TW",                 languageCode: "zh",   scriptCode: "Hans", regionCode: "TW", variantCode: nil,           roundTripID: "zh_Hans_TW")
+        verify(id: "Latn",                       languageCode: "latn", scriptCode: "Latn", regionCode: nil,  variantCode: nil,           roundTripID: "Latn") // why do we allow a 4-letter language code?
+        verify(id: "_Latn",                      languageCode: nil,    scriptCode: "Latn", regionCode: nil,  variantCode: nil,           roundTripID: "_Latn")
+        verify(id: "Hans",                       languageCode: "hans", scriptCode: "Hans", regionCode: nil,  variantCode: nil,           roundTripID: "Hans") // why do we allow a 4-letter language code?
+        verify(id: "Zzzz",                       languageCode: "zzzz", scriptCode: "Zzzz", regionCode: nil,  variantCode: nil,           roundTripID: "Zzzz") // why do we allow a 4-letter language code?
+        verify(id: "es_419",                     languageCode: "es",   scriptCode: "Latn", regionCode: "419", variantCode: nil,          roundTripID: "es_419")
+        verify(id: "419",                        languageCode: "419",  scriptCode: nil,    regionCode: nil,  variantCode: nil,           roundTripID: "419") // why do we allow a numeric language code?
+        verify(id: "US",                         languageCode: "us",   scriptCode: nil,    regionCode: nil,  variantCode: nil,           roundTripID: "US") // should we allow an invalid language code?
+        verify(id: "_419",                       languageCode: nil,    scriptCode: "Latn", regionCode: "419", variantCode: nil,          roundTripID: "_419") // why are we filling in the script code with no language code?
+        verify(id: "_US",                        languageCode: nil,    scriptCode: "Latn", regionCode: "US", variantCode: nil,           roundTripID: "_US") // why are we filling in the script code with no language code?
+        verify(id: "__419",                      languageCode: nil,    scriptCode: nil,    regionCode: nil,  variantCode: "419",         roundTripID: "__419") // should we be interpreting "419" as the variant code?  Is it a legal variant code?
+        verify(id: "__US",                       languageCode: nil,    scriptCode: nil,    regionCode: nil,  variantCode: "US",          roundTripID: "__US") // should we be interpreting "419" as the variant code?  Is it a legal variant code?
+        verify(id: "en_US_POSIX",                languageCode: "en",   scriptCode: "Latn", regionCode: "US", variantCode: "POSIX",       roundTripID: "en_US_POSIX")
+        verify(id: "ca_ES_VALENCIA",             languageCode: "ca",   scriptCode: "Latn", regionCode: "ES", variantCode: "VALENCIA",    roundTripID: "ca_ES_VALENCIA")
+        verify(id: "ja_TRADITIONAL",             languageCode: "ja",   scriptCode: "Jpan", regionCode: nil,  variantCode: "TRADITIONAL", roundTripID: "ja_TRADITIONAL")
+        verify(id: "ja_JP_TRADITIONAL",          languageCode: "ja",   scriptCode: "Jpan", regionCode: "JP", variantCode: "TRADITIONAL", roundTripID: "ja_JP_TRADITIONAL")
+        verify(id: "ja_Jpan_JP_TRADITIONAL",     languageCode: "ja",   scriptCode: "Jpan", regionCode: "JP", variantCode: "TRADITIONAL", roundTripID: "ja_Jpan_JP_TRADITIONAL")
+        verify(id: "VALENCIA",                   languageCode: "valencia", scriptCode: nil, regionCode: nil, variantCode: nil,           roundTripID: "VALENCIA") // should we be interpreting "valencia" as a language code?
+        verify(id: "_VALENCIA",                  languageCode: nil,    scriptCode: nil,    regionCode: nil,  variantCode: "VALENCIA",    roundTripID: "_VALENCIA")
+        verify(id: "__VALENCIA",                 languageCode: nil,    scriptCode: nil,    regionCode: nil,  variantCode: "VALENCIA",    roundTripID: "__VALENCIA")
+        verify(id: "en_#$%#$#$_US",              languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: "#$%#$#$_US",  roundTripID: "en_#$%#$#$_US") // why are we allowing garbage in the variant code?
+        verify(id: "en_US_US",                   languageCode: "en",   scriptCode: "Latn", regionCode: "US", variantCode: "US",          roundTripID: "en_US_US") // why are we allowing "US" as a variant code?
+        verify(id: "en_US_Latn",                 languageCode: "en",   scriptCode: "Latn", regionCode: "US", variantCode: "LATN",        roundTripID: "en_US_Latn") // why are we allowing "LATN" as a variant code?
+        verify(id: "enzzz_US_Latn",              languageCode: "enzzz", scriptCode: nil,   regionCode: "US", variantCode: "LATN",        roundTripID: "enzzz_US_Latn") // why are we allowing "enzzz" as a language code and "LATN" as a variant code?
+        verify(id: "en_Latnzzzz",                languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: "LATNZZZZ",    roundTripID: "en_Latnzzzz") // should we be allowing "LATNZZZ" as a variant code?
+        verify(id: "en_Latn_USzzzz",             languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: "USZZZZ",      roundTripID: "en_Latn_USzzzz") // should we be allowing "USZZZZ" as a variant code?
+        verify(id: "en_#$%%#$%#",                languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: "#$%%#$%#",    roundTripID: "en_#$%%#$%#") // why are we allowing garbage in the variant code?
+        verify(id: "en_#$%%#$%#_US",             languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: "#$%%#$%#_US", roundTripID: "en_#$%%#$%#_US") // why are we allowing garbage in the variant code (and too many fields)?
+        verify(id: "en_Latn_#$%%#$%#",           languageCode: "en",   scriptCode: "Latn", regionCode: nil,  variantCode: "#$%%#$%#",    roundTripID: "en_Latn_#$%%#$%#") // why are we allowing garbage in the variant code?
+        verify(id: "en_Latn_US_SDFPISDFPSIDFOS", languageCode: "en",   scriptCode: "Latn", regionCode: "US", variantCode: "SDFPISDFPSIDFOS", roundTripID: "en_Latn_US_SDFPISDFPSIDFOS") // shouldn't "SDFPISDFPSIDFOS" be too long for a variant code?
+        
+        // test case and delimiter normalization
+        verify(id: "en_Latn_US_POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en_Latn_US_POSIX")
+        verify(id: "en_latn_us_posix", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en_latn_us_posix")
+        verify(id: "EN_LATN_US_POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "EN_LATN_US_POSIX")
+        verify(id: "eN_laTn_uS_poSiX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "eN_laTn_uS_poSiX")
+        verify(id: "en-Latn-US-POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en-Latn-US-POSIX")
+        verify(id: "en-latn-us-posix", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en-latn-us-posix")
+        verify(id: "en-Latn_US_POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en-Latn_US_POSIX")
+        verify(id: "en_Latn-US-POSIX", languageCode: "en", scriptCode: "Latn", regionCode: "US", variantCode: "POSIX", roundTripID: "en_Latn-US-POSIX")
+    }
+    
+    @Test func keyValueNormalization() {
+        func verify(id: String, normalizedID: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let locImpl = _LocaleImpl(identifier: id)
+            #expect(locImpl._normalizedIdentifier == normalizedID, sourceLocation:sourceLocation)
+            
+            let comps = Locale.Components(identifier: id)
+            let newID = comps.icuIdentifier.replacing("-", with: "_") // Locale.Components.icuIdentifier puts a "-" before the script code (e.g., "en-Latn_US"), and I didn't want to change that
+            #expect(newID == normalizedID, sourceLocation:sourceLocation)
+        }
+
+        // quick check to make sure case and delimiter normalization on regular locale IDs works right
+        verify(id: "en-latn-us", normalizedID: "en_Latn_US")
+        
+        // check that we're normalizing the BCP47 identifiers back to the legacy identifiers
+        verify(id: "en_US@calendar=gregorian", normalizedID: "en_US@calendar=gregorian")
+        verify(id: "en_US@ca=gregory",         normalizedID: "en_US@calendar=gregorian")
+        
+        // check correct handling of multiple key-value pairs, normalization of BCP47 identifiers, and sorting of key-value pairs
+        verify(id: "en_US@calendar=gregorian;hours=h12;numbers=latn", normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@ca=gregory;hc=h12;nu=latn",                 normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@numbers=latn;hours=h12;calendar=gregorian", normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@nu=latn;hc=h12;ca=gregory",                 normalizedID: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        
+        // verify that if the same key appears twice, the first one wins
+        verify(id: "en_US@numbers=arabext;calendar=islamic;numbers=latn;calendar=gregorian", normalizedID: "en_US@calendar=islamic;numbers=arabext")
+        
+        // verify case and whitespace normalization, and that malformed key-value pairs get filtered out
+        verify(id: "en_US@HOURS=H23;calendar=gregorian=islamic;rg;;numbers = arab ; 123=456;#$%=%^&;sd=;=goo;rg=GBzzzz", normalizedID: "en_US@hours=h23;numbers=arab;rg=gbzzzz")
+        
+        // verify correct handling of misplaced or extra @ signs
+        verify(id: "en_US@",                                normalizedID: "en_US")
+        verify(id: "en_US@;;;;;",                           normalizedID: "en_US")
+        verify(id: "en_US@numbers=latn@calendar=gregorian", normalizedID: "en_US")
+    }
+    
+    @Test func complexComponentsFromIdentifier() {
+        struct XR { // short for "expected result"
+            let value: String?
+            let showsInComponents: Bool
+            
+            init(_ value: String?, showsInComponents: Bool = true) { self.value = value; self.showsInComponents = showsInComponents }
+        }
+        
+        func verify(id: String, language: XR? = nil, script: XR? = nil, languageRegion: XR? = nil, region: XR? = nil, calendar: XR? = nil, numberingSystem: XR? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+            let loc = Locale(identifier:id)
+            if let language = language?.value { #expect(loc.language.languageCode?.identifier == language, sourceLocation:sourceLocation) }
+            if let script = script?.value { #expect(loc.language.script?.identifier == script, sourceLocation:sourceLocation) }
+            if let languageRegion = languageRegion?.value { #expect(loc.language.region?.identifier == languageRegion, sourceLocation:sourceLocation) }
+            if let region = region?.value { #expect(loc.region?.identifier == region, sourceLocation:sourceLocation) }
+            if let calendar = calendar?.value { #expect(loc._calendarIdentifier.cldrIdentifier == calendar, sourceLocation:sourceLocation) }
+            if let numberingSystem = numberingSystem?.value { #expect(loc.numberingSystem.identifier == numberingSystem, sourceLocation:sourceLocation) }
+
+            let cmp = Locale.Components(identifier:id)
+            if let language, language.showsInComponents { #expect(cmp.languageComponents.languageCode?.identifier == language.value, sourceLocation:sourceLocation) }
+            if let script, script.showsInComponents { #expect(cmp.languageComponents.script == nil || cmp.languageComponents.script?.identifier == script.value, sourceLocation:sourceLocation) }
+            if let languageRegion, languageRegion.showsInComponents { #expect(cmp.languageComponents.region?.identifier == languageRegion.value, sourceLocation:sourceLocation) }
+            if let region, region.showsInComponents { #expect(cmp.region?.identifier == region.value, sourceLocation:sourceLocation) }
+            if let calendar, calendar.showsInComponents { #expect(cmp.calendar?.cldrIdentifier == calendar.value, sourceLocation:sourceLocation) }
+            if let numberingSystem, numberingSystem.showsInComponents { #expect(cmp.numberingSystem?.identifier == numberingSystem.value, sourceLocation:sourceLocation) }
+        }
+        
+        verify(id: "en_US",           language: XR("en"), languageRegion: XR("US"), region: XR("US", showsInComponents: false))
+        verify(id: "en@rg=uszzzz",    language: XR("en"), languageRegion: nil,      region: XR("US"))
+        verify(id: "en_US@rg=gbzzzz", language: XR("en"), languageRegion: XR("US"), region: XR("GB"))
+        verify(id: "en_GB@rg=uszzzz", language: XR("en"), languageRegion: XR("GB"), region: XR("US"))
+        
+        verify(id: "en_US",                           language: XR("en"), languageRegion: XR("US"), calendar: XR("gregorian", showsInComponents: false))
+        verify(id: "en_US@calendar=gregorian",        language: XR("en"), languageRegion: XR("US"), calendar: XR("gregorian"))
+        verify(id: "en_US@calendar=buddhist",         language: XR("en"), languageRegion: XR("US"), calendar: XR("buddhist"))
+        verify(id: "ar_SA",                           language: XR("ar"), languageRegion: XR("SA"), calendar: XR("islamic-umalqura", showsInComponents: false))
+        verify(id: "ar_SA@calendar=islamic-umalqura", language: XR("ar"), languageRegion: XR("SA"), calendar: XR("islamic-umalqura"))
+        verify(id: "ar_SA@calendar=gregorian",        language: XR("ar"), languageRegion: XR("SA"), calendar: XR("gregorian"))
+
+        // Default numbering system derived from the language/script/region (not present in the
+        // identifier, so it never shows up in Locale.Components).
+        verify(id: "en_US",   language: XR("en"),  numberingSystem: XR("latn",    showsInComponents: false)) // default fallback
+        verify(id: "ff_Adlm", language: XR("ff"),  numberingSystem: XR("adlm",    showsInComponents: false)) // script-specific
+        verify(id: "az_Arab", language: XR("az"),  numberingSystem: XR("arabext", showsInComponents: false)) // script-specific
+        verify(id: "ar_BH",   language: XR("ar"),  numberingSystem: XR("arab",    showsInComponents: false)) // region-specific
+        verify(id: "ar_SA",   language: XR("ar"),  numberingSystem: XR("arab",    showsInComponents: false)) // region-specific
+        verify(id: "ar_AE",   language: XR("ar"),  numberingSystem: XR("latn",    showsInComponents: false)) // region not listed -> default
+        verify(id: "ckb",     language: XR("ckb"), numberingSystem: XR("arab",    showsInComponents: false)) // language-only
+        verify(id: "fa",      language: XR("fa"),  numberingSystem: XR("arabext", showsInComponents: false)) // language-only
+        verify(id: "ccp",     language: XR("ccp"), numberingSystem: XR("cakm",    showsInComponents: false)) // language-only
+        verify(id: "my",      language: XR("my"),  numberingSystem: XR("mymr",    showsInComponents: false)) // language-only
+        verify(id: "nqo",     language: XR("nqo"), numberingSystem: XR("nkoo",    showsInComponents: false)) // language-only
+        verify(id: "dz",      language: XR("dz"),  numberingSystem: XR("tibt",    showsInComponents: false)) // language-only
+
+        // Match-precedence pairs: the script-specific default must win over the language-only fallback.
+        verify(id: "mni",      language: XR("mni"), numberingSystem: XR("beng", showsInComponents: false))
+        verify(id: "mni_Mtei", language: XR("mni"), numberingSystem: XR("mtei", showsInComponents: false))
+        verify(id: "sat",      language: XR("sat"), numberingSystem: XR("olck", showsInComponents: false))
+        verify(id: "sat_Deva", language: XR("sat"), numberingSystem: XR("deva", showsInComponents: false))
+
+        // An explicit numbering system in the identifier overrides the derived default (and shows up in Components).
+        verify(id: "ff_Adlm@numbers=latn", language: XR("ff"), numberingSystem: XR("latn"))
     }
 }
 
