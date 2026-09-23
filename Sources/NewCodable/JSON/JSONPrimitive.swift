@@ -40,16 +40,19 @@ public enum JSONPrimitive {
                 case .pureInteger(let integer):
                     return integer
                 case .retryAsFloatingPoint:
+                    if let integer = try reader.parseIntegerFromFloatingPointForm(as: T.self) {
+                        return integer
+                    }
                     // TODO: Slowpath? Lots of inlined code here.
                     let double = try reader.parseFloatingPoint(as: Double.self)
-                    guard let integer = T(exactly: double) else {
-                        fatalError("TODO: Throw error")
+                    guard let integer = T(exactly: double),
+                          double.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) else {
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: string)
                     }
 
-                    // TODO: Classic JSONDecoder would retry Decimal -> integer parsing
                     return integer
                 case .notANumber:
-                    fatalError("TODO: Throw error")
+                    throw JSONError.numberIsNotRepresentableInSwift(parsed: string)
                 }
             }
         }
