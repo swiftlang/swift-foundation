@@ -356,11 +356,11 @@ internal struct BuiltInUnicodeScalarSet {
         if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
             let shouldInvert = invertBitmapData ? !isInverted : isInverted
             if shouldInvert {
-                for i in 0..<Self.byteCount {
+                for i in 0..<destination.count {
                     apply(&destination[unchecked: i], ~src[i])
                 }
             } else {
-                for i in 0..<Self.byteCount {
+                for i in 0..<destination.count {
                     apply(&destination[unchecked: i], src[i])
                 }
             }
@@ -370,21 +370,25 @@ internal struct BuiltInUnicodeScalarSet {
                 let asciiRange: UInt8 = isInverted ? 0xFF : 0x00
                 let otherRange: UInt8 = isInverted ? 0x00 : 0xFF
                 apply(&destination[0], 0x02)
-                for i in 1..<Self.byteCount {
+                for i in 1..<destination.count {
                     let isAsciiRange = (i >= (0x20 / 8)) && (i < (0x80 / 8))
                     apply(&destination[i], isAsciiRange ? asciiRange : otherRange)
                 }
                 return .bitmapFilled
             } else if plane == 15 || plane == 16 {
                 let value: UInt32 = isInverted ? ~0 : 0
-                for i in stride(from: 0, to: Self.byteCount, by: 4) {
+                let alignedCount = destination.count & ~3
+                for i in stride(from: 0, to: alignedCount, by: 4) {
                     apply(&destination[i],     UInt8(value & 0xFF))
                     apply(&destination[i + 1], UInt8((value >> 8) & 0xFF))
                     apply(&destination[i + 2], UInt8((value >> 16) & 0xFF))
                     apply(&destination[i + 3], UInt8((value >> 24) & 0xFF))
                 }
-                let specialIndex = destination.count - 5
-                if specialIndex >= 0 {
+                for i in alignedCount..<destination.count {
+                    apply(&destination[i], UInt8(value & 0xFF))
+                }
+                let specialIndex = Self.byteCount - 5
+                if specialIndex < destination.count {
                     apply(&destination[specialIndex], isInverted ? 0x3F : 0xC0)
                 }
                 return .bitmapFilled
