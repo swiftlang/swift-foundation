@@ -33,6 +33,28 @@ internal enum JSONPrimitiveError: Error, Sendable {
     case invalidMarker
     /// Sentinel for leaf decoders that haven't been implemented for this format variant.
     case notImplemented
+
+    var debugDescription: String {
+        switch self {
+        case let .typeMismatch(expected, actual):
+            return "Expected to decode \(expected) but found \(actual.map(String.init(describing:)) ?? "no value") instead."
+        case let .corruptedValue(message):
+            return message
+        case .invalidMarker:
+            return "The parsed JSON contained an unrecognized value marker."
+        case .notImplemented:
+            return "Decoding this value is not implemented for this format."
+        }
+    }
+
+#if FOUNDATION_FRAMEWORK
+    var nsError: NSError {
+        let userInfo: [String: Any] = [
+            NSDebugDescriptionErrorKey : self.debugDescription
+        ]
+        return .init(domain: NSCocoaErrorDomain, code: CocoaError.propertyListReadCorrupt.rawValue, userInfo: userInfo)
+    }
+#endif // FOUNDATION_FRAMEWORK
 }
 
 internal struct JSONPrimitive: ~Escapable, ~Sendable {

@@ -515,6 +515,13 @@ open class JSONDecoder {
             let underlyingError: Error? = nil
             #endif
             throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "The given data was not valid JSON.", underlyingError: underlyingError))
+        } catch let error as JSONPrimitiveError {
+            #if FOUNDATION_FRAMEWORK
+            let underlyingError: Error? = error.nsError
+            #else
+            let underlyingError: Error? = nil
+            #endif
+            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "The given data was not valid JSON.", underlyingError: underlyingError))
         } catch {
             throw error
         }
