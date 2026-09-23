@@ -557,7 +557,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
     }
 
     /// Integer fast path. Returns nil when a `.` shows the literal is really fractional, so the caller falls through to `strtod`. Overflow isn't an error: the digits just need more range than `Int64`/`UInt64` offers.
-    private static func integerLiteral(_ bytes: borrowing Span<UInt8>, sign: NumberSign) throws -> DecodedNumber? {
+    private static func integerLiteral(_ bytes: borrowing Span<UInt8>, sign: NumberSign, json5Mode: Bool) throws -> DecodedNumber? {
         guard sign.digitStart < bytes.count else {
             throw JSONPrimitiveError.corruptedValue("number: no digits")
         }
@@ -566,13 +566,17 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         if sign.isNegative {
             switch Int64.scanDecimalDigits(of: bytes, from: sign.digitStart, isNegative: true) {
             case .value(let signed): return DecodedNumber(value: .int64(signed))
-            case .overflow: return DecodedNumber(value: .decimalString)
+            case .overflow:
+                try validateDecimalString(bytes, from: sign.digitStart, containsExponent: false, json5Mode: json5Mode)
+                return DecodedNumber(value: .decimalString)
             case .nonDigit(let byte, _): stopper = byte
             }
         } else {
             switch UInt64.scanDecimalDigits(of: bytes, from: sign.digitStart) {
             case .value(let value): return DecodedNumber(value: .uint64(value))
-            case .overflow: return DecodedNumber(value: .decimalString)
+            case .overflow:
+                try validateDecimalString(bytes, from: sign.digitStart, containsExponent: false, json5Mode: json5Mode)
+                return DecodedNumber(value: .decimalString)
             case .nonDigit(let byte, _): stopper = byte
             }
         }
@@ -584,8 +588,6 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
     }
 
     /// `strtod` happily consumes `1e` or `1.` and returns garbage, so reject truncated literals first. A trailing `.` is invalid in strict JSON but legal in JSON5 (`5.` == 5.0), and strict JSON also requires a digit immediately before `e`/`E` (`1.e2` is invalid).
-    ///
-    /// Kept separate from `mantissaDigitCount` deliberately. Fusing the two into one walk measured slower in Release: this scan only runs for strict JSON with an exponent, and the extra per-byte bookkeeping a combined loop needs costs more than the walk it saves. See `.claude/notes/json-number-divergences.md`.
     private static func checkFractionalSyntax(_ bytes: borrowing Span<UInt8>, from digitStart: Int, containsExponent: Bool, json5Mode: Bool) throws {
         let count = bytes.count
         let last = bytes[count &- 1]
@@ -600,12 +602,35 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         for i in digitStart ..< count {
             let c = bytes[i]
             if c == ._e || c == ._E {
-                // `checkDigitAfterSign` already rejected a leading `e`, so `i > digitStart` here; the guard keeps a future reordering from indexing off the front.
                 guard i > digitStart, _asciiNumbers.contains(bytes[i &- 1]) else {
                     throw JSONPrimitiveError.corruptedValue("number: '\(Character(UnicodeScalar(c)))' must be preceded by a digit")
                 }
                 return
             }
+        }
+    }
+
+    /// In combination with the other tests (`checkDigitAfterSign`, `checkNoLeadingZero`, `checkFractionalSyntax`, etc.) verify that the span is exactly [digits] [`.` digits] [`e`/`E` [sign] digits], with nothing left over. This function is necessary for numbers that aren't immediately parsed, but must be valid JSON.
+    @inline(never)
+    private static func validateDecimalString(_ bytes: borrowing Span<UInt8>, from digitStart: Int, containsExponent: Bool, json5Mode: Bool) throws {
+        let count = bytes.count
+        func skipDigits(_ i: inout Int) {
+            while i < count, _asciiNumbers.contains(bytes[i]) { i &+= 1 }
+        }
+
+        var i = digitStart
+        skipDigits(&i)
+        if i < count, bytes[i] == ._period {
+            i &+= 1
+            skipDigits(&i)
+        }
+        if i < count, bytes[i] == ._e || bytes[i] == ._E {
+            i &+= 1
+            if i < count, bytes[i] == ._plus || bytes[i] == ._minus { i &+= 1 }
+            skipDigits(&i)
+        }
+        guard i == count else {
+            throw JSONPrimitiveError.corruptedValue("number: unexpected character '\(Character(UnicodeScalar(bytes[i])))'")
         }
     }
 
@@ -698,7 +723,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         }
 
         // The scanner already told us whether there's an exponent; if there is, this can't be an integer.
-        if !containsExponent, let integer = try integerLiteral(bytes, sign: sign) {
+        if !containsExponent, let integer = try integerLiteral(bytes, sign: sign, json5Mode: json5Mode) {
             // Catch '-0' like inputs here so that they can be surfaced as -0.0 floating point numbers.
             if sign.isNegative, case .int64(0) = integer.value {
                 return DecodedNumber(value: .double(-0.0))
@@ -710,6 +735,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
         // `strtod` silently truncates mantissas longer than `Double` can represent, so hand those to the caller as source bytes instead, delegating responsibility of how to interpret them.
         if mantissaDigitCount(bytes, from: sign.digitStart) > doubleLosslessDigits {
+            try validateDecimalString(bytes, from: sign.digitStart, containsExponent: containsExponent, json5Mode: json5Mode)
             return DecodedNumber(value: .decimalString)
         }
 
