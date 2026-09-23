@@ -677,6 +677,10 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
         // The scanner already told us whether there's an exponent; if there is, this can't be an integer.
         if !containsExponent, let integer = try integerLiteral(bytes, sign: sign) {
+            // Catch '-0' like inputs here so that they can be surfaced as -0.0 floating point numbers.
+            if sign.isNegative, case .int64(0) = integer.value {
+                return DecodedNumber(value: .double(-0.0))
+            }
             return integer
         }
 

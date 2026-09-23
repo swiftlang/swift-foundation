@@ -1243,6 +1243,26 @@ private struct JSONEncoderTests {
         }
     }
 
+    @Test func negativeZero() throws {
+        let negZero = Data("-0".utf8)
+
+        let d = try JSONDecoder().decode(Double.self, from: negZero)
+        #expect(d == 0)
+        #expect(d.sign == .minus)
+
+        let f = try JSONDecoder().decode(Float.self, from: negZero)
+        #expect(f == 0)
+        #expect(f.sign == .minus)
+
+        // Integer decodes drop the sign of zero: `-0` is the integer 0.
+        #expect(try JSONDecoder().decode(Int.self, from: negZero) == 0)
+        #expect(try JSONDecoder().decode(UInt.self, from: negZero) == 0)
+
+        // A positive `0` stays positive zero, and the fractional `-0.0` form is likewise negative.
+        #expect(try JSONDecoder().decode(Double.self, from: Data("0".utf8)).sign == .plus)
+        #expect(try JSONDecoder().decode(Double.self, from: Data("-0.0".utf8)).sign == .minus)
+    }
+
     func _checkExpectedThrownDataCorruptionUnderlyingError(contains substring: String, sourceLocation: SourceLocation = #_sourceLocation, closure: () throws -> Void) {
         do {
             try closure()
