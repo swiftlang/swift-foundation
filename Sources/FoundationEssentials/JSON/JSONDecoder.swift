@@ -47,7 +47,7 @@ extension Dictionary : _JSONStringDictionaryDecodableMarker where Key == String,
 #endif
 /// An object that decodes instances of a data type from JSON objects.
 ///
-/// The example below shows how to decode an instance of a simple `GroceryProduct` type from a JSON object. The type adopts <doc://com.apple.documentation/documentation/swift/codable> so that it's decodable using a ``JSONDecoder`` instance.
+/// The example below shows how to decode an instance of a simple `GroceryProduct` type from a JSON object. The type adopts `Codable` so that it's decodable using a ``JSONDecoder`` instance.
 ///
 /// ```swift
 /// struct GroceryProduct: Codable {
@@ -115,7 +115,7 @@ open class JSONDecoder {
 
     /// The strategies for encoding nonconforming floating-point numbers, also known as IEEE 754 exceptional values.
     ///
-    /// The IEEE 754 floating-point specification defines exceptional values, which include <doc://com.apple.documentation/documentation/swift/floatingpoint/infinity> and <doc://com.apple.documentation/documentation/swift/floatingpoint/nan>.
+    /// The IEEE 754 floating-point specification defines exceptional values, which include `FloatingPoint.infinity` and `FloatingPoint.nan`.
     public enum NonConformingFloatDecodingStrategy : Sendable {
         /// Throw upon encountering non-conforming values. This is the default strategy.
         case `throw`

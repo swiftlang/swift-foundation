@@ -144,9 +144,6 @@ internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBuffer
 /// You can create empty or pre-populated buffers from a variety of sources and later add or remove bytes.
 /// You can filter and sort the content, or compare against other buffers. You can manipulate subranges
 /// of bytes and iterate over some or all of them.
-///
-/// `Data` bridges to the `NSData` class and its mutable subclass, `NSMutableData`. You can use these
-/// interchangeably in code that interacts with Objective-C APIs.
 @frozen
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 #if compiler(>=6.2)

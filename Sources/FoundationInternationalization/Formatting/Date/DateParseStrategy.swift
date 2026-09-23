@@ -96,8 +96,8 @@ public extension ParseStrategy {
     ///
     /// - Parameters:
     ///   - format: The string describing the parsing format.
-    ///   - timeZone: The ``TimeZone`` used to create the string representation of the date.
-    ///   - locale: The ``Locale`` used to create the string representation of the date.
+    ///   - timeZone: The `TimeZone` used to create the string representation of the date.
+    ///   - locale: The `Locale` used to create the string representation of the date.
     /// - Returns: A strategy for parsing a date.
     static func fixed(format: Date.FormatString, timeZone: TimeZone, locale: Locale? = nil) -> Self where Self == Date.ParseStrategy {
         Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone)
