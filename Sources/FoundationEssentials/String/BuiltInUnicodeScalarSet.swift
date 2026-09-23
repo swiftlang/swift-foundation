@@ -414,8 +414,9 @@ internal struct BuiltInUnicodeScalarSet {
         return isInverted ? .bitmapAll : .bitmapEmpty
     }
 
-    internal func appendBitmap(forPlane plane: Int, isInverted: Bool, byteCount: Int = Self.byteCount, to output: inout OutputSpan<UInt8>) -> BitmapResult {
-        precondition(byteCount > 0 && byteCount <= Self.byteCount && byteCount <= output.freeCapacity)
+    internal func appendBitmap(forPlane plane: Int, isInverted: Bool, to output: inout OutputSpan<UInt8>) -> BitmapResult {
+        let byteCount = min(output.freeCapacity, Self.byteCount)
+        precondition(byteCount > 0)
 
         if let (src, invertBitmapData) = _bitmapPtrForPlane(plane) {
             let shouldInvert = invertBitmapData ? !isInverted : isInverted
