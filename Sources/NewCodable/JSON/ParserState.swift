@@ -173,6 +173,13 @@ extension JSONParserDecoder {
                 case .pureInteger(let integer):
                     return integer
                 case .retryAsFloatingPoint:
+                    // The number is spelled like a floating point value, but JSON numbers
+                    // are untyped, so it may still denote an exact integer.
+                    if let integer = try reader.parseIntegerFromFloatingPointForm(as: T.self) ^^ .jsonError {
+                        return integer
+                    }
+
+                    // Either the value is not a whole number, or the token is malformed. Fall back to Double
                     // TODO: Slowpath? Lots of inlined code here.
                     let double = try reader.parseFloatingPoint(as: Double.self) ^^ .jsonError
                     guard let integer = T(exactly: double) else {
@@ -182,7 +189,6 @@ extension JSONParserDecoder {
                     
                     // Double only has 53 bits of significand, so values with magnitude >= 2^53
                     // may have been rounded. Reject them to avoid silently returning wrong integers.
-                    // TODO: Classic JSONDecoder would retry Decimal -> integer parsing for these values.
                     if double.magnitude >= Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
                         throw .json(JSONError.numberIsNotRepresentableInSwift(parsed: String(double)))
                     }
@@ -1093,6 +1099,7 @@ extension JSONParserDecoder {
             internal mutating func _scanRestOfNumberFindingExponent() -> Bool {
                 // "Simple" imprecise scan, since we're either throwing an error anyway, or retrying parse as floating point.
                 var hasExponent = false
+            Loop:
                 while let char = peek() {
                     switch char {
                     case ._e, ._E:
@@ -1100,7 +1107,7 @@ extension JSONParserDecoder {
                         fallthrough
                     case _0 ..< numericalUpperBound, ._dot, ._plus, ._minus:
                         moveReaderIndex(forwardBy: 1)
-                    default: break
+                    default: break Loop
                     }
                 }
                 return hasExponent
@@ -1126,7 +1133,7 @@ extension JSONParserDecoder {
                     switch peek() {
                     case .none:
                         return .pureInteger(0)
-                    case (_0 ..< _0 + numericalUpperBound)?:
+                    case (_0 ..< numericalUpperBound)?:
                         throw JSONError.numberWithLeadingZero(location: .countingLinesAndColumns(upTo: startOffset, in: bytes))
                     case ._dot, ._e, ._E:
                         self.readOffset = startOffset
@@ -1169,6 +1176,7 @@ extension JSONParserDecoder {
 
                         // We overflowed, but if this is actually a floating point number, then with negative exponents, it could still be represented as this integer type. Scan forward for possible periods in this number.
                         if _scanRestOfNumberFindingExponent() {
+                            self.readOffset = startOffset
                             return .retryAsFloatingPoint
                         }
 
@@ -1179,6 +1187,165 @@ extension JSONParserDecoder {
                 }
                 // TODO: Investigate weeeird numbers being returned here in Twitter parse!
                 return .pureInteger(result)
+            }
+
+            @inlinable
+            internal func _numberNotRepresentableError(from startOffset: Int) -> JSONError {
+                let text = String._tryFromUTF8(bytes.extracting(unchecked: startOffset ..< readOffset)) ?? ""
+                return JSONError.numberIsNotRepresentableInSwift(parsed: text)
+            }
+
+            @inlinable
+            @inline(__always)
+            internal func _combinedDigit(at index: Int, intStart: Int, intCount: Int, fracStart: Int) -> UInt8 {
+                if index < intCount {
+                    return bytes._loadByteUnchecked(intStart &+ index)
+                }
+                return bytes._loadByteUnchecked(fracStart &+ (index &- intCount))
+            }
+
+            @inlinable
+            @_lifetime(self: copy self)
+            internal mutating func parseIntegerFromFloatingPointForm<Result: FixedWidthInteger>(
+                as _: Result.Type
+            ) throws(JSONError) -> Result? {
+                let startOffset = readOffset
+
+                var isNegative = false
+                switch peek() {
+                case ._minus?:
+                    isNegative = true
+                    moveReaderIndex(forwardBy: 1)
+                case ._plus?:
+                    moveReaderIndex(forwardBy: 1)
+                default:
+                    break
+                }
+
+                // Integer part.
+                let intStart = readOffset
+                while let digit = peek(), digit >= _0, digit < numericalUpperBound {
+                    moveReaderIndex(forwardBy: 1)
+                }
+                let intCount = readOffset - intStart
+                guard intCount > 0 else {
+                    self.readOffset = startOffset
+                    return nil
+                }
+
+                // Fraction part.
+                var fracStart = readOffset
+                var fracCount = 0
+                if peek() == ._dot {
+                    moveReaderIndex(forwardBy: 1)
+                    fracStart = readOffset
+                    while let digit = peek(), digit >= _0, digit < numericalUpperBound {
+                        moveReaderIndex(forwardBy: 1)
+                    }
+                    fracCount = readOffset - fracStart
+                    guard fracCount > 0 else {
+                        // A '.' with no digits after it is malformed JSON.
+                        self.readOffset = startOffset
+                        return nil
+                    }
+                }
+
+                // Exponent part.
+                var exponent = 0
+                if let marker = peek(), marker == ._e || marker == ._E {
+                    moveReaderIndex(forwardBy: 1)
+                    var exponentIsNegative = false
+                    switch peek() {
+                    case ._minus?:
+                        exponentIsNegative = true
+                        moveReaderIndex(forwardBy: 1)
+                    case ._plus?:
+                        moveReaderIndex(forwardBy: 1)
+                    default:
+                        break
+                    }
+
+                    let exponentDigitStart = readOffset
+                    //Saturating keeps absurd input like `1e99999999999999999999` from overflowing.
+                    let exponentLimit = 1_000_000
+                    while let digit = peek(), digit >= _0, digit < numericalUpperBound {
+                        moveReaderIndex(forwardBy: 1)
+                        if exponent < exponentLimit {
+                            exponent = exponent &* 10 &+ Int(digit &- _0)
+                        }
+                    }
+                    guard readOffset > exponentDigitStart else {
+                        // An exponent marker with no digits after it is malformed JSON.
+                        self.readOffset = startOffset
+                        return nil
+                    }
+                    if exponentIsNegative {
+                        exponent = -exponent
+                    }
+                }
+
+                // The value is exactly `digits * 10 ^ effectiveExponent`, where `digits` is
+                // the integer and fraction digits concatenated.
+                let totalCount = intCount + fracCount
+                var effectiveExponent = exponent - fracCount
+
+                // Leading zeros contribute nothing, and would otherwise inflate the digit
+                // count used for the bounds check below.
+                var firstSignificantIndex = 0
+                while firstSignificantIndex < totalCount,
+                      _combinedDigit(at: firstSignificantIndex, intStart: intStart, intCount: intCount, fracStart: fracStart) == _0 {
+                    firstSignificantIndex &+= 1
+                }
+                guard firstSignificantIndex < totalCount else {
+                    // Every digit is zero, so the value is zero whatever the exponent is.
+                    return 0
+                }
+                var significantCount = totalCount - firstSignificantIndex
+
+                if effectiveExponent < 0 {
+                    let dropCount = -effectiveExponent
+                    guard dropCount < significantCount else {
+                        self.readOffset = startOffset
+                        return nil
+                    }
+                    for index in (totalCount - dropCount) ..< totalCount {
+                        guard _combinedDigit(at: index, intStart: intStart, intCount: intCount, fracStart: fracStart) == _0 else {
+                            self.readOffset = startOffset
+                            return nil
+                        }
+                    }
+                    significantCount -= dropCount
+                    effectiveExponent = 0
+                }
+
+                guard Result.isSigned || !isNegative else {
+                    throw _numberNotRepresentableError(from: startOffset)
+                }
+
+                var result = Result.zero
+                let ten: Result = 10
+                for index in firstSignificantIndex ..< (firstSignificantIndex &+ significantCount) {
+                    let digitValue = Result(truncatingIfNeeded: _combinedDigit(at: index, intStart: intStart, intCount: intCount, fracStart: fracStart) &- _0)
+                    let overflow1: Bool
+                    (result, overflow1) = result.multipliedReportingOverflow(by: ten)
+                    let overflow2: Bool
+                    (result, overflow2) = isNegative
+                        ? result.subtractingReportingOverflow(digitValue)
+                        : result.addingReportingOverflow(digitValue)
+                    guard !overflow1 && !overflow2 else {
+                        throw _numberNotRepresentableError(from: startOffset)
+                    }
+                }
+      
+                for _ in 0 ..< effectiveExponent {
+                    let overflow: Bool
+                    (result, overflow) = result.multipliedReportingOverflow(by: ten)
+                    guard !overflow else {
+                        throw _numberNotRepresentableError(from: startOffset)
+                    }
+                }
+
+                return result
             }
 
             @inlinable

@@ -1509,25 +1509,16 @@ struct JSONEncodingDecodingTests {
 
     @Test func int128SlowPath() throws {
         let decoder = NewJSONDecoder()
-        let work: [Int128] = [0, 1, -1, 256, -256, 65536, -65536]
+        let work: [Int128] = [
+            0, 1, -1, 256, -256, 65536, -65536,
+            18446744073709551615, -18446744073709551615,
+            18446744073709551616, -18446744073709551616,
+            .min, .max
+        ]
         for value in work {
             // force the slow-path by appending ".0"
             let json = "\(value).0".data(using: .utf8)!
             #expect(try value == decoder.decode(Int128.self, from: json))
-        }
-        // These should work, but making them do so probably requires
-        // rewriting the slow path to use a dedicated parser. For now,
-        // we ensure that they throw instead of returning some bogus
-        // result.
-        let shouldWorkButDontYet: [Int128] = [
-            18446744073709551615, -18446744073709551615, // These values work in JSONDecoder because of its Decimal fallback.
-            .min, -18446744073709551616, 18446744073709551616, .max
-        ]
-        for value in shouldWorkButDontYet {
-            let json = "\(value).0".data(using: .utf8)!
-            #expect(throws: (any Error).self) {
-                try decoder.decode(Int128.self, from: json)
-            }
         }
     }
 
@@ -1547,28 +1538,180 @@ struct JSONEncodingDecodingTests {
 
     @Test func uint128SlowPath() throws {
         let decoder = NewJSONDecoder()
-        let work: [UInt128] = [0, 1, 256, 65536]
+        let work: [UInt128] = [
+            0, 1, 256, 65536,
+            18446744073709551615, 18446744073709551616, .max
+        ]
         for value in work {
             // force the slow-path by appending ".0"
             let json = "\(value).0".data(using: .utf8)!
             #expect(try value == decoder.decode(UInt128.self, from: json))
         }
-        // These should work, but making them do so probably requires
-        // rewriting the slow path to use a dedicated parser. For now,
-        // we ensure that they throw instead of returning some bogus
-        // result.
-        let shouldWorkButDontYet: [UInt128] = [
-            18446744073709551615, // This value works in JSONDecoder because of its Decimal fallback.
-            18446744073709551616, .max
-        ]
-        for value in shouldWorkButDontYet {
-            let json = "\(value).0".data(using: .utf8)!
-            #expect(throws: (any Error).self) {
-                try decoder.decode(UInt128.self, from: json)
+    }
+
+    /// A JSON number carries no type of its own, so a value spelled with `.`, `e`, or `E`
+    /// may still denote an exact integer. Decoding must not lose precision to Double on
+    /// the way there. See https://github.com/swiftlang/swift-foundation/issues/1863
+    @Test func integersSpelledAsFloatingPointAreDecodedExactly() throws {
+        let decoder = NewJSONDecoder()
+
+        func check<T: FixedWidthInteger & CommonDecodable>(_ type: T.Type, _ json: String, _ expected: T, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let result = try decoder.decode(T.self, from: Data(json.utf8))
+            #expect(result == expected, "Unexpected result for input \"\(json)\"", sourceLocation: sourceLocation)
+        }
+
+        func checkThrows<T: FixedWidthInteger & CommonDecodable>(_ type: T.Type, _ json: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(throws: (any Error).self, "Expected input \"\(json)\" to be rejected", sourceLocation: sourceLocation) {
+                try decoder.decode(T.self, from: Data(json.utf8))
             }
         }
+
+        // Values requiring more than Double's 53 bits of significand.
+        try check(UInt64.self, "18446744073709551615.0", .max)
+        try check(Int64.self, "9223372036854775807.0", .max)
+        try check(Int64.self, "-9223372036854775808.0", .min)
+        try check(UInt128.self, "1.8446744073709551615e19", 18446744073709551615)
+        try check(UInt128.self, "1e38", 100000000000000000000000000000000000000)
+        try check(Int128.self, "-1.70141183460469231731687303715884105728e38", .min)
+        try check(UInt128.self, "0.0000000000000000000018446744073709551615e40", 18446744073709551615)
+
+        // Exponents that cancel out the fraction, and vice versa.
+        try check(Int.self, "1e2", 100)
+        try check(Int.self, "1E2", 100)
+        try check(Int.self, "1e+2", 100)
+        try check(Int.self, "100e-2", 1)
+        try check(Int.self, "1.5e1", 15)
+        try check(Int.self, "1.5e3", 1500)
+
+        // Zero is zero whatever the exponent says.
+        try check(Int.self, "0.0", 0)
+        try check(Int.self, "-0.0", 0)
+        try check(UInt.self, "-0.0", 0)
+        try check(Int.self, "0.000", 0)
+        try check(Int.self, "0e5", 0)
+        try check(Int.self, "0E5", 0)
+        try check(Int.self, "0e-5", 0)
+        try check(Int.self, "0e999999", 0)
+
+        // Narrow destinations.
+        try check(Int8.self, "127.0", .max)
+        try check(Int8.self, "-128.0", .min)
+        try check(UInt8.self, "255.0", .max)
+        try check(Int8.self, "1e2", 100)
+
+        // The cases called out on the issue thread.
+        try check(Int.self, "1e2", 100)
+        try check(Int.self, "100e-2", 1)
+        checkThrows(Int.self, "101e-2")
+
+        // A leading '+' is not legal JSON, but `parseInteger` tolerates it, so the
+        // slow path has to agree with the fast path rather than diverge.
+        try check(Int.self, "+1.0", 1)
+        try check(Int.self, "+1e2", 100)
+
+        // Numbers nested in containers take the same path as top-level ones.
+        #expect(try decoder.decode([String: UInt64].self, from: Data(#"{"a":18446744073709551615.0}"#.utf8)) == ["a": .max])
+        #expect(try decoder.decode([UInt64].self, from: Data("[1e2,18446744073709551615.0]".utf8)) == [100, .max])
+
+        // Values that genuinely are not integers, or do not fit.
+        checkThrows(Int.self, "1.5")
+        checkThrows(Int.self, "0.5")
+        checkThrows(Int.self, "1e-1")
+        checkThrows(UInt64.self, "-1.0")
+        checkThrows(UInt128.self, "-1.0")
+        checkThrows(Int8.self, "1000.0")
+        checkThrows(UInt8.self, "256.0")
+        checkThrows(Int128.self, "170141183460469231731687303715884105728.0")
+        checkThrows(UInt128.self, "340282366920938463463374607431768211456.0")
+        checkThrows(Int128.self, "1e400")
+        checkThrows(Int128.self, "1e999999999999999999999")
+
+        // Negative values that are fractional reach the Double fallback. Above 2^53 a
+        // Double may have been rounded, so they must be rejected regardless of sign.
+        checkThrows(Int128.self, "-18446744073709551615.5")
+        checkThrows(Int128.self, "-18446744073709551616.5")
+        checkThrows(Int64.self, "-9007199254740993.5")
+        try check(Int64.self, "-9007199254740992.0", -9007199254740992)
+
+        // Malformed numbers are still diagnosed rather than silently accepted.
+        checkThrows(Int.self, "1.")
+        checkThrows(Int.self, "1e")
+        checkThrows(Int.self, "1e+")
+        checkThrows(Int.self, "01")
+        checkThrows(Int.self, "00")
+        checkThrows(Int.self, "01.5")
+
+        // An integer too large for its destination must be diagnosed rather than
+        // sending the overflow scan into an unterminated loop.
+        #expect(throws: (any Error).self) {
+            try decoder.decode([Int].self, from: Data("[99999999999999999999999999]".utf8))
+        }
+
+        // These overflow the destination while the digits are being scanned, and only
+        // then turn out to carry an exponent. The retry has to see the whole number
+        // again, so the scan must rewind.
+        try check(Int32.self, "-214748364800.00e-2", .min)
+        try check(Int32.self, "21474836470e-1", .max)
+        checkThrows(Int32.self, "214748364800.00e-2")
+        checkThrows(Int32.self, "999999999999999.0e2")
+        #expect(try decoder.decode([Int32].self, from: Data("[-214748364800.00e-2,1]".utf8)) == [Int32.min, 1])
+        #expect(throws: (any Error).self) {
+            try decoder.decode([Int32].self, from: Data("[214748364800000.00e-2]".utf8))
+        }
     }
-    
+
+    @Test func fractionalDigitsBeyondDoublePrecisionAreStillAcceptedAsIntegers() throws {
+        let decoder = NewJSONDecoder()
+
+        func check<T: FixedWidthInteger & CommonDecodable>(_ type: T.Type, _ json: String, _ expected: T, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let result = try decoder.decode(T.self, from: Data(json.utf8))
+            #expect(result == expected, "Unexpected result for input \"\(json)\"", sourceLocation: sourceLocation)
+        }
+
+        try check(Int.self, "1.0000000000000001", 1)
+        try check(Int.self, "1.00000000000000000000000000001", 1)
+        try check(Int.self, "1.000000000000000000000000000000000000000000000001", 1)
+        try check(Int.self, "-1.0000000000000001", -1)
+        try check(Int.self, "42.0000000000000001", 42)
+
+        // Stops at 2^53, where a Double may have been rounded to a
+        // different integer entirely.
+        #expect(throws: (any Error).self) {
+            try decoder.decode(Int128.self, from: Data("18446744073709551615.00000000000000000001".utf8))
+        }
+    }
+
+    @Test func jsonPrimitiveNumberDecodesIntegersSpelledAsFloatingPoint() throws {
+        let decoder = NewJSONDecoder()
+
+        func number(_ json: String, sourceLocation: SourceLocation = #_sourceLocation) throws -> JSONPrimitive.Number {
+            let value = try decoder.decode(JSONPrimitive.self, from: Data(json.utf8))
+            guard case .number(let number) = value else {
+                Issue.record("Expected a number for input \"\(json)\"", sourceLocation: sourceLocation)
+                throw CancellationError()
+            }
+            return number
+        }
+
+        // Exact, beyond Double's 53 bits.
+        #expect(try number("18446744073709551615.0")[UInt64.self] == .max)
+        #expect(try number("18446744073709551615.0")[UInt128.self] == 18446744073709551615)
+        #expect(try number("-9223372036854775808.0")[Int64.self] == .min)
+        #expect(try number("-1.70141183460469231731687303715884105728e38")[Int128.self] == .min)
+
+        // Exponent forms.
+        #expect(try number("1e2")[Int.self] == 100)
+        #expect(try number("100e-2")[Int.self] == 1)
+        #expect(try number("0.0")[Int.self] == 0)
+        #expect(try number("-0.0")[UInt64.self] == 0)
+
+        #expect(throws: (any Error).self) { try number("101e-2")[Int.self] }
+        #expect(throws: (any Error).self) { try number("1.5")[Int.self] }
+        #expect(throws: (any Error).self) { try number("256.0")[UInt8.self] }
+        #expect(throws: (any Error).self) { try number("-1.0")[UInt64.self] }
+        #expect(throws: (any Error).self) { try number("1e400")[Int128.self] }
+    }
+
     @Test func roundTrippingDoubleValues() {
         struct Numbers : JSONEncodable, JSONDecodable, Equatable {
             let doubles : [String:Double]
