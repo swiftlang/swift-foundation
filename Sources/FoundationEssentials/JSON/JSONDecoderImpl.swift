@@ -302,18 +302,22 @@ extension JSONDecoderImpl {
                     throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(u)")
                 }
                 return v
-            case .double(let d):
-                // Try lossless double-to-integer coercion (rejects fractional values). `.double` is always finite here — Infinity / NaN arrive as their own cases below.
-                guard let v = T(exactly: d) else {
-                    throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(d)")
-                }
-                return v
             case .positiveInfinity:
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: "Infinity")
             case .negativeInfinity:
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: "-Infinity")
             case .notANumber:
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: "NaN")
+            case .double(let d):
+                // Below 2^53 a Double represents every integer exactly, so the correctly-rounded value is authoritative (and this rejects a genuinely fractional literal like 2.5). At larger magnitudes the Double is rounded. We do not want to lose this precision, so fall through to a .decimalString in that case.
+                let exactIntegerLimit = Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1)
+                if d.magnitude < exactIntegerLimit {
+                    guard let v = T(exactly: d) else {
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(d)")
+                    }
+                    return v
+                }
+                fallthrough
             case .decimalString:
                 // Wide integers (Int128/UInt128 range beyond Int64/UInt64) and overlong integer literals arrive here.
                 let numberBytes = try primitive.numberBytes.bytes

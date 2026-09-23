@@ -1372,6 +1372,9 @@ private struct JSONEncoderTests {
             ( "9223372036854775808", nil),            //  2^63        (Double:  2^63)
             ( "9223372036854776832", nil),            //  2^63 + 1024 (Double:  2^63)
             ( "9223372036854776833", nil),            //  2^63 + 1025 (Double:  2^63 + 2048)
+
+            // An integral literal written with an exponent parses through a Double (rounded above 2^53) but must coerce to the exact source integer, not the nearest Double.
+            (  "92233720368595512e0",  92233720368595512), // >2^53, exponent form: exact, not nearest Double (…520)
         ]
         
         let uint64s: [(String, UInt64?)] = [
@@ -1384,6 +1387,8 @@ private struct JSONEncoderTests {
             ("18446744073709551616", nil),            //  2^64        (Double:  2^64)
             ("18446744073709553664", nil),            //  2^64 + 2048 (Double:  2^64)
             ("18446744073709553665", nil),            //  2^64 + 2049 (Double:  2^64 + 4096)
+
+            ( "92233720368595512e0", 92233720368595512), // >2^53, exponent form: exact, not nearest Double (…520)
         ]
         
         for json5 in [true, false] {
