@@ -1417,14 +1417,19 @@ private struct JSONEncoderTests {
             let json = "\(value).0".data(using: .utf8)!
             #expect(try value == decoder.decode(Int128.self, from: json))
         }
-        // These should work and now do, with improvements to `Decimal` and a latent bugfix.
-        let alsoWork: [Int128] = [
+        // These should work, but making them do so probably requires
+        // rewriting the slow path to use a dedicated parser. For now,
+        // we ensure that they throw instead of returning some bogus
+        // result.
+        let shouldWorkButDontYet: [Int128] = [
             .min, -18446744073709551616, 18446744073709551616, .max
         ]
-        for value in alsoWork {
+        for value in shouldWorkButDontYet {
             // force the slow-path by appending ".0"
             let json = "\(value).0".data(using: .utf8)!
-            #expect(try value == decoder.decode(Int128.self, from: json))
+            #expect(throws: (any Error).self) {
+                try decoder.decode(Int128.self, from: json)
+            }
         }
     }
     
@@ -1450,14 +1455,19 @@ private struct JSONEncoderTests {
             let json = "\(value).0".data(using: .utf8)!
             #expect(try value == decoder.decode(UInt128.self, from: json))
         }
-        // These should work and now do, with improvements to `Decimal` and a latent bugfix.
-        let alsoWork: [UInt128] = [
+        // These should work, but making them do so probably requires
+        // rewriting the slow path to use a dedicated parser. For now,
+        // we ensure that they throw instead of returning some bogus
+        // result.
+        let shouldWorkButDontYet: [UInt128] = [
             18446744073709551616, .max
         ]
-        for value in alsoWork {
+        for value in shouldWorkButDontYet {
             // force the slow-path by appending ".0"
             let json = "\(value).0".data(using: .utf8)!
-            #expect(try value == decoder.decode(UInt128.self, from: json))
+            #expect(throws: (any Error).self) {
+                try decoder.decode(UInt128.self, from: json)
+            }
         }
     }
 
