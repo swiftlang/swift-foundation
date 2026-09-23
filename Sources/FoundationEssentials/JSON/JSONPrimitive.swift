@@ -325,9 +325,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
                     append(Self.scalar(lead: unit, trail: trail), to: &out)
                     readIdx &+= 12
                 } else if UTF16.isTrailSurrogate(unit) {
-                    // For compatibility, treat an isolated low surrogate as a bare UTF-16 code unit and emit U+FFFD.
-                    append(Unicode.Scalar(0xFFFD)!, to: &out)
-                    readIdx &+= 6
+                    throw JSONPrimitiveError.corruptedValue("string: low surrogate without high surrogate")
                 } else {
                     if json5Mode && unit == 0 {
                         throw JSONPrimitiveError.corruptedValue("string: \\u0000 escape not allowed in JSON5")
