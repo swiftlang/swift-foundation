@@ -499,7 +499,7 @@ extension Decimal {
             result.compact()
             return (result, false)
         }
-        if exponent >= 166 {
+        if exponent > 127 {
             throw .overflow
         }
         return try Self._assemble(
