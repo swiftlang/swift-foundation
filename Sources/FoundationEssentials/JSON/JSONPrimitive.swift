@@ -563,13 +563,16 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         }
         // Accumulate signed when negative so `-9223372036854775808` lands on `Int64.min` rather than overflowing.
         let stopper: UInt8
+        let stopOffset: Int
         if sign.isNegative {
             switch Int64.scanDecimalDigits(of: bytes, from: sign.digitStart, isNegative: true) {
             case .value(let signed): return DecodedNumber(value: .int64(signed))
             case .overflow:
                 try validateDecimalString(bytes, from: sign.digitStart, containsExponent: false, json5Mode: json5Mode)
                 return DecodedNumber(value: .decimalString)
-            case .nonDigit(let byte, _): stopper = byte
+            case .nonDigit(let byte, let offset):
+                stopper = byte
+                stopOffset = offset
             }
         } else {
             switch UInt64.scanDecimalDigits(of: bytes, from: sign.digitStart) {
@@ -577,12 +580,19 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
             case .overflow:
                 try validateDecimalString(bytes, from: sign.digitStart, containsExponent: false, json5Mode: json5Mode)
                 return DecodedNumber(value: .decimalString)
-            case .nonDigit(let byte, _): stopper = byte
+            case .nonDigit(let byte, let offset):
+                stopper = byte
+                stopOffset = offset
             }
         }
         // The JSON5 scanner is permissive and can hand over leftover `Inf`/`Na` prefixes or unquoted identifiers misclassified as numbers, so anything but `.` here is garbage.
         guard stopper == ._period else {
             throw JSONPrimitiveError.corruptedValue("number: non-digit in integer literal")
+        }
+        // A trailing `.` is allowed in JSON5. Reparse the digits as an integer instead of falling through unnecessarily to strtod.
+        // This is a minor compatibility nod to legacy NSJSONSerialization creating NSNumbers of these as integers instead of doubles.
+        if json5Mode, stopOffset == bytes.count &- 1 {
+            return try integerLiteral(bytes.extracting(0 ..< stopOffset), sign: sign, json5Mode: json5Mode)
         }
         return nil
     }
