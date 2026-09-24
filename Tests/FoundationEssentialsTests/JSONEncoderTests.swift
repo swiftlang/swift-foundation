@@ -1407,6 +1407,23 @@ private struct JSONEncoderTests {
         }
     }
 
+    @Test func longMantissaDoubleIsCorrectlyRounded() throws {
+        let decoder = JSONDecoder()
+        // More significant digits than a Double holds losslessly must still round to the nearest Double, matching a correctly-rounded parse rather than an approximate narrowing.
+        let cases = [
+            "6.8567125748313281724118833107250630e-37",
+            "9532897707105712955449594938418935855741",
+            "553254383491997013609552689141502945",
+            "130792879449993459016464914",
+            "1.7976931348623157081452742373170435e+308", // near Double.greatestFiniteMagnitude
+        ]
+        for s in cases {
+            let expected = try #require(Double(s), "\(s)")   // Swift's correctly-rounded parse
+            let got = try decoder.decode(Double.self, from: Data(s.utf8))
+            #expect(got.bitPattern == expected.bitPattern, "\(s): got \(got.bitPattern), expected \(expected.bitPattern)")
+        }
+    }
+
     @Test func roundTrippingExtremeValues() {
         struct Numbers : Codable, Equatable {
             let floats : [Float]

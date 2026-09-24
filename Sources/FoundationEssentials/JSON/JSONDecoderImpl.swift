@@ -12,6 +12,9 @@
 
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
+/// 2^53: the smallest magnitude at which a `Double` stops representing every integer exactly. Below it, a parsed JSON `Double` can be used directly for an integer decode.
+private var doubleExactIntegerLimit: Double { Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) }
+
 // MARK: - JSONDecoderImpl
 
 @available(anyAppleOS 26.0, *)
@@ -232,23 +235,8 @@ extension JSONDecoderImpl {
                     return v
                 case .decimalString:
                     let numberBytes = try primitive.numberBytes.bytes
-                    #if !NO_JSON_FOUNDATION_SPECIALIZATION
-                    // Value has too many significant digits for a lossless Double parse. Detour through `Decimal` and take the nearest approximation.
-                    let decimal: Decimal
-                    switch Decimal._decimal(from: numberBytes, matchEntireString: true) {
-                    case .success(let result, _): decimal = result
-                    case .overlargeValue:
-                        let src = numberBytes.withUnsafeBufferPointer { String(decoding: $0, as: UTF8.self) }
-                        throw JSONError.numberIsNotRepresentableInSwift(parsed: src)
-                    case .parseFailure:
-                        throw DecodingError.dataCorrupted(.init(codingPath: codingPathNode.path(byAppending: additionalKey), debugDescription: "Number could not be parsed as Decimal"))
-                    }
-                    return T(decimal.doubleValue)
-                    #else
-                    // Without the `Decimal` detour there is no way to narrow the value further.
-                    let src = numberBytes.withUnsafeBufferPointer { String(decoding: $0, as: UTF8.self) }
-                    throw JSONError.numberIsNotRepresentableInSwift(parsed: src)
-                    #endif
+                    // More significant digits than a Double holds losslessly. Parse with the same correctly-rounded routine used for shorter literals; a `Decimal` detour narrows the value only approximately.
+                    return T(try JSONPrimitive.parseDouble(numberBytes, source: numberBytes))
                 }
             case .string:
                 if case .convertFromString(let posInfString, let negInfString, let nanString) = options.nonConformingFloatDecodingStrategy {
@@ -310,8 +298,7 @@ extension JSONDecoderImpl {
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: "NaN")
             case .double(let d):
                 // Below 2^53 a Double represents every integer exactly, so the correctly-rounded value is authoritative (and this rejects a genuinely fractional literal like 2.5). At larger magnitudes the Double is rounded. We do not want to lose this precision, so fall through to a .decimalString in that case.
-                let exactIntegerLimit = Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1)
-                if d.magnitude < exactIntegerLimit {
+                if d.magnitude < doubleExactIntegerLimit {
                     guard let v = T(exactly: d) else {
                         throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(d)")
                     }
@@ -319,15 +306,25 @@ extension JSONDecoderImpl {
                 }
                 fallthrough
             case .decimalString:
-                // Wide integers (Int128/UInt128 range beyond Int64/UInt64) and overlong integer literals arrive here.
+                // Values with more mantissa digits than a Double holds losslessly arrive here: wide integers (Int128/UInt128 range beyond Int64/UInt64) and long-mantissa fractional literals alike.
                 let numberBytes = try primitive.numberBytes.bytes
-                // `Decimal` holds only 38 significant digits, so it can't round-trip the full Int128/UInt128 range. Accumulate the digits directly into `T` first; `decodeNumberBytes` has already rejected anything that isn't a plain integer literal.
+                // Plain integer digit runs that fit `T` accumulate directly, covering the full Int128/UInt128 range that a 38-significant-digit `Decimal` can't round-trip. A fractional literal stops this scan at the `.` and falls through.
                 let isNegative = numberBytes.count > 0 && numberBytes[0] == ._minus
                 let digitStart = (isNegative || (numberBytes.count > 0 && numberBytes[0] == ._plus)) ? 1 : 0
-                if case .value(let v) = T.scanDecimalDigits(of: numberBytes, from: digitStart, isNegative: isNegative) {
+                if case .value(let v) = T.scanDecimalDigits(of: numberBytes.extracting(droppingFirst: digitStart), isNegative: isNegative) {
+                    return v
+                }
+                // For magnitudes a Double represents exactly, coerce through the correctly-rounded Double (as the floating-point path does) so a fractional literal whose value is integral yields that integer and a genuinely fractional value is rejected. Some clients may rely on this rounding for compatibility. Larger magnitudes exceed a Double's exact-integer range and narrow the exact value instead.
+                let rounded = try JSONPrimitive.parseDouble(numberBytes, source: numberBytes)
+                if rounded.magnitude < doubleExactIntegerLimit {
+                    guard let v = T(exactly: rounded) else {
+                        let src = numberBytes.withUnsafeBufferPointer { String(decoding: $0, as: UTF8.self) }
+                        throw JSONError.numberIsNotRepresentableInSwift(parsed: src)
+                    }
                     return v
                 }
                 #if !NO_JSON_FOUNDATION_SPECIALIZATION
+                // `Decimal` also spans the wide Int128/UInt128 integers a Double can't represent exactly.
                 let decimal: Decimal
                 switch Decimal._decimal(from: numberBytes, matchEntireString: true) {
                 case .success(let result, _): decimal = result
