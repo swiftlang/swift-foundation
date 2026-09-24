@@ -20,6 +20,19 @@ private func _xdgHomeURL() -> URL {
     }
 }
 
+/// The current user's home directory, which the XDG Base Directory
+/// specification defines the user-specific directories relative to.
+///
+/// This is not `_xdgHomeURL()`: that one also backs `.userDirectory`, whose
+/// fallback is the directory *containing* home directories, so using it here
+/// would place user data outside the user's home whenever `HOME` is unset.
+private func _xdgUserHomeURL() -> URL {
+    if let homeEnvValue = ProcessInfo.processInfo.environment["HOME"], !homeEnvValue.isEmpty {
+        return URL(filePath: homeEnvValue, directoryHint: .isDirectory)
+    }
+    return FileManager.default.homeDirectoryForCurrentUser
+}
+
 private let __xdgHomeURL: URL = {
     if let data = try? Data(contentsOf: URL(filePath: "/etc/default/useradd", directoryHint: .notDirectory)) {
         let contents = String(decoding: data, as: UTF8.self)
@@ -39,7 +52,7 @@ private func _xdgDataHomeURL() -> URL {
     if let envValue = ProcessInfo.processInfo.environment["XDG_DATA_HOME"], envValue.unicodeScalars.first == "/" {
         return URL(filePath: envValue, directoryHint: .isDirectory)
     }
-    return _xdgHomeURL().appending(path: ".local/share", directoryHint: .isDirectory)
+    return _xdgUserHomeURL().appending(path: ".local/share", directoryHint: .isDirectory)
 }
 
 /// A single base directory relative to which user-specific non-essential (cached) data should be written. This directory is defined by the environment variable $XDG_CACHE_HOME.
@@ -48,7 +61,7 @@ private func _xdgCacheURL() -> URL {
     if let envValue = ProcessInfo.processInfo.environment["XDG_CACHE_HOME"], envValue.unicodeScalars.first == "/" {
         return URL(filePath: envValue, directoryHint: .isDirectory)
     }
-    return _xdgHomeURL().appending(component: ".cache", directoryHint: .isDirectory)
+    return _xdgUserHomeURL().appending(component: ".cache", directoryHint: .isDirectory)
 }
 
 /// A single base directory relative to which user-specific configuration files should be written. This directory is defined by the environment variable $XDG_CONFIG_HOME.
@@ -57,7 +70,7 @@ private func _xdgConfigHomeURL() -> URL {
     if let envValue = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"], envValue.unicodeScalars.first == "/" {
         return URL(filePath: envValue, directoryHint: .isDirectory)
     }
-    return _xdgHomeURL().appending(component: ".config", directoryHint: .isDirectory)
+    return _xdgUserHomeURL().appending(component: ".config", directoryHint: .isDirectory)
 }
 
 /// A set of preference ordered base directories relative to which configuration files should be searched. This set of directories is defined by the environment variable $XDG_CONFIG_DIRS.
