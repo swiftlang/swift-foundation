@@ -161,4 +161,22 @@ private struct BuiltInUnicodeScalarSetTests {
         setContainsScalar(controlAndFormatter, "\u{D0000}", false)
     }
 
+    @Test(arguments: [BuiltInUnicodeScalarSet.SetType.letter, .control, .illegal, .whitespace, .newline, .whitespaceAndNewline])
+    func partialBitmapMatchesFullPlanePrefix(type: BuiltInUnicodeScalarSet.SetType) {
+        let set = BuiltInUnicodeScalarSet(type: type)
+        for plane in 0...16 {
+            for isInverted in [false, true] {
+                let full = Array(set.bitmap(forPlane: plane, isInverted: isInverted))
+                for count in [1, 10, 16, 8187, 8188] {
+                    let partial = Data(capacity: count) { output in
+                        output.withOutputSpan(of: UInt8.self) { typedOutput in
+                            set.appendBitmap(forPlane: plane, isInverted: isInverted, to: &typedOutput)
+                        }
+                    }
+                    #expect(Array(partial) == Array(full.prefix(count)))
+                }
+            }
+        }
+    }
+
 }
