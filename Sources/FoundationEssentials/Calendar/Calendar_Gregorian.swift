@@ -10,22 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
+// For Logger
 internal import os
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
 #endif
-
 
 /// Julian date helper
 /// Julian dates are noon-based. Gregorian dates are midnight-based.
@@ -175,7 +163,7 @@ package enum GregorianCalendarError : Error {
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "gregorian_calendar")
     }()
@@ -737,7 +725,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             let firstInstant = try _firstInstant(of: unit, at: at)
             return firstInstant
         } catch let error as GregorianCalendarError {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
             switch error {
             case .overflow(_, _, _):
                 _CalendarGregorian.logger.error("Overflowing in firstInstant(of:at:). unit: \(unit.debugDescription, privacy: .public), at: \(at.timeIntervalSinceReferenceDate, privacy: .public)")
@@ -886,15 +874,15 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: at))
             var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti // compute GMT
             return Date(timeIntervalSinceReferenceDate: fixedTime)
         case .minute:
-            return Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0)
+            return Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0)
         case .second:
-            return Date(timeIntervalSinceReferenceDate: floor(time))
+            return Date(timeIntervalSinceReferenceDate: time.rounded(.down))
         case .nanosecond:
-            return Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9)
+            return Date(timeIntervalSinceReferenceDate: (time * 1.0e+9).rounded(.down) * 1.0e-9)
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .dayOfYear, .weekOfMonth, .weekOfYear:
             // Continue to below
             break
@@ -931,7 +919,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         do {
             result = try _ordinality(of: smaller, in: larger, for: date)
         } catch {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
             switch error {
             case .overflow(_, _, _):
                 _CalendarGregorian.logger.error("Overflowing in ordinality(of:in:for:). smaller: \(smaller.debugDescription, privacy: .public), larger: \(larger.debugDescription, privacy: .public), date: \(date.timeIntervalSinceReferenceDate, privacy: .public)")
@@ -967,12 +955,12 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 var test: Date
                 var month = 0
                 if let r = maximumRange(of: .day) {
-                    month = Int(floor(
+                    month = Int((
                         (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                         86400.0 /
                         Double(r.count + 1) *
-                        0.96875
-                    ))
+                        0.96875).rounded(.down)
+                    )
                     // low-ball the estimate
                     month = 10 < month ? month - 10 : 0
                     // low-ball the estimate further
@@ -1000,11 +988,11 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                     startMatchinWeekday -= 7 * 86400.0
                     start -=  7 * 86400.0
                 }
-                var week = Int(floor(
+                var week = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                     86400.0 /
-                    7.0
-                ))
+                    7.0).rounded(.down)
+                )
                 // low-ball the estimate
                 var test: Date
                 week = 10 < week ? week - 109 : 0
@@ -1025,11 +1013,11 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 let targetDOW = dateComponent(.weekday, from: date)
                 let (startMatchingWeekday, _) = try dateAfterDateWithTargetDoW(start, targetDOW)
 
-                var nthWeekday = Int(floor(
+                var nthWeekday = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                     86400.0 /
-                    7.0
-                ))
+                    7.0).rounded(.down)
+                )
 
                 // Low-ball estimate
                 nthWeekday = (10 < nthWeekday) ? nthWeekday - 10 : 0
@@ -1051,10 +1039,10 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 guard let start = start(of: .era, at: date) else {
                     return nil
                 }
-                let day = Int(floor(
+                let day = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                    86400.0
-                )) + 1
+                    86400.0).rounded(.down)
+                ) + 1
                 return day
 
             case .hour:
@@ -1145,7 +1133,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .year, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1178,7 +1166,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .day, .dayOfYear:
                 guard let start = start(of: .yearForWeekOfYear, at: date) else { return nil }
-                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                let day = Int(((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0).rounded(.down)) + 1
                 return day
 
             case .hour:
@@ -1205,7 +1193,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .yearForWeekOfYear, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1248,7 +1236,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             case .day, .dayOfYear:
                 let start = start(of: .quarter, at: date)
                 guard let start else { return nil }
-                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                let day = Int(((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0).rounded(.down)) + 1
                 return day
 
             case .hour:
@@ -1273,7 +1261,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .quarter, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1319,7 +1307,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .month, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1360,7 +1348,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .weekOfYear, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1387,7 +1375,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .day, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1408,7 +1396,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .hour, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1423,7 +1411,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .minute, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1432,7 +1420,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .second:
             switch smaller {
             case .nanosecond:
-                return Int(((date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate)) * 1.0e9) + 1)
+                return Int(((date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down)) * 1.0e9) + 1)
 
             default:
                 return nil
@@ -1465,15 +1453,15 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: date))
             var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti // compute GMT
             return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
         case .minute:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0), duration: 60.0)
         case .second:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: time.rounded(.down)), duration: 1.0)
         case .nanosecond:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9), duration: 1.0e-9)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time * 1.0e+9).rounded(.down) * 1.0e-9), duration: 1.0e-9)
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .dayOfYear, .weekOfMonth, .weekOfYear:
             // Continue to below
             break
@@ -3160,7 +3148,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                         let (diffInNano, overflow) = end >= start ? diff.addingReportingOverflow(diffsInNano) : diff.subtractingReportingOverflow(diffsInNano)
 
                         if overflow {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
                             _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")
 #endif
                             dc.nanosecond = diff
@@ -3172,7 +3160,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                         dc.setValue(diff, for: component)
                     }
                 } catch {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
                     switch error {
                     case .overflow(_, _, _):
                         _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(curr.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")

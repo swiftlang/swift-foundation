@@ -14,22 +14,6 @@
 import FoundationEssentials
 #endif
 
-#if canImport(Android)
-@preconcurrency import Android
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif canImport(Darwin)
-import Darwin
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
-#endif
-
 internal import _FoundationICU
 internal import Synchronization
 
@@ -610,12 +594,12 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
                 var month = 0
                 if let r = _locked_maximumRange(of: .day) {
-                    month = Int(floor(
+                    month = Int((
                         (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                         86400.0 /
                         Double(r.count + 1) *
-                        0.96875
-                    ))
+                        0.96875).rounded(.down)
+                    )
                     // low-ball the estimate
                     month = 10 < month ? month - 10 : 0
                     // low-ball the estimate further
@@ -651,11 +635,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                     startUDate -= 7 * 86400.0 * 1000.0
                 }
 
-                var week = Int(floor(
+                var week = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                     86400.0 /
-                    7.0
-                ))
+                    7.0).rounded(.down)
+                )
                 // low-ball the estimate
                 week = 10 < week ? week - 109 : 0
                 repeat {
@@ -685,11 +669,11 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                     startUDate += 86400.0 * 1000.0
                 }
 
-                var nthWeekday = Int(floor(
+                var nthWeekday = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                     86400.0 /
                     7.0
-                ))
+                ).rounded(.down))
 
                 // Low-ball estimate
                 nthWeekday = (10 < nthWeekday) ? nthWeekday - 10 : 0
@@ -710,10 +694,10 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 ucal_clear(ucalendar)
                 ucal_setMillis(ucalendar, date.udateInSeconds, &status)
                 guard let start else { return nil }
-                let day = Int(floor(
+                let day = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                    86400.0
-                )) + 1
+                    86400.0).rounded(.down)
+                ) + 1
                 return day
             case .hour:
                 guard let day = _locked_ordinality(of: .day, in: .era, for: date) else { return nil }
@@ -815,7 +799,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .year, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -857,7 +841,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return nthWeekday
             case .day:
                 guard let start = _locked_start(of: .yearForWeekOfYear, at: date) else { return nil }
-                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                let day = Int(((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0).rounded(.down)) + 1
                 return day
             case .hour:
                 var status = U_ZERO_ERROR
@@ -876,7 +860,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .yearForWeekOfYear, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
 
@@ -944,7 +928,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 ucal_clear(ucalendar)
                 ucal_setMillis(ucalendar, date.udateInSeconds, &status)
                 guard let start else { return nil }
-                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                let day = Int(((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0).rounded(.down)) + 1
                 return day
             case .hour:
                 var status = U_ZERO_ERROR
@@ -963,7 +947,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .quarter, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1006,7 +990,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .month, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1041,7 +1025,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .weekOfYear, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1067,7 +1051,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .day, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1088,7 +1072,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .hour, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1104,7 +1088,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                 return second
             case .nanosecond:
                 guard let second = _locked_ordinality(of: .second, in: .minute, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1113,7 +1097,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         case .second:
             switch smaller {
             case .nanosecond:
-                return Int(((date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate)) * 1.0e9) + 1)
+                return Int(((date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down)) * 1.0e9) + 1)
 
             default:
                 return nil
@@ -1246,7 +1230,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if components.contains(.hour) { dc.hour = Int(ucal_get(ucalendar, UCAL_HOUR_OF_DAY, &status)) }
             if components.contains(.minute) { dc.minute = Int(ucal_get(ucalendar, UCAL_MINUTE, &status)) }
             if components.contains(.second) { dc.second = Int(ucal_get(ucalendar, UCAL_SECOND, &status)) }
-            if components.contains(.nanosecond) { dc.nanosecond = Int((capped.timeIntervalSinceReferenceDate - floor(capped.timeIntervalSinceReferenceDate)) * 1.0e+9) }
+            if components.contains(.nanosecond) { dc.nanosecond = Int((capped.timeIntervalSinceReferenceDate - capped.timeIntervalSinceReferenceDate.rounded(.down)) * 1.0e+9) }
 
             // TODO: See if we can exclude this for calendars which do not use leap month
             if components.contains(.isLeapMonth) || components.contains(.month) {
@@ -1278,13 +1262,10 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
 
             var status = U_ZERO_ERROR
             ucal_clear(ucalendar)
-            var (startingInt, startingFrac) = modf(capped.timeIntervalSinceReferenceDate)
-
-            if startingFrac < 0 {
-                // `modf` returns negative integral and fractional parts when `capped.timeIntervalSinceReferenceDate` is negative. In this case, we would wrongly turn the time backwards by adding the negative fractional part back after we're done with wrapping in `add` below. To avoid this, ensure that `startingFrac` is always positive: subseconds do not contribute to the wrapping of a second, so they should always be additive to the time ahead.
-                startingFrac += 1.0
-                startingInt -= 1.0
-            }
+            // Split the time interval into a whole number of seconds and a fraction of a second. Round the integral part down rather than toward zero so that the fractional part is never negative, even before the reference date. Subseconds do not contribute to the wrapping of a second, so they should always be additive to the time ahead; a negative fractional part would wrongly turn the time backwards when it is added back after the wrapping in `add` below.
+            let startingInterval = capped.timeIntervalSinceReferenceDate
+            let startingInt = startingInterval.rounded(.down)
+            let startingFrac = startingInterval - startingInt
 
             ucal_setMillis(ucalendar, Date(timeIntervalSinceReferenceDate: startingInt).udate, &status)
             var nanosecond = 0
@@ -1336,7 +1317,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             ucal_clear(ucalendar)
 
             var curr = cappedStart.udate
-            let currX = floor(curr)
+            let currX = curr.rounded(.down)
             let diff = curr - currX
             curr = currX
             var goal = cappedEnd.udate
@@ -1375,7 +1356,7 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
             if components.contains(.second) { dc.second = Int(ucal_getFieldDifference(ucalendar, goal, UCAL_SECOND, &status)) }
             if components.contains(.nanosecond) {
                 let curr0 = ucal_getMillis(ucalendar, &status)
-                let tmp = floor((goal - curr0) * 1.0e+6)
+                let tmp = ((goal - curr0) * 1.0e+6).rounded(.down)
                 if tmp >= Double(Int32.max) {
                     dc.nanosecond = Int(Int32.max)
                 } else if tmp <= Double(Int32.min) {
@@ -1490,15 +1471,15 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: capped))
             var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti // compute GMT
             return Date(timeIntervalSinceReferenceDate: fixedTime)
         case .minute:
-            return Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0)
+            return Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0)
         case .second:
-            return Date(timeIntervalSinceReferenceDate: floor(time))
+            return Date(timeIntervalSinceReferenceDate: time.rounded(.down))
         case .nanosecond:
-            return Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9)
+            return Date(timeIntervalSinceReferenceDate: (time * 1.0e+9).rounded(.down) * 1.0e-9)
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .weekOfMonth, .weekOfYear:
             // Continue to below
             break
@@ -1610,15 +1591,15 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: capped))
             var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti // compute GMT
             return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
         case .minute:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0), duration: 60.0)
         case .second:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: time.rounded(.down)), duration: 1.0)
         case .nanosecond:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9), duration: 1.0e-9)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time * 1.0e+9).rounded(.down) * 1.0e-9), duration: 1.0e-9)
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .weekOfMonth, .weekOfYear:
             // Continue to below
             break
@@ -1868,14 +1849,14 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
                     udate = testUDate
                 }
 
-                if fabs(udate - badUDate) < 1000 {
+                if (udate - badUDate).magnitude < 1000 {
                     break
                 }
             } while true
 
             repeat {
                 // TODO: Double check C math trick here
-                badUDate = floor((badUDate + 1000) / 1000) * 1000
+                badUDate = ((badUDate + 1000) / 1000).rounded(.down) * 1000
                 ucal_setMillis(ucalendar, badUDate, &status)
             } while ucal_get(ucalendar, UCAL_ERA, &status) < targetEra
         }

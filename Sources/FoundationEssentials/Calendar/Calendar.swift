@@ -10,22 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-internal import os
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
-#endif
-
 #if FOUNDATION_FRAMEWORK
 // For feature flag
 internal import _ForSwiftFoundation
@@ -915,8 +899,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
             // assumes that time zone or other adjustments are always whole minutes
             var int1 = date1.timeIntervalSinceReferenceDate.rounded(.down)
             var int2 = date2.timeIntervalSinceReferenceDate.rounded(.down)
-            int1 = floor(int1 / 60.0)
-            int2 = floor(int2 / 60.0)
+            int1 = (int1 / 60.0).rounded(.down)
+            int2 = (int2 / 60.0).rounded(.down)
             if int1 == int2 {
                 return .orderedSame
             } else if int2 < int1 {
@@ -1490,7 +1474,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         // Apply an epsilon to comparison of nanosecond values
         if let nanosecond = comp.nanosecond, let tempNanosecond = tempComp.nanosecond {
-            if labs(CLong(nanosecond - tempNanosecond)) > 500 {
+            if (nanosecond - tempNanosecond).magnitude > 500 {
                 return false
             } else {
                 comp.nanosecond = 0

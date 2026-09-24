@@ -24,10 +24,6 @@ internal import os
 internal import _FoundationICU
 internal import Synchronization
 
-#if canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 #if !FOUNDATION_FRAMEWORK
 @_dynamicReplacement(for: _localeICUClass())
 private func _localeICUClass_localized() -> any _LocaleProtocol.Type {

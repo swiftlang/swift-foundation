@@ -10,22 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(Windows)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
-#endif
-
 // MARK: - BinaryInteger + Numeric string representation
 
 extension BinaryInteger {
@@ -149,9 +133,9 @@ private func numericStringRepresentationForMutableBinaryInteger(words: UnsafeMut
 private func maxDecimalDigitCountForUnsignedInteger(bitWidth: Int) -> Int {
     // - Int.init(some BinaryFloatingPoint) rounds to zero.
     // - Double.init(exactly:) and UInt.init(_:) for correctness.
-    // - log10(2.0) is: 1.0021010002000002002101⌈01...⌉ * 2^(-2).
+    // - log10(2.0) is: 1.0021010002000002002101⌈01...⌉ * 2^(-2). (0.3010299956639812)
     // - It's an upper bound, so Double/nextUp for peace of mind.
-    return Int(Double(exactly: UInt(bitWidth))! * log10(2.0).nextUp) + 1
+    return Int(Double(exactly: UInt(bitWidth))! * 0.3010299956639812.nextUp) + 1
 }
 
 /// Returns the largest `exponent` and `power` in `pow(10, exponent) <= UInt.max + 1`.
