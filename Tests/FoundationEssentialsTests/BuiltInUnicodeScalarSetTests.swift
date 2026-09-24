@@ -167,15 +167,16 @@ private struct BuiltInUnicodeScalarSetTests {
             let set = BuiltInUnicodeScalarSet(type: type)
             for plane in 0...16 {
                 for isInverted in [false, true] {
-                    var full = [UInt8](repeating: 0, count: BuiltInUnicodeScalarSet.byteCount)
-                    var fullSpan = full.mutableSpan
-                    let fullResult = set.bitmap(forPlane: plane, isInverted: isInverted, into: &fullSpan) { $0 = $1 }
+                    let full = Array(set.bitmap(forPlane: plane, isInverted: isInverted))
                     for count in [1, 10, 16, 8187, 8188] {
-                        var partial = [UInt8](repeating: 0, count: count)
-                        var partialSpan = partial.mutableSpan
+                        let partial = Data(capacity: count) { output in
+                            output.withOutputSpan(of: UInt8.self) { typedOutput in
+                                set.appendBitmap(forPlane: plane, isInverted: isInverted, to: &typedOutput)
+                            }
                         let partialResult = set.bitmap(forPlane: plane, isInverted: isInverted, into: &partialSpan) { $0 = $1 }
                         #expect(partialResult == fullResult)
                         #expect(partial == Array(full.prefix(count)))
+                        #expect(Array(partial) == Array(full.prefix(count)))
                     }
                 }
             }
