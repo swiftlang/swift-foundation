@@ -718,8 +718,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         if !json5Mode {
             try checkDigitAfterSign(bytes, from: sign.digitStart)
             try checkNoLeadingZero(bytes, from: sign.digitStart, allowingHex: false)
-        } else if !containsExponent {
-            // A JSON5 literal with an exponent skips this, matching the legacy reader.
+        } else {
             try checkNoLeadingZero(bytes, from: sign.digitStart, allowingHex: true)
         }
 

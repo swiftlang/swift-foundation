@@ -2129,6 +2129,7 @@ extension JSONEncoderTests {
             ("1E+2", 1E+2),
             ("1e+02", 1e+02),
             ("1E+02", 1E+02),
+            ("8e-0185", 8e-185), // leading zeros are legal in the exponent, unlike the mantissa
             ("0x1F", Double(0x1F)),
             ("-0X1f", Double(-0x1f)),
             ("+0X1f", Double(+0x1f)),
@@ -2194,6 +2195,12 @@ extension JSONEncoderTests {
             "0x2.2",
             ".e1",
             "0xFFFFFFFFFFFFFFFFFFFFFF",
+            "00",
+            "01",
+            "-01",
+            "00.5",
+            "00e2",
+            "008885e8",
         ];
         for json in unsuccessfulDoubles {
             #expect(throws: (any Error).self, "Expected failure for input \"\(json)\"") {
