@@ -473,7 +473,7 @@ open class JSONDecoder {
         #if FOUNDATION_FRAMEWORK
         return _foundation_swift_json_deserialization_enabled()
         #else
-        return false
+        return true
         #endif
     }
 
