@@ -42,9 +42,9 @@ func localeBenchmarks() {
     }
 
     Benchmark("CFStringCompareWithOptionsAndLocale", configuration: .init(scalingFactor: .mega)) { benchmark in
-            for nsLocale in nsLocales {
-                CFStringCompareWithOptionsAndLocale(string1, string2, range1, .init(rawValue: 0), nsLocale)
-            }
+        for nsLocale in nsLocales {
+            CFStringCompareWithOptionsAndLocale(string1, string2, range1, .init(rawValue: 0), nsLocale)
+        }
     }
 #endif
 
@@ -61,6 +61,38 @@ func localeBenchmarks() {
     Benchmark("LocaleComponentsInitIdentifer") { benchmark in
         for identifier in identifiers {
             let components = Locale.Components(identifier: identifier)
+        }
+    }
+
+    let legacyIdentifiers: [String] = [ "English", "French", "Japanese", "Norwegian", "Chinese, Simplified", "Chinese, Traditional", "Chinese, Tradtional", "Brazilian Portugese", "Brazilian Portuguese", "Simplified Chinese", "Traditional Chinese", "Flemish", "Nynorsk", "Tagalog", "Farsi", "Scottish", "az.Ar", "az.Cy", "az.La", "zh.Ha-S", "zh.Ha-S_CN", "zh.Ha-T", "zh.Ha-T_TW", "mn.Cy", "mn.Mn", "ms.Ar", "el.El-P", "ga.Lg", "ga.Lg_IE", "sa.Dv", "yi.He", "en_??", "de_??", "es_??", "fr_??", "ar_??", "be_??", "sr_??", "sl_??", "zh-simp", "zh-trad", "ga-dots", "ga-dots_IE", "no-NO", "no-NO_NO", "no_BOKMAL", "no_NYNORSK", "aa_SAAHO", "nl-be", "nl-be_BE", "fra_FR", "deu_DE", "spa_ES", "zho_CN", "jpn_JP", "kor_KR", "cmn", "zh-cmn", "zh-yue", "zh-wuu", "zh-nan", "zh-hak", "zh-min-nan", "zh-guoyu", "zh-hakka", "zh-xiang", "iw_IL", "in_ID", "ji", "jw", "mo", "tw", "art-lojban", "i-hak", "no-bok", "no-nyn", "sgn-us", "en_UK", "pt_TP", "cs_CS", "sk_CS", "sr_CS", "sr_YU", "sh_HR", "sh_RS", "zh-Hans_CN", "zh-Hans_SG", "zh-Hant_TW", "zh-Hant_HK", "zh-Hant_MO", "zh-Hans_TW", "zh-Hant_CN", "en-Latn_US", "ar-Arab_SA", "ru-Cyrl_RU", "ja-Jpan_JP", "de-Latn-1901_DE", "ko-Kore_KR", "en-Cyrl_US", "ks-Aran-IN", "ks-Arab-IN", "ur-Aran-IN", "ur-Arab-IN", "EN_US", "en_us", "eN_uS", "ZH-HANS-CN", "sr-latn-rs", "ja_JP_TRADITIONAL", "th_TH_TRADITIONAL", "en_US_POSIX", "en_US@calendar=japanese", "de_DE@collation=phonebook", "ar_SA@numbers=arab", "ja_JP_TRADITIONAL@numbers=latn", "de-96", "de_96", "en-ascii", "es_XL", "", "en", "und", "root", "pt-BR", "pt_BR", "zh-Hans-CN", "zh_Hans_CN", "arb", "zsm", "ekk", "uzn", "en-US_US", "zh-TW_TW", "fr-CA_CA", "es-MX_AR", "zh_TW@COLLATION=pinyin", "de_DE@currency=DEM;calendar=gregorian", "en_US@", "zh_Hans_CN@collation=big5han", "en_US@@calendar=japanese", "en_US@a=1;a=2"]
+
+#if FOUNDATION_FRAMEWORK
+    Benchmark("CanonicalizeIdentifier_CF") { benchmark in
+        for identifier in identifiers {
+            let r = CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorSystemDefault, identifier as CFString)
+            blackHole(r)
+        }
+    }
+
+    Benchmark("CanonicalizeIdentifier_CF_legacyIdentifiers") { benchmark in
+        for identifier in legacyIdentifiers {
+            let r = CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorSystemDefault, identifier as CFString)
+            blackHole(r)
+        }
+    }
+#endif // FOUNDATION_FRAMEWORK
+
+    Benchmark("CanonicalizeIdentifier_Swift") { benchmark in
+        for identifier in identifiers {
+            let k = Locale.canonicalIdentifier(from: identifier)
+            blackHole(k)
+        }
+    }
+
+    Benchmark("CanonicalizeIdentifier_Swift_legacyIdentifiers") { benchmark in
+        for identifier in legacyIdentifiers {
+            let k = Locale.canonicalIdentifier(from: identifier)
+            blackHole(k)
         }
     }
 }

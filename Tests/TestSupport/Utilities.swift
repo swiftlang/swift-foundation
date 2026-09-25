@@ -14,6 +14,7 @@ import Testing
 
 extension Testing.Tag {
     @Tag package static var calendar: Self
+    @Tag package static var locale: Self
 }
 
 /// Test that the elements of `instances` satisfy the semantic
