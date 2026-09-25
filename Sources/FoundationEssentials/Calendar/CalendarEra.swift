@@ -140,12 +140,6 @@ extension GregorianFamilyCalendarEras {
 /// One table per calendar that `_CalendarGregorian` serves. Stored properties, so each is built once rather than on every calendar copy.
 extension GregorianFamilyCalendarEras {
 
-    /// Gregorian and ISO8601.
-    static let gregorian = GregorianFamilyCalendarEras([
-        GregorianFamilyCalendarEra(eraNumber: 1, anchorYear: 1, startMonth: 1, startDay: 1, direction: .forward),
-        GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: 1, startMonth: 1, startDay: 1, direction: .backward),
-    ])
-
     /// One era covering every date. 1 CE is 544 BE.
     static let buddhist = GregorianFamilyCalendarEras([
         GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: -542, startMonth: 1, startDay: 1, direction: .forward)
@@ -168,15 +162,13 @@ extension GregorianFamilyCalendarEras {
         GregorianFamilyCalendarEra(eraNumber: 0, anchorYear: 1912, startMonth: 1, startDay: 1, direction: .backward),
     ])
 
-    /// Builds a date from a year that is already extended, so no era conversion applies.
-    static let noRelabeling = GregorianFamilyCalendarEras([])
-
-    static func forCalendar(_ identifier: Calendar.Identifier) -> GregorianFamilyCalendarEras {
+    /// Nil for Gregorian and ISO8601, whose CE and BCE eras need no table.
+    static func forCalendar(_ identifier: Calendar.Identifier) -> GregorianFamilyCalendarEras? {
         switch identifier {
         case .buddhist: return .buddhist
         case .japanese: return .japanese
         case .republicOfChina: return .republicOfChina
-        default: return .gregorian
+        default: return nil
         }
     }
 }
