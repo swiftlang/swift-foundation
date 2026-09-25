@@ -285,15 +285,15 @@ private struct DecimalTests {
 
     @Test func decimalParseUnicodeSeparator() {
         let arabic = "٫"
-        var (result, _) = Decimal.decimal(from: "1٫5".utf8, decimalSeparator: arabic.utf8, matchEntireString: true)
+        var (result, _) = Decimal._decimal(from: "1٫5".utf8, decimalSeparator: arabic.utf8, matchEntireString: true)
         #expect(result == Decimal(1.5))
         let decomposed = "\u{65}\u{301}" // 'e' + COMBINING ACUTE ACCENT
-        (result, _) = Decimal.decimal(from: "1é5e4".utf8, decimalSeparator: decomposed.utf8, matchEntireString: true)
+        (result, _) = Decimal._decimal(from: "1é5e4".utf8, decimalSeparator: decomposed.utf8, matchEntireString: true)
         #expect(result == Decimal(15000))
     }
 
     @Test func decimalParseTruncatedMultiByteSeparator() {
-        let (result, _) = Decimal.decimal(from: "1,".utf8, decimalSeparator: ",,".utf8, matchEntireString: false)
+        let (result, _) = Decimal._decimal(from: "1,".utf8, decimalSeparator: ",,".utf8, matchEntireString: false)
         if let result {
             #expect(result == Decimal(1))
         } else {
@@ -1351,7 +1351,11 @@ private struct DecimalTests {
         #expect(z * 2 == Decimal.zero)
         #expect(z / 2 == Decimal.zero)
         var x = z, y = Decimal(2)
+#if FOUNDATION_FRAMEWORK
+        _ = NSDecimalNormalize(&x, &y, .plain)
+#else
         _ = _NSDecimalNormalize(&x, &y, .plain)
+#endif
         #expect(!x.isNaN)
         #expect(x == Decimal.zero)
     }
