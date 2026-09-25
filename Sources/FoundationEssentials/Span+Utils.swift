@@ -109,17 +109,31 @@ extension Span<UInt8> {
     }
 
     func firstRange(of needle: Span<UInt8>) -> Range<Int>? {
-        guard !needle.isEmpty, count >= needle.count else { return nil }
-        return withUnsafeBufferPointer { haystackBuf in
-            needle.withUnsafeBufferPointer { needleBuf in
-                guard let haystackBase = haystackBuf.baseAddress,
-                      let needleBase = needleBuf.baseAddress,
-                      let result = memmem(haystackBase, haystackBuf.count, needleBase, needleBuf.count)
-                else { return nil }
-                let start = haystackBase.distance(to: result.assumingMemoryBound(to: UInt8.self))
-                return start..<(start + needle.count)
+        let m = needle.count
+        guard m > 0 else {
+            return 0..<0
+        }
+        guard m <= count else {
+            return nil
+        }
+
+        let first = needle[0]
+        for i in 0...(count - m) {
+            guard self[i] == first else {
+                continue
+            }
+
+            var j = 1
+            while j < m, self[i &+ j] == needle[j] {
+                j &+= 1
+            }
+
+            if j == m {
+                return i ..< (i &+ m)
             }
         }
+        
+        return nil
     }
 }
 

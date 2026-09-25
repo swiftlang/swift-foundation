@@ -20,47 +20,43 @@ import Testing
 
 struct SpanExtensionTests {
 
-    @Test func firstRangeOfASCIIStrings() {
-
-        func check(_ string: String, _ candidate: String, expects result: Range<Int>?, file: StaticString = #filePath, line: UInt = #line) {
-            let actual = string.utf8.span.firstRange(of: candidate.utf8.span)
-            #expect(actual == result)
-        }
-
-        check("hello world", "world", expects: 6..<11)
-        check("hello world", "hello", expects: 0..<5)
-        check("hello world", "xyz", expects: nil)
-        check("hello", "", expects: nil)
-        check("ab", "abc", expects: nil)
-        check("abc", "abc", expects: 0..<3)
-        check("abcabc", "abc", expects: 0..<3)
-        check("", "a", expects: nil)
-        check("hello", "l", expects: 2..<3)
+    @Test(arguments: [
+        (string: "hello world", candidate: "world", expected: 6..<11),
+        (string: "hello world", candidate: "hello", expected: 0..<5),
+        (string: "hello world", candidate: "xyz", expected: nil),
+        (string: "hello", candidate: "", expected: 0..<0),
+        (string: "ab", candidate: "abc", expected: nil),
+        (string: "abc", candidate: "abc", expected: 0..<3),
+        (string: "abcabc", candidate: "abc", expected: 0..<3),
+        (string: "", candidate: "a", expected: nil),
+        (string: "hello", candidate: "l", expected: 2..<3),
+    ] as [(string: String, candidate: String, expected: Range<Int>?)])
+    func firstRangeOfASCIIStrings(string: String, candidate: String, expected: Range<Int>?) {
+        let actual = string.utf8.span.firstRange(of: candidate.utf8.span)
+        #expect(actual == expected)
     }
 }
 
 struct OutputSpanExtensionTests {
 
-    @Test func removesSubrange() {
-
-        func check(_ string: String, _ ranges: Range<Int>..., expect: String, file: StaticString = #filePath, line: UInt = #line) {
-            let result = Array<UInt8>(capacity: string.utf8.count) { output in
-                for byte in string.utf8 {
-                    output.append(byte)
-                }
-                for range in ranges {
-                    output.removeSubrange(range)
-                }
+    @Test(arguments: [
+        (string: "hello", ranges: [1..<3], expected: "hlo"),
+        (string: "hello", ranges: [0..<2], expected: "llo"),
+        (string: "hello", ranges: [3..<5], expected: "hel"),
+        (string: "hello", ranges: [0..<5], expected: ""),
+        (string: "hello", ranges: [4..<5], expected: "hell"),
+        (string: "hello", ranges: [2..<2], expected: "hello"),
+        (string: "abcdefg", ranges: [1..<2, 2..<4], expected: "acfg"), // abcdefg -> acdefg -> acfg
+    ] as [(string: String, ranges: [Range<Int>], expected: String)])
+    func removesSubrange(string: String, ranges: [Range<Int>], expected: String) {
+        let result = Array<UInt8>(capacity: string.utf8.count) { output in
+            for byte in string.utf8 {
+                output.append(byte)
             }
-            #expect(result == Array(expect.utf8))
+            for range in ranges {
+                output.removeSubrange(range)
+            }
         }
-
-        check("hello", 1..<3, expect: "hlo")
-        check("hello", 0..<2, expect: "llo")
-        check("hello", 3..<5, expect: "hel")
-        check("hello", 0..<5, expect: "")
-        check("hello", 4..<5, expect: "hell")
-        check("hello", 2..<2, expect: "hello")
-        check("abcdefg", 1..<2, 2..<4, expect: "acfg") // abcdefg -> acdefg -> acfg
+        #expect(result == Array(expected.utf8))
     }
 }
