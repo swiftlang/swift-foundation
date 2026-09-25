@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import _FoundationCShims
+
 extension Span<UInt8> {
     func firstIndex(of byte: UInt8) -> Int? {
         guard !isEmpty else {
@@ -105,6 +107,20 @@ extension Span<UInt8> {
         }
         return false
     }
+
+    func firstRange(of needle: Span<UInt8>) -> Range<Int>? {
+        guard !needle.isEmpty, count >= needle.count else { return nil }
+        return withUnsafeBufferPointer { haystackBuf in
+            needle.withUnsafeBufferPointer { needleBuf in
+                guard let haystackBase = haystackBuf.baseAddress,
+                      let needleBase = needleBuf.baseAddress,
+                      let result = memmem(haystackBase, haystackBuf.count, needleBase, needleBuf.count)
+                else { return nil }
+                let start = haystackBase.distance(to: result.assumingMemoryBound(to: UInt8.self))
+                return start..<(start + needle.count)
+            }
+        }
+    }
 }
 
 extension OutputRawSpan {
@@ -195,7 +211,22 @@ extension OutputSpan<UInt8> {
         }
         return self[count - 1]
     }
+
+    mutating func removeSubrange(_ range: Range<Int>) {
+        guard !range.isEmpty else { return }
+
+        precondition(range.lowerBound >= 0, "Range lower bound must be non-negative")
+        precondition(range.upperBound <= count, "Range upper bound out of bounds")
+        do {
+            var bytes = mutableSpan
+            for i in range.upperBound..<bytes.count {
+                bytes[i - range.count] = bytes[i]
+            }
+        }
+        removeLast(range.count)
+    }
 }
+
 
 extension String {
     package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
