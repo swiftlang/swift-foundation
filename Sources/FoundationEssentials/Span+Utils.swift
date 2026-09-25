@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _FoundationCShims
-
 extension Span<UInt8> {
     func firstIndex(of byte: UInt8) -> Int? {
         guard !isEmpty else {
