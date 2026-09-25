@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _FoundationCShims
 internal import Synchronization
 
 private let plistBytes : StaticString = "plist"
@@ -28,6 +27,14 @@ private let falseBytes : StaticString = "false"
 private let docType : StaticString = "DOCTYPE"
 private let cdSect : StaticString = "<![CDATA["
 private let cfuid : StaticString = "CF$UID"
+
+extension Calendar {
+    static var sufficientlyProlepticISO8601Calendar: Self {
+        // This date constant is carefully chosen to be the earliest Julian date we consider valid in Calendar_Gregorian.
+        let gregorianStartDate = Date(timeIntervalSinceReferenceDate: -184_304_880_835_200)
+        return Calendar(identifier: .iso8601, locale: nil, timeZone: .gmt, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: gregorianStartDate)
+    }
+}
 
 enum XMLPlistTag {
     case plist
@@ -104,76 +111,12 @@ enum XMLPlistTag {
     }
 }
 
-typealias XMLPlistMapOffset = Int
-
-class XMLPlistMap : PlistDecodingMap {
-    enum TypeDescriptor : Int {
-        case string  // [marker, count, sourceByteOffset]
-        case key     // [marker, count, sourceByteOffset]
-        case real    // [marker, count, sourceByteOffset]
-        case integer // [marker, count, sourceByteOffset]
-        case data    // [marker, count, sourceByteOffset]
-        case date    // [marker, count, sourceByteOffset]
-        case `true`  // [marker]
-        case `false` // [marker]
-
-        case array   // [marker, nextSiblingOffset, count, <keys and values>, .collectionEnd]
-        case dict    // [marker, nextSiblingOffset, count, <values>, .collectionEnd]
-        case collectionEnd
-
-        case nullSentinel // [marker]
-        case simpleString // [marker, count, sourceByteOffset]
-        case simpleKey    // [marker, count, sourceByteOffset]
-
-        @inline(__always)
-        var mapMarker : Int {
-            rawValue
-        }
-
-        init(_ tag: XMLPlistTag) {
-            switch tag {
-            case .string: self = .string
-            case .key: self = .key
-            case .real: self = .real
-            case .integer: self = .integer
-            case .data: self = .data
-            case .date: self = .date
-            case .true: self = .true
-            case .false: self = .false
-            case .array: self = .array
-            case .dict: self = .dict
-            case .plist: fatalError("Type descriptor not applicable to <plist> tag")
-            }
-        }
-    }
-
-    internal indirect enum Value {
-        case string(Region, isKey: Bool, isSimple: Bool)
-        case array(startOffset: Int, count: Int)
-        case dict(startOffset: Int, count: Int)
-        case data(Region)
-        case date(Region)
-        case boolean(Bool)
-        case real(Region)
-        case integer(Region)
-        case null
-        
-        case uid // UNUSED by PropertyListDecoder.
-    }
-
-    struct Region {
-        let startOffset: Int
-        let count: Int
-    }
-    
-    @inline(__always)
-    static var nullValue: Value { .null }
-
-    let mapBuffer : [Int]
+class XMLPlistLegacyDecodingDocument : PlistDecodingDocument, @unchecked Sendable {
+    let map: XMLPlistMap<ArrayMapRecords>
     let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
-    init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
-        self.mapBuffer = mapBuffer
+    init(map: consuming XMLPlistMap<ArrayMapRecords>, dataBuffer: BufferView<UInt8>) {
+        self.map = map
         self.dataLock = .init((buffer: dataBuffer, allocation: nil))
     }
 
@@ -186,18 +129,18 @@ class XMLPlistMap : PlistDecodingMap {
         }
     }
 
-    var topObject : Value {
+    var topObject : XMLPlistMapValue {
         loadValue(at: 0)!
     }
-    
+
     @inline(__always)
-    func value(from reference: Value) throws -> Value {
+    func value(from reference: XMLPlistMapValue) throws -> XMLPlistMapValue {
         return reference
     }
 
     @inline(__always)
     func withBuffer<T: ~Copyable, E>(
-      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+      for region: XMLPlistMapRegion, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
     ) throws(E) -> sending T {
         try dataLock.withLock { state throws(E) in
             return try closure(state.buffer[region], state.buffer)
@@ -223,65 +166,23 @@ class XMLPlistMap : PlistDecodingMap {
         }
     }
 
-    func loadValue(at mapOffset: XMLPlistMapOffset) -> Value? {
-        let marker = mapBuffer[mapOffset]
-        switch TypeDescriptor(rawValue: marker) {
-        case .array:
-            let count = mapBuffer[mapOffset + 2]
-            let objsOffset = mapOffset + 3
-            return .array(startOffset: objsOffset, count: count)
-        case .dict:
-            let count = mapBuffer[mapOffset + 2]
-            let objsOffset = mapOffset + 3
-            
-            // NSKeyedArchiver UIDs are encoded as single element dictionaries with a key of "CF$UID". This is the best time to detect those and return the correct value so that clients aren't tricked into decoding these as [String:Int32].
-            if detectUID(dictionaryReferenceCount: count, objectOffset: objsOffset) {
-                return .uid
-            }
-            
-            return .dict(startOffset: objsOffset, count: count)
-        case .key, .string, .simpleKey, .simpleString:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            let isKey = marker == TypeDescriptor.key.mapMarker || marker == TypeDescriptor.simpleKey.mapMarker
-            let isSimple = marker == TypeDescriptor.simpleKey.mapMarker || marker == TypeDescriptor.simpleString.mapMarker
-            return .string(.init(startOffset: dataOffset, count: length), isKey: isKey, isSimple: isSimple)
-        case .data:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            return .data(.init(startOffset: dataOffset, count: length))
-        case .date:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            return .date(.init(startOffset: dataOffset, count: length))
-        case .real:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            return .real(.init(startOffset: dataOffset, count: length))
-        case .integer:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            return .integer(.init(startOffset: dataOffset, count: length))
-        case .true:
-            return .boolean(true)
-        case .false:
-            return .boolean(false)
-        case .nullSentinel:
-            return .null
-        case .collectionEnd:
-            return nil
-        case .none:
-            fatalError("Invalid plist tag value in mapping: \(marker))")
+    func loadValue(at mapOffset: XMLPlistMapOffset) -> XMLPlistMapValue? {
+        guard let value = map.loadValue(at: mapOffset) else { return nil }
+        // NSKeyedArchiver UIDs are encoded as single-entry dictionaries whose key is `CF$UID`. Detect that shape here (needs byte access to compare the key string).
+        if case let .dict(startOffset: objsOffset, count: count) = value,
+           detectUID(dictionaryReferenceCount: count, objectOffset: objsOffset) {
+            return .uid
         }
+        return value
     }
-    
+
     private func detectUID(dictionaryReferenceCount count: Int, objectOffset objsOffset: XMLPlistMapOffset) -> Bool {
         if count == 2,
-           mapBuffer[objsOffset] == TypeDescriptor.simpleKey.mapMarker,
-           mapBuffer[objsOffset + 1] == cfuid.utf8CodeUnitCount {
-            
+           map.records[objsOffset] == XMLPlistMapTypeDescriptor.simpleKey.mapMarker,
+           map.records[objsOffset + 1] == cfuid.utf8CodeUnitCount {
+
             // OK, we've peeked enough into this first key to justify loading and examining the entire value.
-            if case let .string(region, _, _) = loadValue(at: objsOffset) {
+            if case let .string(region, _, _) = map.loadValue(at: objsOffset) {
                 return self.withBuffer(for: region) { bufferView, _ in
                     bufferView.withUnsafeRawPointer { ptr, _ in
                         cfuid.withUTF8Buffer { cfuidBuf in
@@ -295,28 +196,14 @@ class XMLPlistMap : PlistDecodingMap {
     }
 
     func offset(after previousValueOffset: XMLPlistMapOffset) -> XMLPlistMapOffset {
-        let marker = mapBuffer[previousValueOffset]
-        let type = TypeDescriptor(rawValue: marker)
-        switch type {
-        case .string, .simpleString, .key, .simpleKey, .real, .integer, .data, .date:
-            return previousValueOffset + 3 // Skip marker, length, and data offset
-        case .true, .false, .nullSentinel:
-            return previousValueOffset + 1 // Skip only the marker.
-        case .dict, .array:
-            // The collection records the offset to the next sibling
-            return mapBuffer[previousValueOffset + 1]
-        case .collectionEnd:
-            fatalError("Attempt to find next object past the end of collection at offset \(previousValueOffset))")
-        case .none:
-            fatalError("Invalid XML value type code in mapping: \(marker))")
-        }
+        map.offset(after: previousValueOffset)
     }
 
     struct ArrayIterator: PlistArrayIterator {
         var currentOffset: Int
-        let map : XMLPlistMap
+        let document : XMLPlistLegacyDecodingDocument
 
-        mutating func next() -> XMLPlistMap.Value? {
+        mutating func next() -> XMLPlistMapValue? {
             guard let next = peek() else {
                 return nil
             }
@@ -324,42 +211,42 @@ class XMLPlistMap : PlistDecodingMap {
             return next
         }
 
-        func peek() -> XMLPlistMap.Value? {
-            guard let next = map.loadValue(at: currentOffset) else {
+        func peek() -> XMLPlistMapValue? {
+            guard let next = document.loadValue(at: currentOffset) else {
                 return nil
             }
             return next
         }
 
         mutating func advance() {
-            currentOffset = map.offset(after: currentOffset)
+            currentOffset = document.offset(after: currentOffset)
         }
     }
 
     func makeArrayIterator(from offset: Int) -> ArrayIterator {
-        return .init(currentOffset: offset, map: self)
+        return .init(currentOffset: offset, document: self)
     }
 
     struct DictionaryIterator: PlistDictionaryIterator {
         var currentOffset: Int
-        let map : XMLPlistMap
+        let document : XMLPlistLegacyDecodingDocument
 
-        mutating func next() -> (key: XMLPlistMap.Value, value: XMLPlistMap.Value)? {
+        mutating func next() -> (key: XMLPlistMapValue, value: XMLPlistMapValue)? {
             let keyOffset = currentOffset
-            guard let key = map.loadValue(at: currentOffset) else {
+            guard let key = document.loadValue(at: currentOffset) else {
                 return nil
             }
-            let valueOffset = map.offset(after: keyOffset)
-            guard let value = map.loadValue(at: valueOffset) else {
-                preconditionFailure("XMLPlistMap object constructed incorrectly. No value found for key")
+            let valueOffset = document.offset(after: keyOffset)
+            guard let value = document.loadValue(at: valueOffset) else {
+                preconditionFailure("XMLPlistLegacyDecodingDocument object constructed incorrectly. No value found for key")
             }
-            currentOffset = map.offset(after: valueOffset)
+            currentOffset = document.offset(after: valueOffset)
             return (key, value)
         }
     }
 
     func makeDictionaryIterator(from offset: Int) -> DictionaryIterator {
-        return .init(currentOffset: offset, map: self)
+        return .init(currentOffset: offset, document: self)
     }
 }
 
@@ -383,13 +270,13 @@ internal let dataDecodeTable =
     /* 'x' */ 49, 50, 51, -1, -1, -1, -1, -1
 ]
 
-extension XMLPlistMap.Value {
-    func dataValue(in map: XMLPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Data {
+extension XMLPlistMapValue {
+    func dataValue(in document: XMLPlistLegacyDecodingDocument, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Data {
         guard case let .data(region) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: Data.self, reality: self)
         }
 
-        return try map.withBuffer(for: region) { buffer, fullSource in
+        return try document.withBuffer(for: region) { buffer, fullSource in
             var reader = BufferReader(bytes: buffer, fullSource: fullSource)
 
             var numEq = 0
@@ -401,7 +288,7 @@ extension XMLPlistMap.Value {
                     break
                 } else if c == ._equal {
                     numEq += 1
-                } else if isspace(Int32(c)) != 0 {
+                } else if !c.isASCIIWhitespace {
                     numEq = 0
                 }
 
@@ -438,12 +325,12 @@ extension XMLPlistMap.Value {
 
     // YYYY '-' MM '-' DD 'T' hh ':' mm ':' ss 'Z'
     // NOTE: The DTD claims that smaller units can be omitted, but the old C implementation doesn't accept this.
-    func dateValue(in map: XMLPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Date {
+    func dateValue(in document: XMLPlistLegacyDecodingDocument, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Date {
         guard case let .date(region) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: Date.self, reality: self)
         }
 
-        return try map.withBuffer(for: region) { buffer, fullSource in
+        return try document.withBuffer(for: region) { buffer, fullSource in
             var reader = BufferReader(bytes: buffer, fullSource: fullSource)
 
             var badForm = false
@@ -542,11 +429,8 @@ extension XMLPlistMap.Value {
                 throw DecodingError._dataCorrupted("Encountered unexpected character \(Character(UnicodeScalar(ch))) at line \(reader.lineNumber) while parsing date", for: codingPathNode, additionalKey)
             }
 
-            var c = Calendar(identifier: .iso8601)
-            c.timeZone = .gmt
-
-            let dc = DateComponents(year: year, month: month, day: day, hour: hour, minute: minute, second: second)
-            if let date = c.date(from: dc) {
+            let dc = DateComponents(year: yearIsNegative ? -year : year, month: month, day: day, hour: hour, minute: minute, second: second)
+            if let date = Calendar.sufficientlyProlepticISO8601Calendar.date(from: dc) {
                 return date
             } else {
                 return Date(gregorianYear: Int64(yearIsNegative ? -year : year), month: Int8(month), day: Int8(day), hour: Int8(hour), minute: Int8(minute), second: Double(second))
@@ -605,9 +489,9 @@ extension XMLPlistMap.Value {
         }
     }
 
-    func integerValue<T: FixedWidthInteger & Sendable>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    func integerValue<T: FixedWidthInteger & Sendable>(in document: XMLPlistLegacyDecodingDocument, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         if case .real = self {
-            let double = try self.realValue(in: map, as: Double.self, for: codingPathNode, additionalKey)
+            let double = try self.realValue(in: document, as: Double.self, for: codingPathNode, additionalKey)
             guard let integer = T(exactly: double) else {
                 throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
             }
@@ -618,7 +502,7 @@ extension XMLPlistMap.Value {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: type, reality: self)
         }
 
-        return try map.withBuffer(for: region) { buffer, fullSource in
+        return try document.withBuffer(for: region) { buffer, fullSource in
             var reader = BufferReader(bytes: buffer, fullSource: fullSource)
 
             // decimal_constant         S*(-|+)?S*[0-9]+        (S == space)
@@ -701,20 +585,20 @@ extension XMLPlistMap.Value {
         }
     }
     
-    func realValue<T: BinaryFloatingPoint & Sendable>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
+    func realValue<T: BinaryFloatingPoint & Sendable>(in document: XMLPlistLegacyDecodingDocument, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
         if case .integer = self {
-            if let uintValue = try? self.integerValue(in: map, as: UInt64.self, for: codingPathNode, additionalKey) {
+            if let uintValue = try? self.integerValue(in: document, as: UInt64.self, for: codingPathNode, additionalKey) {
                 return T(uintValue)
             }
-            let intValue = try self.integerValue(in: map, as: Int64.self, for: codingPathNode, additionalKey)
+            let intValue = try self.integerValue(in: document, as: Int64.self, for: codingPathNode, additionalKey)
             return T(intValue)
         }
 
         guard case let .real(region) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: type, reality: self)
         }
-        
-        return try map.withBuffer(for: region) { bytes, fullSource in
+
+        return try document.withBuffer(for: region) { bytes, fullSource in
             // NOTE: The historical XML plist parsing code used to parse the contents of a <real> tag exactly like a string, CDATA sections and all, and then convert that parsed string to a real value. We no longer do that, because it's wrong.
             
             // Try parsing special values that XML plist accepts that strto* does not.
@@ -745,7 +629,7 @@ extension XMLPlistMap.Value {
     }
 }
 
-extension XMLPlistMap.Value: DecodingErrorValueTypeDebugStringConvertible {
+extension XMLPlistMapValue: DecodingErrorValueTypeDebugStringConvertible {
     var debugDataTypeDescription: String {
         switch self {
         case .string: return "a string"
@@ -767,62 +651,62 @@ internal struct XMLPlistScanner {
     var partialMapData = PartialMapData()
 
     struct PartialMapData {
-        var mapData : [Int] = []
-        var prevMapDataSize = 0
+    var mapData: [Int] = []
+    var prevMapDataSize = 0
 
-        mutating func resizeIfNecessary(with reader: BufferReader) {
-            let currentCount = mapData.count
-            if currentCount > 0, currentCount.isMultiple(of: 2048) {
-                // Time to predict how big these arrays are going to be based on the current rate of consumption per processed bytes.
-                // total objects = (total bytes / current bytes) * current objects
-                let totalBytes = reader.bytes.count
-                let consumedBytes = reader.byteOffset(at: reader.readIndex)
-                let ratio = (Double(totalBytes) / Double(consumedBytes))
-                let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
-                if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
-                    mapData.reserveCapacity(totalExpectedMapSize)
-                    prevMapDataSize = totalExpectedMapSize
-                }
+    mutating func resizeIfNecessary(with reader: BufferReader) {
+        let currentCount = mapData.count
+        if currentCount > 0, currentCount.isMultiple(of: 2048) {
+            // Time to predict how big these arrays are going to be based on the current rate of consumption per processed bytes.
+            // total objects = (total bytes / current bytes) * current objects
+            let totalBytes = reader.bytes.count
+            let consumedBytes = reader.byteOffset(at: reader.readIndex)
+            let ratio = (Double(totalBytes) / Double(consumedBytes))
+            let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
+            if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
+                mapData.reserveCapacity(totalExpectedMapSize)
+                prevMapDataSize = totalExpectedMapSize
             }
         }
+    }
 
-        mutating func recordStartCollection(tagType: XMLPlistMap.TypeDescriptor, with reader: BufferReader) -> Int {
+        mutating func recordStartCollection(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) -> Int {
             resizeIfNecessary(with: reader)
 
             mapData.append(tagType.mapMarker)
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-            mapData.append(contentsOf: [0, 0])
+        mapData.append(contentsOf: [0, 0])
             return startIdx
-        }
+    }
 
         mutating func recordEndCollection(count: Int, atStartOffset startOffset: Int, with reader: BufferReader) {
-            resizeIfNecessary(with: reader)
+        resizeIfNecessary(with: reader)
 
-            mapData.append(XMLPlistMap.TypeDescriptor.collectionEnd.mapMarker)
+            mapData.append(XMLPlistMapTypeDescriptor.collectionEnd.mapMarker)
 
-            let nextValueOffset = mapData.count
+        let nextValueOffset = mapData.count
             mapData.withUnsafeMutableBufferPointer {
                 $0[startOffset] = nextValueOffset
                 $0[startOffset + 1] = count
             }
         }
 
-        mutating func recordEmptyCollection(tagType: XMLPlistMap.TypeDescriptor, with reader: BufferReader) {
-            resizeIfNecessary(with: reader)
+        mutating func recordEmptyCollection(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
+        resizeIfNecessary(with: reader)
 
-            let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMap.TypeDescriptor.collectionEnd.mapMarker])
+        let nextValueOffset = mapData.count + 4
+            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
-        mutating func record(tagType: XMLPlistMap.TypeDescriptor, count: Int, dataOffset: Int, with reader: BufferReader) {
+        mutating func record(tagType: XMLPlistMapTypeDescriptor, count: Int, dataOffset: Int, with reader: BufferReader) {
             resizeIfNecessary(with: reader)
 
             mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
         }
 
-        mutating func record(tagType: XMLPlistMap.TypeDescriptor, with reader: BufferReader) {
+        mutating func record(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
             resizeIfNecessary(with: reader)
 
             mapData.append(tagType.mapMarker)
@@ -898,8 +782,8 @@ internal struct XMLPlistScanner {
         // Apparently empty keys are allowed by the original implementation.
         try scanString(asKey: true)
         try checkForCloseTag(.key)
-        return true
-    }
+                return true
+            }
 
     @inline(__always)
     func matches(tag: XMLPlistTag, at location: BufferViewIndex<UInt8>, until endIdx : BufferViewIndex<UInt8>) -> Bool {
@@ -995,42 +879,42 @@ internal struct XMLPlistScanner {
 
     mutating func scanXMLElement() throws {
         let (tag, isEmpty) = try peekXMLElement()
-        switch tag {
-        case .plist:
-            if isEmpty {
-                throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
-            }
+            switch tag {
+            case .plist:
+                if isEmpty {
+                    throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
+                }
             return try scanPlist()
-        case .array:
-            if isEmpty {
+            case .array:
+                if isEmpty {
                 partialMapData.recordEmptyCollection(tagType: .array, with: reader)
-            } else {
+                } else {
                 try scanArray()
-            }
-        case .dict:
-            if isEmpty {
+                }
+            case .dict:
+                if isEmpty {
                 partialMapData.recordEmptyCollection(tagType: .dict, with: reader)
-            } else {
+                } else {
                 try scanDict()
             }
         case .key, .string:
             let isKey = tag == .key
-            if isEmpty {
+                if isEmpty {
                 partialMapData.record(tagType: isKey ? .simpleKey : .simpleString, count: 0, dataOffset: 0, with: reader)
                 return
-            }
+                }
             try scanString(asKey: isKey)
             try checkForCloseTag(tag)
-        case .data, .date, .real, .integer:
-            guard !isEmpty else {
-                throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
-            }
+            case .data, .date, .real, .integer:
+                guard !isEmpty else {
+                    throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
+                }
             let (start, end) = try scanThroughCloseTag(tag)
             partialMapData.record(tagType: .init(tag), count: start.distance(to: end), dataOffset: reader.byteOffset(at: start), with: reader)
-        case .true, .false:
-            if !isEmpty {
-                try checkForCloseTag(tag)
-            }
+            case .true, .false:
+                if !isEmpty {
+                    try checkForCloseTag(tag)
+                }
             partialMapData.record(tagType: .init(tag), with: reader)
         }
     }
@@ -1203,7 +1087,7 @@ internal struct XMLPlistScanner {
         if isNull {
             partialMapData.record(tagType: .nullSentinel, with: reader)
         } else {
-            let tagType: XMLPlistMap.TypeDescriptor
+            let tagType: XMLPlistMapTypeDescriptor
             switch (asKey, isSimple) {
             case (true, true):
                 tagType = .simpleKey
@@ -1380,7 +1264,7 @@ internal struct XMLPlistScanner {
         try checkForCloseTag(.plist)
     }
 
-    mutating func scanXMLPropertyList() throws -> XMLPlistMap {
+    mutating func scanXMLPropertyList() throws -> XMLPlistMap<ArrayMapRecords> {
         while !reader.isAtEnd {
             skipWhitespace()
             guard let shouldBeOpenAngle = reader.read() else {
@@ -1410,7 +1294,7 @@ internal struct XMLPlistScanner {
                 try skipXMLProcessingInstruction()
             default:
                 try scanXMLElement()
-                return XMLPlistMap(mapBuffer: partialMapData.mapData, dataBuffer: self.reader.bytes)
+                return XMLPlistMap(records: .init(partialMapData.mapData))
             }
         }
         throw XMLPlistError.unexpectedEndOfFile()
@@ -1454,56 +1338,13 @@ internal struct XMLPlistScanner {
     }
 }
 
-enum XMLPlistError: Swift.Error, Equatable {
-    case unexpectedEndOfFile(context: String? = nil)
-    case malformedTag(line: Int)
-    case unexpectedEmptyTag(XMLPlistTag, line: Int)
-    case unexpectedCharacter(UInt8, line: Int, context: String? = nil)
-    case unknownEscape(line: Int)
-    case cannotConvertToUTF8
-    case other(String)
-
-    var debugDescription : String {
-        switch self {
-        case .unexpectedEndOfFile(let context):
-            if let context {
-                return "Encountered unexpected EOF " + context
-            } else {
-                return "Encountered unexpected EOF"
-            }
-        case let .malformedTag(line):
-            return "Malformed tag on line \(line)"
-        case let .unexpectedEmptyTag(tag, line):
-            return "Encountered empty <\(tag.tagName)> on line \(line)"
-        case let .unexpectedCharacter(ascii, line, context):
-            if let context {
-                return "Encountered unexpected character \(Character(UnicodeScalar(ascii))) on line \(line) " + context
-            } else {
-                return "Encountered unexpected character \(Character(UnicodeScalar(ascii))) on line \(line)"
-            }
-        case let .unknownEscape(line):
-            return "Encountered unknown ampersand-escape sequence at line \(line)"
-        case .cannotConvertToUTF8:
-            return "Unable to convert string to correct encoding"
-        case let .other(description):
-            return description
-        }
-    }
-
-    var cocoaError: CocoaError {
-        .init(.propertyListReadCorrupt, userInfo: [
-            NSDebugDescriptionErrorKey : self.debugDescription
-        ])
-    }
-}
-
 extension BufferView<UInt8> {
     // TODO: Here temporarily until it can be moved to CodableUtilities.swift on the FoundationPreview size
-    internal subscript(region: XMLPlistMap.Region) -> BufferView {
+    internal subscript(region: XMLPlistMapRegion) -> BufferView {
         slice(from: region.startOffset, count: region.count)
     }
 
-    internal subscript(unchecked region: XMLPlistMap.Region) -> BufferView {
+    internal subscript(unchecked region: XMLPlistMapRegion) -> BufferView {
         uncheckedSlice(from: region.startOffset, count: region.count)
     }
 }

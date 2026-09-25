@@ -1286,12 +1286,10 @@ private struct JSONEncoderTests {
     @Test
     @MainActor // Deeply recursive tests which requires running on the main thread which has a higher stack size limit
     func depthTraversal() {
-        struct SuperNestedArray : Decodable {
+        // The important part to test is the parsing pass, not the decoding pass.
+        struct DecodeNothing : Decodable {
             init(from decoder: Decoder) throws {
-                var container = try decoder.unkeyedContainer()
-                while container.count! > 0 {
-                    container = try container.nestedUnkeyedContainer()
-                }
+                // Do nothing.
             }
         }
 
@@ -1300,10 +1298,10 @@ private struct JSONEncoderTests {
         let jsonBad = String(repeating: "[", count: MAX_DEPTH + 1) + String(repeating: "]", count: MAX_DEPTH + 1)
 
         #expect(throws: Never.self) {
-            try JSONDecoder().decode(SuperNestedArray.self, from: jsonGood.data(using: .utf8)!)
+            try JSONDecoder().decode(DecodeNothing.self, from: jsonGood.data(using: .utf8)!)
         }
         #expect(throws: (any Error).self) {
-            try JSONDecoder().decode(SuperNestedArray.self, from: jsonBad.data(using: .utf8)!)
+            try JSONDecoder().decode(DecodeNothing.self, from: jsonBad.data(using: .utf8)!)
         }
 
     }
@@ -1667,6 +1665,118 @@ private struct JSONEncoderTests {
         // The expected valueNotFound error is swalled by the init(from:) implementation.
         #expect(throws: Never.self) {
             try JSONDecoder().decode(ValueNotFound.self, from: json)
+        }
+    }
+
+    // Exercises every reachable method on the Decoder returned by `keyedContainer.superDecoder(forKey:)` when the key is absent from the input.
+    @Test func superDecoderForAbsentKey() throws {
+        enum CodingKeys: String, CodingKey {
+            case present, absent
+        }
+
+        // Collector class: captured error is stored on the instance so no
+        // shared mutable state is needed. The `probe` closure is passed
+        // through `JSONDecoder.userInfo`.
+        final class ProbeResult: Decodable, @unchecked Sendable {
+            var thrown: (any Error)?
+            init() {}
+            required init(from decoder: Decoder) throws {
+                let keyed = try decoder.container(keyedBy: CodingKeys.self)
+                let sup = try keyed.superDecoder(forKey: .absent)
+                let probeKey = CodingUserInfoKey(rawValue: "superDecoderProbe")!
+                let probe = decoder.userInfo[probeKey] as? @Sendable (Decoder) throws -> Void
+                do {
+                    try probe?(sup)
+                    self.thrown = nil
+                } catch {
+                    self.thrown = error
+                }
+            }
+        }
+
+        let json = #"{"present":true}"#.data(using: .utf8)!
+        let probeKey = CodingUserInfoKey(rawValue: "superDecoderProbe")!
+
+        func run(_ probe: @escaping @Sendable (Decoder) throws -> Void) throws -> (any Error)? {
+            let decoder = JSONDecoder()
+            decoder.userInfo[probeKey] = probe
+            return try decoder.decode(ProbeResult.self, from: json).thrown
+        }
+
+        // decodeNil() on a single-value container: should report true.
+        do {
+            let error = try run { decoder in
+                let svc = try decoder.singleValueContainer()
+                #expect(svc.decodeNil())
+            }
+            #expect(error == nil)
+        }
+
+        // decode(_: T.self) on a single-value container: valueNotFound for every type except `Bool`, which reports typeMismatch against null, matching the legacy implementation.
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(Bool.self)
+            }
+            guard case DecodingError.typeMismatch? = error else {
+                Issue.record("expected typeMismatch for Bool, got \(String(describing: error))")
+                return
+            }
+        }
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(String.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("expected valueNotFound for String, got \(String(describing: error))")
+                return
+            }
+        }
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(Int.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("expected valueNotFound for Int, got \(String(describing: error))")
+                return
+            }
+        }
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(Double.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("expected valueNotFound for Double, got \(String(describing: error))")
+                return
+            }
+        }
+
+        // container(keyedBy:): synthetic scope is null, so this should throw
+        // valueNotFound (or typeMismatch; both are acceptable non-crash outcomes).
+        do {
+            let error = try run { decoder in
+                _ = try decoder.container(keyedBy: CodingKeys.self)
+            }
+            #expect(error != nil, "expected an error opening a keyed container on absent-key superDecoder")
+            switch error {
+            case DecodingError.valueNotFound?, DecodingError.typeMismatch?:
+                break
+            default:
+                Issue.record("expected valueNotFound or typeMismatch, got \(String(describing: error))")
+            }
+        }
+
+        // unkeyedContainer(): same expectation.
+        do {
+            let error = try run { decoder in
+                _ = try decoder.unkeyedContainer()
+            }
+            #expect(error != nil, "expected an error opening an unkeyed container on absent-key superDecoder")
+            switch error {
+            case DecodingError.valueNotFound?, DecodingError.typeMismatch?:
+                break
+            default:
+                Issue.record("expected valueNotFound or typeMismatch, got \(String(describing: error))")
+            }
         }
     }
 

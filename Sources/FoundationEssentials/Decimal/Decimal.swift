@@ -693,9 +693,16 @@ extension Decimal {
         from utf8: BufferView<UInt8>,
         matchEntireString: Bool
     ) -> DecimalParseResult {
+        _decimal(from: utf8.span, matchEntireString: matchEntireString)
+    }
+    
+    internal static func _decimal(
+        from utf8: Span<UInt8>,
+        matchEntireString: Bool
+    ) -> DecimalParseResult {
         do throws(_ParseError) {
             let (result, _, processedCodeUnits) = try Self.__decimal(
-                from: utf8.span,
+                from: utf8,
                 decimalSeparator: ".".utf8Span,
                 matchEntireString: matchEntireString)
             return .success(result, processedLength: processedCodeUnits)

@@ -45,7 +45,7 @@ internal struct JSON5Scanner {
             }
         }
 
-        mutating func recordStartCollection(tagType: JSONMap.TypeDescriptor, with reader: DocumentReader) -> Int {
+        mutating func recordStartCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) -> Int {
             resizeIfNecessary(with: reader)
 
             mapData.append(tagType.mapMarker)
@@ -59,7 +59,7 @@ internal struct JSON5Scanner {
         mutating func recordEndCollection(count: Int, atStartOffset startOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(JSONMap.TypeDescriptor.collectionEnd.rawValue)
+            mapData.append(JSONMapTypeDescriptor.collectionEnd.rawValue)
 
             let nextValueOffset = mapData.count
             mapData.withUnsafeMutableBufferPointer {
@@ -68,20 +68,20 @@ internal struct JSON5Scanner {
             }
         }
 
-        mutating func recordEmptyCollection(tagType: JSONMap.TypeDescriptor, with reader: DocumentReader) {
+        mutating func recordEmptyCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMap.TypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
-        mutating func record(tagType: JSONMap.TypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
+        mutating func record(tagType: JSONMapTypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
         }
 
-        mutating func record(tagType: JSONMap.TypeDescriptor, with reader: DocumentReader) {
+        mutating func record(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             mapData.append(tagType.mapMarker)
@@ -93,7 +93,7 @@ internal struct JSON5Scanner {
         self.reader = DocumentReader(bytes: bytes)
     }
 
-    mutating func scan() throws -> JSONMap {
+    mutating func scan() throws -> JSONMap<ArrayMapRecords> {
         if options.assumesTopLevelDictionary {
             switch try reader.consumeWhitespace(allowingEOF: true) {
             case ._openbrace?:
@@ -118,40 +118,33 @@ internal struct JSON5Scanner {
             throw JSONError.unexpectedCharacter(context: "after top-level value", ascii: char, location: reader.sourceLocation)
         }
 
-        let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
-
-        // If any number token extends to the last byte of the input, we must give the map an owned buffer with a trailing NUL so that `strtod` (which peeks one byte past the last consumed digit) doesn't OOB read. Covers the top-level-number case and the `assumesTopLevelDictionary` case where the last value in the (brace-less) object is a number.
-        if numberExtendsToEndOfBuffer {
-            map.copyInBuffer()
-        }
-
-        return map
+        return JSONMap(records: .init(partialMap.mapData))
     }
 
     // MARK: Generic Value Scanning
 
     mutating func scanValue() throws {
-        let byte = try reader.consumeWhitespace()
-        switch byte {
-        case ._quote:
-            try scanString(withQuote: ._quote)
-        case ._singleQuote:
-            try scanString(withQuote: ._singleQuote)
-        case ._openbrace:
+            let byte = try reader.consumeWhitespace()
+            switch byte {
+            case ._quote:
+                try scanString(withQuote: ._quote)
+            case ._singleQuote:
+                try scanString(withQuote: ._singleQuote)
+            case ._openbrace:
             try scanObject()
-        case ._openbracket:
+            case ._openbracket:
             try scanArray()
-        case UInt8(ascii: "f"), UInt8(ascii: "t"):
-            try scanBool()
-        case UInt8(ascii: "n"):
-            try scanNull()
-        case UInt8(ascii: "-"), UInt8(ascii: "+"), _asciiNumbers, UInt8(ascii: "N"), UInt8(ascii: "I"), UInt8(ascii: "."):
-            try scanNumber()
+            case UInt8(ascii: "f"), UInt8(ascii: "t"):
+                try scanBool()
+            case UInt8(ascii: "n"):
+                try scanNull()
+            case UInt8(ascii: "-"), UInt8(ascii: "+"), _asciiNumbers, UInt8(ascii: "N"), UInt8(ascii: "I"), UInt8(ascii: "."):
+                try scanNumber()
         case ._space, ._return, ._newline, ._tab:
             preconditionFailure("Expected that all white space is consumed")
-        default:
-            throw JSONError.unexpectedCharacter(ascii: byte, location: reader.sourceLocation)
-        }
+            default:
+                throw JSONError.unexpectedCharacter(ascii: byte, location: reader.sourceLocation)
+            }
     }
 
 
@@ -192,9 +185,9 @@ internal struct JSON5Scanner {
             // consume the whitespace after the value before the comma
             let ascii = try reader.consumeWhitespace()
             switch ascii {
-            case ._space, ._return, ._newline, ._tab:
-                preconditionFailure("Expected that all white space is consumed")
-            case ._closebracket:
+        case ._space, ._return, ._newline, ._tab:
+            preconditionFailure("Expected that all white space is consumed")
+        case ._closebracket:
                 reader.moveReaderIndex(forwardBy: 1)
                 break ScanValues
             case ._comma:
@@ -203,11 +196,11 @@ internal struct JSON5Scanner {
                 // consume the whitespace before the next value
                 if try reader.consumeWhitespace() == ._closebracket {
                     // the foundation json implementation does support trailing commas
-                    reader.moveReaderIndex(forwardBy: 1)
+            reader.moveReaderIndex(forwardBy: 1)
                     break ScanValues
                 }
                 continue
-            default:
+        default:
                 throw JSONError.unexpectedCharacter(context: "in array", ascii: ascii, location: reader.sourceLocation)
             }
         }
@@ -216,8 +209,8 @@ internal struct JSON5Scanner {
     // MARK: - Scan Object -
 
     mutating func scanObject() throws {
-        let firstChar = self.reader.read()
-        precondition(firstChar == ._openbrace)
+            let firstChar = self.reader.read()
+            precondition(firstChar == ._openbrace)
         guard self.depth < 512 else {
             throw JSONError.tooManyNestedArraysOrDictionaries(location: reader.sourceLocation(atOffset: -1))
         }
