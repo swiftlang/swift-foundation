@@ -243,7 +243,7 @@ extension JSONDecoderImpl {
                     case .parseFailure:
                         throw DecodingError.dataCorrupted(.init(codingPath: codingPathNode.path(byAppending: additionalKey), debugDescription: "Number could not be parsed as Decimal"))
                     }
-                    return T((decimal as NSDecimalNumber).doubleValue)
+                    return T(decimal.doubleValue)
                     #else
                     // Without the `Decimal` detour there is no way to narrow the value further.
                     let src = numberBytes.withUnsafeBufferPointer { String(decoding: $0, as: UTF8.self) }
