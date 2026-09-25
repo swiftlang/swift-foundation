@@ -407,10 +407,10 @@ private struct GregorianFamilyHashContractTests {
     }
 
     @Test(arguments: GregorianCalendarFamily.allCases)
-    func differentTimeZonesHashApart(_ family: GregorianCalendarFamily) {
+    func differentTimeZonesHashApart(_ family: GregorianCalendarFamily) throws {
         let gmt = family.calendar(firstWeekday: nil, minimumDaysInFirstWeek: nil)
         var tokyo = gmt
-        tokyo.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        tokyo.timeZone = try #require(TimeZone(identifier: "Asia/Tokyo"))
         #expect(gmt != tokyo)
         #expect(Self.hashValue(gmt) != Self.hashValue(tokyo))
     }
