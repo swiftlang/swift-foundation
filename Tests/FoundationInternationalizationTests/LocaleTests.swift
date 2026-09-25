@@ -12,16 +12,16 @@
 
 import Testing
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #elseif canImport(FoundationInternationalization)
 @testable import FoundationEssentials
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
-
-extension Testing.Tag {
-    @Tag static var locale: Self
-}
 
 @Suite("Locale", .tags(.locale))
 private struct LocaleTests {
