@@ -72,4 +72,47 @@ private struct CalendarICUTests {
         #expect(outBig >= outSmall, "adding a larger positive amount must not produce an earlier date")
     }
 #endif
+
+    @Test(arguments: [
+        (1, Date(timeIntervalSince1970: 1703980800)), // 2023-12-31
+        (2, Date(timeIntervalSince1970: 1704585600)), // 2024-01-07
+        (3, Date(timeIntervalSince1970: 1705190400)), // 2024-01-14
+        (4, Date(timeIntervalSince1970: 1705795200)), // 2024-01-21
+        (5, Date(timeIntervalSince1970: 1706400000)), // 2024-01-28
+    ])
+    func dateFromComponentsWeekOfMonth(weekOfMonth: Int, expected: Date) {
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        #expect(icuCalendar.date(from: DateComponents(year: 2024, month: 1, weekOfMonth: weekOfMonth)) == expected)
+    }
+
+    @Test(arguments: [
+        DateComponents(year: 2024, month: 1, weekOfMonth: 1),
+        DateComponents(year: 2024, month: 1, weekOfMonth: 2),
+        DateComponents(year: 2024, month: 1, weekOfMonth: 3),
+        DateComponents(year: 2024, month: 1, weekOfMonth: 4),
+        DateComponents(year: 2024, month: 1, weekOfMonth: 5),
+        DateComponents(year: 2024, month: 3, weekOfMonth: 2, weekOfYear: 20),
+        DateComponents(year: 2024, month: 3, weekdayOrdinal: 3, weekOfMonth: 2),
+        DateComponents(year: 2024, month: 3, weekday: 2, weekOfMonth: 2),
+        DateComponents(year: 2024, month: 3, weekday: 2, weekOfMonth: 2, weekOfYear: 20),
+        DateComponents(year: 2024, month: 3, weekday: 2, weekdayOrdinal: 3, weekOfMonth: 2),
+        {
+            var dc = DateComponents(year: 2024, month: 3, weekOfMonth: 2)
+            dc.dayOfYear = 100
+            return dc
+        }(),
+        DateComponents(year: 2024, month: 3, day: 9, weekOfMonth: 4),
+        DateComponents(weekOfMonth: 2, weekOfYear: 10, yearForWeekOfYear: 2024),
+        DateComponents(year: 2024, month: 3, weekOfMonth: 0),
+        DateComponents(year: 2024, month: 3, weekOfMonth: -1),
+        DateComponents(year: 2024, month: 3, weekOfMonth: 6),
+    ], [(1, 1), (2, 4), (7, 7)])
+    func dateFromComponentsWeekOfMonthMatchesGregorianBackend(components: DateComponents, weekSettings: (firstWeekday: Int, minimumDaysInFirstWeek: Int)) {
+        let icuCalendar = _CalendarICU(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: weekSettings.firstWeekday, minimumDaysInFirstWeek: weekSettings.minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: weekSettings.firstWeekday, minimumDaysInFirstWeek: weekSettings.minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let icuResult = icuCalendar.date(from: components)
+        let gregorianResult = gregorianCalendar.date(from: components)
+
+        #expect(icuResult == gregorianResult, "ICU returned \(String(describing: icuResult)), Gregorian returned \(String(describing: gregorianResult))")
+    }
 }
