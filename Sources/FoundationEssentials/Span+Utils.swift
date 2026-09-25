@@ -165,45 +165,11 @@ extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
 }
 
 extension String {
-    // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
-    // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
-    package var utf8SpanMakingContiguous: UTF8Span {
-        mutating get {
-            #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
-            self.makeContiguousUTF8()
-            guard let span = self._utf8Span else {
-                preconditionFailure("Internal Inconsistency: A contiguous UTF-8 String produced nil for _utf8Span")
-            }
-            return span
-            #else
-            self.utf8Span
-            #endif
-        }
-    }
-
     package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
         try self.init(unsafeUninitializedCapacity: capacity) { buffer throws(E) in
             var outputSpan = OutputSpan(buffer: buffer, initializedCount: 0)
             try body(&outputSpan)
             return outputSpan.finalize(for: buffer)
-        }
-    }
-}
-
-extension Substring {
-    // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
-    // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
-    package var utf8SpanMakingContiguous: UTF8Span {
-        mutating get {
-            #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
-            self.makeContiguousUTF8()
-            guard let span = self._utf8Span else {
-                preconditionFailure("Internal Inconsistency: A contiguous UTF-8 String produced nil for _utf8Span")
-            }
-            return span
-            #else
-            self.utf8Span
-            #endif
         }
     }
 }

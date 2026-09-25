@@ -340,10 +340,8 @@ private extension UInt128 {
 }
 
 extension Decimal {
-#if FOUNDATION_FRAMEWORK
-#else
-    @_spi(SwiftCorelibsFoundation)
-    public func toString(with locale: Locale? = nil) -> String {
+    // For testing
+    internal func toString(with locale: Locale? = nil) -> String {
         let separator: String
         if let locale = locale,
            let localizedSeparator = locale.decimalSeparator {
@@ -353,13 +351,9 @@ extension Decimal {
         }
         return _toString(withDecimalSeparator: separator)
     }
-    
-    @_spi(SwiftCorelibsFoundation)
-    public static func decimal(
-        from stringView: String.UTF8View,
-        decimalSeparator: String.UTF8View,
-        matchEntireString: Bool
-    ) -> (result: Decimal?, processedLength: Int) {
+
+    // For testing
+    internal static func _decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
         do {
             let (result, _, processedCodeUnits) = try Self.__decimal(
                 from: stringView.span,
@@ -371,6 +365,12 @@ extension Decimal {
             return (nil, 0)
         }
     }
+#if !FOUNDATION_FRAMEWORK
+    // Make this function available for SwiftCorelibsFoundation
+    @_spi(SwiftCorelibsFoundation)
+    public static func decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
+        _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString)
+    }        
 #endif
 
     internal func _toString(withDecimalSeparator separator: String) -> String {
