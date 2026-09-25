@@ -151,7 +151,6 @@ internal struct SimpleFormatter: Equatable {
 
     /// Format two arguments into a freshly allocated `String`.
     func format(_ s0: String, _ s1: String) -> String {
-        let s0 = s0, s1 = s1
         let total = utf8Count(s0.utf8.count, s1.utf8.count)
         return String(unsafeUninitializedCapacity: total) { buffer in
             var output = OutputSpan(buffer: buffer, initializedCount: 0)
