@@ -358,7 +358,7 @@ extension Locale {
 
         let keyValueString = String(copying: UTF8Span(unchecked: keyValueBytes, isKnownASCII: true))
 
-#if FOUNDATION_FRAMEWORK // TODO: implement this once we are done implementing uloc_ in FoundationEssentials
+#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU) // TODO: implement this once we are done implementing uloc_ in FoundationEssentials
         var status = U_ZERO_ERROR
         let uenum = uloc_openKeywords(keyValueString, &status)
         guard let uenum, status.isSuccess else {
