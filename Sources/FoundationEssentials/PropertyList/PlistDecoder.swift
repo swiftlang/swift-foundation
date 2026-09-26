@@ -10,8 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK
 internal import _FoundationCShims
+internal import _ForSwiftFoundation
+#endif
 internal import Synchronization
+
+#if FOUNDATION_FRAMEWORK
+internal func foundation_swift_xml_plist_deserialization_enabled() -> Bool {
+    return _foundation_swift_xml_plist_deserialization_enabled()
+}
+internal func foundation_swift_bplist_deserialization_enabled() -> Bool {
+    return _foundation_swift_bplist_deserialization_enabled()
+}
+#else
+internal func foundation_swift_xml_plist_deserialization_enabled() -> Bool { return false }
+internal func foundation_swift_bplist_deserialization_enabled() -> Bool { return false }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Plist Decoder
@@ -133,7 +148,28 @@ open class PropertyListDecoder {
     
     private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
         return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
-            var decoder: _PlistDecoder<_BPlistDecodingFormat>
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+            // Enabled by feature flag; falls back to `BPlistLegacyDecodingFormat` when off.
+            if #available(anyAppleOS 26.0, *), foundation_swift_bplist_deserialization_enabled() {
+                var decoder: _PlistDecoder<BPlistDecodingFormat>
+                do {
+                    let parsedMetadata = try BPlistMetadata.parse(from: data.bytes)
+                    let urbp = data.withUnsafeBytes { $0 }
+                    let document = BPlistDecodingDocument(bytes: urbp, metadata: parsedMetadata)
+                    decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
+                } catch let error as BPlistError {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error))
+                }
+                let result = try doDecode(decoder)
+
+                let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
+                decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+
+                format = .binary
+                return result
+            }
+#endif
+            var decoder: _PlistDecoder<BPlistLegacyDecodingFormat>
             do {
                 let map = try BPlistScanner.scanBinaryPropertyList(from: utf8Buffer)
                 decoder = try _PlistDecoder(referencing: map, options: self.options, codingPathNode: .root)
@@ -148,11 +184,45 @@ open class PropertyListDecoder {
             format = .binary
             return result
         }, xml: { utf8Buffer in
-            var decoder: _PlistDecoder<_XMLPlistDecodingFormat>
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+            // Enabled by feature flag; falls back to `XMLPlistLegacyDecodingFormat` when off.
+            if #available(anyAppleOS 26.0, *), foundation_swift_xml_plist_deserialization_enabled() {
+                let result = try utf8Buffer.withUnsafeRawPointer { ptr, count in
+                    let sourceSpan = unsafe Span<UInt8>(_unsafeStart: ptr.assumingMemoryBound(to: UInt8.self), count: count)
+                    let source = XMLPlistScannerEventSource(sourceBytes: sourceSpan)
+                    let sink = XMLPlistMapBuildingSink(sourceBytes: sourceSpan)
+                    let parser = IterativeParsingDriver<XMLPlistScannerEventSource, _>(sink: sink)
+                    
+                    var decoder: _PlistDecoder<XMLPlistDecodingFormat>
+                    let result: T
+                    do {
+                        let map = try parser.run(source: source)
+                        
+                        let urbp = unsafe UnsafeRawBufferPointer(start: ptr, count: count)
+                        
+                        let document = XMLPlistDecodingDocument(bytes: urbp, map: map)
+                        decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
+                        result = try doDecode(decoder)
+                    } catch let error as XMLPlistError {
+                        throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
+                    }
+                    
+                    let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
+                    decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                    
+                    return result
+                }
+
+                format = .xml
+                return result
+            }
+#endif
+            var decoder: _PlistDecoder<XMLPlistLegacyDecodingFormat>
             do {
                 var scanInfo = XMLPlistScanner(buffer: utf8Buffer)
                 let map = try scanInfo.scanXMLPropertyList()
-                decoder = try _PlistDecoder(referencing: map, options: self.options, codingPathNode: .root)
+                let document = XMLPlistLegacyDecodingDocument(map: map, dataBuffer: utf8Buffer)
+                decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
             } catch let error as XMLPlistError {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
             }
@@ -179,7 +249,7 @@ open class PropertyListDecoder {
     @inline(__always)
     private static func findXMLTagOpening(in buffer: BufferView<UInt8>) -> BufferView<UInt8>.Index? {
         buffer.withUnsafeRawPointer { bufPtr, bufCount in
-            guard bufCount >= 5 && strncmp(bufPtr, "<?xml", 5) == 0 else {
+            guard bufCount >= 5 && Platform.memcmp(bufPtr, "<?xml", 5) == 0 else {
                 return nil
             }
             return buffer.index(buffer.startIndex, offsetBy: 5)
@@ -204,7 +274,7 @@ open class PropertyListDecoder {
                 guard bufCount > 9 else {
                     throw DecodingError._dataCorrupted("End of buffer while looking for encoding name", for: .root)
                 }
-                if strncmp(bufPtr, "encoding=", 9) == 0 {
+                if Platform.memcmp(bufPtr, "encoding=", 9) == 0 {
                     return buffer.index(idx, offsetBy: 9)
                 }
                 return nil
@@ -303,7 +373,7 @@ open class PropertyListDecoder {
         try data.withBufferView { buffer in
             
             // Binary plist always begins with the same literal bytes, which isn't valid in any of the other formats.
-            if BPlistScanner.hasBPlistMagic(in: buffer) {
+            if BPlistScanner.validateBPlistMagicAndSize(in: buffer) {
                 return try binaryPlist(buffer)
             }
             

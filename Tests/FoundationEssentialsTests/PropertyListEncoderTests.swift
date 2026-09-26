@@ -1097,18 +1097,18 @@ data1 = <7465
     }
 
     @Test func badDate_encode() throws {
-        let date = Date(timeIntervalSinceReferenceDate: -63145612800) // 0000-01-02 AD
+        let date = Date(timeIntervalSinceReferenceDate: -63145612800) // -0001-12-31 in the proleptic Gregorian calendar
 
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
         let data = try encoder.encode([date])
         let str = String(data: data, encoding: String.Encoding.utf8)
-        #expect(str == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>0000-01-02T00:00:00Z</date>\n</array>\n</plist>\n")
+        #expect(str == "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<array>\n\t<date>-0001-12-31T00:00:00Z</date>\n</array>\n</plist>\n")
     }
 
     @Test func badDate_decode() throws {
         // Test that we can correctly decode a distant date in the past
-        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<date>0000-01-02T00:00:00Z</date>\n</plist>"
+        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<date>-0001-12-31T00:00:00Z</date>\n</plist>"
         let data = plist.data(using: .utf8)!
 
         let d = try PropertyListDecoder().decode(Date.self, from: data)
@@ -1229,6 +1229,156 @@ data1 = <7465
         #expect(format == .openStep)
     }
 #endif
+
+    // Only the iterative parser is depth-unbounded; the legacy recursive scanner overflows the
+    // stack on input this deeply nested rather than reporting an error.
+    @Test(.enabled(if: foundation_swift_xml_plist_deserialization_enabled()))
+    func xmlPlist_depthTraversal() {
+        // The important part to test is the parsing pass, not the decoding pass.
+        struct DecodeNothing : Decodable {
+            init(from decoder: Decoder) throws {
+                // Do nothing.
+            }
+        }
+
+        let MAX_DEPTH = 512
+        let xmlGood = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\">"
+            + String(repeating: "<array>", count: MAX_DEPTH / 2) + String(repeating: "</array>", count: MAX_DEPTH / 2)
+            + "</plist>"
+        let xmlBad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\">"
+            + String(repeating: "<array>", count: MAX_DEPTH + 1) + String(repeating: "</array>", count: MAX_DEPTH + 1)
+            + "</plist>"
+
+        #expect(throws: Never.self) {
+            try PropertyListDecoder().decode(DecodeNothing.self, from: xmlGood.data(using: .utf8)!)
+        }
+        #expect(throws: (any Error).self) {
+            try PropertyListDecoder().decode(DecodeNothing.self, from: xmlBad.data(using: .utf8)!)
+        }
+    }
+
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+    /// Parses `xml` with the iterative scanner, returning the map or the thrown `XMLPlistError`.
+    private func scanXMLPlist(_ xml: String) throws {
+        let bytes = Array(xml.utf8)
+        let span = bytes.span
+        let source = XMLPlistScannerEventSource(sourceBytes: span)
+        let sink = XMLPlistMapBuildingSink(sourceBytes: span)
+        _ = try IterativeParsingDriver(sink: sink).run(source: source)
+    }
+
+    // Historical implementation quirk: <key> is accepted as <string> outside of its normal place in a <dict>.
+    @Test(arguments: [
+            "<plist><array><key>foo</key></array></plist>",
+            "<plist><key>x</key></plist>",
+            "<plist><dict><key>k</key><key>v</key></dict></plist>",
+          ])
+    func xmlPlist_keyInValuePositionIsAString(_ xml: String) throws {
+        #expect(throws: Never.self) { try scanXMLPlist(xml) }
+    }
+
+    // `<plist></plist>` must report an empty wrapper, not an unknown tag: `scanUpToNextTag` has to
+    // distinguish `</` from `<name` for the empty-wrapper guard to be reachable.
+    @Test func xmlPlist_emptyPlistWrapperDiagnostic() throws {
+        for xml in ["<plist></plist>"] {
+            let error = try #require(#expect(throws: XMLPlistError.self) { try scanXMLPlist(xml) })
+            #expect(error == .unexpectedEmptyTag(.plist, line: 1), "got \(error.debugDescription) for \(xml)")
+        }
+        // More than one object inside a wrapper keeps the reference wording.
+        let error = try #require(#expect(throws: XMLPlistError.self) { try scanXMLPlist("<plist><string>a</string><string>b</string></plist>")
+        })
+        #expect(error.debugDescription.contains("plist can only include one object"))
+    }
+
+    /// One line of a test document. `.bad` marks the line the diagnostic must name, so the expected
+    /// line number is derived from the markup rather than hand-counted.
+    struct XMLLine: Sendable, ExpressibleByStringLiteral {
+        typealias StringLiteralType = String
+        
+        let text: String
+        let isMalformed: Bool
+
+        static func bad(_ text: String) -> XMLLine { .init(text: text, isMalformed: true) }
+        
+        init(text: String, isMalformed: Bool) {
+            self.text = text
+            self.isMalformed = isMalformed
+        }
+        
+        init(stringLiteral value: Self.StringLiteralType) {
+            self.text = value
+            self.isMalformed = false
+        }
+    }
+
+    /// A malformed document paired with the 1-based line its diagnostic must report. Attributes are
+    /// single-quoted and `<plist>` is bare because the scanner skips both, which keeps the markup
+    /// free of escapes.
+    struct XMLDiagnosticLineNumbersCase: CustomTestStringConvertible, Sendable {
+        let name: String
+        let xml: String
+        let expectedLine: Int
+
+        var testDescription: String { name }
+
+        init(name: String, _ lines: XMLLine ...) {
+            guard let badIndex = lines.firstIndex(where: \.isMalformed) else {
+                preconditionFailure("\(name): no line marked `.bad`")
+            }
+            self.name = name
+            self.xml = lines.map(\.text).joined(separator: "\n")
+            self.expectedLine = badIndex + 1
+        }
+    }
+
+    @Test(arguments: [
+        XMLDiagnosticLineNumbersCase(name: "mismatched close tag",
+                                     "<?xml version='1.0' encoding='UTF-8'?>",
+                                     "<plist>",
+                                     "<array>",
+                                     .bad("<string>hi</integer>"),
+                                     "</array>",
+                                     "</plist>",
+                                    ),
+        XMLDiagnosticLineNumbersCase(name: "unrecognized tag",
+                                     "<?xml version='1.0' encoding='UTF-8'?>",
+                                     "<plist>",
+                                     "<array>",
+                                     "<string>ok</string>",
+                                     .bad("<bogus>x</bogus>"),
+                                     "</array>",
+                                     "</plist>",
+                                    ),
+        XMLDiagnosticLineNumbersCase(name: "self-closing integer",
+                                     "<?xml version='1.0' encoding='UTF-8'?>",
+                                     "<plist>",
+                                     "<array>",
+                                     .bad("<integer/>"),
+                                     "</array>",
+                                     "</plist>",
+                                    ),
+        XMLDiagnosticLineNumbersCase(name: "non-key element in dict",
+                                     "<?xml version='1.0' encoding='UTF-8'?>",
+                                     "<plist>",
+                                     "<dict>",
+                                     .bad("<string>notakey</string>"),
+                                     "<string>v</string>",
+                                     "</dict>",
+                                     "</plist>",
+                                    ),
+        XMLDiagnosticLineNumbersCase(name: "inline DTD",
+                                     "<?xml version='1.0' encoding='UTF-8'?>",
+                                     .bad("<!DOCTYPE plist [ <!ENTITY x 'y'> ]>"),
+                                     "<plist><string>a</string></plist>",
+                                    ),
+    ])
+    func xmlPlist_diagnosticLineNumbers(_ testCase: XMLDiagnosticLineNumbersCase) throws {
+        let error = #expect(throws: XMLPlistError.self) { try scanXMLPlist(testCase.xml) }
+        let message = try #require(error).debugDescription
+        #expect(message.contains("line \(testCase.expectedLine)"),
+                "\(testCase.name): expected line \(testCase.expectedLine) in \"\(message)\"")
+    }
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
     @Test func decodingEmoji() throws {
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#128664;</string></dict></plist>".data(using: .utf8)!
@@ -1367,6 +1517,135 @@ data1 = <7465
         #expect(result2.assertionFailure == nil)
     }
     
+    // Confirms that `decodeNil(forKey:)` on an absent key throws `.keyNotFound`.
+    @Test func decodeNilForAbsentKey() throws {
+        struct Container: Decodable {
+            let sawKeyNotFound: Bool
+            enum CodingKeys: String, CodingKey { case present, absent }
+            init(from decoder: Decoder) throws {
+                let keyed = try decoder.container(keyedBy: CodingKeys.self)
+                do {
+                    _ = try keyed.decodeNil(forKey: .absent)
+                    self.sawKeyNotFound = false  // unexpected: didn't throw
+                } catch DecodingError.keyNotFound {
+                    self.sawKeyNotFound = true
+                }
+            }
+        }
+
+        for format in [PropertyListDecoder.PropertyListFormat.xml, .binary] {
+            let enc = PropertyListEncoder()
+            enc.outputFormat = format
+            let plistData = try enc.encode(["present": true])
+            let decoded = try PropertyListDecoder().decode(Container.self, from: plistData)
+            #expect(decoded.sawKeyNotFound, "expected .keyNotFound for absent key in \(format) plist")
+        }
+    }
+
+    // Exercises every reachable method on the Decoder returned by `keyedContainer.superDecoder(forKey:)` when the key is absent.
+    @Test(arguments: [PropertyListDecoder.PropertyListFormat.binary, .xml])
+    func superDecoderForAbsentKey(format: PropertyListDecoder.PropertyListFormat) throws {
+        enum CodingKeys: String, CodingKey { case present, absent }
+
+        final class ProbeResult: Decodable, @unchecked Sendable {
+            var thrown: (any Error)?
+            required init(from decoder: Decoder) throws {
+                let keyed = try decoder.container(keyedBy: CodingKeys.self)
+                let sup = try keyed.superDecoder(forKey: .absent)
+                let probeKey = CodingUserInfoKey(rawValue: "superDecoderProbe")!
+                let probe = decoder.userInfo[probeKey] as? @Sendable (Decoder) throws -> Void
+                do {
+                    try probe?(sup)
+                    self.thrown = nil
+                } catch {
+                    self.thrown = error
+                }
+            }
+        }
+
+        let enc = PropertyListEncoder()
+        enc.outputFormat = format
+        let plist = try enc.encode(["present": true])
+        let probeKey = CodingUserInfoKey(rawValue: "superDecoderProbe")!
+
+        func run(_ probe: @escaping @Sendable (Decoder) throws -> Void) throws -> (any Error)? {
+            let decoder = PropertyListDecoder()
+            decoder.userInfo[probeKey] = probe
+            return try decoder.decode(ProbeResult.self, from: plist).thrown
+        }
+
+        // decodeNil() on a single-value container reports true.
+        do {
+            let error = try run { decoder in
+                let svc = try decoder.singleValueContainer()
+                #expect(svc.decodeNil())
+            }
+            #expect(error == nil, "unexpected error from decodeNil: \(String(describing: error))")
+        }
+
+        // Every scalar decode throws valueNotFound.
+        let scalarProbes: [(name: String, fn: @Sendable (Decoder) throws -> Void)] = [
+            ("Bool",   { _ = try $0.singleValueContainer().decode(Bool.self) }),
+            ("String", { _ = try $0.singleValueContainer().decode(String.self) }),
+            ("Int",    { _ = try $0.singleValueContainer().decode(Int.self) }),
+            ("Double", { _ = try $0.singleValueContainer().decode(Double.self) }),
+        ]
+        for probe in scalarProbes {
+            let error = try run(probe.fn)
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("[\(format)] expected valueNotFound for \(probe.name), got \(String(describing: error))")
+                continue
+            }
+        }
+
+        // container(keyedBy:) throws valueNotFound.
+        do {
+            let error = try run { decoder in
+                _ = try decoder.container(keyedBy: CodingKeys.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("[\(format)] expected valueNotFound from container(keyedBy:), got \(String(describing: error))")
+                return
+            }
+        }
+
+        // unkeyedContainer() throws valueNotFound.
+        do {
+            let error = try run { decoder in
+                _ = try decoder.unkeyedContainer()
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("[\(format)] expected valueNotFound from unkeyedContainer(), got \(String(describing: error))")
+                return
+            }
+        }
+    }
+
+    @Test(arguments: [
+            // (description, big-endian UTF-16 payload bytes, decodes successfully)
+            ("BMP scalar", [0x00, 0x41] as [UInt8], true),
+            ("surrogate pair", [0xD8, 0x34, 0xDD, 0x1E], true),
+            ("lone lead surrogate", [0xD8, 0x34], false),
+            ("lone trail surrogate", [0xDC, 0x1E], false),
+            ("lead followed by a BMP scalar", [0xD8, 0x34, 0x00, 0x41], false),
+            ("lone lead after valid content", [0x00, 0x41, 0xD8, 0x34], false),
+            ("surrogates in the wrong order", [0xDC, 0x1E, 0xD8, 0x34], false),
+          ])
+    func bplistUTF16StringRejectsUnpairedSurrogates(_ testCase: (description: String, utf16BE: [UInt8], decodes: Bool)) throws {
+        let data = Data(testCase.utf16BE)
+        var encoding = BPlistPrimitive.EncodedString(span: data.bytes, kind: .utf16BE)
+        do {
+            _ = try encoding.decodedUTF8Span
+            if !testCase.decodes {
+                Issue.record("\(testCase.description): expected ill-formed UTF-16 to be rejected")
+            }
+        } catch {
+            if testCase.decodes {
+                Issue.record("\(testCase.description): expected well-formed UTF-16 to decode, got \(error)")
+            }
+        }
+    }
+
     @Test func badReferenceIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
@@ -1382,12 +1661,12 @@ data1 = <7465
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13 // trailer
         ] as [UInt8]
         let data = Data(bplist)
-        
+
         #expect(throws: (any Error).self) {
             try PropertyListDecoder().decode([Int].self, from: data)
         }
     }
-    
+
     @Test func badTopObjectIndex() {
         // The following is the bplist representation of `[42, 314, 0xFF]` that has been corrupted.
         let bplist = [
@@ -1566,7 +1845,110 @@ data1 = <7465
             try PropertyListDecoder().decode([Int32].self, from: bplistData)
         }
     }
-    
+
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+    /// Parses `xml` with the iterative scanner and hands the top-level primitive to `body`.
+    private func withXMLTopLevelPrimitive<R>(_ xml: String, _ body: (borrowing XMLPlistPrimitive) throws -> R) throws -> R {
+        let bytes = Array(xml.utf8)
+        return try bytes.withUnsafeBufferPointer { buffer in
+            let raw = unsafe RawSpan(_unsafeStart: UnsafeRawPointer(buffer.baseAddress!), byteCount: buffer.count)
+            let plist = try XMLPropertyList(raw)
+            return try body(plist.topLevelPrimitive)
+        }
+    }
+
+    @Test func xmlPlist_cfuidIsANativeMapRecord() throws {
+        let (type, uid, dictIteratorThrew) = try withXMLTopLevelPrimitive("<plist><dict><key>CF$UID</key><integer>7</integer></dict></plist>") { primitive in
+            var threw = false
+            do {
+                _ = try primitive.dictionaryIterator
+            } catch {
+                threw = true
+            }
+            return (primitive.type, try primitive.uidValue, threw)
+        }
+        #expect(type == .uid)
+        #expect(uid == 7)
+        // A UID is not a dictionary, so dictionary access must be rejected rather than exposing `CF$UID` as a key.
+        #expect(dictIteratorThrew)
+    }
+
+    @Test(arguments: [
+            // Shapes that resemble the UID encoding but aren't it; all must stay dictionaries.
+            "<plist><dict><key>CF$UID</key><string>7</string></dict></plist>",
+            "<plist><dict><key>CF$UIDX</key><integer>7</integer></dict></plist>",
+            "<plist><dict><key>CF$UI</key><integer>7</integer></dict></plist>",
+            "<plist><dict><key>CF$UID</key><integer>7</integer><key>other</key><integer>8</integer></dict></plist>",
+            "<plist><dict><key>other</key><integer>8</integer><key>CF$UID</key><integer>7</integer></dict></plist>",
+            "<plist><dict><key>CF$UID</key><dict><key>a</key><integer>1</integer></dict></dict></plist>",
+          ])
+    func xmlPlist_nonUIDDictsAreNotCollapsed(_ xml: String) throws {
+        let (type, uidValueThrew) = try withXMLTopLevelPrimitive(xml) { primitive in
+            var threw = false
+            do {
+                _ = try primitive.uidValue
+            } catch {
+                threw = true
+            }
+            return (primitive.type, threw)
+        }
+        #expect(type == .dict)
+        #expect(uidValueThrew)
+    }
+
+    @Test(arguments: [
+            "<plist><integer>7</integer></plist>",
+            "<plist><string>CF$UID</string></plist>",
+            "<plist><array><integer>7</integer></array></plist>",
+          ])
+    func xmlPlist_uidValueRejectsNonUIDPrimitives(_ xml: String) throws {
+        let threw = try withXMLTopLevelPrimitive(xml) { primitive in
+            do {
+                _ = try primitive.uidValue
+                return false
+            } catch {
+                return true
+            }
+        }
+        #expect(threw)
+    }
+
+    @Test func xmlPlist_uidCollapseKeepsSiblingOffsetsValid() throws {
+        // The collapse truncates records mid-buffer, so verify surrounding values still resolve.
+        let xml = """
+        <plist><array>\
+        <integer>1</integer>\
+        <dict><key>CF$UID</key><integer>2</integer></dict>\
+        <string>after</string>\
+        <dict><key>CF$UID</key><integer>3</integer></dict>\
+        <integer>4</integer>\
+        </array></plist>
+        """
+        // `XMLPlistPrimitive` is ~Escapable, so collect comparable values rather than the primitives themselves.
+        let (types, ints, uids, strings): ([XMLPlistTypeMarker?], [Int], [UInt32], [String]) = try withXMLTopLevelPrimitive(xml) { primitive in
+            var types: [XMLPlistTypeMarker?] = []
+            var ints: [Int] = []
+            var uids: [UInt32] = []
+            var strings: [String] = []
+            var iter = try primitive.arrayIterator
+            while let child = iter.next() {
+                types.append(child.type)
+                switch child.type {
+                case .integer: ints.append(try child.decodeInteger(as: Int.self))
+                case .uid: uids.append(try child.uidValue)
+                case .string: strings.append(try child.decodeString())
+                default: break
+                }
+            }
+            return (types, ints, uids, strings)
+        }
+        #expect(types == [.integer, .uid, .string, .uid, .integer])
+        #expect(ints == [1, 4])
+        #expect(uids == [2, 3])
+        #expect(strings == ["after"])
+    }
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+
     @Test func fauxStability_struct() throws {
         struct FauxStable: Encodable {
             let a = "a"

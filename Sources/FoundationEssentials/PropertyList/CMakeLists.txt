@@ -13,8 +13,13 @@
 ##===----------------------------------------------------------------------===##
 
 target_sources(FoundationEssentials PRIVATE
+    BPlistDecodingDocument.swift
     BPlistDecodingFormat.swift
     BPlistEncodingFormat.swift
+    BPlistLegacyDecodingFormat.swift
+    BPlistPrimitive.swift
+    BPlistPrimitive+Scope.swift
+    BPlistPrimitiveSource.swift
     BPlistScanner.swift
     OpenStepPlist.swift
     PlistDecoder.swift
@@ -23,6 +28,14 @@ target_sources(FoundationEssentials PRIVATE
     PlistDictionaryEncoder.swift
     PlistEncoder.swift
     PlistEncoderGeneric.swift
+    XMLPlistDecodingDocument.swift
     XMLPlistDecodingFormat.swift
     XMLPlistEncodingFormat.swift
-    XMLPlistScanner.swift)
+    XMLPlistLegacyDecodingFormat.swift
+    XMLPlistMap.swift
+    XMLPlistMapBuildingSink.swift
+    XMLPlistPrimitive.swift
+    XMLPlistPrimitive+Scope.swift
+    XMLPlistPrimitiveSource.swift
+    XMLPlistScanner.swift
+    XMLPlistScannerEventSource.swift)

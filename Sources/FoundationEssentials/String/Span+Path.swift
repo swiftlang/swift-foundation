@@ -218,17 +218,6 @@ extension Span<UInt8> {
         return lastDot
     }
 
-    @inline(__always)
-    func starts(with prefix: StaticString) -> Bool {
-        let prefixLength = prefix.utf8CodeUnitCount
-        guard prefixLength > 0 else { return true }
-        guard self.count >= prefixLength else { return false }
-        // Precondition: self.count > 0
-        return withUnsafeBufferPointer { buffer in
-            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
-        }
-    }
-
     /// Returns a `String` by compressing consecutive forward slashes.
     func slashCompressedString() -> String {
         String(unsafeUninitializedCapacity: count) { buffer in

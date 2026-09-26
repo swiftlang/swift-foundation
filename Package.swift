@@ -137,6 +137,7 @@ let package = Package(
             "Data/CMakeLists.txt",
             "TimeZone/CMakeLists.txt",
             "JSON/CMakeLists.txt",
+            "Codable/CMakeLists.txt",
             "AttributedString/CMakeLists.txt",
             "Calendar/CMakeLists.txt",
             "Predicate/CMakeLists.txt",
