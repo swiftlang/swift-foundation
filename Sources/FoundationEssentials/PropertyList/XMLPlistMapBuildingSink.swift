@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 // MARK: - XMLPlistMapBuildingSink
 
@@ -234,4 +234,4 @@ struct XMLPlistMapBuildingSink: ParseEventSink, ~Copyable {
 
     func releaseFragment(_ fragment: consuming Void) {}
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

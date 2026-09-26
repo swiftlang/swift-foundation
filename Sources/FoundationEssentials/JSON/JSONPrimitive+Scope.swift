@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 // Identity of one node in a parsed JSON payload: a map-buffer offset. Copyable, Sendable, no ARC reference. Reconstitution needs both the `JSONMap` and a `RawSpan` over the source bytes, which the caller supplies.
 
@@ -48,4 +48,4 @@ extension JSONPrimitiveScope {
         return try body(primitive)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

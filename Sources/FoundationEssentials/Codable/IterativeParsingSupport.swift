@@ -109,7 +109,7 @@ protocol MapRecordStorage: ~Copyable {
     subscript(position: Int) -> Int { get }
 }
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 @available(anyAppleOS 27.0, *)
 struct UniqueMapRecords: MapRecordStorage, ~Copyable {
     var storage: UniqueArray<Int>
@@ -121,7 +121,7 @@ struct UniqueMapRecords: MapRecordStorage, ~Copyable {
     @inline(__always)
     subscript(position: Int) -> Int { storage[position] }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 struct ArrayMapRecords: MapRecordStorage {
     var storage: [Int]

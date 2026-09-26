@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 // MARK: - XMLPlistScannerEventSource
 
@@ -413,4 +413,4 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
 
     private var xmlCDATAOpeningMarker: StaticString { "<![CDATA[" }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

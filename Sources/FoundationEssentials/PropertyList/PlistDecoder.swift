@@ -148,7 +148,7 @@ open class PropertyListDecoder {
     
     private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
         return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
             // Enabled by feature flag; falls back to `BPlistLegacyDecodingFormat` when off.
             if #available(anyAppleOS 26.0, *), foundation_swift_bplist_deserialization_enabled() {
                 var decoder: _PlistDecoder<BPlistDecodingFormat>
@@ -184,7 +184,7 @@ open class PropertyListDecoder {
             format = .binary
             return result
         }, xml: { utf8Buffer in
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
             // Enabled by feature flag; falls back to `XMLPlistLegacyDecodingFormat` when off.
             if #available(anyAppleOS 26.0, *), foundation_swift_xml_plist_deserialization_enabled() {
                 let result = try utf8Buffer.withUnsafeRawPointer { ptr, count in

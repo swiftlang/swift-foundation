@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 
 // MARK: - ParseEventVocabulary
@@ -429,4 +429,4 @@ struct ParseEventAccumulator<Fragment>: ~Copyable, ~Escapable {
         storage.value.append(fragment)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

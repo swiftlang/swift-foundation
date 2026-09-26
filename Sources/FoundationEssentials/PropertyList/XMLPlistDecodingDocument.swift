@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 // MARK: - Document
 
@@ -114,4 +114,4 @@ final class XMLPlistDecodingDocument: PlistDecodingDocument {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif  // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

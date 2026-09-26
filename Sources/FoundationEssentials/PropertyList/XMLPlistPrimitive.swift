@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 // Low-level cursor over a single node in a structurally-parsed XML property list, providing fast random access to its fields.
 
@@ -1206,4 +1206,4 @@ internal func _decodeXMLString(from span: borrowing Span<UInt8>, isSimple: Bool,
 
 }
 
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

@@ -390,7 +390,7 @@ open class JSONDecoder {
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     /// - throws: An error if any value throws an error during decoding.
     open func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        #if FOUNDATION_FRAMEWORK || !os(macOS)
+        #if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
         if #available(anyAppleOS 26.0, *), Self._useJSONPrimitivePath() {
             return try _decodePrimitive({
                 try $0.unwrap($1, as: type, for: .root, _CodingKey?.none)
@@ -404,7 +404,7 @@ open class JSONDecoder {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
-        #if FOUNDATION_FRAMEWORK || !os(macOS)
+        #if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
         if #available(anyAppleOS 26.0, *), Self._useJSONPrimitivePath() {
             return try _decodePrimitive({
                 try $0.unwrap($1, as: type, configuration: configuration, for: .root, _CodingKey?.none)
@@ -466,7 +466,7 @@ open class JSONDecoder {
         }
     }
 
-    #if FOUNDATION_FRAMEWORK || !os(macOS)
+    #if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
     /// Feature-flag gate for the new `JSONDecoderImpl` code path. When off, `JSONDecoder` falls back to the legacy `JSONLegacyDecoderImpl`.
     @inline(__always)
     internal static func _useJSONPrimitivePath() -> Bool {

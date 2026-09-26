@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 // Identity of one node in a parsed XML property list in a Copyable form with a map-buffer offset. Reconstitution into a full XMLPlistPrimitive needs both the `XMLPlistMap` and a `RawSpan` over the source bytes, which the caller supplies. They must match the original map and span that the scope was derived from originally.
 
@@ -44,4 +44,4 @@ extension XMLPlistPrimitiveScope {
         return try body(primitive)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))

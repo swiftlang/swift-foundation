@@ -1257,7 +1257,7 @@ data1 = <7465
         }
     }
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
     /// Parses `xml` with the iterative scanner, returning the map or the thrown `XMLPlistError`.
     private func scanXMLPlist(_ xml: String) throws {
         let bytes = Array(xml.utf8)
@@ -1378,7 +1378,7 @@ data1 = <7465
         #expect(message.contains("line \(testCase.expectedLine)"),
                 "\(testCase.name): expected line \(testCase.expectedLine) in \"\(message)\"")
     }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
     @Test func decodingEmoji() throws {
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>emoji</key><string>&#128664;</string></dict></plist>".data(using: .utf8)!
@@ -1846,7 +1846,7 @@ data1 = <7465
         }
     }
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
     /// Parses `xml` with the iterative scanner and hands the top-level primitive to `body`.
     private func withXMLTopLevelPrimitive<R>(_ xml: String, _ body: (borrowing XMLPlistPrimitive) throws -> R) throws -> R {
         let bytes = Array(xml.utf8)
@@ -1947,7 +1947,7 @@ data1 = <7465
         #expect(uids == [2, 3])
         #expect(strings == ["after"])
     }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
     @Test func fauxStability_struct() throws {
         struct FauxStable: Encodable {

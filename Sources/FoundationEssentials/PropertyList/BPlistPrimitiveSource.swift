@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
 
 
 // MARK: - Frame
@@ -296,4 +296,4 @@ struct BPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEventSo
         return source.child(at: childIdx)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
+#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
