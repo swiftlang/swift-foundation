@@ -307,7 +307,7 @@ extension Decimal /* : FloatingPoint */ {
 
         self = significand
         do {
-            self = try significand._multiplyByPowerOfTen(power: exponent, roundingMode: .plain)
+            self = try significand._multiplyByPowerOfTen(power: exponent, roundingMode: .bankers)
         } catch _CalculationError.underflow {
             self = 0
             return
@@ -604,7 +604,13 @@ extension Decimal /* : FloatingPoint */ {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : ExpressibleByFloatLiteral {
-    /// Creates and initializes a decimal with the provided floating point value.
+    /// Creates a `Decimal` instance initialized to the specified floating-point value.
+    ///
+    /// Do not call this initializer directly. Instead, initialize a variable or constant using a floating-point literal. For example:
+    ///
+    ///     let x: Decimal = 21.5
+    ///
+    /// In this example, the assignment to the `x` constant calls this floating-point literal initializer behind the scenes.
     public init(floatLiteral value: Double) {
         self.init(value)
     }
@@ -612,7 +618,13 @@ extension Decimal : ExpressibleByFloatLiteral {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : ExpressibleByIntegerLiteral {
-    /// Creates and initializes a decimal with the provided integer value.
+    /// Creates a `Decimal` instance initialized to the specified integer value.
+    ///
+    /// Do not call this initializer directly. Instead, initialize a variable or constant using an integer literal. For example:
+    ///
+    ///     let x: Decimal = 42
+    ///
+    /// In this example, the assignment to the `x` constant calls this integer literal initializer behind the scenes.
     public init(integerLiteral value: Int) {
         self.init(value)
     }
@@ -759,11 +771,11 @@ extension Decimal : SignedNumeric {
             _reserved: 0, _mantissa: self._mantissa)
     }
 
-    /// Creates a new decimal value exactly representing the provided integer.
+    /// Creates a new decimal floating-point value, if the given integer can be represented exactly.
     ///
-    /// If `source` isn't representable as a `Decimal` instance, the result is `nil`.
+    /// If the given integer cannot be represented exactly as a `Decimal`, the result is `nil`.
     ///
-    /// - Parameter source: The integer to convert.
+    /// - Parameter source: The integer to convert to a decimal floating-point value.
     public init?<T : BinaryInteger>(exactly source: T) {
         let zero = 0 as T
 
@@ -809,54 +821,63 @@ extension Decimal : SignedNumeric {
     }
 #endif
 
-    /// Adds two decimal numbers, storing the result in the first number.
+    /// Adds two decimal floating-point values and stores the result in the left-hand-side variable,
+    /// rounding to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN.
+    ///
+    /// If the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalAdd(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
-    ///   - lhs: A value to add.
-    ///   - rhs: Another value to add.
+    ///   - lhs: The first value to add.
+    ///   - rhs: The second value to add.
     public static func +=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._add(rhs: rhs, roundingMode: .plain)
+            let result = try lhs._add(rhs: rhs, roundingMode: .bankers)
             lhs = result
         } catch {
             lhs = .nan
         }
     }
 
-    /// Subtracts one decimal number from another, storing the result in the first number.
+    /// Subtracts the second decimal floating-point value from the first and stores the difference in the left-hand-side variable,
+    /// rounding to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN.
+    ///
+    /// If the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalSubtract(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
-    ///   - lhs: The value to subtract from.
-    ///   - rhs: The value to subtract.
+    ///   - lhs: A numeric value.
+    ///   - rhs: The value to subtract from `lhs`.
     public static func -=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._subtract(rhs: rhs, roundingMode: .plain)
+            let result = try lhs._subtract(rhs: rhs, roundingMode: .bankers)
             lhs = result
         } catch {
             lhs = .nan
         }
     }
 
-    /// Multiplies two decimal numbers, storing the result in the first number.
+    /// Multiplies two decimal floating-point values and stores the result in the left-hand-side variable,
+    /// rounding to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN.
+    ///
+    /// If the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalMultiply(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
-    ///   - lhs: A value to multiply.
-    ///   - rhs: Another value to multiply.
+    ///   - lhs: The first value to multiply.
+    ///   - rhs: The second value to multiply.
     public static func *=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._multiply(by: rhs, roundingMode: .plain)
+            let result = try lhs._multiply(by: rhs, roundingMode: .bankers)
             lhs = result
         } catch _CalculationError.underflow {
             lhs = .zero
@@ -865,18 +886,21 @@ extension Decimal : SignedNumeric {
         }
     }
 
-    /// Divides one decimal number by another, storing the result in the first number.
+    /// Divides the first decimal floating-point value by the second and stores the quotient in the left-hand-side variable,
+    /// rounding to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN. If `rhs` is zero, the result of the division is NaN.
+    ///
+    /// When the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalDivide(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
     ///   - lhs: The value to divide.
     ///   - rhs: The value to divide `lhs` by.
     public static func /=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._divide(by: rhs, roundingMode: .plain)
+            let result = try lhs._divide(by: rhs, roundingMode: .bankers)
             lhs = result
         } catch _CalculationError.underflow {
             lhs = .zero
@@ -885,15 +909,17 @@ extension Decimal : SignedNumeric {
         }
     }
 
-    /// Adds two decimal numbers.
+    /// Adds two decimal floating-point values and produces their sum, rounded to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN.
+    ///
+    /// If the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalAdd(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
-    ///   - lhs: A value to add.
-    ///   - rhs: Another value to add.
+    ///   - lhs: The first value to add.
+    ///   - rhs: The second value to add.
     /// - Returns: The result of adding `lhs` and `rhs`.
     public static func +(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
@@ -901,15 +927,17 @@ extension Decimal : SignedNumeric {
         return answer
     }
 
-    /// Subtracts one decimal number from another.
+    /// Subtracts one decimal floating-point value from another and produces their difference, rounded to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN.
+    ///
+    /// If the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalSubtract(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
-    ///   - lhs: The value to subtract from.
-    ///   - rhs: The value to subtract.
+    ///   - lhs: A numeric value.
+    ///   - rhs: The value to subtract from `lhs`.
     /// - Returns: The result of subtracting `rhs` from `lhs`.
     public static func -(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
@@ -917,15 +945,17 @@ extension Decimal : SignedNumeric {
         return answer
     }
 
-    /// Multiplies two decimal numbers.
+    /// Multiplies two decimal floating-point values and produces their product, rounded to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode.
+    /// Overflow results in NaN.
+    ///
+    /// If the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalMultiply(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
-    ///   - lhs: A value to multiply.
-    ///   - rhs: Another value to multiply.
+    ///   - lhs: The first value to multiply.
+    ///   - rhs: The second value to multiply.
     /// - Returns: The result of multiplying `lhs` by `rhs`.
     public static func *(lhs: Decimal, rhs: Decimal) -> Decimal {
         var answer = lhs
@@ -933,11 +963,13 @@ extension Decimal : SignedNumeric {
         return answer
     }
 
-    /// Divides one decimal number by another.
+    /// Divides one decimal floating-point value by another and produces their quotient, rounded to a representable value.
     ///
-    /// If the result of this operation requires more precision than the `Decimal`
-    /// type can provide, the result is rounded using the
-    /// ``Decimal/RoundingMode/plain`` rounding mode. 
+    /// Overflow results in NaN. If `rhs` is zero, the result of the division is NaN.
+    ///
+    /// When the unrounded result of this operation requires more precision than the `Decimal` type can provide,
+    /// the result is rounded using the ``Decimal/RoundingMode/bankers`` rounding mode (round to nearest, ties to even).
+    /// To specify a different rounding mode, use the ``NSDecimalDivide(_:_:_:_:)`` function instead.
     ///
     /// - Parameters:
     ///   - lhs: The value to divide.
@@ -949,7 +981,10 @@ extension Decimal : SignedNumeric {
         return answer
     }
 
-    /// Negates this decimal.
+    /// Replaces this decimal floating-point value with its additive inverse.
+    ///
+    /// The result is always exact.
+    /// If the value is zero or NaN, it is unchanged.
     public mutating func negate() {
         guard self._length != 0 else { return }
         self._isNegative = self._isNegative == 0 ? 1 : 0
@@ -958,12 +993,18 @@ extension Decimal : SignedNumeric {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : Strideable {
-    /// Returns the distance from this value to the specified value.
+    /// Returns the distance from this value to the given value, expressed as a stride.
+    ///
+    /// Using this method with `Decimal` may result in an approximation due to rounding.
     public func distance(to other: Decimal) -> Decimal {
         return other - self
     }
 
-    /// Returns a new value advanced by the given distance.
+    /// Returns a value that is offset the specified distance from this value.
+    ///
+    /// Use the `advanced(by:)` method in generic code to offset a value by a specified distance.
+    /// If you're working directly with numeric values, use the addition operator (`+`) instead of this method.
+    /// Using this method with `Decimal` may result in an approximation due to rounding.
     public func advanced(by n: Decimal) -> Decimal {
         return self + n
     }
