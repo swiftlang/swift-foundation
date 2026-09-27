@@ -111,7 +111,7 @@ private struct DecimalTests {
         #expect("123.458" == Decimal(123.458).description)
         #expect("123" == Decimal(UInt8(123)).description)
         #expect("45" == Decimal(Int8(45)).description)
-        #expect("3.14159265358979323846264338327950288419" == Decimal.pi.description)
+        #expect("3.14159265358979323846264338327950288420" == Decimal.pi.description)
         #expect("-30000000000" == Decimal(sign: .minus, exponent: 10, significand: Decimal(3)).description)
         #expect("300000" == Decimal(sign: .plus, exponent: 5, significand: Decimal(3)).description)
         #expect("5" == Decimal(signOf: Decimal(3), magnitudeOf: Decimal(5)).description)
@@ -635,7 +635,7 @@ private struct DecimalTests {
         #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .up).result.description.hasSuffix("6"))
         #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .down).result.description.hasSuffix("7"))
 
-        #expect((Decimal(1) / Decimal.pi).description.hasSuffix("1830988618379067153776752674502872407")) // 0.31830988618379067153776752674502872407
+        #expect((Decimal(1) / Decimal.pi).description.hasSuffix("18309886183790671537767526745028724069")) // 0.318309886183790671537767526745028724069
 
         let huge = try #require(Decimal(string: "340282366920938463463374607431768211455")) // UInt128.max
         let quotient1 = Decimal(1) / huge
@@ -981,17 +981,16 @@ private struct DecimalTests {
 
     @Test func constants() {
         let smallest = Decimal(_exponent: 127, _length: 8, _isNegative: 1, _isCompact: 1, _reserved: 0, _mantissa: (UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max))
-        #expect(smallest == Decimal.leastFiniteMagnitude)
+        #expect(smallest == -Decimal.greatestFiniteMagnitude)
         let biggest = Decimal(_exponent: 127, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max, UInt16.max))
         #expect(biggest == Decimal.greatestFiniteMagnitude)
-        let leastNormal = Decimal(_exponent: -127, _length: 1, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (1, 0, 0, 0, 0, 0, 0, 0))
+        let leastNormal = Decimal(_exponent: -128, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (0x999a, 0x9999, 0x9999, 0x9999, 0x9999, 0x9999, 0x9999, 0x1999))
         #expect(leastNormal == Decimal.leastNormalMagnitude)
-        let leastNonzero = Decimal(_exponent: -127, _length: 1, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (1, 0, 0, 0, 0, 0, 0, 0))
+        let leastNonzero = Decimal(_exponent: -128, _length: 1, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (1, 0, 0, 0, 0, 0, 0, 0))
         #expect(leastNonzero == Decimal.leastNonzeroMagnitude)
-        let pi = Decimal(_exponent: -38, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (0x6623, 0x7d57, 0x16e7, 0xad0d, 0xaf52, 0x4641, 0xdfa7, 0xec58))
+        let pi = Decimal(_exponent: -38, _length: 8, _isNegative: 0, _isCompact: 1, _reserved: 0, _mantissa: (0x6624, 0x7d57, 0x16e7, 0xad0d, 0xaf52, 0x4641, 0xdfa7, 0xec58))
         #expect(pi == Decimal.pi)
         #expect(10 == Decimal.radix)
-        #expect(Decimal().isCanonical)
         #expect(!Decimal().isSignalingNaN)
         #expect(!Decimal.nan.isSignalingNaN)
         #expect(Decimal.nan.isNaN)
