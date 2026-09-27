@@ -405,7 +405,7 @@ private struct DecimalTests {
         let b = Decimal(
             _exponent: 0, _length: 1, _isNegative: 0, _isCompact: 0, _reserved: 0,
             _mantissa: (10, 0, 0, 0, 0, 0, 0, 0))
-        #expect((a + b)._mantissa.0 == 39323) // Round up.
+        #expect((a + b)._mantissa.0 == 39322) // Round down (bankers).
     }
 
     @Test func additionWithScaling() throws {
