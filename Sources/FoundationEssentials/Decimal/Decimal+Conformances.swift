@@ -39,11 +39,11 @@ extension Decimal : CustomStringConvertible {
     }
 }
 
-// The methods in this extension exist to match the protocol requirements of
-// FloatingPoint, even if we can't conform directly.
+// The methods in this extension originally existed to match the protocol requirements of `FloatingPoint`, even if we can't conform directly.
+// Semantics that differ from those of `FloatingPoint` are explicitly documented below.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal /* : FloatingPoint */ {
-    /// The decimal that contains the smallest possible non-infinite magnitude for the underlying representation.
+    @available(*, deprecated, message: "Use '-Decimal.greatestFiniteMagnitude' instead")
     public static let leastFiniteMagnitude = Decimal(
         _exponent: 127,
         _length: 8,
@@ -53,7 +53,10 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff)
     )
 
-    /// The decimal that contains the largest possible non-infinite magnitude for the underlying representation.
+    /// The greatest finite number representable by this type.
+    ///
+    /// This value compares greater than or equal to all finite numbers.
+    /// As `Decimal` does not represent infinity, no values compare greater than this value.
     public static let greatestFiniteMagnitude = Decimal(
         _exponent: 127,
         _length: 8,
@@ -63,19 +66,24 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff)
     )
 
-    /// The decimal value that represents the smallest possible normal magnitude for the underlying representation.
+    /// The least positive normal number representable by this type.
+    ///
+    /// This value compares less than or equal to all positive normal numbers.
+    /// Smaller positive numbers are *subnormal*, meaning that they are represented with less precision than normal numbers.
     public static let leastNormalMagnitude = Decimal(
-        _exponent: -127,
-        _length: 1,
+        _exponent: -128,
+        _length: 8,
         _isNegative: 0,
         _isCompact: 1,
         _reserved: 0,
-        _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
+        _mantissa: (0x999a, 0x9999, 0x9999, 0x9999, 0x9999, 0x9999, 0x9999, 0x1999)
     )
 
-    /// The decimal value that represents the smallest possible non-zero value for the underlying representation.
+    /// The least positive number representable by this type.
+    ///
+    /// This value compares less than or equal to all positive numbers but greater than zero.
     public static let leastNonzeroMagnitude = Decimal(
-        _exponent: -127,
+        _exponent: -128,
         _length: 1,
         _isNegative: 0,
         _isCompact: 1,
@@ -83,33 +91,48 @@ extension Decimal /* : FloatingPoint */ {
         _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000)
     )
 
-    /// The mathematical constant pi.
+    /// The mathematical constant pi (π), approximately equal to 3.14159.
+    ///
+    /// When measuring an angle in radians, π is equivalent to a half-turn.
+    ///
+    /// This value is provided at its best possible precision, rounded to nearest.
     public static let pi = Decimal(
         _exponent: -38,
         _length: 8,
         _isNegative: 0,
         _isCompact: 1,
         _reserved: 0,
-        _mantissa: (0x6623, 0x7d57, 0x16e7, 0xad0d, 0xaf52, 0x4641, 0xdfa7, 0xec58)
+        _mantissa: (0x6624, 0x7d57, 0x16e7, 0xad0d, 0xaf52, 0x4641, 0xdfa7, 0xec58)
     )
 
-    @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
-    public static var infinity: Decimal { fatalError("Decimal does not yet fully adopt FloatingPoint") }
+    @available(*, unavailable, message: "Decimal does not represent infinity")
+    public static var infinity: Decimal { fatalError("Decimal does not represent infinity") }
 
-    @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
-    public static var signalingNaN: Decimal { fatalError("Decimal does not yet fully adopt FloatingPoint") }
+    @available(*, unavailable, message: "Decimal does not represent signaling NaN")
+    public static var signalingNaN: Decimal { fatalError("Decimal does not represent signaling NaN") }
 
-    /// A quiet representation of not-a-number.
-    public static var quietNaN: Decimal {
-        return Decimal(
-            _exponent: 0, _length: 0, _isNegative: 1, _isCompact: 0,
-            _reserved: 0, _mantissa: (0, 0, 0, 0, 0, 0, 0, 0))
-    }
+    @available(*, deprecated, renamed: "nan")
+    public static var quietNaN: Decimal { nan }
 
-    /// The value that represents "not a number."
-    public static var nan: Decimal { quietNaN }
+    /// A quiet NaN ("not a number").
+    ///
+    /// Unlike `FloatingPoint.nan`, a NaN of type `Decimal` compares equal to itself and less than every other value.
+    public static let nan = Decimal(
+        _exponent: 0,
+        _length: 0,
+        _isNegative: 1,
+        _isCompact: 0,
+        _reserved: 0,
+        _mantissa: (0, 0, 0, 0, 0, 0, 0, 0)
+    )
 
-    /// The radix used by decimal numbers.
+    /// The radix, or base of exponentiation, for a floating-point type.
+    ///
+    /// The magnitude of a floating-point value *x* of type F can be calculated by the following formula,
+    /// where `**` is exponentiation:
+    ///
+    ///     x.significand * (F.radix ** x.exponent)
+    @inline(always)
     public static var radix: Int { 10 }
 
     /// Creates and initializes a decimal with the provided unsigned integer value.
@@ -246,7 +269,26 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
-    /// Creates a decimal initialized with the given sign, exponent, and significand.
+    /// Creates a new value from the given sign, exponent, and significand.
+    ///
+    /// The following example uses this initializer to create a new `Decimal` instance.
+    ///
+    ///     let x = Decimal(sign: .plus, exponent: -2, significand: 1.5)
+    ///     // x == 0.015
+    ///
+    /// This initializer is equivalent to the following calculation, where `**` is exponentiation,
+    /// computed as if by a single, correctly rounded floating-point operation:
+    ///
+    ///     let sign: FloatingPointSign = .plus
+    ///     let exponent = -2
+    ///     let significand: Decimal = 1.5
+    ///     let y = (sign == .minus ? -1 : 1) * significand * (10 ** exponent)
+    ///     // y == 0.015
+    ///
+    /// - Parameters:
+    ///   - sign: The sign to use for the new value.
+    ///   - exponent: The new value's exponent.
+    ///   - significand: The new value's significand.
     public init(sign: FloatingPointSign, exponent: Int, significand: Decimal) {
 #if FOUNDATION_FRAMEWORK
         // Compatibility path
@@ -278,42 +320,89 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
-    /// Creates and initializes a decimal with the sign and magnitude of the given decimals.
+    /// Creates a new value using the sign of one value and the magnitude of another.
     ///
     /// - Parameters:
-    ///   - signOf: A `Decimal` to use for the sign of the newly-created `Decimal`.
-    ///   - magnitude: A `Decimal` to use for the magnitude of the newly-created `Decimal`.
-    public init(signOf: Decimal, magnitudeOf magnitude: Decimal) {
+    ///   - sign: A `Decimal` with the sign to use for the new value.
+    ///   - magnitude: A `Decimal` with the magnitude of the new value.
+    public init(signOf sign: Decimal, magnitudeOf magnitude: Decimal) {
         self.init(
             _exponent: magnitude._exponent,
             _length: magnitude._length,
-            _isNegative: signOf._isNegative,
+            _isNegative: sign._isNegative,
             _isCompact: magnitude._isCompact,
             _reserved: 0,
             _mantissa: magnitude._mantissa)
     }
 
-    /// The exponent of the decimal.
+    /// The exponent of the decimal floating-point value.
+    ///
+    /// For a finite `Decimal` value `x`, the magnitude can be calculated as the following,
+    /// where `**` is exponentiation:
+    ///
+    ///     x.significand * (10 ** x.exponent)
+    ///
+    /// In the next example, `y` has a value of `21.5`, represented as `215 * (10 ** -1)`.
+    ///
+    ///     let y = Decimal(string: "21.5")!
+    ///     // y.significand == 215
+    ///     // y.exponent == -1
+    ///
+    /// This property is the exponent of the value's stored representation.
+    /// Equal values can have different stored exponents and significands.
+    ///
+    /// Unlike `FloatingPoint.exponent`, this property is not the decimal logarithm of the magnitude rounded down to an integer,
+    /// and it has no edge cases where the value is zero or NaN.
     public var exponent: Int {
         return Int(_exponent)
     }
 
-    /// The significand of the decimal.
+    /// The significand of the decimal floating-point value.
+    ///
+    /// For a finite `Decimal` value `x`, the magnitude can be calculated as the following,
+    /// where `**` is exponentiation:
+    ///
+    ///     x.significand * (10 ** x.exponent)
+    ///
+    /// In the next example, `y` has a value of `21.5`, represented as `215 * (10 ** -1)`.
+    ///
+    ///     let y = Decimal(string: "21.5")!
+    ///     // y.significand == 215
+    ///     // y.exponent == -1
+    ///
+    /// For a finite nonzero value, this property is the significand (or mantissa) of the value's stored representation.
+    /// Equal values can have different stored exponents and significands.
+    /// If the value is zero or NaN, then `significand` is zero or NaN, respectively.
+    ///
+    /// Unlike `FloatingPoint.significand`, this property is not scaled to the range `1 ..< radix`.
     public var significand: Decimal {
+        let length = _length
         let isCompact = _isCompact
         var result = Decimal(
-            _exponent: 0, _length: _length, _isNegative: 0, _isCompact: isCompact,
-            _reserved: 0, _mantissa: _mantissa)
+            _exponent: 0,
+            _length: length,
+            _isNegative: length == 0 ? _isNegative : 0,
+            _isCompact: isCompact,
+            _reserved: 0,
+            _mantissa: _mantissa)
         if isCompact != 0 && !result._isActuallyCompact { result._isCompact = 0 }
         return result
     }
 
-    /// The sign of the decimal.
+    /// The sign of the decimal floating-point value.
+    ///
+    /// The `sign` property is `.minus` if the value's signbit is set and `.plus` otherwise.
+    /// If a `Decimal` value `x` is NaN, `x.sign` is `.minus`.
     public var sign: FloatingPointSign {
         return _isNegative == 0 ? FloatingPointSign.plus : FloatingPointSign.minus
     }
 
-    /// The unit in the last place of the decimal.
+    /// The unit in the last place of this value.
+    ///
+    /// This is the unit of the least significant digit in this value's significand when represented with as much precision as possible.
+    /// For most numbers `x`, this is the difference between `x` and the next greater (in magnitude) representable number.
+    /// If `x` is NaN, then `x.ulp` is NaN.
+    /// `greatestFiniteMagnitude.ulp` is a finite number, even though no greater number is representable.
     public var ulp: Decimal {
         guard isFinite else { return .nan }
 
@@ -336,61 +425,98 @@ extension Decimal /* : FloatingPoint */ {
             _reserved: 0, _mantissa: (0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000))
     }
 
-    /// The IEEE 754 class of this type.
+    /// The floating-point classification of this value.
+    ///
+    /// `Decimal` does not represent values with classification `negativeInfinity`, `negativeZero`, `positiveInfinity`, or `signalingNaN`.
     public var floatingPointClass: FloatingPointClassification {
-        if _length == 0 && _isNegative == 1 {
-            return .quietNaN
-        } else if _length == 0 {
-            return .positiveZero
+        if _length == 0 {
+            return _isNegative == 1 ? .quietNaN : .positiveZero
         }
-        // NSDecimal does not really represent normal and subnormal in the same
-        // manner as the IEEE standard, for now we can probably claim normal for
-        // any nonzero, non-NaN values.
         if _isNegative == 1 {
-            return .negativeNormal
-        } else {
-            return .positiveNormal
+            return isSubnormal ? .negativeSubnormal : .negativeNormal
         }
+        if isSubnormal {
+            return .positiveSubnormal
+        }
+        return .positiveNormal
     }
 
-    /// A Boolean value indicating whether the representation of this decimal is canonical.
+    /// A Boolean value indicating whether this instance's representation is in its canonical form.
+    @available(*, deprecated, message: "Decimal does not fully adopt FloatingPoint")
     public var isCanonical: Bool { true }
 
-    /// A Boolean value indicating whether this decimal has a negative sign.
+    /// A Boolean value indicating whether this instance's sign is minus.
     ///
-    /// This property is `true` when the value is negative or `-0.0`; otherwise, `false`.
+    /// For a `Decimal` value `x`, `x.isSignMinus` is equivalent to the following comparison: `x.sign == .minus`.
+    /// This property is `true` when the value is negative or NaN; otherwise, `false`.
     public var isSignMinus: Bool { _isNegative != 0 }
 
-    /// A Boolean value indicating whether this value is zero.
+    /// A Boolean value indicating whether this instance is equal to zero.
     ///
-    /// This property is `true` for `-0.0` and `+0.0` and `false` for all other values.
+    /// For a `Decimal` value `x`, `x.isZero` is equivalent to the following comparison: `x == 0.0`.
     public var isZero: Bool { _length == 0 && _isNegative == 0 }
 
-    /// A Boolean value indicating whether this decimal is subnormal.
-    public var isSubnormal: Bool { false }
+    /// A Boolean value indicating whether this instance is subnormal.
+    ///
+    /// A *subnormal* value is a nonzero number that has a lesser magnitude than the smallest normal number.
+    /// Subnormal values don't use the full precision available to values of a type.
+    ///
+    /// Zero is neither a normal nor a subnormal number.
+    /// Subnormal numbers are also called *denormal* or *denormalized*—these are different names for the same concept.
+    public var isSubnormal: Bool {
+        guard _length != 0 else { return false }
+        guard _exponent < -90 else { return false }
 
-    /// A Boolean value indicating whether this decimal is normal (not zero, subnormal, infinity, or NaN).
-    public var isNormal: Bool { !isZero && !isInfinite && !isNaN }
+        let m = _significand
+        // Deliberately underestimate the max "headroom" for scaling up,
+        // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
+        let shift = ((m|1).leadingZeroBitCount &* 1233) &>> 12
+        let available = Int(_exponent &+ 128)
+        // Since our underestimate is off by at most one,
+        // it's subnormal if `shift > available` and normal if `shift < available`.
+        if shift != available { return shift > available }
+        // If `shift == available`, determine if the actual headroom was underestimated
+        // (and hence exceeds the available exponent range).
+        return m &* _uint128_pow10[shift] <= 34028236692093846346337460743176821145 /* UInt128.max / 10 */
+    }
 
-    /// A Boolean value indicating whether this decimal is zero, subnormal, or normal (not infinity or NaN).
+    /// A Boolean value indicating whether this instance is normal.
+    ///
+    /// A *normal* value is a finite number that uses the full precision available to values of a type.
+    /// Zero is neither a normal nor a subnormal number.
+    public var isNormal: Bool { _length != 0 && !isSubnormal }
+
+    /// A Boolean value indicating whether this value is finite.
+    ///
+    /// All `Decimal` values other than NaN are finite, whether zero, subnormal, or normal.
     public var isFinite: Bool { !isNaN }
 
-    /// A Boolean value indicating whether this decimal is infinity.
+    /// A Boolean value indicating whether this value is infinite.
+    ///
+    /// `Decimal` does not represent infinity, so this property is always `false`.
     public var isInfinite: Bool { false }
 
-    /// A Boolean value indicating whether this decimal is NaN.
+    /// A Boolean value indicating whether this value is NaN ("not a number").
+    ///
+    /// For a value `x` specifically of `Decimal` type, `x.isNaN` is equivalent to the following comparison: `x == .nan`.
     public var isNaN: Bool { _length == 0 && _isNegative == 1 }
 
-    /// A Boolean value indicating whether this decimal is a signaling NaN.
+    @available(*, deprecated, renamed: "isSignalingNaN")
     public var isSignaling: Bool { false }
 
-    /// A Boolean value indicating whether this decimal is a signaling NaN.
+    /// A Boolean value indicating whether this value is a signaling NaN.
+    ///
+    /// `Decimal` does not represent signaling NaN, so this property is always `false`.
     public var isSignalingNaN: Bool { false }
 
-    @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
-    public mutating func formTruncatingRemainder(dividingBy other: Decimal) { fatalError("Decimal does not yet fully adopt FloatingPoint") }
+    @available(*, unavailable, message: "Decimal does not fully adopt FloatingPoint")
+    public mutating func formTruncatingRemainder(dividingBy other: Decimal) { fatalError("Decimal does not fully adopt FloatingPoint") }
 
-    /// The least representable value that is greater than this decimal.
+    /// The least representable value that compares greater than this value.
+    ///
+    /// For any finite `Decimal` value `x` except `greatestFiniteMagnitude`, `x.nextUp` is greater than `x`.
+    /// For `greatestFiniteMagnitude`, `x.nextUp` is NaN.
+    /// For `nan`, `x.nextUp` is `x` itself.
     public var nextUp: Decimal {
         if _isNegative == 1 {
             if _length != 0 && _exponent > -128 && _significand == 0x1999_9999_9999_9999_9999_9999_9999_999a {
@@ -418,29 +544,48 @@ extension Decimal /* : FloatingPoint */ {
         return self + ulp
     }
 
-    /// The greatest representable value that is less than this decimal.
+    /// The greatest representable value that compares less than this value.
+    ///
+    /// For any finite `Decimal` value `x`, `x.nextDown` is less than `x`.
+    /// For `nan`, `x.nextDown` is `x` itself.
     public var nextDown: Decimal {
         return -(-self).nextUp
     }
 
-    /// Indicates whether this decimal is equal to the specified one.
+    /// Returns a Boolean value indicating whether this instance is equal to the given value.
+    ///
+    /// - Parameter other: The value to compare with this value.
+    /// - Returns: `true` if `other` has the same value as this instance; otherwise `false`.
+    ///   If both this value and `other` are NaN, the result of this method is `true`; otherwise, if either is NaN, the result is `false`.
     public func isEqual(to other: Decimal) -> Bool {
         return self == other
     }
 
-    /// Indicates whether this decimal is less than the specified one.
+    /// Returns a Boolean value indicating whether this instance is less than the given value.
+    ///
+    /// - Parameter other: The value to compare with this value.
+    /// - Returns: `true` if this value is less than `other`; otherwise `false`.
+    ///   If `other` is NaN, the result of this method is `false`; otherwise, if this value is NaN, the result is `true`.
     public func isLess(than other: Decimal) -> Bool {
         return Decimal._compare(lhs: self, rhs: other) == .orderedAscending
     }
 
-    /// Indicates whether this decimal is less than or equal to the specified one.
+    /// Returns a Boolean value indicating whether this instance is less than or equal to the given value.
+    ///
+    /// - Parameter other: The value to compare with this value.
+    /// - Returns: `true` if this value is not greater than `other`; otherwise `false`.
+    ///   If this value is NaN, the result of this method is `true`; otherwise, if `other` is NaN, the result is `false`.
     public func isLessThanOrEqualTo(_ other: Decimal) -> Bool {
         let order = Decimal._compare(lhs: self, rhs: other)
         return order == .orderedAscending || order == .orderedSame
     }
 
-    /// Returns a Boolean value indicating whether this instance should precede the given value in an ascending sort.
+    /// Returns a Boolean value indicating whether this instance should precede or tie positions with the given value in an ascending sort.
+    @available(*, deprecated, message: "Decimal does not fully adopt FloatingPoint")
     public func isTotallyOrdered(belowOrEqualTo other: Decimal) -> Bool {
+        // Unfortunately, this implementation doesn't provide a total order:
+        // for example, NaN compared to itself returns `false`.
+
         // Note: Decimal does not have -0 or infinities to worry about
         if self.isNaN {
             return false
@@ -474,35 +619,6 @@ extension Decimal : ExpressibleByIntegerLiteral {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal: Hashable {
-    internal subscript(index: UInt32) -> UInt16 {
-        get {
-            switch index {
-            case 0: return _mantissa.0
-            case 1: return _mantissa.1
-            case 2: return _mantissa.2
-            case 3: return _mantissa.3
-            case 4: return _mantissa.4
-            case 5: return _mantissa.5
-            case 6: return _mantissa.6
-            case 7: return _mantissa.7
-            default: fatalError("Invalid index \(index) for _mantissa")
-            }
-        }
-        set {
-            switch index {
-            case 0: _mantissa.0 = newValue
-            case 1: _mantissa.1 = newValue
-            case 2: _mantissa.2 = newValue
-            case 3: _mantissa.3 = newValue
-            case 4: _mantissa.4 = newValue
-            case 5: _mantissa.5 = newValue
-            case 6: _mantissa.6 = newValue
-            case 7: _mantissa.7 = newValue
-            default: fatalError("Invalid index \(index) for _mantissa")
-            }
-        }
-    }
-
     public func hash(into hasher: inout Hasher) {
         var value = self
         if value._isCompact == 0 {
@@ -630,7 +746,10 @@ extension Decimal : Codable {
 // MARK: - SignedNumeric
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : SignedNumeric {
-    /// The magnitude of this decimal.
+    /// The magnitude of this decimal floating-point value.
+    ///
+    /// For any numeric value `x`, `x.magnitude` is the absolute value of `x`.
+    /// You can also use the global `abs(_:)` function when you need to find an absolute value.
     public var magnitude: Decimal {
         guard _length != 0 else { return self }
         return Decimal(

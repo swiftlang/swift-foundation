@@ -979,6 +979,35 @@ extension FixedWidthInteger {
 // preserved for their quirks--they exhibit unspecified behavior for some inputs
 // and aren't performant.
 extension Decimal {
+    internal subscript(index: UInt32) -> UInt16 {
+        get {
+            switch index {
+            case 0: return _mantissa.0
+            case 1: return _mantissa.1
+            case 2: return _mantissa.2
+            case 3: return _mantissa.3
+            case 4: return _mantissa.4
+            case 5: return _mantissa.5
+            case 6: return _mantissa.6
+            case 7: return _mantissa.7
+            default: fatalError("Invalid index \(index) for _mantissa")
+            }
+        }
+        set {
+            switch index {
+            case 0: _mantissa.0 = newValue
+            case 1: _mantissa.1 = newValue
+            case 2: _mantissa.2 = newValue
+            case 3: _mantissa.3 = newValue
+            case 4: _mantissa.4 = newValue
+            case 5: _mantissa.5 = newValue
+            case 6: _mantissa.6 = newValue
+            case 7: _mantissa.7 = newValue
+            default: fatalError("Invalid index \(index) for _mantissa")
+            }
+        }
+    }
+
     private func _multiply(byShort multiplicand: UInt16) throws -> Decimal {
         var result = self
         if multiplicand == 0 {
