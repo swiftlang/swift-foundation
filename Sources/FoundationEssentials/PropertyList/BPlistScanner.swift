@@ -13,13 +13,14 @@
 internal import Synchronization
 
 typealias BPlistObjectIndex = Int
+typealias BPlistDictionaryPair = (key: BPlistObjectIndex, value: BPlistObjectIndex)
 
 class BPlistLegacyDecodingDocument : PlistDecodingDocument {
     internal enum Value {
         case string(Region, isAscii: Bool)
         case array([BPlistObjectIndex])
         case set([BPlistObjectIndex])
-        case dict([BPlistObjectIndex:BPlistObjectIndex])
+        case dict([BPlistDictionaryPair])
         case data(Region)
         case date(UInt64)
         case boolean(Bool)
@@ -139,8 +140,8 @@ class BPlistLegacyDecodingDocument : PlistDecodingDocument {
     }
     
     struct DictionaryIterator: PlistDictionaryIterator {
-        var iter: [BPlistObjectIndex:BPlistObjectIndex].Iterator
-        
+        var iter: [BPlistDictionaryPair].Iterator
+
         @inline(__always)
         mutating func next() -> (key: BPlistObjectIndex, value: BPlistObjectIndex)? {
             iter.next()
@@ -698,16 +699,18 @@ internal struct BPlistScanner {
         guard !overflow2, dataStartIdx.distance(to: objectRangeEndIndex) >= Int(byteCount) else {
             throw BPlistError.corruptedValue("dictionary")
         }
-        var dict = [BPlistObjectIndex:BPlistObjectIndex](minimumCapacity: Int(count))
+        // Keep the pairs in source order so that duplicate keys can be handled deterministically.
+        var pairs = [BPlistDictionaryPair]()
+        pairs.reserveCapacity(Int(count))
         let offsetFromKeyToObject = Int(count) * Int(trailer._objectRefSize)
         var keyIndexCursor = dataStartIdx
         for _ in 0..<Int(count) {
             let keyIdx = try Int(bplistSafe: reader.getBoundsCheckedSizedInt(at: keyIndexCursor, size: refSize))
             let valIdx = try Int(bplistSafe: reader.getBoundsCheckedSizedInt(at: keyIndexCursor.advanced(by: offsetFromKeyToObject), size: refSize))
-            dict[keyIdx] = valIdx
+            pairs.append((key: keyIdx, value: valIdx))
             reader.bytes.formIndex(&keyIndexCursor, offsetBy: refSize)
         }
-        return .dict(dict)
+        return .dict(pairs)
 
     }
 }
