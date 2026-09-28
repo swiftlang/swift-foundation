@@ -114,18 +114,9 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         Array(rule.recurrences(of: start).prefix(count))
     }
 
-    private static func divergences(icu icuDates: [Date], ours ourDates: [Date], label: (Int) -> String) -> [String] {
-        var failures: [String] = []
-        for idx in 0..<max(icuDates.count, ourDates.count) where idx >= icuDates.count || idx >= ourDates.count || icuDates[idx] != ourDates[idx] {
-            failures.append(label(idx))
-        }
-        return failures
-    }
-
     @Test(arguments: Family.allCases)
     private func yearlyChristmas(_ family: Family) {
         let (icu, ours) = family.pair
-        var failures: [String] = []
         for (label, anchor) in family.anchors {
             var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .yearly, end: .afterOccurrences(5))
             icuRule.months = [12]; icuRule.daysOfTheMonth = [25]
@@ -133,15 +124,13 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
             ourRule.months = [12]; ourRule.daysOfTheMonth = [25]
             let icuDates = Self.collect(rule: icuRule, from: anchor, count: 5)
             let ourDates = Self.collect(rule: ourRule, from: anchor, count: 5)
-            failures += Self.divergences(icu: icuDates, ours: ourDates) { "[\(label)][\($0)]" }
+            #expect(ourDates == icuDates, "\(label)")
         }
-        #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
     @Test(arguments: Family.allCases)
     private func monthlyFirstOfMonth(_ family: Family) {
         let (icu, ours) = family.pair
-        var failures: [String] = []
         for (label, anchor) in family.anchors {
             var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .monthly, end: .afterOccurrences(12))
             icuRule.daysOfTheMonth = [1]
@@ -149,16 +138,14 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
             ourRule.daysOfTheMonth = [1]
             let icuDates = Self.collect(rule: icuRule, from: anchor, count: 12)
             let ourDates = Self.collect(rule: ourRule, from: anchor, count: 12)
-            failures += Self.divergences(icu: icuDates, ours: ourDates) { "[\(label)][\($0)]" }
+            #expect(ourDates == icuDates, "\(label)")
         }
-        #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
     /// Only Buddhist and ROC carry this test. The original Japanese probe never had a weekly case.
     @Test(arguments: [Family.buddhist, .roc])
     private func weeklyMondays(_ family: Family) {
         let (icu, ours) = family.pair
-        var failures: [String] = []
         for (label, anchor) in family.anchors {
             var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .weekly, end: .afterOccurrences(8))
             icuRule.weekdays = [.every(.monday)]
@@ -166,15 +153,13 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
             ourRule.weekdays = [.every(.monday)]
             let icuDates = Self.collect(rule: icuRule, from: anchor, count: 8)
             let ourDates = Self.collect(rule: ourRule, from: anchor, count: 8)
-            failures += Self.divergences(icu: icuDates, ours: ourDates) { "[\(label)][\($0)]" }
+            #expect(ourDates == icuDates, "\(label)")
         }
-        #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
     /// Only the Buddhist probe carried this shape.
     @Test func yearlyThanksgivingShapeForBuddhist() {
         let (icu, ours) = Family.buddhist.pair
-        var failures: [String] = []
         for (label, anchor) in Family.buddhist.anchors {
             var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .yearly, end: .afterOccurrences(5))
             icuRule.months = [11]; icuRule.weekdays = [.nth(4, .thursday)]
@@ -182,15 +167,13 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
             ourRule.months = [11]; ourRule.weekdays = [.nth(4, .thursday)]
             let icuDates = Self.collect(rule: icuRule, from: anchor, count: 5)
             let ourDates = Self.collect(rule: ourRule, from: anchor, count: 5)
-            failures += Self.divergences(icu: icuDates, ours: ourDates) { "[\(label)][\($0)]" }
+            #expect(ourDates == icuDates, "\(label)")
         }
-        #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
     /// Only the Japanese probe carried this shape.
     @Test func yearlyConstitutionDayForJapanese() {
         let (icu, ours) = Family.japanese.pair
-        var failures: [String] = []
         for (label, anchor) in Family.japanese.anchors {
             var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .yearly, end: .afterOccurrences(5))
             icuRule.months = [5]; icuRule.daysOfTheMonth = [3]
@@ -198,9 +181,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
             ourRule.months = [5]; ourRule.daysOfTheMonth = [3]
             let icuDates = Self.collect(rule: icuRule, from: anchor, count: 5)
             let ourDates = Self.collect(rule: ourRule, from: anchor, count: 5)
-            failures += Self.divergences(icu: icuDates, ours: ourDates) { "[\(label)][\($0)]" }
+            #expect(ourDates == icuDates, "\(label)")
         }
-        #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
     @Test(arguments: boundaryCases)
@@ -213,14 +195,12 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         ourRule.daysOfTheMonth = [1]
         let icuDates = Self.collect(rule: icuRule, from: anchor, count: 24)
         let ourDates = Self.collect(rule: ourRule, from: anchor, count: 24)
-        let failures = Self.divergences(icu: icuDates, ours: ourDates) { "[\($0)]" }
-        #expect(failures.isEmpty, "\(failures.count) divergences across the \(boundary.boundaryLabel) boundary")
+        #expect(ourDates == icuDates, "across the \(boundary.boundaryLabel) boundary")
     }
 
     @Test(arguments: boundaryCases)
     private func yearlyAcrossEraBoundary(_ boundary: BoundaryCase) {
         let (icu, ours) = boundary.family.pair
-        var failures: [String] = []
         for anchorComponents in boundary.yearlyAnchors {
             let anchor = Self.gregorianDate(anchorComponents.year, anchorComponents.month, anchorComponents.day)
             var icuRule = Calendar.RecurrenceRule(calendar: icu, frequency: .yearly, end: .afterOccurrences(5))
@@ -229,9 +209,8 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
             ourRule.months = [1]; ourRule.daysOfTheMonth = [1]
             let icuDates = Self.collect(rule: icuRule, from: anchor, count: 5)
             let ourDates = Self.collect(rule: ourRule, from: anchor, count: 5)
-            failures += Self.divergences(icu: icuDates, ours: ourDates) { "[\(anchor)][\($0)]" }
+            #expect(ourDates == icuDates, "\(anchor)")
         }
-        #expect(failures.isEmpty, "\(failures.count) divergences")
     }
 
     @Test(arguments: boundaryCases)
@@ -242,7 +221,6 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         let ourRule = Calendar.RecurrenceRule(calendar: ours, frequency: .daily, end: .afterOccurrences(60))
         let icuDates = Self.collect(rule: icuRule, from: anchor, count: 60)
         let ourDates = Self.collect(rule: ourRule, from: anchor, count: 60)
-        let failures = Self.divergences(icu: icuDates, ours: ourDates) { "[\($0)]" }
-        #expect(failures.isEmpty, "\(failures.count) divergences across the \(boundary.boundaryLabel) boundary")
+        #expect(ourDates == icuDates, "across the \(boundary.boundaryLabel) boundary")
     }
 }
