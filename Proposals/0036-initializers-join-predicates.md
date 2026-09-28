@@ -184,3 +184,9 @@ extension Predicate {
 ```
 
 A developer typing `Predicate.compound(` would see both variants together in autocomplete, reinforcing that they are counterparts. However, newcomers may not recognize this terminology from `NSCompoundPredicate`. Names containing `compound` would need to be pervasively used throughout the Swift ecosystem to feel natural. Initializers are a more conventional shape for constructing a value from inputs, and the `all` and `any` labels are sufficiently descriptive on their own without an additional grouping word.
+
+### Add initializers accepting `some Sequence<Self>`
+
+Taking a generic sequence of subpredicates in the initializers is possible but was passed over in favor of `BidirectionalCollection`, which provides access to a reversed iterator without materializing an array. This detail matters for efficiently constructing a right-branching tree of subexpressions and mirroring the short-circuiting behavior found elsewhere in Swift.
+
+The correct short-circuiting could be achieved with a left-fold or right-fold, in that one could successfully avoid the execution of all redundant evaluations. However, since the logical operators are left-associative, a left-branching tree would necessitate tunneling to its deepest level before evaluating the first subexpression from a given sequence, thereby increasing the minimum number of stack frames incurred before bailing.
