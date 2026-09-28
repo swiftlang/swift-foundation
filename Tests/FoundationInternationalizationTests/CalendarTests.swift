@@ -570,6 +570,16 @@ private struct CalendarTests {
         #expect(first != last)
     }
 
+    @Test(arguments: [
+        (Calendar.RepeatedTimePolicy.first, Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1730622000.0)),  // 2024-11-03T01:20:00-0700
+        (Calendar.RepeatedTimePolicy.last, Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1730625600.0)),   // 2024-11-03T01:20:00-0800
+        (Calendar.RepeatedTimePolicy.first, Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1730625600.0)), // 2024-11-03T01:20:00-0800
+        (Calendar.RepeatedTimePolicy.last, Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1730622000.0)),  // 2024-11-03T01:20:00-0700
+    ])
+    func repeatedTimePolicyIsAppliedInSearchOrder(policy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection, expected: Date) throws {
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, policy, direction) == expected)
+    }
+
     @Test func dayInWeekOfMonth() {
         let cal = Calendar(identifier: .chinese)
         // A very specific date for which we know a call into ICU produces an unusual result
