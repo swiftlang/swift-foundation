@@ -19,9 +19,7 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
-/// Golden-value tests for the era the Japanese calendar reports before Meiji. A pre-Meiji date reports the inherited Gregorian era rather than a pre-Meiji Japanese era.
-///
-/// These are pinned values rather than a comparison, so they do not depend on which era data the platform calendar carries.
+/// A date before Meiji reports the inherited Gregorian era rather than a pre-Meiji Japanese era.
 @Suite("Japanese Gregorian Era Inheritance")
 private struct JapaneseGregorianEraInheritanceTests {
 

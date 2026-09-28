@@ -62,7 +62,7 @@ private enum GregorianCalendarFamily: String, Sendable, CaseIterable, CustomTest
 private struct GregorianFamilyProbe: Sendable, CustomTestStringConvertible {
     let label: String
     let era, year, month, day: Int
-    /// True for dates the Japanese calendar deliberately labels differently, so they are pinned by golden values instead of compared.
+    /// True for dates the Japanese calendar deliberately labels differently, so they are checked against fixed expected values instead.
     let isPreMeiji: Bool
     /// True where the Japanese era ends at the next era's start, which `_CalendarICU` reports differently.
     let endsInsideABoundedJapaneseEra: Bool
@@ -112,9 +112,9 @@ private let gregorianFamilyProbes: [GregorianFamilyProbe] = [
 
 /// Parity tests for the three Gregorian-family calendars against `_CalendarICU`.
 ///
-/// They share one era-table engine, so a divergence in any one of them usually means the engine is wrong rather than the calendar.
+/// They share `GregorianFamilyCalendarEras`, so a divergence in any one of them usually means the table code is wrong rather than the calendar.
 ///
-/// The Japanese calendar labels two sets of dates differently on purpose, so those dates are skipped here and pinned by golden values in `JapaneseGregorianEraInheritanceTests` instead.
+/// The Japanese calendar labels two sets of dates differently on purpose, so those dates are skipped here and checked in `JapaneseGregorianEraInheritanceTests` instead.
 ///
 /// It does not list the pre-Meiji eras, and it ends an era where the next era starts.
 @Suite("Gregorian Family Calendar Parity")
@@ -167,7 +167,7 @@ private struct GregorianFamilyCalendarParityTests {
     }
 }
 
-/// Golden values for the ROC calendar's backward-counting Before-Minguo era, which no other calendar in the family exercises.
+/// Expected values for the ROC calendar's backward-counting Before-Minguo era, which no other calendar in the family exercises.
 @Suite("ROC Backward Era")
 private struct ROCBackwardEraTests {
 

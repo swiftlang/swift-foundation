@@ -109,9 +109,6 @@ internal struct GregorianFamilyCalendarEras: Sendable {
         guard !index.overflow, erasByNumber.indices.contains(index.partialValue) else { return nil }
         return erasByNumber[index.partialValue]
     }
-}
-
-extension GregorianFamilyCalendarEras {
 
     /// The era a `DateComponents.era` value refers to, which may be one this table lists or one of the Gregorian eras it inherits.
     enum ResolvedEra: Sendable {
@@ -136,6 +133,7 @@ extension GregorianFamilyCalendarEras {
         return .inheritedGregorian(isBCE: eraNumber == 0)
     }
 }
+
 
 /// One table per calendar that `_CalendarGregorian` serves. Stored properties, so each is built once rather than on every calendar copy.
 extension GregorianFamilyCalendarEras {

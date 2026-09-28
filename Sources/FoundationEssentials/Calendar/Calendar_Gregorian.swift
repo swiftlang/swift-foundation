@@ -331,7 +331,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     /// How this calendar labels eras and numbers years inside them. The tables live in `CalendarEra.swift`.
     ///
-    /// Nil for Gregorian and ISO8601, so a calendar copy retains nothing.
+    /// Nil for Gregorian and ISO8601, which use the default CE and BCE eras.
     let eraTable: GregorianFamilyCalendarEras?
 
     // Returns the range of a component in Gregorian Calendar.
@@ -878,7 +878,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             return nil
         case .era:
             // The era start comes from the table, so the ordinality algorithms below count from this calendar's era rather than from the Gregorian one.
-            return eraInterval(containing: at)?.start
+            return eraStart(containing: at)?.start
 
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: at))
@@ -1626,49 +1626,56 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Era lookup
 
+    /// The proleptic 0001-01-01, where CE begins and BCE ends.
+    private static let commonEraStart = Date(timeIntervalSinceReferenceDate: -63113904000.0)
+
+    /// The start of the Gregorian era, BCE or CE, that holds `date`.
+    private func inheritedEraStart(for date: Date) -> Date {
+        date < Self.commonEraStart ? Self.commonEraStart - inf_ti : Self.commonEraStart
+    }
+
     func eraBoundary(of entry: GregorianFamilyCalendarEra) -> Date? {
-        // The CE and BCE boundary is a proleptic 0001-01-01. `date(from:)` is Julian-cutover aware and would land two days earlier, so keep the reference instant.
+        // `date(from:)` is Julian-cutover aware and would land two days before the proleptic CE start, so keep the reference instant.
         if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
-            return Date(timeIntervalSinceReferenceDate: -63113904000.0)
+            return Self.commonEraStart
         }
         // Midnight on the boundary date, with era relabeling switched off since the year given here is already extended.
         let components = DateComponents(year: entry.anchorYear, month: entry.startMonth, day: entry.startDay, hour: 0, minute: 0, second: 0)
         return try? date(from: components, inTimeZone: timeZone, relabelsEras: false)
     }
 
-    func eraInterval(containing date: Date) -> DateInterval? {
-        let time = date.timeIntervalSinceReferenceDate
-        let ceStart = Date(timeIntervalSinceReferenceDate: -63113904000.0)
-        let inherited = time < ceStart.timeIntervalSinceReferenceDate
-            ? DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti), duration: inf_ti)
-            : DateInterval(start: ceStart, duration: inf_ti)
-        guard let eraTable else { return inherited }
+    /// Where the era holding `date` starts, and its index in the table. The index is nil for an inherited Gregorian era.
+    func eraStart(containing date: Date) -> (start: Date, index: Int?)? {
+        guard let eraTable else { return (inheritedEraStart(for: date), nil) }
 
         // Find the era by instant rather than by extended year. At the CE boundary the two disagree, because the boundary is proleptic while the arithmetic is Julian aware.
         for index in eraTable.entries.indices where eraTable.entries[index].direction == .forward {
-            let entry = eraTable.entries[index]
-            guard let boundary = eraBoundary(of: entry), date >= boundary else { continue }
-
-            // An era ends where the next one begins, so successive eras meet exactly and never overlap. Entries run newest first, so the next era is the one before this index.
-            guard index > 0, let end = eraBoundary(of: eraTable.entries[index - 1]) else {
-                return DateInterval(start: boundary, duration: Calendar._maxDateIntervalDuration)
+            if let boundary = eraBoundary(of: eraTable.entries[index]), date >= boundary {
+                return (boundary, index)
             }
-            return DateInterval(start: boundary, end: end)
         }
-
         // Older than every forward era. A backward era covers that, otherwise the era is inherited.
-        if let backward = eraTable.entries.first(where: { $0.direction == .backward }), let boundary = eraBoundary(of: backward) {
-            return DateInterval(start: boundary - Calendar._maxDateIntervalDuration, end: boundary)
+        if let index = eraTable.entries.firstIndex(where: { $0.direction == .backward }), let boundary = eraBoundary(of: eraTable.entries[index]) {
+            return (boundary - Calendar._maxDateIntervalDuration, index)
         }
         // A table that numbers every date has no era to inherit, so there is nothing to report before its first era.
         if eraTable.coversEveryDate { return nil }
+        return (inheritedEraStart(for: date), nil)
+    }
 
-        // Older than every era in the table, so the inherited interval is cut short where the oldest era begins.
-        guard let oldest = eraTable.entries.last, let oldestBoundary = eraBoundary(of: oldest) else { return inherited }
-        if inherited.start < oldestBoundary && inherited.end > oldestBoundary {
+    func eraInterval(containing date: Date) -> DateInterval? {
+        guard let era = eraStart(containing: date) else { return nil }
+        guard let eraTable, let index = era.index else {
+            // An inherited era, cut short where the table's oldest era begins.
+            let inherited = DateInterval(start: era.start, duration: inf_ti)
+            guard let oldest = eraTable?.entries.last, let oldestBoundary = eraBoundary(of: oldest), inherited.start < oldestBoundary, inherited.end > oldestBoundary else { return inherited }
             return DateInterval(start: inherited.start, end: oldestBoundary)
         }
-        return inherited
+        // An era ends where the next one begins, so successive eras meet exactly. Entries run newest first, so the next era is the one before this index.
+        guard eraTable.entries[index].direction == .forward, index > 0, let end = eraBoundary(of: eraTable.entries[index - 1]) else {
+            return DateInterval(start: era.start, duration: Calendar._maxDateIntervalDuration)
+        }
+        return DateInterval(start: era.start, end: end)
     }
 
     // MARK:
