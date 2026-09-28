@@ -193,8 +193,10 @@ extension Decimal /* : FloatingPoint */ {
         self.init(Int64(value))
     }
 
-    /// Creates and initializes a decimal with the provided floating point value.
-    public init(_ value: Double) {
+#if FOUNDATION_FRAMEWORK
+    @abi(init(_ value: Double))
+    @usableFromInline
+    internal init(__legacy value: Double) {
         precondition(!value.isInfinite, "Decimal does not yet fully adopt FloatingPoint")
         if value.isNaN {
             self = Decimal.nan
@@ -268,6 +270,7 @@ extension Decimal /* : FloatingPoint */ {
             self.compact()
         }
     }
+#endif
 
     /// Creates a new value from the given sign, exponent, and significand.
     ///
@@ -603,6 +606,14 @@ extension Decimal /* : FloatingPoint */ {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : ExpressibleByFloatLiteral {
+#if FOUNDATION_FRAMEWORK
+    @abi(init(floatLiteral value: Double))
+    @usableFromInline
+    internal init(__legacy_floatLiteral value: Double) {
+        self.init(__legacy: value)
+    }
+#endif
+
     /// Creates a `Decimal` instance initialized to the specified floating-point value.
     ///
     /// Do not call this initializer directly. Instead, initialize a variable or constant using a floating-point literal. For example:
@@ -610,7 +621,12 @@ extension Decimal : ExpressibleByFloatLiteral {
     ///     let x: Decimal = 21.5
     ///
     /// In this example, the assignment to the `x` constant calls this floating-point literal initializer behind the scenes.
+#if FOUNDATION_FRAMEWORK
+    @abi(init(__shortest_floatLiteral value: Double))
+    @export(implementation)
+#endif
     public init(floatLiteral value: Double) {
+        // FIXME: For legacy behavior in a generic context, we need a linked-on-or-after check.
         self.init(value)
     }
 }

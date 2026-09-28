@@ -754,11 +754,7 @@ private struct DecimalTests {
         }
 
         // Overflow doubles
-        #expect(Decimal(Double.leastNonzeroMagnitude).isNaN)
-        #expect(Decimal(Double.leastNormalMagnitude).isNaN)
         #expect(Decimal(Double.greatestFiniteMagnitude).isNaN)
-        #expect(Decimal(Double("1e-129")!).isNaN)
-        #expect(Decimal(Double("0.1e-128")!).isNaN)
     }
 
     @Test func roundBankers() throws {
@@ -1004,39 +1000,43 @@ private struct DecimalTests {
         #expect(Decimal(Double.nan) == Decimal.nan)
         #expect(Decimal(Double.signalingNaN) == Decimal.nan)
 
-        // These values are out out range for Decimal
-        #expect(Decimal(-Double.leastNonzeroMagnitude) == Decimal.nan)
-        #expect(Decimal(Double.leastNonzeroMagnitude) == Decimal.nan)
-        #expect(Decimal(-Double.leastNormalMagnitude) == Decimal.nan)
-        #expect(Decimal(Double.leastNormalMagnitude) == Decimal.nan)
+        // These values are out of range for Decimal
+        #expect(Decimal(-Double.leastNonzeroMagnitude)._length == 0)
+        #expect(Decimal(Double.leastNonzeroMagnitude)._length == 0)
+        #expect(Decimal(-Double.leastNormalMagnitude)._length == 0)
+        #expect(Decimal(Double.leastNormalMagnitude)._length == 0)
         #expect(Decimal(-Double.greatestFiniteMagnitude) == Decimal.nan)
         #expect(Decimal(Double.greatestFiniteMagnitude) == Decimal.nan)
 
+#if FOUNDATION_FRAMEWORK
+        guard #available(anyAppleOS 10000, *) else { return }
+#endif
         // SR-13837
         let testDoubles: [(Double, String)] = [
-            (1.8446744073709550E18, "1844674407370954752"),
-            (1.8446744073709551E18, "1844674407370954752"),
-            (1.8446744073709552E18, "1844674407370955264"),
-            (1.8446744073709553E18, "1844674407370955264"),
-            (1.8446744073709554E18, "1844674407370955520"),
-            (1.8446744073709555E18, "1844674407370955520"),
+            (1.8446744073709550E18, "1844674407370955000"),
+            (1.8446744073709551E18, "1844674407370955000"),
+            (1.8446744073709552E18, "1844674407370955300"),
+            (1.8446744073709553E18, "1844674407370955300"),
+            (1.8446744073709554E18, "1844674407370955500"),
+            (1.8446744073709555E18, "1844674407370955500"),
 
-            (1.8446744073709550E19, "18446744073709547520"),
-            (1.8446744073709551E19, "18446744073709552640"),
-            (1.8446744073709552E19, "18446744073709552640"),
-            (1.8446744073709553E19, "18446744073709552640"),
-            (1.8446744073709554E19, "18446744073709555200"),
-            (1.8446744073709555E19, "18446744073709555200"),
+            (1.8446744073709550E19, "18446744073709550000"),
+            (1.8446744073709551E19, "18446744073709552000"),
+            (1.8446744073709552E19, "18446744073709552000"),
+            (1.8446744073709553E19, "18446744073709552000"),
+            (1.8446744073709554E19, "18446744073709556000"),
+            (1.8446744073709555E19, "18446744073709556000"),
 
-            (1.8446744073709550E20, "184467440737095526400"),
-            (1.8446744073709551E20, "184467440737095526400"),
-            (1.8446744073709552E20, "184467440737095526400"),
-            (1.8446744073709553E20, "184467440737095526400"),
-            (1.8446744073709554E20, "184467440737095552000"),
-            (1.8446744073709555E20, "184467440737095552000"),
+            (1.8446744073709550E20, "184467440737095500000"),
+            (1.8446744073709551E20, "184467440737095500000"),
+            (1.8446744073709552E20, "184467440737095500000"),
+            (1.8446744073709553E20, "184467440737095500000"),
+            (1.8446744073709554E20, "184467440737095550000"),
+            (1.8446744073709555E20, "184467440737095550000"),
         ]
 
         for (d, s) in testDoubles {
+            #expect(Decimal(d) == Decimal(string: d.description))
             #expect(Decimal(d) == Decimal(string: s))
             #expect(try Decimal(d).description == #require(Decimal(string: s)).description)
         }
@@ -1236,6 +1236,42 @@ private struct DecimalTests {
         #expect(Decimal(-1).doubleValue == -1)
         #expect(Decimal.nan.doubleValue.isNaN)
         #expect(Decimal(UInt64.max).doubleValue == Double(1.8446744073709552e+19))
+
+        let testDoubles: [(Double, String)] = [
+            (1.8446744073709550E18, "1844674407370955000"),
+            (1.8446744073709551E18, "1844674407370955000"),
+            (1.8446744073709552E18, "1844674407370955300"),
+            (1.8446744073709553E18, "1844674407370955300"),
+            (1.8446744073709554E18, "1844674407370955500"),
+            (1.8446744073709555E18, "1844674407370955500"),
+
+            (1.8446744073709550E19, "18446744073709550000"),
+            (1.8446744073709551E19, "18446744073709552000"),
+            (1.8446744073709552E19, "18446744073709552000"),
+            (1.8446744073709553E19, "18446744073709552000"),
+            (1.8446744073709554E19, "18446744073709556000"),
+            (1.8446744073709555E19, "18446744073709556000"),
+
+            (1.8446744073709550E20, "184467440737095500000"),
+            (1.8446744073709551E20, "184467440737095500000"),
+            (1.8446744073709552E20, "184467440737095500000"),
+            (1.8446744073709553E20, "184467440737095500000"),
+            (1.8446744073709554E20, "184467440737095550000"),
+            (1.8446744073709555E20, "184467440737095550000"),
+        ]
+        for (d, s) in testDoubles {
+            #expect(Decimal(d).__doubleValue == d)
+#if FOUNDATION_FRAMEWORK
+            guard #available(anyAppleOS 10000, *) else { continue }
+#endif
+            #expect(Decimal(d).__doubleValue == Double(s))
+        }
+
+        let midpoint: Decimal = Decimal(string: "10746007285463371481088")!
+        let lower: Double = 0x1.23456789abcdfp+73
+        // As the name suggests, `midpoint` is exactly the midpoint between `lower` and `lower.nextUp`.
+        // Thus, `midpoint` should be converted to `lower.nextUp` (by *either* ties-away or ties-to-even rounding).
+        #expect(midpoint.__doubleValue == lower.nextUp)
     }
 
     @Test func integerConversion() async throws {
