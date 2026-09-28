@@ -5,7 +5,7 @@
 * Authors: [Xiaodi Wu](https://github.com/xwu)
 * Review Manager: TBD
 * Status: **Awaiting review**
-* Implementation: [swiftlang/swift-foundation#NNNNN](https://github.com/swiftlang/swift-foundation/pull/NNNNN)
+* Implementation: [swiftlang/swift-foundation#2267](https://github.com/swiftlang/swift-foundation/pull/2267)
 * Review: ([pitch](https://forums.swift.org/t/pitch-revising-certain-behaviors-of-decimal/89754))
 
 ## Introduction
