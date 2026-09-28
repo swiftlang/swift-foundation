@@ -414,8 +414,11 @@ extension Date {
     // Julian day 0 (-4712-01-01 12:00:00 +0000) in CFAbsoluteTime to 506713-02-07 00:00:00 +0000, smaller than the max time ICU supported.
     package static let validCalendarRange = Date(timeIntervalSinceReferenceDate: TimeInterval(-211845067200.0))...Date(timeIntervalSinceReferenceDate: TimeInterval(15927175497600.0))
 
-    // aka __CFCalendarValidateAndCapTimeRange
     package var capped: Date {
+        if timeIntervalSinceReferenceDate.isNaN {
+            // return the lowerbound for compatibility
+            return Date.validCalendarRange.lowerBound
+        }
         return max(min(self, Date.validCalendarRange.upperBound), Date.validCalendarRange.lowerBound)
     }
     
