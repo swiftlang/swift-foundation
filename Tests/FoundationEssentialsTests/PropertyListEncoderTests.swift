@@ -769,6 +769,72 @@ private struct PropertyListEncoderTests {
         #expect(value == [42, -99, -0xFACE])
     }
 
+    @Test func xmlRealToIntegerCoercionEdgeCases() throws {
+        // A <real> element decoded as an integer is parsed with strtod first, which rounds any text with magnitude >= 2^53 to the nearest Double. The rounded value must never be substituted for the value that actually appeared in the element text.
+        func checkNoSilentSubstitution<T: FixedWidthInteger & Decodable>(_ text: String, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) {
+            let xml = "<real>\(text)</real>"
+            do {
+                let decoded = try PropertyListDecoder().decode(type, from: xml.data(using: .utf8)!)
+                // Decoding is only acceptable if it produced exactly the text's value.
+                #expect("\(decoded)" == text, "<real>\(text)</real> decoded as \(type) silently became \(decoded)", sourceLocation: sourceLocation)
+            } catch {
+                // Rejecting the value outright is also acceptable.
+            }
+        }
+
+        // Out of range for Int64: strtod rounds these up to exactly Int64.min, which
+        // T(exactly:) then accepts.
+        checkNoSilentSubstitution("-9223372036854775809", type: Int64.self)
+        checkNoSilentSubstitution("-9223372036854776832", type: Int64.self)
+        // In range, but not exactly representable as a Double: integer A must not
+        // silently become integer B.
+        checkNoSilentSubstitution("9007199254740993", type: Int64.self)
+        checkNoSilentSubstitution("9007199254740995", type: Int64.self)
+        checkNoSilentSubstitution("-9007199254740993", type: Int64.self)
+        checkNoSilentSubstitution("9223372036854775807", type: Int64.self)
+
+        func checkValidEdgeCase<T: Decodable & Equatable>(_ xml: String, type: T.Type, expected: T, sourceLocation: SourceLocation = #_sourceLocation) throws {
+            let value = try PropertyListDecoder().decode(type, from: xml.data(using: .utf8)!)
+            #expect(value == expected, sourceLocation: sourceLocation)
+        }
+
+        // Values that are exactly representable as a Double must still decode, even
+        // though their magnitude is >= 2^53.
+        try checkValidEdgeCase("<real>-9223372036854775808</real>", type: Int64.self, expected: .min)
+        try checkValidEdgeCase("<real>9223372036854775808</real>", type: UInt64.self, expected: 9223372036854775808)
+        try checkValidEdgeCase("<real>9007199254740992</real>", type: Int64.self, expected: 9007199254740992)
+        try checkValidEdgeCase("<real>-9007199254740992</real>", type: Int64.self, expected: -9007199254740992)
+        try checkValidEdgeCase("<real>1e18</real>", type: Int64.self, expected: 1000000000000000000)
+        try checkValidEdgeCase("<real>1E18</real>", type: Int64.self, expected: 1000000000000000000)
+        try checkValidEdgeCase("<real>1000000000000000000</real>", type: Int64.self, expected: 1000000000000000000)
+        try checkValidEdgeCase("<real>+9007199254740993</real>", type: Int64.self, expected: 9007199254740993)
+        try checkValidEdgeCase("<real>9007199254740993</real>", type: Int64.self, expected: 9007199254740993)
+        try checkValidEdgeCase("<real>-9007199254740993</real>", type: Int64.self, expected: -9007199254740993)
+        try checkValidEdgeCase("<real>18446744073709551615</real>", type: UInt64.self, expected: .max)
+        try checkValidEdgeCase("<real>42.0</real>", type: Int64.self, expected: 42)
+        try checkValidEdgeCase("<real>42.</real>", type: Int64.self, expected: 42)
+        try checkValidEdgeCase("<real>-0</real>", type: Int64.self, expected: 0)
+
+        func checkInvalidEdgeCase<T: Decodable>(_ xml: String, type: T.Type, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(throws: (any Error).self, sourceLocation: sourceLocation) {
+                try PropertyListDecoder().decode(type, from: xml.data(using: .utf8)!)
+            }
+        }
+
+        // Forms that were already rejected must keep being rejected.
+        checkInvalidEdgeCase("<real>1.5</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>9007199254740993.5</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>1e19</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>nan</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>infinity</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>-infinity</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>0x10</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real>-1</real>", type: UInt64.self)
+        checkInvalidEdgeCase("<real>300</real>", type: UInt8.self)
+        checkInvalidEdgeCase("<real>abc</real>", type: Int64.self)
+        checkInvalidEdgeCase("<real></real>", type: Int64.self)
+    }
+
     @Test func binaryNumberEdgeCases() throws {
         _testRoundTrip(of: [Int8.max], in: .binary)
         _testRoundTrip(of: [Int8.min], in: .binary)
