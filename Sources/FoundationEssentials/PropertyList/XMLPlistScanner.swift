@@ -605,13 +605,40 @@ extension XMLPlistMap.Value {
         }
     }
 
+    // Whether `decimal` is exactly `value`, compared without a Double intermediate.
+    private static func decimal<I: FixedWidthInteger>(_ decimal: Decimal, isExactly value: I) -> Bool {
+        if value < 0 {
+            guard let signed = Int64(exactly: value) else { return false }
+            return decimal == Decimal(signed)
+        }
+        guard let unsigned = UInt64(exactly: value) else { return false }
+        return decimal == Decimal(unsigned)
+    }
+
     func integerValue<T: FixedWidthInteger & Sendable>(in map: XMLPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
-        if case .real = self {
+        if case .real(let region) = self {
             let double = try self.realValue(in: map, as: Double.self, for: codingPathNode, additionalKey)
-            guard let integer = T(exactly: double) else {
-                throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
+            let rounded = T(exactly: double)
+
+            // The distance between Doubles is >=2 from ±2^53, so below that every integer is exactly representable and the value strtod produced is the value that appeared in the element text.
+            if double.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
+                guard let rounded else {
+                    throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
+                }
+                return rounded
             }
-            return integer
+
+            if let exact = map.withBuffer(for: region) { bytes, _ in
+                Decimal._decimal(from: bytes, matchEntireString: true).asOptional.result
+            } {
+                if let rounded, Self.decimal(exact, isExactly: rounded) {
+                    return rounded
+                }
+                if let recovered = T(exact), Self.decimal(exact, isExactly: recovered) {
+                    return recovered
+                }
+            }
+            throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
         }
 
         guard case let .integer(region) = self else {
