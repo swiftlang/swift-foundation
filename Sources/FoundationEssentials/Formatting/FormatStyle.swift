@@ -101,6 +101,50 @@
 ///   instance and a parse strategy as parameters. For example, you can create a `Decimal` from a
 ///   formatted string with the initializer `Decimal.init(_:format:lenient:)`.
 /// - Create a parse strategy and call its `parse(_:)` method on one or more formatted instances.
+#if hasFeature(Embedded)
+// Embedded Swift makes Codable unavailable, so the protocol cannot refine it here. Every other platform keeps the original `: Codable, Hashable` refinement (the #else branch below).
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public protocol FormatStyle<FormatInput, FormatOutput> : Hashable {
+
+    /// The type this format style accepts as input.
+    ///
+    /// Swift type inference uses this value to determine which static accessors are available at a
+    /// given call point. For example, when you format an `Int32`, you can use the static `number`
+    /// property that provides a `IntegerFormatStyle<Int32>`, as seen in the following example. This
+    /// works because the style's input type `IntegerFormatStyle.FormatInput` is a `BinaryInteger`
+    /// generically constrained to the `Int32` type.
+    ///
+    /// ```swift
+    /// let perihelionDistanceToSunInKm: Int32 = 147098291
+    /// perihelionDistanceToSunInKm.formatted(.number
+    ///     .notation(.scientific)) // "1.470983E8"
+    /// ```
+    associatedtype FormatInput
+
+    /// The type this format style produces as output.
+    ///
+    /// Conforming types in Foundation define this type as either `String` or `AttributedString`.
+    associatedtype FormatOutput
+
+    /// Formats a value, using this style.
+    ///
+    /// Use this method when you want to create a single style instance, and then use it to format
+    /// multiple values.
+    ///
+    /// - Parameter value: The value to format.
+    /// - Returns: A representation of `value`, in the ``FormatOutput`` type, formatted according to
+    ///   the style's configuration.
+    func format(_ value: FormatInput) -> FormatOutput
+
+    /// Modifies the format style to use the specified locale.
+    ///
+    /// Use this format style to change the locale used by an existing format style.
+    ///
+    /// - Parameter locale: The locale to apply to the format style.
+    /// - Returns: A format style modified to use the provided locale.
+    func locale(_ locale: Locale) -> Self
+}
+#else
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public protocol FormatStyle<FormatInput, FormatOutput> : Codable, Hashable {
 
@@ -142,6 +186,7 @@ public protocol FormatStyle<FormatInput, FormatOutput> : Codable, Hashable {
     /// - Returns: A format style modified to use the provided locale.
     func locale(_ locale: Locale) -> Self
 }
+#endif
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FormatStyle {

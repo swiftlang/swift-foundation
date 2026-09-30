@@ -22,9 +22,15 @@ internal func _calendarICUClass() -> _CalendarProtocol.Type? {
     _CalendarICU.self
 }
 #else
+#if hasFeature(Embedded)
+package func _calendarICUClass() -> _CalendarProtocol.Type? {
+    nil
+}
+#else
 dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
     nil
 }
+#endif
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -46,13 +52,16 @@ internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { retu
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
     if identifier == .gregorian || identifier == .iso8601 {
         return _CalendarGregorian.self
-    } else if foundation_swift_hebrew_calendar_feature_enabled() && identifier == .hebrew {
-        return _CalendarHebrew.self
-    } else if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
-        return _CalendarChinese.self
-    } else {
-        return _calendarICUClass()
     }
+#if !hasFeature(Embedded)
+    if foundation_swift_hebrew_calendar_feature_enabled() && identifier == .hebrew {
+        return _CalendarHebrew.self
+    }
+    if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
+        return _CalendarChinese.self
+    }
+#endif
+    return _calendarICUClass()
 }
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.

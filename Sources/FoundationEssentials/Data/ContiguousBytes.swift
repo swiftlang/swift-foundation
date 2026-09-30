@@ -94,6 +94,16 @@ extension ContiguousBytes where Self: ~Escapable, Self: ~Copyable {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Array : ContiguousBytes where Element == UInt8 {
+    #if hasFeature(Embedded)
+    // In Embedded Swift the stdlib's rethrowing `withUnsafeBytes` does not satisfy the protocol's typed-throws requirement, so provide it explicitly.
+    @export(implementation)
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
+        try withUnsafeBufferPointer { (buffer) throws(E) in
+            try body(UnsafeRawBufferPointer(buffer))
+        }
+    }
+    #endif
+
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
@@ -107,6 +117,16 @@ extension Array : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ArraySlice : ContiguousBytes where Element == UInt8 {
+    #if hasFeature(Embedded)
+    // In Embedded Swift the stdlib's rethrowing `withUnsafeBytes` does not satisfy the protocol's typed-throws requirement, so provide it explicitly.
+    @export(implementation)
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
+        try withUnsafeBufferPointer { (buffer) throws(E) in
+            try body(UnsafeRawBufferPointer(buffer))
+        }
+    }
+    #endif
+
     // FIXME: Generalize to R: ~Copyable when withUnsafeBufferPointer does
     @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
@@ -120,6 +140,16 @@ extension ArraySlice : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ContiguousArray : ContiguousBytes where Element == UInt8 {
+    #if hasFeature(Embedded)
+    // In Embedded Swift the stdlib's rethrowing `withUnsafeBytes` does not satisfy the protocol's typed-throws requirement, so provide it explicitly.
+    @export(implementation)
+    public func withUnsafeBytes<R, E>(_ body: (UnsafeRawBufferPointer) throws(E) -> R) throws(E) -> R {
+        try withUnsafeBufferPointer { (buffer) throws(E) in
+            try body(UnsafeRawBufferPointer(buffer))
+        }
+    }
+    #endif
+
     @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func withBytes<R: ~Copyable, E>(_ body: (RawSpan) throws(E) -> R) throws(E) -> R {

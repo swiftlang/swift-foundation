@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 internal import _FoundationCShims
+#endif
 
 /// Information about standard time conventions associated with a specific geopolitical region.
 ///
@@ -287,6 +289,7 @@ extension TimeZone {
 #endif
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var customMirror : Mirror {
@@ -308,7 +311,9 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
         return _tz.debugDescription
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -345,6 +350,7 @@ extension TimeZone : Codable {
         }
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK

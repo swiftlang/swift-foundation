@@ -553,6 +553,7 @@ extension DateComponents {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
 
@@ -590,7 +591,9 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -693,6 +696,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
+#endif
 
 // MARK: - Bridging
 
