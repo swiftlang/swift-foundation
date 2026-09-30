@@ -132,7 +132,7 @@ class XMLPlistLegacyDecodingDocument : PlistDecodingDocument, @unchecked Sendabl
     var topObject : XMLPlistMapValue {
         loadValue(at: 0)!
     }
-
+    
     @inline(__always)
     func value(from reference: XMLPlistMapValue) throws -> XMLPlistMapValue {
         return reference
@@ -171,16 +171,16 @@ class XMLPlistLegacyDecodingDocument : PlistDecodingDocument, @unchecked Sendabl
         // NSKeyedArchiver UIDs are encoded as single-entry dictionaries whose key is `CF$UID`. Detect that shape here (needs byte access to compare the key string).
         if case let .dict(startOffset: objsOffset, count: count) = value,
            detectUID(dictionaryReferenceCount: count, objectOffset: objsOffset) {
-            return .uid
-        }
+                return .uid
+            }
         return value
     }
-
+    
     private func detectUID(dictionaryReferenceCount count: Int, objectOffset objsOffset: XMLPlistMapOffset) -> Bool {
         if count == 2,
            map.records[objsOffset] == XMLPlistMapTypeDescriptor.simpleKey.mapMarker,
            map.records[objsOffset + 1] == cfuid.utf8CodeUnitCount {
-
+            
             // OK, we've peeked enough into this first key to justify loading and examining the entire value.
             if case let .string(region, _, _) = map.loadValue(at: objsOffset) {
                 return self.withBuffer(for: region) { bufferView, _ in
@@ -489,13 +489,40 @@ extension XMLPlistMapValue {
         }
     }
 
+    // Whether `decimal` is exactly `value`, compared without a Double intermediate.
+    private static func decimal<I: FixedWidthInteger>(_ decimal: Decimal, isExactly value: I) -> Bool {
+        if value < 0 {
+            guard let signed = Int64(exactly: value) else { return false }
+            return decimal == Decimal(signed)
+        }
+        guard let unsigned = UInt64(exactly: value) else { return false }
+        return decimal == Decimal(unsigned)
+    }
+
     func integerValue<T: FixedWidthInteger & Sendable>(in document: XMLPlistLegacyDecodingDocument, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T {
-        if case .real = self {
+        if case .real(let region) = self {
             let double = try self.realValue(in: document, as: Double.self, for: codingPathNode, additionalKey)
-            guard let integer = T(exactly: double) else {
-                throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
+            let rounded = T(exactly: double)
+
+            // The distance between Doubles is >=2 from ±2^53, so below that every integer is exactly representable and the value strtod produced is the value that appeared in the element text.
+            if double.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
+                guard let rounded else {
+                    throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
+                }
+                return rounded
             }
-            return integer
+
+            if let exact = document.withBuffer(for: region) { bytes, _ in
+                Decimal._decimal(from: bytes, matchEntireString: true).asOptional.result
+            } {
+                if let rounded, Self.decimal(exact, isExactly: rounded) {
+                    return rounded
+                }
+                if let recovered = T(exactly: exact), Self.decimal(exact, isExactly: recovered) {
+                    return recovered
+                }
+            }
+            throw DecodingError._dataCorrupted("Parsed property list number <\(double)> does not fit in \(type).", for: codingPathNode, additionalKey)
         }
 
         guard case let .integer(region) = self else {
@@ -597,7 +624,7 @@ extension XMLPlistMapValue {
         guard case let .real(region) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: type, reality: self)
         }
-
+        
         return try document.withBuffer(for: region) { bytes, fullSource in
             // NOTE: The historical XML plist parsing code used to parse the contents of a <real> tag exactly like a string, CDATA sections and all, and then convert that parsed string to a real value. We no longer do that, because it's wrong.
             
@@ -651,24 +678,24 @@ internal struct XMLPlistScanner {
     var partialMapData = PartialMapData()
 
     struct PartialMapData {
-    var mapData: [Int] = []
-    var prevMapDataSize = 0
+        var mapData : [Int] = []
+        var prevMapDataSize = 0
 
-    mutating func resizeIfNecessary(with reader: BufferReader) {
-        let currentCount = mapData.count
-        if currentCount > 0, currentCount.isMultiple(of: 2048) {
-            // Time to predict how big these arrays are going to be based on the current rate of consumption per processed bytes.
-            // total objects = (total bytes / current bytes) * current objects
-            let totalBytes = reader.bytes.count
-            let consumedBytes = reader.byteOffset(at: reader.readIndex)
-            let ratio = (Double(totalBytes) / Double(consumedBytes))
-            let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
-            if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
-                mapData.reserveCapacity(totalExpectedMapSize)
-                prevMapDataSize = totalExpectedMapSize
+        mutating func resizeIfNecessary(with reader: BufferReader) {
+            let currentCount = mapData.count
+            if currentCount > 0, currentCount.isMultiple(of: 2048) {
+                // Time to predict how big these arrays are going to be based on the current rate of consumption per processed bytes.
+                // total objects = (total bytes / current bytes) * current objects
+                let totalBytes = reader.bytes.count
+                let consumedBytes = reader.byteOffset(at: reader.readIndex)
+                let ratio = (Double(totalBytes) / Double(consumedBytes))
+                let totalExpectedMapSize = Int( Double(mapData.count) * ratio )
+                if prevMapDataSize == 0 || Double(totalExpectedMapSize) / Double(prevMapDataSize) > 1.25 {
+                    mapData.reserveCapacity(totalExpectedMapSize)
+                    prevMapDataSize = totalExpectedMapSize
+                }
             }
         }
-    }
 
         mutating func recordStartCollection(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) -> Int {
             resizeIfNecessary(with: reader)
@@ -677,16 +704,16 @@ internal struct XMLPlistScanner {
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-        mapData.append(contentsOf: [0, 0])
+            mapData.append(contentsOf: [0, 0])
             return startIdx
-    }
+        }
 
         mutating func recordEndCollection(count: Int, atStartOffset startOffset: Int, with reader: BufferReader) {
-        resizeIfNecessary(with: reader)
+            resizeIfNecessary(with: reader)
 
             mapData.append(XMLPlistMapTypeDescriptor.collectionEnd.mapMarker)
 
-        let nextValueOffset = mapData.count
+            let nextValueOffset = mapData.count
             mapData.withUnsafeMutableBufferPointer {
                 $0[startOffset] = nextValueOffset
                 $0[startOffset + 1] = count
@@ -694,9 +721,9 @@ internal struct XMLPlistScanner {
         }
 
         mutating func recordEmptyCollection(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
-        resizeIfNecessary(with: reader)
+            resizeIfNecessary(with: reader)
 
-        let nextValueOffset = mapData.count + 4
+            let nextValueOffset = mapData.count + 4
             mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
@@ -782,8 +809,8 @@ internal struct XMLPlistScanner {
         // Apparently empty keys are allowed by the original implementation.
         try scanString(asKey: true)
         try checkForCloseTag(.key)
-                return true
-            }
+        return true
+    }
 
     @inline(__always)
     func matches(tag: XMLPlistTag, at location: BufferViewIndex<UInt8>, until endIdx : BufferViewIndex<UInt8>) -> Bool {
@@ -879,42 +906,42 @@ internal struct XMLPlistScanner {
 
     mutating func scanXMLElement() throws {
         let (tag, isEmpty) = try peekXMLElement()
-            switch tag {
-            case .plist:
-                if isEmpty {
-                    throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
-                }
+        switch tag {
+        case .plist:
+            if isEmpty {
+                throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
+            }
             return try scanPlist()
-            case .array:
-                if isEmpty {
+        case .array:
+            if isEmpty {
                 partialMapData.recordEmptyCollection(tagType: .array, with: reader)
-                } else {
+            } else {
                 try scanArray()
-                }
-            case .dict:
-                if isEmpty {
+            }
+        case .dict:
+            if isEmpty {
                 partialMapData.recordEmptyCollection(tagType: .dict, with: reader)
-                } else {
+            } else {
                 try scanDict()
             }
         case .key, .string:
             let isKey = tag == .key
-                if isEmpty {
+            if isEmpty {
                 partialMapData.record(tagType: isKey ? .simpleKey : .simpleString, count: 0, dataOffset: 0, with: reader)
                 return
-                }
+            }
             try scanString(asKey: isKey)
             try checkForCloseTag(tag)
-            case .data, .date, .real, .integer:
-                guard !isEmpty else {
-                    throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
-                }
+        case .data, .date, .real, .integer:
+            guard !isEmpty else {
+                throw XMLPlistError.unexpectedEmptyTag(tag, line: reader.lineNumber)
+            }
             let (start, end) = try scanThroughCloseTag(tag)
             partialMapData.record(tagType: .init(tag), count: start.distance(to: end), dataOffset: reader.byteOffset(at: start), with: reader)
-            case .true, .false:
-                if !isEmpty {
-                    try checkForCloseTag(tag)
-                }
+        case .true, .false:
+            if !isEmpty {
+                try checkForCloseTag(tag)
+            }
             partialMapData.record(tagType: .init(tag), with: reader)
         }
     }

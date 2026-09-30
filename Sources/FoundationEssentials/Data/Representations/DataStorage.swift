@@ -28,6 +28,8 @@ import ucrt
 internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 // Underlying storage representation for medium and large data.

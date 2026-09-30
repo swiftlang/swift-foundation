@@ -63,103 +63,105 @@ public struct Decimal: Sendable {
     // always non-compact: compaction gives canonical zero, and setting the
     // `_isCompact` bit without compaction can lead to unspecified behavior
     // inherent to breaking that invariant.
-    internal struct Storage: Sendable {
-        var exponent: Int8
-        // Layout:
-        // |  0  1  2  3 | 4 | 5 | 6  7 |
-        // | -> _length  | | | | | ->_reserved
-        // |             | | | |-> _isCompact
-        // |             | |-> _isNegative
-        var lengthFlagsAndReserved: UInt8
-        // 18 bits long
-        var reserved: UInt16
-        var mantissa: Mantissa
+    internal struct _Storage: Sendable {
+        // Layout (from least significant to most significant):
+        //
+        // signed   _exponent   :  8
+        // unsigned _length     :  4
+        // unsigned _isNegative :  1
+        // unsigned _isCompact  :  1
+        // unsigned _reserved   : 18
+        internal var bitFields: UInt32
+        internal var mantissa: Mantissa
+
+        @inline(always)
+        internal init(bitFields: UInt32, mantissa: Mantissa) {
+            self.bitFields = bitFields
+            self.mantissa = mantissa
+        }
     }
 
-    internal var storage: Storage
+    internal var _storage: _Storage
 
-    // Int8
     internal var _exponent: Int32 {
+        @inline(always)
         get {
-            return Int32(self.storage.exponent)
+            return Int32(Int8(truncatingIfNeeded: _storage.bitFields))
         }
+        @inline(always)
         set {
-            self.storage.exponent = Int8(newValue)
+            _storage.bitFields &= ~0xFF
+            _storage.bitFields |= UInt32(bitPattern: newValue) & 0xFF
         }
     }
 
-    // 4 bits
     internal var _length: UInt32 {
+        @inline(always)
         get {
-            return UInt32(self.storage.lengthFlagsAndReserved >> 4)
+            return (_storage.bitFields &>> 8) & 0xF
         }
+        @inline(always)
         set {
-            let newLength = (UInt8(truncatingIfNeeded: newValue) & 0x0F) << 4
-            self.storage.lengthFlagsAndReserved &= 0x0F // clear the length
-            self.storage.lengthFlagsAndReserved |= newLength // set the new length
+            _storage.bitFields &= ~0xF00
+            _storage.bitFields |= (newValue & 0xF) &<< 8
         }
     }
     
-    // Bool
     internal var _isNegative: UInt32 {
+        @inline(always)
         get {
-            return UInt32((self.storage.lengthFlagsAndReserved >> 3) & 0x01)
+            return (_storage.bitFields &>> 12) & 1
         }
+        @inline(always)
         set {
-            if (newValue & 0x1) != 0 {
-                self.storage.lengthFlagsAndReserved |= 0b00001000
+            if (newValue & 1) != 0 {
+                _storage.bitFields |= 0x1000
             } else {
-                self.storage.lengthFlagsAndReserved &= 0b11110111
+                _storage.bitFields &= ~0x1000
             }
         }
     }
     
-    // Bool
     internal var _isCompact: UInt32 {
+        @inline(always)
         get {
-            return UInt32((self.storage.lengthFlagsAndReserved >> 2) & 0x01)
+            return (_storage.bitFields &>> 13) & 1
         }
+        @inline(always)
         set {
-            if (newValue & 0x1) != 0 {
-                self.storage.lengthFlagsAndReserved |= 0b00000100
+            if (newValue & 1) != 0 {
+                _storage.bitFields |= 0x2000
             } else {
-                self.storage.lengthFlagsAndReserved &= 0b11111011
+                _storage.bitFields &= ~0x2000
             }
         }
     }
-    
-    // Only 18 bits
+
     internal var _reserved: UInt32 {
+        @inline(always)
         get {
-            return (UInt32(self.storage.lengthFlagsAndReserved & 0x03) << 16) | UInt32(self.storage.reserved)
+            return (_storage.bitFields &>> 14) & 0x3FFFF
         }
+        @inline(always)
         set {
-            // Bottom 16 bits
-            self.storage.reserved = UInt16(newValue & 0xFFFF)
-            self.storage.lengthFlagsAndReserved &= 0xFC
-            self.storage.lengthFlagsAndReserved |= UInt8(newValue >> 16) & 0xFF
+            _storage.bitFields &= ~0xFFFF_C000
+            _storage.bitFields |= (newValue & 0x3FFFF) &<< 14
         }
     }
 
     internal var _mantissa: Mantissa {
+        @inline(always)
         get {
-            return self.storage.mantissa
+            return _storage.mantissa
         }
+        @inline(always)
         set {
-            self.storage.mantissa = newValue
-        }
-    }
-
-    internal var _lengthFlagsAndReserved: UInt8 {
-        get {
-            return self.storage.lengthFlagsAndReserved
-        }
-        set {
-            self.storage.lengthFlagsAndReserved = newValue
+            _storage.mantissa = newValue
         }
     }
 
     @_spi(SwiftCorelibsFoundation)
+    @inline(__always)
     public init(
         _exponent: Int32 = 0,
         _length: UInt32,
@@ -168,16 +170,13 @@ public struct Decimal: Sendable {
         _reserved: UInt32 = 0,
         _mantissa: Mantissa
     ) {
-        let length: UInt8 = (UInt8(truncatingIfNeeded: _length) & 0xF) << 4
-        let isNegative: UInt8 = UInt8(truncatingIfNeeded: _isNegative & 0x1) == 0 ? 0 : 0b00001000
-        let isCompact: UInt8 = UInt8(truncatingIfNeeded: _isCompact & 0x1) == 0 ? 0 : 0b00000100
-        let reservedLeft: UInt8 = UInt8(truncatingIfNeeded: (_reserved & 0x3FFFF) >> 16)
-        self.storage = .init(
-            exponent: Int8(truncatingIfNeeded: _exponent),
-            lengthFlagsAndReserved: length | isNegative | isCompact | reservedLeft,
-            reserved: UInt16(truncatingIfNeeded: _reserved & 0xFFFF),
-            mantissa: _mantissa
-        )
+        let bitFields =
+            (UInt32(bitPattern: _exponent) & 0xFF)
+            | ((_length & 0xF) &<< 8)
+            | ((_isNegative & 1) &<< 12)
+            | ((_isCompact & 1) &<< 13)
+            | ((_reserved & 0x3FFFF) &<< 14)
+        self._storage = .init(bitFields: bitFields, mantissa: _mantissa)
     }
 
     @_spi(SwiftCorelibsFoundation)
@@ -189,13 +188,9 @@ public struct Decimal: Sendable {
     }
 
     /// Creates a decimal initialized to `0`.
+    @inline(__always)
     public init() {
-        self.storage = .init(
-            exponent: 0,
-            lengthFlagsAndReserved: 0,
-            reserved: 0,
-            mantissa: (0, 0, 0, 0, 0, 0, 0, 0)
-        )
+        self._storage = .init(bitFields: 0, mantissa: (0, 0, 0, 0, 0, 0, 0, 0))
     }
 }
 
@@ -236,7 +231,7 @@ extension Decimal {
 #if FOUNDATION_FRAMEWORK
             return unsafeBitCast(_mantissa, to: UInt128.self)
 #else
-            return unsafeBitCast(storage.mantissa, to: UInt128.self)
+            return unsafeBitCast(_storage.mantissa, to: UInt128.self)
 #endif
         }
         // Note that if `_significand` is set to `0` while `_isNegative == 1`, setting `_length` results in NaN.
@@ -245,8 +240,8 @@ extension Decimal {
             _mantissa = unsafeBitCast(newValue, to: Mantissa.self)
             _length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
 #else
-            self.storage.mantissa = unsafeBitCast(newValue, to: Mantissa.self)
-            self._length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
+            _storage.mantissa = unsafeBitCast(newValue, to: Mantissa.self)
+            _length = UInt32((128 &- newValue.leadingZeroBitCount &+ 15) / 16)
 #endif
         }
     }

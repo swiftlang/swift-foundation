@@ -536,17 +536,15 @@ extension Decimal : Equatable {
             lhs._mantissa.7 == rhs._mantissa.7
 #else
         let bitwiseEqual: Bool =
-            lhs.storage.exponent == rhs.storage.exponent &&
-            lhs.storage.lengthFlagsAndReserved == rhs.storage.lengthFlagsAndReserved &&
-            lhs.storage.reserved == rhs.storage.reserved &&
-            lhs.storage.mantissa.0 == rhs.storage.mantissa.0 &&
-            lhs.storage.mantissa.1 == rhs.storage.mantissa.1 &&
-            lhs.storage.mantissa.2 == rhs.storage.mantissa.2 &&
-            lhs.storage.mantissa.3 == rhs.storage.mantissa.3 &&
-            lhs.storage.mantissa.4 == rhs.storage.mantissa.4 &&
-            lhs.storage.mantissa.5 == rhs.storage.mantissa.5 &&
-            lhs.storage.mantissa.6 == rhs.storage.mantissa.6 &&
-            lhs.storage.mantissa.7 == rhs.storage.mantissa.7
+            lhs._storage.bitFields == rhs._storage.bitFields &&
+            lhs._storage.mantissa.0 == rhs._storage.mantissa.0 &&
+            lhs._storage.mantissa.1 == rhs._storage.mantissa.1 &&
+            lhs._storage.mantissa.2 == rhs._storage.mantissa.2 &&
+            lhs._storage.mantissa.3 == rhs._storage.mantissa.3 &&
+            lhs._storage.mantissa.4 == rhs._storage.mantissa.4 &&
+            lhs._storage.mantissa.5 == rhs._storage.mantissa.5 &&
+            lhs._storage.mantissa.6 == rhs._storage.mantissa.6 &&
+            lhs._storage.mantissa.7 == rhs._storage.mantissa.7
 #endif
         if bitwiseEqual {
             return true

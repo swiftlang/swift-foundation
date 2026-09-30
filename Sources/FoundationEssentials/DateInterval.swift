@@ -17,7 +17,7 @@
 /// not support reverse intervals i.e. intervals where the duration is less than 0 and the end date
 /// occurs earlier in time than the start date.
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-public struct DateInterval : Comparable, Hashable, Codable, Sendable {
+public struct DateInterval : Comparable, Hashable, Sendable {
 
     /// The start date.
     public var start : Date
@@ -167,6 +167,7 @@ public struct DateInterval : Comparable, Hashable, Codable, Sendable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
 extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var description: String {
@@ -185,6 +186,7 @@ extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, 
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
@@ -228,4 +230,10 @@ extension NSDateInterval : _HasCustomAnyHashableRepresentation {
         return AnyHashable(self as DateInterval)
     }
 }
+#endif
+
+// Codable is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
+@available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
+extension DateInterval : Codable {}
 #endif

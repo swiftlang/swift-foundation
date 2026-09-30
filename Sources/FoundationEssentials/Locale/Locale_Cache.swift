@@ -17,7 +17,9 @@ internal import CoreFoundation_Private.CFNotificationCenter
 internal import os
 #endif
 
+#if !hasFeature(Embedded)
 internal import _FoundationCShims
+#endif
 internal import Synchronization
 
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
@@ -26,10 +28,17 @@ internal func _localeICUClass() -> _LocaleProtocol.Type {
     _LocaleICU.self
 }
 #else
+#if hasFeature(Embedded)
+package func _localeICUClass() -> _LocaleProtocol.Type {
+    // Return _LocaleUnlocalized if FoundationInternationalization isn't loaded. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
+    _LocaleUnlocalized.self
+}
+#else
 dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
     // Return _LocaleUnlocalized if FoundationInternationalization isn't loaded. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
     _LocaleUnlocalized.self
 }
+#endif
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
