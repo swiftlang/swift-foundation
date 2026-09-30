@@ -72,6 +72,8 @@ internal import _FoundationDarwinExtras.POSIX.sys.mman
 @usableFromInline let memcpy = Bionic.memcpy
 #elseif canImport(string_h)
 import string_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 #if os(Windows)
@@ -1201,7 +1203,7 @@ extension Data {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension Data : CustomStringConvertible, CustomDebugStringConvertible {
     /// A human-readable description for the data.
     public var description: String {
         return "\(self.count) bytes"
@@ -1211,7 +1213,11 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data: CustomReflectable {
     public var customMirror: Mirror {
         let nBytes = self.count
         var children: [(label: String?, value: Any)] = []
@@ -1263,3 +1269,4 @@ extension Data : Codable {
         }
     }
 }
+#endif

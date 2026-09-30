@@ -59,6 +59,9 @@ internal import unistd
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
 import stdlib_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
+fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
 
 #if canImport(Bionic)
@@ -335,7 +338,7 @@ extension Platform {
           }
           return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-#elseif os(WASI) || targetEnvironment(exclaveCore) // WASI does not have uname
+#elseif os(WASI) || targetEnvironment(exclaveCore) || hasFeature(Embedded) // WASI and embedded have no uname
         return "localhost"
 #else
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
@@ -405,6 +408,8 @@ extension Platform {
     }
 }
 
+// The C-locale string helpers need a locale_t and the *_l libc entry points, neither of which the embedded libc shim provides. Embedded does not reference these.
+#if !hasFeature(Embedded)
 extension Platform {
     #if canImport(Darwin) || canImport(_FoundationDarwinExtras)
     private static var cLocale: locale_t? { /* LC_C_LOCALE */ nil }
@@ -513,3 +518,9 @@ extension Platform {
     static let memcmp = _FoundationCShims.memcmp
 #endif
 }
+#elseif canImport(_FoundationPlatformExtras)
+extension Platform {
+    static let calloc = _FoundationPlatformExtras.calloc
+    static let malloc = _FoundationPlatformExtras.malloc
+}
+#endif

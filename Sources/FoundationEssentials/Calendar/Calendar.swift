@@ -93,34 +93,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         
         @available(FoundationPreview 6.2, *)
         case vietnamese
-        
-        private typealias GregorianCodingKeys = EmptyCodingKeys
-        private typealias ChineseCodingKeys = EmptyCodingKeys
-        private typealias BuddhistCodingKeys = EmptyCodingKeys
-        private typealias CopticCodingKeys = EmptyCodingKeys
-        private typealias EthiopicAmeteMihretCodingKeys = EmptyCodingKeys
-        private typealias EthiopicAmeteAlemCodingKeys = EmptyCodingKeys
-        private typealias HebrewCodingKeys = EmptyCodingKeys
-        private typealias Iso8601CodingKeys = EmptyCodingKeys
-        private typealias IndianCodingKeys = EmptyCodingKeys
-        private typealias IslamicCodingKeys = EmptyCodingKeys
-        private typealias IslamicCivilCodingKeys = EmptyCodingKeys
-        private typealias JapaneseCodingKeys = EmptyCodingKeys
-        private typealias PersianCodingKeys = EmptyCodingKeys
-        private typealias RepublicOfChinaCodingKeys = EmptyCodingKeys
-        private typealias IslamicTabularCodingKeys = EmptyCodingKeys
-        private typealias IslamicUmmAlQuraCodingKeys = EmptyCodingKeys
-        private typealias BanglaCodingKeys = EmptyCodingKeys
-        private typealias GujaratiCodingKeys = EmptyCodingKeys
-        private typealias KannadaCodingKeys = EmptyCodingKeys
-        private typealias MalayalamCodingKeys = EmptyCodingKeys
-        private typealias MarathiCodingKeys = EmptyCodingKeys
-        private typealias OdiaCodingKeys = EmptyCodingKeys
-        private typealias TamilCodingKeys = EmptyCodingKeys
-        private typealias TeluguCodingKeys = EmptyCodingKeys
-        private typealias VikramCodingKeys = EmptyCodingKeys
-        private typealias DangiCodingKeys = EmptyCodingKeys
-        private typealias VietnameseCodingKeys = EmptyCodingKeys
 
         package static let cldrKeywordKey = "ca"
         package static let legacyKeywordKey = ICULegacyKey("calendar")
@@ -1639,6 +1611,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
     public var description: String {
@@ -1661,7 +1634,9 @@ extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, Cust
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -1727,7 +1702,37 @@ extension Calendar : Codable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Calendar.Identifier : Codable {}
+extension Calendar.Identifier : Codable {
+    private typealias GregorianCodingKeys = EmptyCodingKeys
+    private typealias ChineseCodingKeys = EmptyCodingKeys
+    private typealias BuddhistCodingKeys = EmptyCodingKeys
+    private typealias CopticCodingKeys = EmptyCodingKeys
+    private typealias EthiopicAmeteMihretCodingKeys = EmptyCodingKeys
+    private typealias EthiopicAmeteAlemCodingKeys = EmptyCodingKeys
+    private typealias HebrewCodingKeys = EmptyCodingKeys
+    private typealias Iso8601CodingKeys = EmptyCodingKeys
+    private typealias IndianCodingKeys = EmptyCodingKeys
+    private typealias IslamicCodingKeys = EmptyCodingKeys
+    private typealias IslamicCivilCodingKeys = EmptyCodingKeys
+    private typealias JapaneseCodingKeys = EmptyCodingKeys
+    private typealias PersianCodingKeys = EmptyCodingKeys
+    private typealias RepublicOfChinaCodingKeys = EmptyCodingKeys
+    private typealias IslamicTabularCodingKeys = EmptyCodingKeys
+    private typealias IslamicUmmAlQuraCodingKeys = EmptyCodingKeys
+    private typealias BanglaCodingKeys = EmptyCodingKeys
+    private typealias GujaratiCodingKeys = EmptyCodingKeys
+    private typealias KannadaCodingKeys = EmptyCodingKeys
+    private typealias MalayalamCodingKeys = EmptyCodingKeys
+    private typealias MarathiCodingKeys = EmptyCodingKeys
+    private typealias OdiaCodingKeys = EmptyCodingKeys
+    private typealias TamilCodingKeys = EmptyCodingKeys
+    private typealias TeluguCodingKeys = EmptyCodingKeys
+    private typealias VikramCodingKeys = EmptyCodingKeys
+    private typealias DangiCodingKeys = EmptyCodingKeys
+    private typealias VietnameseCodingKeys = EmptyCodingKeys
+
+}
+#endif
 
 /// Internal-use struct for holding the range of a Weekend
 package struct WeekendRange: Equatable, Hashable {
@@ -1745,6 +1750,7 @@ package struct WeekendRange: Equatable, Hashable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.MatchingPolicy: Codable {
     public init(from decoder: Decoder) throws {
@@ -1802,6 +1808,7 @@ extension Calendar.RepeatedTimePolicy: Codable {
         }
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
