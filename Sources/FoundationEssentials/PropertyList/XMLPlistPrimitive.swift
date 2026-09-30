@@ -649,9 +649,9 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
         }
     }
 
-    mutating func skipIntegerWhitespace() {
+    mutating func skipNumberWhitespace() {
         while let byte1 = self.peek() {
-            // Integer parsing has historically had a very inclusive whitespace check.
+            // <integer> and <real> parsing have historically had a very inclusive whitespace check.
             // We consider some additional values from 0x0 to 0x21 and 0x7E to 0xA1 as whitespace, for compatibility.
             if byte1 < 0x21 || (byte1 > 0x7E && byte1 < 0xA1) {
                 self.advance()
@@ -676,10 +676,10 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
         if first == ._minus {
             self.advance()
             isNegative = true
-            skipIntegerWhitespace()
+            skipNumberWhitespace()
         } else if first == ._plus {
             self.advance()
-            skipIntegerWhitespace()
+            skipNumberWhitespace()
         }
 
         let isHex: Bool
@@ -919,7 +919,8 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
 
     /// Parse the XML-plist real values that `strto*` does not: `nan`, `+/-infinity`, `+/-inf`.
     func parseSpecialReal<T: BinaryFloatingPoint>() throws -> T? {
-        try bytes.withUnsafeBufferPointer { buf -> T? in
+        try bytes.withUnsafeBufferPointer { fullBuf -> T? in
+            let buf = UnsafeBufferPointer(rebasing: fullBuf[index...])
             switch (buf.first, buf.count) {
             case (UInt8(ascii: "n"), 3), (UInt8(ascii: "N"), 3):
                 if (buf[1] == UInt8(ascii: "a") || buf[1] == UInt8(ascii: "A")),
@@ -962,10 +963,9 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
     /// `strto*` accepts hexadecimal values, which are not valid in plist. Reject them up front.
     func rejectHexReal() throws {
         var looksLikeHex = false
-        let count = bytes.count
+        let remaining = bytes.extracting(index...)
         Loop:
-        for i in 0 ..< count {
-            let byte = bytes[i]
+        for byte in remaining {
             switch byte {
             case ._plus, ._minus, ._space, ._tab, ._newline, ._return, UInt8(ascii: "0"):
                 continue
@@ -982,16 +982,21 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
     }
 
     /// Decode an XML `<real>` payload.
-    func parseReal<T: BinaryFloatingPoint>() throws -> T {
+    mutating func parseReal<T: BinaryFloatingPoint>() throws -> T {
+        // <real> tolerates the same inclusive leading whitespace as <integer>, for compatibility.
+        skipNumberWhitespace()
+
         if let special: T = try parseSpecialReal() {
             return special
         }
         try rejectHexReal()
 
-        return try bytes.withUnsafeBufferPointer { buf -> T in
-            guard let ptr = buf.baseAddress else {
+        return try bytes.withUnsafeBufferPointer { fullBuf -> T in
+            guard let base = fullBuf.baseAddress else {
                 throw XMLPlistError.corruptedValue("real")
             }
+            let ptr = base.advanced(by: index)
+            let count = fullBuf.count &- index
             var parseEndPtr: UnsafeMutablePointer<CChar>?
             let res: T
             if MemoryLayout<T>.size == MemoryLayout<Float>.size {
@@ -1001,7 +1006,7 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
             } else {
                 preconditionFailure("Only Float and Double are supported, not \(T.self)")
             }
-            guard UnsafeRawPointer(ptr.advanced(by: buf.count)) == UnsafeRawPointer(parseEndPtr!) else {
+            guard UnsafeRawPointer(ptr.advanced(by: count)) == UnsafeRawPointer(parseEndPtr!) else {
                 throw XMLPlistError.corruptedValue("real")
             }
             return res
@@ -1143,7 +1148,7 @@ internal func decodeXMLInteger<T: FixedWidthInteger>(from span: borrowing Span<U
     let sourceCopy = copy source
     var reader = XMLPlistSpanReader(bytesCopy, source: sourceCopy)
 
-    reader.skipIntegerWhitespace()
+    reader.skipNumberWhitespace()
     guard !reader.isAtEnd else {
         throw XMLPlistError.corruptedValue("integer")
     }
@@ -1155,7 +1160,7 @@ internal func decodeXMLInteger<T: FixedWidthInteger>(from span: borrowing Span<U
 
 /// Decode an XML `<real>` payload.
 internal func decodeXMLReal<T: BinaryFloatingPoint>(from span: borrowing Span<UInt8>, source: borrowing Span<UInt8>) throws -> T {
-    let reader = XMLPlistSpanReader(copy span, source: copy source)
+    var reader = XMLPlistSpanReader(copy span, source: copy source)
     return try reader.parseReal()
 }
 
