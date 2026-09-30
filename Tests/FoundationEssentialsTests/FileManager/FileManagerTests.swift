@@ -1163,6 +1163,37 @@ private struct FileManagerTests {
             validate("HOME", directory: .userDirectory, domain: .localDomainMask)
         }
     }
+
+    /* Scenario: the XDG user directories fall back to the current user's home
+     *   Given HOME is not set in the environment, as for a process started by
+     *     systemd or cron, and no XDG_* variables are set
+     *   When the user-domain application support, caches and configuration
+     *     directories are resolved
+     *   Then they are rooted at the home directory Foundation reports for the
+     *     current user, and not at the directory that contains user home
+     *     directories
+     */
+    @Test(.disabled(if: ProcessInfo.processInfo.environment.keys.contains(where: { $0.starts(with: "XDG") }), "Skipping due to presence of XDG environment variables which may affect this test"))
+    func searchPaths_missingHOMEFallsBackToCurrentUserHome() throws {
+        let oldHome = ProcessInfo.processInfo.environment["HOME"]
+        unsetenv("HOME")
+        defer {
+            if let oldHome {
+                setenv("HOME", oldHome, 1)
+            }
+        }
+
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        for (directory, component) in [
+            (FileManager.SearchPathDirectory.applicationSupportDirectory, ".local/share"),
+            (.cachesDirectory, ".cache")
+        ] {
+            let expected = home.appending(path: component, directoryHint: .isDirectory)
+            let results = FileManager.default.urls(for: directory, in: .userDomainMask)
+
+            #expect(results.contains(expected), "Results \(results.map(\.path)) did not contain \(expected.path) for \(directory) with HOME unset")
+        }
+    }
     #endif
 
     @Test func getSetAttributes() async throws {
