@@ -547,6 +547,13 @@ private struct PropertyListEncoderTests {
         }
     }
 
+    // An XML plist dict with a duplicate key resolves last-wins, matching canonical CoreFoundation: a repeated <key>k</key> keeps the later <string>.
+    @Test func xmlDuplicateKeyIsLastWins() throws {
+        let xmlData = "<plist><dict><key>k</key><string>A</string><key>k</key><string>B</string></dict></plist>".data(using: .utf8)!
+        let decoded = try PropertyListDecoder().decode([String: String].self, from: xmlData)
+        #expect(decoded == ["k": "B"])
+    }
+
     @Test func nonStringDictionaryKey() throws {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
