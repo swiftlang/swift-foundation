@@ -24,7 +24,7 @@ internal func foundation_swift_bplist_deserialization_enabled() -> Bool {
     return _foundation_swift_bplist_deserialization_enabled()
 }
 #else
-internal func foundation_swift_xml_plist_deserialization_enabled() -> Bool { return false }
+internal func foundation_swift_xml_plist_deserialization_enabled() -> Bool { return true }
 internal func foundation_swift_bplist_deserialization_enabled() -> Bool { return false }
 #endif
 
