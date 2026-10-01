@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - Document
 
@@ -121,4 +121,4 @@ final class BPlistDecodingDocument: PlistDecodingDocument {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#endif  // FOUNDATION_FRAMEWORK || !os(macOS)

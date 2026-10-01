@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - JSONDecoderImpl
 
@@ -1067,4 +1067,4 @@ extension JSONDecoderImpl {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#endif  // FOUNDATION_FRAMEWORK || !os(macOS)

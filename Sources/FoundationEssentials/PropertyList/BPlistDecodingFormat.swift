@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - Format
 
@@ -180,4 +180,4 @@ struct BPlistDecodingFormat: PlistDecodingFormat {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#endif  // FOUNDATION_FRAMEWORK || !os(macOS)

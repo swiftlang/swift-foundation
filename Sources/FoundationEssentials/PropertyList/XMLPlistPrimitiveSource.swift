@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - XMLPlistPrimitiveSource
 
@@ -200,4 +200,4 @@ struct XMLPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEvent
         }
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)

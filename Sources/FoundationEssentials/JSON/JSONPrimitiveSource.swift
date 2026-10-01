@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // `ParseEventSource` walker over a pre-scanned `JSONPrimitive` tree.
 // Emits raw byte views for strings/numbers; the sink materializes.
@@ -196,4 +196,4 @@ struct JSONPrimitiveSource: ParseEventSource, ~Copyable, ~Escapable {
         }
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !(os(macOS) || os(Windows))
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)
