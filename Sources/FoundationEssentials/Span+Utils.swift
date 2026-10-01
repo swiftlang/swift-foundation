@@ -182,6 +182,21 @@ extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
     }
 }
 
+extension OutputSpan<UInt8> {
+    @inline(__always)
+    mutating func _append(copying source: StaticString) {
+        source.withUTF8Buffer { _append(copying: $0.span) }
+    }
+
+    @inline(__always)
+    var last: UInt8? {
+        guard count > 0 else {
+            return nil
+        }
+        return self[count - 1]
+    }
+}
+
 extension String {
     package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
         try self.init(unsafeUninitializedCapacity: capacity) { buffer throws(E) in
