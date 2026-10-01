@@ -35,6 +35,7 @@ add_library(FoundationEssentials
 
 add_subdirectory(AttributedString)
 add_subdirectory(Calendar)
+add_subdirectory(Codable)
 add_subdirectory(Data)
 add_subdirectory(Decimal)
 add_subdirectory(Error)

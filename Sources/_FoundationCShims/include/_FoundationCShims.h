@@ -19,7 +19,6 @@
 #include "CFUniCharBitmapData.h"
 #include "CFUniCharBitmapDataAccess.h"
 #include "string_shims.h"
-#include "bplist_shims.h"
 #include "io_shims.h"
 #include "platform_shims.h"
 #include "filemanager_shims.h"

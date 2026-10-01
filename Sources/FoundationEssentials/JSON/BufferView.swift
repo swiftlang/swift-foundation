@@ -273,7 +273,7 @@ extension BufferView:
 extension BufferView /* where Element: BitwiseCopyable */ {
 
     //FIXME: mark closure parameter as non-escaping
-    func withUnsafeRawPointer<R>(
+    func withUnsafeRawPointer<R: ~Copyable>(
         _ body: (_ pointer: UnsafeRawPointer, _ count: Int) throws -> R
     ) rethrows -> R {
         try body(baseAddress, count * MemoryLayout<Element>.stride)

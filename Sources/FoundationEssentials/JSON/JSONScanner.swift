@@ -10,95 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-/*
- A JSONMap is created by a JSON scanner to describe the values found in a JSON payload, including their size, location, and contents, without copying any of the non-structural data. It is used by the JSONDecoder, which will fully parse only those values that are required to decode the requested Decodable types.
-
- To minimize the number of allocations required during scanning, the map's contents are implemented using an array of integers, whose values are a serialization of the JSON payload's full structure. Each type has its own unique marker value, which is followed by zero or more other integers that describe that contents of that type, if any.
-
- Due to the complexity and additional allocations required to parse JSON string values into Swift Strings or JSON number values into the requested integer or floating-point types, their map contents are captured as lengths of bytes and byte offsets into the input. This allows the full parsing to occur at decode time, or to be skipped if the value is not desired. A partial, imperfect parsing is performed by the scanner, simply "skipping" characters which are valid in their given contexts without interpreting or further validating them relative to the other inputs. This incomplete scanning process does however guarantee that the structure of the JSON input is correctly interpreted.
-
- The JSONMap representation of JSON arrays and objects is a sequence of integers that is delimited by their starting marker and a shared "collection end" marker. Their contents are nested in between those two markers. To facilitate skipping over unwanted elements of a collection, which is especially useful for JSON objects, the map encodes the offset in the map array to the next object after the end of the collection.
-
- For instance, a JSON payload such as the following:
-
- ```
- {"array":[1,2,3],"number":42}
- ```
-
- will be scanned into a map buffer looking like this:
-
- ```
- Key:
- <OM> == Object Marker
- <AM> == Array Marker
- <SS> == Simple String (a variant of String that can has no escapes and can be passed directly to a UTF-8 parser)
- <NM> == Number Marker
- <CE> == Collection End
- (See JSONMap.TypeDescriptor comments below for more details)
-
- Map offset:        0,  1, 2,    3, 4, 5,    6,  7, 8,    9, 10, 11,   12  13, 14,   15  16, 17,   18,   19, 20, 21,   22, 23, 24,   25
- Map contents: [ <OM>, 26, 2, <SS>, 5, 2, <AM>, 19, 3, <NM>,  1, 10, <NM>,  1, 12, <NM>,  1, 14, <CE>, <SS>,  6, 18, <NM>,  2, 26, <CE> ]
- Description:           |     -- key2 --  ------------------------- value1 --------------------------  --- key2 ---  -- value2 --
-                        |              |         |  --arr elm 0-  --arr elm 0-  --arr elm 0-
-                        |              > Byte offset from the beginning of the input to the contents of the string
-                        |                        > Offset to the next entry after this array, which is key2
-                        > Offset to next entry after this object, which is the endIndex of the array, as this is the top level value
-
- A Decodable type that wishes only to decode the "number" key of this object as an Int will be able to entirely skip the decoding of the "array" value by doing the following.
- 1. Find the type of the value at index 0 (object), and its size at index 2.
- 2. Begin parsing keys at index 3. It decodes the string, and finds "array", which is not a match for "number".
- 3. Skip the key's value by finding its type (array), and then its nextSiblingOffset index (19)
- 4. Parse the next key at index 4. It decodes the string and finds "number", which is a match.
- 5. Decode the value by findings its type (number), its length (2) and the byte offset from the beginning of the input (26).
- 6. Pass that byte offset + length into the number parser to produce the corresponding Swift Int value.
-*/
-
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
 
-internal class JSONMap {
-    enum TypeDescriptor : Int {
-        case string  // [marker, count, sourceByteOffset]
-        case number  // [marker, count, sourceByteOffset]
-        case null    // [marker]
-        case `true`  // [marker]
-        case `false` // [marker]
-
-        case object  // [marker, nextSiblingOffset, count, <keys and values>, .collectionEnd]
-        case array   // [marker, nextSiblingOffset, count, <values>, .collectionEnd]
-        case collectionEnd
-
-        case simpleString // [marker, count, sourceByteOffset]
-        case numberContainingExponent // [marker, count, sourceByteOffset]
-
-        @inline(__always)
-        var mapMarker: Int {
-            self.rawValue
-        }
-    }
-
-    struct Region {
-        let startOffset: Int
-        let count: Int
-    }
-
-    enum Value {
-        case string(Region, isSimple: Bool)
-        case number(Region, containsExponent: Bool)
-        case bool(Bool)
-        case null
-
-        case object(Region)
-        case array(Region)
-    }
-
-    let mapBuffer : [Int]
+internal class JSONDocument {
+    let map: JSONMap<ArrayMapRecords>
     let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
-    init(mapBuffer: [Int], dataBuffer: BufferView<UInt8>) {
-        self.mapBuffer = mapBuffer
+    init(map: consuming JSONMap<ArrayMapRecords>, dataBuffer: BufferView<UInt8>) {
+        self.map = map
         self.dataLock = .init((buffer: dataBuffer, allocation: nil))
+        // If the top-level value is a number, ensure a trailing NUL byte is available so strtod can't overrun.
+        if case .number = self.map.loadValue(at: 0) {
+            self.copyInBuffer()
+        }
     }
 
     func copyInBuffer() {
@@ -123,7 +49,7 @@ internal class JSONMap {
 
     @inline(__always)
     func withBuffer<T: ~Copyable, E>(
-      for region: Region, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
+      for region: JSONMapRegion, perform closure: (_ jsonBytes: BufferView<UInt8>, _ fullSource: BufferView<UInt8>) throws(E) -> sending T
     ) throws(E) -> sending T {
         try dataLock.withLock { state throws(E) in
             return try closure(state.buffer[region], state.buffer)
@@ -139,62 +65,19 @@ internal class JSONMap {
         }
     }
 
-    func loadValue(at mapOffset: Int) -> Value? {
-        let marker = mapBuffer[mapOffset]
-        let type = JSONMap.TypeDescriptor(rawValue: marker)
-        switch type {
-        case .string, .simpleString:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            return .string(.init(startOffset: dataOffset, count: length), isSimple: type == .simpleString)
-        case .number, .numberContainingExponent:
-            let length = mapBuffer[mapOffset + 1]
-            let dataOffset = mapBuffer[mapOffset + 2]
-            return .number(.init(startOffset: dataOffset, count: length), containsExponent: type == .numberContainingExponent)
-        case .object:
-            // Skip the offset to the next sibling value.
-            let count = mapBuffer[mapOffset + 2]
-            return .object(.init(startOffset: mapOffset + 3, count: count))
-        case .array:
-            // Skip the offset to the next sibling value.
-            let count = mapBuffer[mapOffset + 2]
-            return .array(.init(startOffset: mapOffset + 3, count: count))
-        case .null:
-            return .null
-        case .true:
-            return .bool(true)
-        case .false:
-            return .bool(false)
-        case .collectionEnd:
-            return nil
-        default:
-            fatalError("Invalid JSON value type code in mapping: \(marker))")
-        }
+    func loadValue(at mapOffset: Int) -> JSONMapValue? {
+        map.loadValue(at: mapOffset)
     }
 
     func offset(after previousValueOffset: Int) -> Int {
-        let marker = mapBuffer[previousValueOffset]
-        let type = JSONMap.TypeDescriptor(rawValue: marker)
-        switch type {
-        case .string, .simpleString, .number, .numberContainingExponent:
-            return previousValueOffset + 3 // Skip marker, length, and data offset
-        case .null, .true, .false:
-            return previousValueOffset + 1 // Skip only the marker.
-        case .object, .array:
-            // The collection records the offset to the next sibling.
-            return mapBuffer[previousValueOffset + 1]
-        case .collectionEnd:
-            fatalError("Attempt to find next object past the end of collection at offset \(previousValueOffset))")
-        default:
-            fatalError("Invalid JSON value type code in mapping: \(marker))")
-        }
+        map.offset(after: previousValueOffset)
     }
 
     struct ArrayIterator {
         var currentOffset: Int
-        let map : JSONMap
+        let document : JSONDocument
 
-        mutating func next() -> JSONMap.Value? {
+        mutating func next() -> JSONMapValue? {
             guard let next = peek() else {
                 return nil
             }
@@ -202,46 +85,46 @@ internal class JSONMap {
             return next
         }
 
-        func peek() -> JSONMap.Value? {
-            guard let next = map.loadValue(at: currentOffset) else {
+        func peek() -> JSONMapValue? {
+            guard let next = document.loadValue(at: currentOffset) else {
                 return nil
             }
             return next
         }
 
         mutating func advance() {
-            currentOffset = map.offset(after: currentOffset)
+            currentOffset = document.offset(after: currentOffset)
         }
     }
 
     func makeArrayIterator(from offset: Int) -> ArrayIterator {
-        return .init(currentOffset: offset, map: self)
+        return .init(currentOffset: offset, document: self)
     }
 
     struct ObjectIterator {
         var currentOffset: Int
-        let map : JSONMap
+        let document : JSONDocument
 
-        mutating func next() -> (key: JSONMap.Value, value: JSONMap.Value)? {
+        mutating func next() -> (key: JSONMapValue, value: JSONMapValue)? {
             let keyOffset = currentOffset
-            guard let key = map.loadValue(at: currentOffset) else {
+            guard let key = document.loadValue(at: currentOffset) else {
                 return nil
             }
-            let valueOffset = map.offset(after: keyOffset)
-            guard let value = map.loadValue(at: valueOffset) else {
-                preconditionFailure("JSONMap object constructed incorrectly. No value found for key")
+            let valueOffset = document.offset(after: keyOffset)
+            guard let value = document.loadValue(at: valueOffset) else {
+                preconditionFailure("JSONDocument object constructed incorrectly. No value found for key")
             }
-            currentOffset = map.offset(after: valueOffset)
+            currentOffset = document.offset(after: valueOffset)
             return (key, value)
         }
     }
 
     func makeObjectIterator(from offset: Int) -> ObjectIterator {
-        return .init(currentOffset: offset, map: self)
+        return .init(currentOffset: offset, document: self)
     }
 }
 
-extension JSONMap.Value {
+extension JSONMapValue {
     var debugDataTypeDescription : String {
         switch self {
         case .string: return "a string"
@@ -291,7 +174,7 @@ internal struct JSONScanner {
             }
         }
 
-        mutating func recordStartCollection(tagType: JSONMap.TypeDescriptor, with reader: DocumentReader) -> Int {
+        mutating func recordStartCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) -> Int {
             resizeIfNecessary(with: reader)
 
             mapData.append(tagType.mapMarker)
@@ -305,7 +188,7 @@ internal struct JSONScanner {
         mutating func recordEndCollection(count: Int, atStartOffset startOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(JSONMap.TypeDescriptor.collectionEnd.rawValue)
+            mapData.append(JSONMapTypeDescriptor.collectionEnd.rawValue)
 
             let nextValueOffset = mapData.count
             mapData.withUnsafeMutableBufferPointer {
@@ -314,20 +197,20 @@ internal struct JSONScanner {
             }
         }
 
-        mutating func recordEmptyCollection(tagType: JSONMap.TypeDescriptor, with reader: DocumentReader) {
+        mutating func recordEmptyCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMap.TypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
-        mutating func record(tagType: JSONMap.TypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
+        mutating func record(tagType: JSONMapTypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
         }
 
-        mutating func record(tagType: JSONMap.TypeDescriptor, with reader: DocumentReader) {
+        mutating func record(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             mapData.append(tagType.mapMarker)
@@ -339,7 +222,7 @@ internal struct JSONScanner {
         self.reader = DocumentReader(bytes: bytes)
     }
 
-    mutating func scan() throws -> JSONMap {
+    mutating func scan() throws -> JSONMap<ArrayMapRecords> {
         if options.assumesTopLevelDictionary {
             switch try reader.consumeWhitespace(allowingEOF: true) {
             case ._openbrace?:
@@ -371,14 +254,7 @@ internal struct JSONScanner {
             }
         }
 
-        let map = JSONMap(mapBuffer: partialMap.mapData, dataBuffer: self.reader.bytes)
-
-        // If any number token extends to the last byte of the input, we must give the map an owned buffer with a trailing NUL so that `strtod` (which peeks one byte past the last consumed digit) doesn't OOB read. Covers the top-level-number case and the `assumesTopLevelDictionary` case where the last value in the (brace-less) object is a number.
-        if numberExtendsToEndOfBuffer {
-            map.copyInBuffer()
-        }
-
-        return map
+        return JSONMap(records: .init(partialMap.mapData))
     }
 
     // MARK: Generic Value Scanning

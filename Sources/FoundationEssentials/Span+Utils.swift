@@ -62,6 +62,24 @@ extension Span<UInt8> {
 
         return true
     }
+    
+    /// Comparison against a prefix StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func starts(with prefix: StaticString) -> Bool {
+        let prefixLength = prefix.utf8CodeUnitCount
+        guard prefixLength > 0 else { return true }
+        guard self.count >= prefixLength else { return false }
+        // Precondition: self.count > 0
+        return withUnsafeBufferPointer { buffer in
+            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
+        }
+    }
+
+    /// Whole-span comparison against a StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func equals(_ other: StaticString) -> Bool {
+        count == other.utf8CodeUnitCount && starts(with: other)
+    }
 
     @inline(__always)
     var first: UInt8? {
