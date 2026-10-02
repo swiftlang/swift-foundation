@@ -662,10 +662,10 @@ extension Decimal {
                 significand: (0, significand),
                 tail: (UInt128(truncatingIfNeeded: (guardDigit &<< 2) | (roundBit == true ? 2 : 0) | (sticky ? 1 : 0)), 40),
                 exponent: Int32(exponent),
-                // Use the minimum exponent for *storage* irrespective of the default scale for arithmetic operations:
-                minExponent: -128,
                 // Round ties to even irrespective of the default rounding mode for arithmetic operations:
-                roundingMode: .bankers)
+                rounding: .toNearestOrEven,
+                // Use the minimum exponent for *storage* irrespective of the default scale for arithmetic operations:
+                minExponent: -128)
             return (result, inexact, index)
         } catch .underflow {
             throw .underflow(processedCodeUnits: index)

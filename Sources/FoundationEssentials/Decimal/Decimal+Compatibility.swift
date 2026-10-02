@@ -64,7 +64,7 @@ extension Decimal : _ObjectiveCBridgeable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(
-        exponent: y, roundingMode: .plain
+        exponent: y, rounding: .toNearestOrEven
     )
     return result ?? .nan
 }
@@ -76,8 +76,8 @@ private func __NSDecimalAdd(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let addition = try lhs.pointee._addReportingInexact(
-            rhs: rhs.pointee, roundingMode: roundingMode
+        let addition = try lhs.pointee._addingReportingInexact(
+            rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
         result.pointee = addition.result
         if addition.inexact {
@@ -112,8 +112,8 @@ private func __NSDecimalSubtract(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let subtraction = try lhs.pointee._subtractReportingInexact(
-            rhs: rhs.pointee, roundingMode: roundingMode
+        let subtraction = try lhs.pointee._subtractingReportingInexact(
+            rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
         result.pointee = subtraction.result
         if subtraction.inexact {
@@ -147,8 +147,8 @@ private func __NSDecimalMultiply(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._multiplyReportingInexact(
-            by: rhs.pointee, roundingMode: roundingMode
+        let product = try lhs.pointee._multipliedReportingInexact(
+            by: rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
         result.pointee = product.result
         if product.inexact {
@@ -184,8 +184,8 @@ private func __NSDecimalDivide(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let quotient = try lhs.pointee._divideReportingInexact(
-            by: rhs.pointee, roundingMode: roundingMode
+        let quotient = try lhs.pointee._dividedReportingInexact(
+            by: rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
         result.pointee = quotient.result
         if quotient.inexact {
@@ -222,7 +222,7 @@ private func __NSDecimalPower(
 ) -> Decimal.CalculationError {
     do {
         let power = try decimal.pointee._power(
-            exponent: exponent, roundingMode: roundingMode
+            exponent: exponent, rounding: _convertRoundingMode(roundingMode)
         )
         result.pointee = power
         return .noError
@@ -253,8 +253,8 @@ private func __NSDecimalMultiplyByPowerOf10(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try decimal.pointee._multiplyByPowerOfTenReportingInexact(
-            power: Int(power), roundingMode: roundingMode
+        let product = try decimal.pointee._multipliedReportingInexact(
+            byPowerOfTen: Int(power), rounding: _convertRoundingMode(roundingMode)
         )
         result.pointee = product.result
         if product.inexact {
@@ -310,9 +310,9 @@ private func __NSDecimalRound(
     _ roundingMode: Decimal.RoundingMode
 ) {
     do {
-        let rounded = try decimal.pointee._round(
-            scale: scale,
-            roundingMode: roundingMode
+        let rounded = try decimal.pointee._rounded(
+            _convertRoundingMode(roundingMode),
+            minExponent: -Int32(Int16(clamping: scale))
         )
         result.pointee = rounded
     } catch {
@@ -342,7 +342,7 @@ private func __NSDecimalNormalize(
     var a = lhs.pointee
     var b = rhs.pointee
     let lossOfPrecision = Decimal._normalize(
-        a: &a, b: &b, roundingMode: roundingMode
+        a: &a, b: &b, rounding: _convertRoundingMode(roundingMode)
     )
     lhs.pointee = a
     rhs.pointee = b
@@ -459,6 +459,17 @@ private func _convertError(_ error: any Error) -> Decimal.CalculationError {
         return .underflow
     case .divideByZero:
         return .divideByZero
+    }
+}
+
+@inline(always)
+private func _convertRoundingMode(_ mode: Decimal.RoundingMode) -> FloatingPointRoundingRule {
+    switch mode {
+    case .plain: return .toNearestOrAwayFromZero
+    case .bankers: return .toNearestOrEven
+    case .down: return .down
+    case .up: return .up
+    @unknown default: fatalError("Unknown rounding mode")
     }
 }
 

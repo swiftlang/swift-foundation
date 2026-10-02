@@ -33,6 +33,12 @@ import CRT
 @testable import Foundation
 #endif
 
+private extension FloatingPointRoundingRule {
+    // Borrow terminology from `Decimal.RoundingMode` to reduce code churn.
+    static var plain: Self { .toNearestOrAwayFromZero }
+    static var bankers: Self { .toNearestOrEven }
+}
+
 @Suite("Decimal")
 private struct DecimalTests {
 #if !FOUNDATION_FRAMEWORK // These tests tests the stub implementations
@@ -304,7 +310,7 @@ private struct DecimalTests {
     @Test func normalize() throws {
         var one = Decimal(1)
         var ten = Decimal(-10)
-        var lossPrecision = Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
+        var lossPrecision = Decimal._normalize(a: &one, b: &ten, rounding: .plain)
         #expect(!lossPrecision)
         #expect(Decimal(1) == one)
         #expect(Decimal(-10) == ten)
@@ -312,7 +318,7 @@ private struct DecimalTests {
         #expect(1 == ten._length)
         one = Decimal(1)
         ten = Decimal(10)
-        lossPrecision = Decimal._normalize(a: &one, b: &ten, roundingMode: .plain)
+        lossPrecision = Decimal._normalize(a: &one, b: &ten, rounding: .plain)
         #expect(!lossPrecision)
         #expect(Decimal(1) == one)
         #expect(Decimal(10) == ten)
@@ -327,7 +333,7 @@ private struct DecimalTests {
         var bNormalized = b
 
         lossPrecision = Decimal._normalize(
-            a: &aNormalized, b: &bNormalized, roundingMode: .plain)
+            a: &aNormalized, b: &bNormalized, rounding: .plain)
         #expect(lossPrecision)
 
         #expect(aNormalized.exponent == -35)
@@ -350,7 +356,7 @@ private struct DecimalTests {
         var addend: Decimal = one
         // 2 digits
         addend._exponent = -1
-        var (result, lostPrecision) = try one._addReportingInexact(rhs: addend, roundingMode: .plain)
+        var (result, lostPrecision) = try one._addingReportingInexact(addend, rounding: .plain)
         var expected: Decimal = Decimal()
         expected._isNegative = 0
         expected._isCompact = 0
@@ -370,11 +376,11 @@ private struct DecimalTests {
         expected._mantissa.5 = 0xd5da;
         expected._mantissa.6 = 0xee10;
         expected._mantissa.7 = 0x0785;
-        result = try one._add(rhs: addend, roundingMode: .plain)
+        result = try one._adding(addend, rounding: .plain)
         #expect(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
         // 39 Digits -- not guaranteed to work
         addend._exponent = -38
-        (result, lostPrecision) = try one._addReportingInexact(rhs: addend, roundingMode: .plain)
+        (result, lostPrecision) = try one._addingReportingInexact(addend, rounding: .plain)
         if !lostPrecision {
             expected._exponent = -38;
             expected._length = 8;
@@ -392,7 +398,7 @@ private struct DecimalTests {
         }
         // 40 Digits -- does NOT work, make sure we round
         addend._exponent = -39
-        (result, lostPrecision) = try one._addReportingInexact(rhs: addend, roundingMode: .plain)
+        (result, lostPrecision) = try one._addingReportingInexact(addend, rounding: .plain)
         #expect(lostPrecision)
         #expect("1" == result.description)
         #expect(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
@@ -411,22 +417,22 @@ private struct DecimalTests {
     @Test func additionWithScaling() throws {
         let a = Decimal(123)
         let b = Decimal(456) / Decimal(1000)
-        #expect(try a._add(rhs: b, roundingMode: .plain) == Decimal(string: "123.456"))
-        #expect(try a._add(rhs: b, minExponent: -2, roundingMode: .plain) == Decimal(string: "123.46"))
-        #expect(try a._add(rhs: b, minExponent: -2, roundingMode: .down) == Decimal(string: "123.45"))
-        #expect(try a._add(rhs: b, minExponent: 0, roundingMode: .plain) == Decimal(string: "123"))
-        #expect(try a._add(rhs: b, minExponent: 0, roundingMode: .up) == Decimal(string: "124"))
-        #expect(try a._add(rhs: b, minExponent: 2, roundingMode: .plain) == Decimal(string: "100"))
-        #expect(try a._add(rhs: b, minExponent: 2, roundingMode: .bankers) == Decimal(string: "100"))
+        #expect(try a._adding(b, rounding: .plain) == Decimal(string: "123.456"))
+        #expect(try a._adding(b, rounding: .plain, minExponent: -2) == Decimal(string: "123.46"))
+        #expect(try a._adding(b, rounding: .down, minExponent: -2) == Decimal(string: "123.45"))
+        #expect(try a._adding(b, rounding: .plain, minExponent: 0) == Decimal(string: "123"))
+        #expect(try a._adding(b, rounding: .up, minExponent: 0) == Decimal(string: "124"))
+        #expect(try a._adding(b, rounding: .plain, minExponent: 2) == Decimal(string: "100"))
+        #expect(try a._adding(b, rounding: .bankers, minExponent: 2) == Decimal(string: "100"))
 
         let c = Decimal(string: "1.005")!
         let d = Decimal(string: "2.005")!
-        #expect(try c._add(rhs: d, roundingMode: .plain) == Decimal(string: "3.01"))
-        #expect(try c._add(rhs: d, minExponent: -2, roundingMode: .plain) == Decimal(string: "3.01"))
-        #expect(try c._add(rhs: .zero, minExponent: -2, roundingMode: .bankers) == Decimal(1))
+        #expect(try c._adding(d, rounding: .plain) == Decimal(string: "3.01"))
+        #expect(try c._adding(d, rounding: .plain, minExponent: -2) == Decimal(string: "3.01"))
+        #expect(try c._adding(.zero, rounding: .bankers, minExponent: -2) == Decimal(1))
 
         let z = Decimal(string: "0.001")!
-        #expect(try z._addReportingInexact(rhs: z, minExponent: -2, roundingMode: .plain) == (.zero, true))
+        #expect(try z._addingReportingInexact(z, rounding: .plain, minExponent: -2) == (.zero, true))
     }
 
     @Test func simpleMultiplication() throws {
@@ -450,8 +456,8 @@ private struct DecimalTests {
                 multiplier._mantissa.0 = UInt16(j)
                 expected._mantissa.0 = UInt16(i) * UInt16(j)
 
-                let result = try multiplicand._multiply(
-                    by: multiplier, roundingMode: .plain
+                let result = try multiplicand._multiplied(
+                    by: multiplier, rounding: .plain
                 )
                 #expect(Decimal._compare(lhs: expected, rhs: result) == .orderedSame)
             }
@@ -465,22 +471,22 @@ private struct DecimalTests {
         negativeOne._isNegative = 1
 
         // 1 * 1
-        var result = try one._multiply(by: one, roundingMode: .plain)
+        var result = try one._multiplied(by: one, rounding: .plain)
         #expect(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
         // 1 * -1
-        result = try one._multiply(by: negativeOne, roundingMode: .plain)
+        result = try one._multiplied(by: negativeOne, rounding: .plain)
         #expect(Decimal._compare(lhs: negativeOne, rhs: result) == .orderedSame)
         // -1 * 1
-        result = try negativeOne._multiply(by: one, roundingMode: .plain)
+        result = try negativeOne._multiplied(by: one, rounding: .plain)
         #expect(Decimal._compare(lhs: negativeOne, rhs: result) == .orderedSame)
         // -1 * -1
-        result = try negativeOne._multiply(by: negativeOne, roundingMode: .plain)
+        result = try negativeOne._multiplied(by: negativeOne, rounding: .plain)
         #expect(Decimal._compare(lhs: one, rhs: result) == .orderedSame)
         // 1 * 0
-        result = try one._multiply(by: zero, roundingMode: .plain)
+        result = try one._multiplied(by: zero, rounding: .plain)
         #expect(Decimal._compare(lhs: zero, rhs: result) == .orderedSame)
         // 0 * 1
-        result = try zero._multiply(by: negativeOne, roundingMode: .plain)
+        result = try zero._multiplied(by: negativeOne, rounding: .plain)
         #expect(Decimal._compare(lhs: zero, rhs: result) == .orderedSame)
     }
 
@@ -499,26 +505,26 @@ private struct DecimalTests {
 
         // This test makes sure the following does NOT throw
         // max_mantissa * 2
-        _ = try multiplicand._multiply(
-            by: multiplier, roundingMode: .plain)
+        _ = try multiplicand._multiplied(
+            by: multiplier, rounding: .plain)
         // 2 * max_mantissa
-        _ = try multiplier._multiply(
-            by: multiplicand, roundingMode: .plain)
+        _ = try multiplier._multiplied(
+            by: multiplicand, rounding: .plain)
 
         // The following should throw .overflow
         multiplier._exponent = 0x7F
         #expect {
             // 2e127 * max_mantissa
-            _ = try multiplicand._multiply(
-                by: multiplier, roundingMode: .plain)
+            _ = try multiplicand._multiplied(
+                by: multiplier, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         #expect {
             // max_mantissa * 2e127
-            _ = try multiplier._multiply(
-                by: multiplicand, roundingMode: .plain)
+            _ = try multiplier._multiplied(
+                by: multiplicand, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
@@ -538,7 +544,7 @@ private struct DecimalTests {
         let a = Decimal(sign: .plus, exponent: -100, significand: Decimal(2))
         let b = Decimal(sign: .plus, exponent: -100, significand: Decimal(3))
         #expect {
-            _ = try a._multiplyReportingInexact(by: b, roundingMode: .plain)
+            _ = try a._multipliedReportingInexact(by: b, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .underflow
         }
@@ -547,25 +553,25 @@ private struct DecimalTests {
 
     @Test func multiplyByPowerOfTen() throws {
         let a = Decimal(1234)
-        var result = try a._multiplyByPowerOfTen(power: 1, roundingMode: .plain)
+        var result = try a._multiplied(byPowerOfTen: 1, rounding: .plain)
         #expect(result == Decimal(12340))
-        result = try a._multiplyByPowerOfTen(power: 2, roundingMode: .plain)
+        result = try a._multiplied(byPowerOfTen: 2, rounding: .plain)
         #expect(result == Decimal(123400))
-        result = try a._multiplyByPowerOfTen(power: 0, roundingMode: .plain)
+        result = try a._multiplied(byPowerOfTen: 0, rounding: .plain)
         #expect(result == Decimal(1234))
-        result = try a._multiplyByPowerOfTen(power: -2, roundingMode: .plain)
+        result = try a._multiplied(byPowerOfTen: -2, rounding: .plain)
         #expect(result == Decimal(12.34))
 
         // Overflow
         #expect {
-            _ = try a._multiplyByPowerOfTen(power: 163, roundingMode: .plain)
+            _ = try a._multiplied(byPowerOfTen: 163, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         // Underflow
         #expect {
-            _ = try Decimal(12.34)._multiplyByPowerOfTen(power: -130, roundingMode: .plain)
+            _ = try Decimal(12.34)._multiplied(byPowerOfTen: -130, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .underflow
         }
@@ -574,12 +580,12 @@ private struct DecimalTests {
     @Test func repeatingDivision() throws {
         let repeatingNumerator = Decimal(16)
         let repeatingDenominator = Decimal(9)
-        let repeating = try repeatingNumerator._divide(
-            by: repeatingDenominator, roundingMode: .down
+        let repeating = try repeatingNumerator._divided(
+            by: repeatingDenominator, rounding: .down
         )
         let numerator = Decimal(1010)
-        let result = try numerator._divide(
-            by: repeating, roundingMode: .down
+        let result = try numerator._divided(
+            by: repeating, rounding: .down
         )
         var expected = Decimal()
         expected._exponent = -3
@@ -630,10 +636,10 @@ private struct DecimalTests {
     @Test func divisionRoundingAndPrecision() throws {
         let a = Decimal(2)
         let b = Decimal(3)
-        #expect(try! a._divideReportingInexact(by: b, roundingMode: .plain).inexact)
+        #expect(try! a._dividedReportingInexact(by: b, rounding: .plain).inexact)
         #expect((a / b).description.hasSuffix("7"))
-        #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .up).result.description.hasSuffix("6"))
-        #expect(try! (-a)._divideReportingInexact(by: b, roundingMode: .down).result.description.hasSuffix("7"))
+        #expect(try! (-a)._dividedReportingInexact(by: b, rounding: .up).result.description.hasSuffix("6"))
+        #expect(try! (-a)._dividedReportingInexact(by: b, rounding: .down).result.description.hasSuffix("7"))
 
         #expect((Decimal(1) / Decimal.pi).description.hasSuffix("1830988618379067153776752674502872407")) // 0.31830988618379067153776752674502872407
 
@@ -651,38 +657,38 @@ private struct DecimalTests {
         let numerator = Decimal(exactly: UInt128.max / 5)!
         let denominator = Decimal(sign: .plus, exponent: 38, significand: 2)
         let expected = Decimal(sign: .plus, exponent: -39, significand: Decimal(exactly: UInt128.max)!)
-        #expect(try numerator._divideReportingInexact(by: denominator, roundingMode: .plain) == (expected, false))
+        #expect(try numerator._dividedReportingInexact(by: denominator, rounding: .plain) == (expected, false))
     }
 
     @Test func power() throws {
         var a = Decimal(1234)
-        var result = try a._power(exponent: 0, roundingMode: .plain)
+        var result = try a._power(exponent: 0, rounding: .plain)
         #expect(Decimal._compare(lhs: result, rhs: Decimal(1)) == .orderedSame)
         a = Decimal(8)
-        result = try a._power(exponent: 2, roundingMode: .plain)
+        result = try a._power(exponent: 2, rounding: .plain)
         #expect(Decimal._compare(lhs: result, rhs: Decimal(64)) == .orderedSame)
         a = Decimal(-2)
-        result = try a._power(exponent: 3, roundingMode: .plain)
+        result = try a._power(exponent: 3, rounding: .plain)
         #expect(Decimal._compare(lhs: result, rhs: Decimal(-8)) == .orderedSame)
-        result = try a._power(exponent: 0, roundingMode: .plain)
+        result = try a._power(exponent: 0, rounding: .plain)
         #expect(Decimal._compare(lhs: result, rhs: Decimal(1)) == .orderedSame)
         // Positive base
         let six = Decimal(6)
         for exponent in 1 ..< 10 {
-            result = try six._power(exponent: exponent, roundingMode: .plain)
+            result = try six._power(exponent: exponent, rounding: .plain)
             #expect(result.doubleValue == pow(6.0, Double(exponent)))
         }
         // Negative base
         let negativeSix = Decimal(-6)
         for exponent in 1 ..< 10 {
-            result = try negativeSix._power(exponent: exponent, roundingMode: .plain)
+            result = try negativeSix._power(exponent: exponent, rounding: .plain)
             #expect(result.doubleValue == pow(-6.0, Double(exponent)))
         }
         for i in -2 ... 10 {
             for j in 0 ... 5 {
                 let actual = Decimal(i)
                 let result = try actual._power(
-                    exponent: j, roundingMode: .plain
+                    exponent: j, rounding: .plain
                 )
                 let expected = Decimal(pow(Double(i), Double(j)))
                 #expect(expected == result, "\(result) == \(i)^\(j)")
@@ -696,65 +702,65 @@ private struct DecimalTests {
 
         #expect {
             // NaN + 1
-            _ = try nan._add(rhs: one, roundingMode: .plain)
+            _ = try nan._adding(one, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         #expect {
             // 1 + NaN
-            _ = try one._add(rhs: nan, roundingMode: .plain)
+            _ = try one._adding(nan, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         #expect {
             // NaN - 1
-            _ = try nan._subtract(rhs: one, roundingMode: .plain)
+            _ = try nan._subtracting(one, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         #expect {
             // 1 - NaN
-            _ = try one._subtract(rhs: nan, roundingMode: .plain)
+            _ = try one._subtracting(nan, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         #expect {
             // NaN * 1
-            _ = try nan._multiply(by: one, roundingMode: .plain)
+            _ = try nan._multiplied(by: one, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         #expect {
             // 1 * NaN
-            _ = try one._multiply(by: nan, roundingMode: .plain)
+            _ = try one._multiplied(by: nan, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         #expect {
             // NaN / 1
-            _ = try nan._divide(by: one, roundingMode: .plain)
+            _ = try nan._divided(by: one, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         #expect {
             // 1 / NaN
-            _ = try one._divide(by: nan, roundingMode: .plain)
+            _ = try one._divided(by: nan, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
 
         #expect {
             // NaN ^ 0
-            _ = try nan._power(exponent: 0, roundingMode: .plain)
+            _ = try nan._power(exponent: 0, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         #expect {
             // NaN ^ 1
-            _ = try nan._power(exponent: 1, roundingMode: .plain)
+            _ = try nan._power(exponent: 1, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
@@ -769,36 +775,36 @@ private struct DecimalTests {
 
     @Test func roundBankers() throws {
         let onePointTwo = Decimal(1.2)
-        var result = try onePointTwo._round(scale: 1, roundingMode: .bankers)
+        var result = try onePointTwo._rounded(.bankers, minExponent: -1)
         #expect((1.1009 ... 1.2001).contains(result.doubleValue))
 
         let onePointTwoOne = Decimal(1.21)
-        result = try onePointTwoOne._round(scale: 1, roundingMode: .bankers)
+        result = try onePointTwoOne._rounded(.bankers, minExponent: -1)
         #expect((1.1009 ... 1.2001).contains(result.doubleValue))
 
         let onePointTwoFive = Decimal(1.25)
-        result = try onePointTwoFive._round(scale: 1, roundingMode: .bankers)
+        result = try onePointTwoFive._rounded(.bankers, minExponent: -1)
         #expect((1.1009 ... 1.2001).contains(result.doubleValue))
 
         let onePointThreeFive = Decimal(1.35)
-        result = try onePointThreeFive._round(scale: 1, roundingMode: .bankers)
+        result = try onePointThreeFive._rounded(.bankers, minExponent: -1)
         #expect((1.3009 ... 1.4001).contains(result.doubleValue))
 
         let onePointTwoSeven = Decimal(1.27)
-        result = try onePointTwoSeven._round(scale: 1, roundingMode: .bankers)
+        result = try onePointTwoSeven._rounded(.bankers, minExponent: -1)
         #expect((1.2009 ... 3.2001).contains(result.doubleValue))
 
         let minusEightPointFourFive = Decimal(-8.45)
-        result = try minusEightPointFourFive._round(scale: 1, roundingMode: .bankers)
+        result = try minusEightPointFourFive._rounded(.bankers, minExponent: -1)
         #expect((-8.4001 ... -8.3009).contains(result.doubleValue))
 
         let minusFourPointNineEightFive = Decimal(-4.985)
-        result = try minusFourPointNineEightFive._round(scale: 2, roundingMode: .bankers)
+        result = try minusFourPointNineEightFive._rounded(.bankers, minExponent: -2)
         #expect((-4.9801 ... -4.9709).contains(result.doubleValue))
     }
 
     @Test func round() throws {
-        let testCases: [(Double, Double, Int, Decimal.RoundingMode)] = [
+        let testCases: [(Double, Double, Int, FloatingPointRoundingRule)] = [
             // expected, start, scale, round
             ( 0, 0.5, 0, .down ),
             ( 1, 0.5, 0, .up ),
@@ -823,7 +829,7 @@ private struct DecimalTests {
         for testCase in testCases {
             let (expected, start, scale, mode) = testCase
             let num = Decimal(start)
-            let actual = try num._round(scale: scale, roundingMode: mode)
+            let actual = try num._rounded(mode, minExponent: -Int32(scale))
             #expect(Decimal(expected) == actual, "Failed test case: \(testCase)")
         }
     }
@@ -928,36 +934,36 @@ private struct DecimalTests {
         #expect(Decimal.greatestFiniteMagnitude.magnitude == Decimal.greatestFiniteMagnitude)
 
         var a = Decimal(1234)
-        var result = try a._multiplyByPowerOfTen(power: 1, roundingMode: .plain)
+        var result = try a._multiplied(byPowerOfTen: 1, rounding: .plain)
         #expect(Decimal(12340) == result)
         a = Decimal(1234)
-        result = try a._multiplyByPowerOfTen(power: 2, roundingMode: .plain)
+        result = try a._multiplied(byPowerOfTen: 2, rounding: .plain)
         #expect(Decimal(123400) == result)
         a = result
         #expect {
-            result = try a._multiplyByPowerOfTen(power: 161, roundingMode: .plain)
+            result = try a._multiplied(byPowerOfTen: 161, rounding: .plain)
         } throws: {
             ($0 as? Decimal._CalculationError) == .overflow
         }
         a = Decimal(1234)
-        result = try a._multiplyByPowerOfTen(power: -2, roundingMode: .plain)
+        result = try a._multiplied(byPowerOfTen: -2, rounding: .plain)
         #expect(Decimal(12.34) == result)
         a = Decimal(1234)
-        result = try a._power(exponent: 0, roundingMode: .plain)
+        result = try a._power(exponent: 0, rounding: .plain)
         #expect(Decimal(1) == result)
         a = Decimal(8)
-        result = try a._power(exponent: 2, roundingMode: .plain)
+        result = try a._power(exponent: 2, rounding: .plain)
         #expect(Decimal(64) == result)
         a = Decimal(-2)
-        result = try a._power(exponent: 3, roundingMode: .plain)
+        result = try a._power(exponent: 3, rounding: .plain)
         #expect(Decimal(-8) == result)
         for i in -2...10 {
             for j in 0...5 {
                 let power = Decimal(i)
-                let actual = try power._power(exponent: j, roundingMode: .plain)
+                let actual = try power._power(exponent: j, rounding: .plain)
                 let expected = Decimal(pow(Double(i), Double(j)))
                 #expect(expected == actual, "\(actual) == \(i)^\(j)")
-                #expect(try expected == power._power(exponent: j, roundingMode: .plain))
+                #expect(try expected == power._power(exponent: j, rounding: .plain))
             }
         }
 
@@ -1152,7 +1158,7 @@ private struct DecimalTests {
         #expect(x.ulp == Decimal(string: "1e127")!)
         #expect(x.nextDown == x - Decimal(string: "1e127")!)
         #expect(x.nextUp.isNaN)
-        #expect(try x._addReportingInexact(rhs: x.ulp, roundingMode: .plain) == (x, true))
+        #expect(try x._addingReportingInexact(x.ulp, rounding: .plain) == (x, true))
 
         x.negate()
         #expect(x.nextDown.isNaN)
@@ -1304,8 +1310,8 @@ private struct DecimalTests {
     @Test func negativePower() throws {
         func test(withBase base: Decimal, power: Int, sourceLocation: SourceLocation = #_sourceLocation) throws {
             #expect(
-                try base._power(exponent: -power, roundingMode: .plain) ==
-                Decimal(1)/base._power(exponent: power, roundingMode: .plain),
+                try base._power(exponent: -power, rounding: .plain) ==
+                Decimal(1)/base._power(exponent: power, rounding: .plain),
                 "Base: \(base), Power: \(power)",
                 sourceLocation: sourceLocation
             )
@@ -1327,11 +1333,11 @@ private struct DecimalTests {
 
             // For zero base: 0^n = 0; 0^(-n) = nan
             #expect(
-                try Decimal(0)._power(exponent: power, roundingMode: .plain) ==
+                try Decimal(0)._power(exponent: power, rounding: .plain) ==
                 Decimal(0)
             )
             #expect(
-                try Decimal(0)._power(exponent: -power, roundingMode: .plain) ==
+                try Decimal(0)._power(exponent: -power, rounding: .plain) ==
                 Decimal.nan
             )
         }
@@ -1375,17 +1381,17 @@ private struct DecimalTests {
         let b = Decimal(sign: .plus, exponent: 1, significand: Decimal(exactly: UInt128.max / 10 + 1)!)
 
         // The midpoint of the five-unit gap is 2.5 units above `a`.
-        #expect(try a._addReportingInexact(rhs: Decimal(string: "0.75")!, roundingMode: .plain) == (a, true))
-        #expect(try a._addReportingInexact(rhs: Decimal(1), roundingMode: .plain) == (a, true))
-        #expect(try a._addReportingInexact(rhs: Decimal(1), roundingMode: .up) == (b, true))
-        #expect(try (-a)._addReportingInexact(rhs: Decimal(-1), roundingMode: .down) == (-b, true))
-        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.49")!, roundingMode: .plain) == (a, true))
-        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.5")!, roundingMode: .plain) == (b, true))
-        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.5")!, roundingMode: .bankers) == (b, true))
-        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.51")!, roundingMode: .plain) == (b, true))
+        #expect(try a._addingReportingInexact(Decimal(string: "0.75")!, rounding: .plain) == (a, true))
+        #expect(try a._addingReportingInexact(Decimal(1), rounding: .plain) == (a, true))
+        #expect(try a._addingReportingInexact(Decimal(1), rounding: .up) == (b, true))
+        #expect(try (-a)._addingReportingInexact(Decimal(-1), rounding: .down) == (-b, true))
+        #expect(try a._addingReportingInexact(Decimal(string: "2.49")!, rounding: .plain) == (a, true))
+        #expect(try a._addingReportingInexact(Decimal(string: "2.5")!, rounding: .plain) == (b, true))
+        #expect(try a._addingReportingInexact(Decimal(string: "2.5")!, rounding: .bankers) == (b, true))
+        #expect(try a._addingReportingInexact(Decimal(string: "2.51")!, rounding: .plain) == (b, true))
 
         // Restricting the scale excludes the finer endpoint.
-        #expect(try a._addReportingInexact(rhs: Decimal(1), minExponent: 1, roundingMode: .plain) == (b, true))
+        #expect(try a._addingReportingInexact(Decimal(1), rounding: .plain, minExponent: 1) == (b, true))
     }
 
     @Test func stringRoundingAcrossSignificandBoundary() throws {
