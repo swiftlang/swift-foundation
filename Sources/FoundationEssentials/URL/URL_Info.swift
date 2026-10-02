@@ -311,10 +311,10 @@ extension _URLInfo {
     }
 
     func replacingPath(
-        unsafeUninitializedCapacity capacity: Int,
+        capacity: Int,
         initializingWith initializer: (
-            _ buffer: UnsafeMutableBufferPointer<UInt8>
-        ) -> (initializedCount: Int, encodingState: PathEncodingState)
+            _ newPath: inout OutputSpan<UInt8>
+        ) -> PathEncodingState
     ) -> _URLInfo {
         withSpan { stringSpan in
             // Values the String closure reports back to us
@@ -328,23 +328,28 @@ extension _URLInfo {
                 var writeIndex = buffer.initialize(
                     fromSpan: stringSpan.extracting(..<pathRange.startIndex)
                 )
-                let pathAllocation = UnsafeMutableBufferPointer(
-                    rebasing: buffer[writeIndex..<(writeIndex + capacity)]
+
+                let reserved = UnsafeMutableBufferPointer(
+                    rebasing: buffer[writeIndex..<writeIndex + capacity]
                 )
-                let (initializedCount, encodingState) = initializer(pathAllocation)
-                pathLength = initializedCount
-                writeIndex += pathLength
+                var pathOutputSpan = OutputSpan(buffer: reserved, initializedCount: 0)
+                let encodingState = initializer(&pathOutputSpan)
 
-                let path = UnsafeBufferPointer(rebasing: pathAllocation[..<pathLength])
-                hasAbsolutePath = (path.first == ._slash)
-                hasDirectoryPath = path.hasDirectoryPath
-                hasEncodedPath = switch encodingState {
-                case .notEncoded: false
-                case .encoded: true
-                case .unknown: path.contains(UInt8(ascii: "%"))
+                // Scope the borrow of `pathOutputSpan` so we can finalize (consume it) below
+                do {
+                    let path = pathOutputSpan.span
+                    hasAbsolutePath = (path.first == ._slash)
+                    hasDirectoryPath = path.hasDirectoryPath
+                    hasEncodedPath = switch encodingState {
+                    case .notEncoded: false
+                    case .encoded: true
+                    case .unknown: path.contains(UInt8(ascii: "%"))
+                    }
+                    assert(hasEncodedPath == path.contains(UInt8(ascii: "%")))
                 }
-                assert(hasEncodedPath == path.contains(UInt8(ascii: "%")))
 
+                pathLength = pathOutputSpan.finalize(for: reserved)
+                writeIndex += pathLength
                 return buffer[writeIndex...].initialize(
                     fromSpan: stringSpan.extracting(pathRange.endIndex...)
                 )
@@ -409,13 +414,13 @@ extension _URLInfo {
     func appendingTrailingSlash() -> _URLInfo {
         withSpan { stringSpan in
             let path = stringSpan.extracting(pathRange)
-            guard path.last != UInt8(ascii: "/") else {
+            guard path.last != ._slash else {
                 return self
             }
-            return replacingPath(unsafeUninitializedCapacity: path.count + 1) { buffer in
-                let pathLength = buffer.initialize(fromSpan: path)
-                buffer[pathLength] = UInt8(ascii: "/")
-                return (pathLength + 1, flags.contains(.hasEncodedPath) ? .encoded : .notEncoded)
+            return replacingPath(capacity: path.count + 1) { newPath in
+                newPath._append(copying: path)
+                newPath.append(._slash)
+                return flags.contains(.hasEncodedPath) ? .encoded : .notEncoded
             }
         }
     }
@@ -431,12 +436,6 @@ private extension Range<Int> {
     }
 }
 
-private extension UnsafeBufferPointer<UInt8> {
-    var hasDirectoryPath: Bool {
-        URL.hasDirectoryPath(self, pathEnd: count, pathLength: count)
-    }
-}
-
 // MARK: - Original string
 
 extension _URLInfo {
@@ -448,106 +447,79 @@ extension _URLInfo {
             return string
         }
         return withSpan { stringSpan in
-            String(unsafeUninitializedCapacity: stringSpan.count) { buffer in
-                var writeIndex = 0
-
+            String(_capacity: stringSpan.count) { original in
+                // Components flagged `.didEncode` were escaped by the parser, which never leaves a bare "%", so decoding can't fail.
                 @inline(__always)
-                func decode(range: Range<Int>) -> Int? {
-                    URLEncoder.percentDecodeUnchecked(
+                func decodeAndAppend(_ range: Range<Int>) {
+                    URLEncoder.percentDecodeValidUnchecked(
                         input: stringSpan.extracting(range),
-                        output: .init(rebasing: buffer[writeIndex...])
+                        output: &original
                     )
                 }
 
                 if hasScheme {
-                    writeIndex = buffer.initialize(
-                        fromSpan: stringSpan.extracting(schemeRange)
-                    )
-                    buffer[writeIndex] = UInt8(ascii: ":")
-                    writeIndex += 1
+                    original._append(copying: stringSpan.extracting(schemeRange))
+                    original.append(UInt8(ascii: ":"))
                 }
                 if hasHost {
-                    buffer[writeIndex] = UInt8(ascii: "/")
-                    buffer[writeIndex + 1] = UInt8(ascii: "/")
-                    writeIndex += 2
+                    original.append(UInt8(ascii: "/"))
+                    original.append(UInt8(ascii: "/"))
                 }
                 if hasUser {
-                    if flags.contains(.didEncodeUser), let written = decode(range: userRange) {
-                        writeIndex += written
+                    if flags.contains(.didEncodeUser) {
+                        decodeAndAppend(userRange)
                     } else {
-                        writeIndex = buffer[writeIndex...].initialize(
-                            fromSpan: stringSpan.extracting(userRange)
-                        )
+                        original._append(copying: stringSpan.extracting(userRange))
                     }
                     if hasPassword {
-                        buffer[writeIndex] = UInt8(ascii: ":")
-                        writeIndex += 1
-                        if flags.contains(.didEncodePassword), let written = decode(range: passwordRange) {
-                            writeIndex += written
+                        original.append(UInt8(ascii: ":"))
+                        if flags.contains(.didEncodePassword) {
+                            decodeAndAppend(passwordRange)
                         } else {
-                            writeIndex = buffer[writeIndex...].initialize(
-                                fromSpan: stringSpan.extracting(passwordRange)
-                            )
+                            original._append(copying: stringSpan.extracting(passwordRange))
                         }
                     }
-                    buffer[writeIndex] = UInt8(ascii: "@")
-                    writeIndex += 1
+                    original.append(UInt8(ascii: "@"))
                 }
                 if hasHost {
                     if !flags.contains(.didEncodeHost) {
-                        writeIndex = buffer[writeIndex...].initialize(
-                            fromSpan: stringSpan.extracting(hostRange)
-                        )
+                        original._append(copying: stringSpan.extracting(hostRange))
                     } else {
                         let shouldPercentDecode = (
                             !flags.contains(.hasSpecialScheme) || flags.contains(.isIPLiteral) || _uidnaHook() == nil
                         )
-                        if shouldPercentDecode, let written = decode(range: hostRange) {
-                            writeIndex += written
+                        if shouldPercentDecode {
+                            decodeAndAppend(hostRange)
                         } else {
-                            writeIndex = buffer[writeIndex...].initialize(
-                                fromSpan: stringSpan.extracting(hostRange)
-                            )
+                            original._append(copying: stringSpan.extracting(hostRange))
                         }
                     }
                 }
                 if hasPort {
-                    buffer[writeIndex] = UInt8(ascii: ":")
-                    writeIndex += 1
-                    writeIndex = buffer[writeIndex...].initialize(
-                        fromSpan: stringSpan.extracting(portRange)
-                    )
+                    original.append(UInt8(ascii: ":"))
+                    original._append(copying: stringSpan.extracting(portRange))
                 }
-                if flags.contains(.didEncodePath), let written = decode(range: pathRange) {
-                    writeIndex += written
+                if flags.contains(.didEncodePath) {
+                    decodeAndAppend(pathRange)
                 } else {
-                    writeIndex = buffer[writeIndex...].initialize(
-                        fromSpan: stringSpan.extracting(pathRange)
-                    )
+                    original._append(copying: stringSpan.extracting(pathRange))
                 }
                 if hasQuery {
-                    buffer[writeIndex] = UInt8(ascii: "?")
-                    writeIndex += 1
-                    if flags.contains(.didEncodeQuery), let written = decode(range: queryRange) {
-                        writeIndex += written
+                    original.append(UInt8(ascii: "?"))
+                    if flags.contains(.didEncodeQuery) {
+                        decodeAndAppend(queryRange)
                     } else {
-                        writeIndex = buffer[writeIndex...].initialize(
-                            fromSpan: stringSpan.extracting(queryRange)
-                        )
+                        original._append(copying: stringSpan.extracting(queryRange))
                     }
                 }
                 if hasFragment {
-                    buffer[writeIndex] = UInt8(ascii: "#")
-                    writeIndex += 1
-                    if flags.contains(.didEncodeFragment), let written = decode(range: fragmentRange) {
-                        writeIndex += written
+                    original.append(UInt8(ascii: "#"))
+                    if flags.contains(.didEncodeFragment) {
+                        decodeAndAppend(fragmentRange)
                     } else {
-                        writeIndex = buffer[writeIndex...].initialize(
-                            fromSpan: stringSpan.extracting(fragmentRange)
-                        )
+                        original._append(copying: stringSpan.extracting(fragmentRange))
                     }
                 }
-                return writeIndex
             }
         }
     }
