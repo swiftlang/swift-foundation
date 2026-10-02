@@ -912,10 +912,29 @@ extension Decimal {
         }
     }
 
+    /// The significand of this decimal floating-point value as an unsigned integer.
+    ///
+    /// For a finite value, the magnitude is `significandInteger * 10 ** exponent`,
+    /// where `**` denotes exponentiation.
+    /// This property is zero when the value is zero or NaN.
+    ///
+    /// Equal values can have different integer significands and exponents.
+    /// This property describes the value's current representation.
     public var significandInteger: UInt128 {
         _length == 0 ? 0 : _significand
     }
 
+    /// Creates a decimal floating-point value with the given sign, exponent, and integer significand.
+    ///
+    /// The magnitude of the result is `significandInteger * 10 ** exponent`, where `**` denotes exponentiation.
+    /// The given exponent and integer significand are preserved in the resulting value's representation.
+    /// If `significandInteger` is zero, the result is zero when `sign` is `.plus` and NaN when `sign` is `.minus`,
+    /// as the type does not represent negative zero.
+    ///
+    /// - Parameters:
+    ///   - sign: The sign of the new value.
+    ///   - exponent: The exponent of the new value, which must be in the closed range `-128...127`.
+    ///   - significandInteger: The significand of the new value as an unsigned integer.
     public init(
         sign: FloatingPointSign,
         exponent: Int,
@@ -1202,6 +1221,17 @@ private func _boundMinExponent(_ minExponent: Int) -> Int32 {
 
 @available(anyAppleOS 10000, *)
 extension Decimal {
+    /// Adds the given value to this value in place.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func add(
         _ other: Decimal,
@@ -1211,6 +1241,21 @@ extension Decimal {
         self = self.adding(other, rounding: rule, minExponent: minExponent)
     }
 
+    /// Adds the given value to this value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func addReportingInexact(
@@ -1227,6 +1272,18 @@ extension Decimal {
         return addition.inexact
     }
 
+    /// Returns the sum of this value and the given value.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The sum of this value and `other`, rounded as specified.
     public func adding(
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1247,6 +1304,22 @@ extension Decimal {
         }
     }
 
+    /// Returns the sum of this value and the given value, along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing the sum of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func addingReportingInexact(
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1270,6 +1343,17 @@ extension Decimal {
         }
     }
 
+    /// Subtracts the given value from this value in place.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func subtract(
         _ other: Decimal,
@@ -1283,6 +1367,21 @@ extension Decimal {
         )
     }
 
+    /// Subtracts the given value from this value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func subtractReportingInexact(
@@ -1299,6 +1398,18 @@ extension Decimal {
         return subtraction.inexact
     }
 
+    /// Returns the difference obtained by subtracting the given value from this value.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The difference of this value and `other`, rounded as specified.
     public func subtracting(
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1319,6 +1430,23 @@ extension Decimal {
         }
     }
 
+    /// Returns the difference obtained by subtracting the given value from this value,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing the difference of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func subtractingReportingInexact(
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1342,6 +1470,17 @@ extension Decimal {
         }
     }
 
+    /// Multiplies this value by the given value in place.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func multiply(
         by other: Decimal,
@@ -1355,6 +1494,21 @@ extension Decimal {
         )
     }
 
+    /// Multiplies this value by the given value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func multiplyReportingInexact(
@@ -1371,6 +1525,18 @@ extension Decimal {
         return multiplication.inexact
     }
 
+    /// Returns the product of this value and the given value.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The product of this value and `other`, rounded as specified.
     public func multiplied(
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1391,6 +1557,23 @@ extension Decimal {
         }
     }
 
+    /// Returns the product of this value and the given value,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing the product of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func multipliedReportingInexact(
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1414,6 +1597,17 @@ extension Decimal {
         }
     }
 
+    /// Multiplies this value by the given power of ten in place.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func multiply(
         byPowerOfTen power: Int,
@@ -1427,6 +1621,21 @@ extension Decimal {
         )
     }
 
+    /// Multiplies this value by the given power of ten in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func multiplyReportingInexact(
@@ -1443,6 +1652,18 @@ extension Decimal {
         return multiplication.inexact
     }
 
+    /// Returns this value multiplied by the given power of ten.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: This value multiplied by ten raised to `power`, rounded as specified.
     public func multiplied(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
@@ -1463,6 +1684,23 @@ extension Decimal {
         }
     }
 
+    /// Returns this value multiplied by the given power of ten,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing this value multiplied by ten raised to `power`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func multipliedReportingInexact(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
@@ -1486,6 +1724,17 @@ extension Decimal {
         }
     }
 
+    /// Divides this value by the given value in place.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func divide(
         by other: Decimal,
@@ -1495,6 +1744,21 @@ extension Decimal {
         self = self.divided(by: other, rounding: rule, minExponent: minExponent)
     }
 
+    /// Divides this value by the given value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN or if `other` is zero, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func divideReportingInexact(
@@ -1511,6 +1775,18 @@ extension Decimal {
         return division.inexact
     }
 
+    /// Returns the quotient obtained by dividing this value by the given value.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The quotient of this value and `other`, rounded as specified.
     public func divided(
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1534,6 +1810,23 @@ extension Decimal {
         }
     }
 
+    /// Returns the quotient obtained by dividing this value by the given value,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN or if `other` is zero, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing the quotient of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func dividedReportingInexact(
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
@@ -1560,6 +1853,21 @@ extension Decimal {
         }
     }
 
+    /// Adds the product of the two given values to this value in place,
+    /// computed without intermediate rounding.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func addProduct(
         _ lhs: Decimal,
@@ -1575,6 +1883,25 @@ extension Decimal {
         )
     }
 
+    /// Adds the product of the two given values to this value in place,
+    /// computed without intermediate rounding, reporting whether the result is inexact.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If any operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func addProductReportingInexact(
@@ -1593,6 +1920,22 @@ extension Decimal {
         return addition.inexact
     }
 
+    /// Returns the result of adding the product of the two given values to this value,
+    /// computed without intermediate rounding.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The product of `lhs` and `rhs`, added to this value, rounded as specified.
     public func addingProduct(
         _ lhs: Decimal,
         _ rhs: Decimal,
@@ -1615,6 +1958,26 @@ extension Decimal {
         }
     }
 
+    /// Returns the result of adding the product of the two given values to this value,
+    /// computed without intermediate rounding, along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If any operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing the product of `lhs` and `rhs`, added to this value, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func addingProductReportingInexact(
         _ lhs: Decimal,
         _ rhs: Decimal,
@@ -1640,6 +2003,16 @@ extension Decimal {
         }
     }
 
+    /// Replaces this value with its square root.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func formSquareRoot(
         rounding rule: FloatingPointRoundingRule,
@@ -1648,6 +2021,19 @@ extension Decimal {
         self = self.squareRoot(rounding: rule, minExponent: minExponent)
     }
 
+    /// Replaces this value with its square root, reporting whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN or negative, the result is NaN and this method returns `false`.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: `true` if rounding changed the exact result; otherwise, `false`.
     @inlinable
     @discardableResult
     public mutating func formSquareRootReportingInexact(
@@ -1662,6 +2048,16 @@ extension Decimal {
         return root.inexact
     }
 
+    /// Rounds this value in place using the specified rounding rule and minimum exponent.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
     @inlinable
     public mutating func round(
         rounding rule: FloatingPointRoundingRule,
@@ -1670,6 +2066,17 @@ extension Decimal {
         self = self.rounded(rounding: rule, minExponent: minExponent)
     }
 
+    /// Returns this value rounded using the specified rounding rule and minimum exponent.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The value found by rounding using `rule` and `minExponent`.
     public func rounded(
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int
@@ -1688,6 +2095,17 @@ extension Decimal {
         }
     }
 
+    /// Returns the square root of this value.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: The square root of this value, rounded as specified.
     public func squareRoot(
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int
@@ -1706,6 +2124,20 @@ extension Decimal {
         }
     }
 
+    /// Returns the square root of this value, along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded using `rule` to the *n*th power of ten (subject to what the type can represent),
+    /// where *n* is `max(minExponent, -128)`.
+    /// For example, a minimum exponent of `-2` rounds to two decimal places;
+    /// a minimum exponent of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN or less than zero, the result is NaN and `inexact` is `false`.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - minExponent: The minimum exponent for rounding, which must not exceed `165`.
+    /// - Returns: A tuple containing the square root of this value, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func squareRootReportingInexact(
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int
