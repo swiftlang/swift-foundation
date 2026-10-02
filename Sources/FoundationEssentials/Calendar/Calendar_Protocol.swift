@@ -77,6 +77,25 @@ extension _CalendarProtocol {
     package var gregorianStartDate: Date? { nil }
     package var debugDescription: String { "\(identifier)" }
     
+    /// Combines exactly the state that `Calendar`'s `==` compares, so calendars that compare equal always hash equally. That means the resolved `firstWeekday`, not the stored one.
+    package func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
+        hasher.combine(timeZone)
+        hasher.combine(firstWeekday)
+        hasher.combine(minimumDaysInFirstWeek)
+        hasher.combine(localeIdentifier)
+        hasher.combine(preferredFirstWeekday)
+        hasher.combine(preferredMinimumDaysInFirstweek)
+    }
+
+    package func isDateInWeekend(_ date: Date) -> Bool {
+        let weekendRange = locale?.weekendRange ?? _CalendarUtility.defaultWeekendRange
+        let components = dateComponents([.weekday, .hour, .minute, .second], from: date, in: timeZone)
+        guard let weekday = components.weekday else { return false }
+        let timeInDay = TimeInterval((components.hour ?? 0) * Calendar._secondsInHour + (components.minute ?? 0) * Calendar._secondsInMinute + (components.second ?? 0))
+        return _CalendarUtility.isDateInWeekend(weekday: weekday, timeInDay: timeInDay, weekendRange: weekendRange)
+    }
+
     package var localeIdentifier: String {
         // We use this to provide a consistent answer for hashing and equality -- null is equal to an empty string
         locale?.identifier ?? ""
