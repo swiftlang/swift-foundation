@@ -157,8 +157,9 @@ extension stat {
     
     var creationDate: Date {
         #if canImport(Darwin)
-        Date(seconds: TimeInterval(st_ctimespec.tv_sec), nanoSeconds: TimeInterval(st_ctimespec.tv_nsec))
+        Date(seconds: TimeInterval(st_birthtimespec.tv_sec), nanoSeconds: TimeInterval(st_birthtimespec.tv_nsec))
         #else
+        // st_ctim records the last time the inode changed, which is the closest thing available here.
         Date(seconds: TimeInterval(st_ctim.tv_sec), nanoSeconds: TimeInterval(st_ctim.tv_nsec))
         #endif
     }
@@ -840,26 +841,45 @@ extension _FileManagerImpl {
                 }
             }
 
-            if let modification = attributes[.modificationDate] as? Date {
-                let seconds = modification.timeIntervalSince1601
+            // Malformed dates are dropped rather than reported as an error.
+            func fileTime(from date: Date) -> FILETIME? {
+                let seconds = date.timeIntervalSince1601
+                guard let converted = UInt64(exactly: seconds * 10000000.0) else {
+                    return nil
+                }
 
                 var uiTime: ULARGE_INTEGER = .init()
-                guard let converted = UInt64(exactly: seconds * 10000000.0) else {
-                    return
-                }
                 uiTime.QuadPart = converted
 
                 var ftTime: FILETIME = .init()
                 ftTime.dwLowDateTime = uiTime.LowPart
                 ftTime.dwHighDateTime = uiTime.HighPart
+                return ftTime
+            }
 
+            func withOptionalPointer<T, R>(to value: T?, _ body: (UnsafePointer<T>?) -> R) -> R {
+                guard let value else {
+                    return body(nil)
+                }
+                return withUnsafePointer(to: value) { body($0) }
+            }
+
+            let creationTime = (attributes[.creationDate] as? Date).flatMap(fileTime(from:))
+            let modificationTime = (attributes[.modificationDate] as? Date).flatMap(fileTime(from:))
+
+            if creationTime != nil || modificationTime != nil {
                 let hFile: HANDLE = CreateFileW($0, GENERIC_WRITE, FILE_SHARE_WRITE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nil)
                 if hFile == INVALID_HANDLE_VALUE {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
                 }
                 defer { CloseHandle(hFile) }
 
-                guard SetFileTime(hFile, nil, nil, &ftTime) else {
+                let succeeded = withOptionalPointer(to: creationTime) { creation in
+                    withOptionalPointer(to: modificationTime) { modification in
+                        SetFileTime(hFile, creation, nil, modification)
+                    }
+                }
+                guard succeeded else {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
                 }
             }
@@ -962,7 +982,7 @@ extension _FileManagerImpl {
                 #endif
             }
             
-            try Self._setCatInfoAttributes(attributes, path: path)
+            try Self._setCatInfoAttributes(attributes, path: path, fileSystemRepresentation: fileSystemRepresentation)
             
             if let extendedAttrs = attributes[.init("NSFileExtendedAttributes")] as? [String : Data] {
                 #if os(WASI) || os(OpenBSD) || os(Emscripten)
