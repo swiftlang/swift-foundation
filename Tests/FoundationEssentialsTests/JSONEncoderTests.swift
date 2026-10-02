@@ -1157,6 +1157,32 @@ private struct JSONEncoderTests {
         }
     }
 
+    @Test func encodingEscapesInLongStrings() {
+        // The writer scans for characters to escape 8 bytes at a time, starting after the first byte that doesn't need escaping
+        let testCases = [
+            // First byte of the first scanned word
+            "a\"bcdefghijklmnopqr": #""a\"bcdefghijklmnopqr""#,
+            // Last byte of the first scanned word
+            "abcdefgh\\ijklmnopqr": #""abcdefgh\\ijklmnopqr""#,
+            // First byte of the second scanned word
+            "abcdefghi/jklmnopqr": #""abcdefghi\/jklmnopqr""#,
+            // Last byte of the second scanned word, followed by more text to scan
+            "abcdefghijklmnop\u{0}qrstuvwxyz": #""abcdefghijklmnop\u0000qrstuvwxyz""#,
+            // Fewer than 8 bytes remain
+            "abcdefghijklmnopqr\n": #""abcdefghijklmnopqr\n""#,
+            // Several escapes, separated by text long enough to scan
+            "abcdefghijk\u{1f}lmnopqrstuv\"wxyzABCDEFGH\\IJKLMNOP": #""abcdefghijk\u001flmnopqrstuv\"wxyzABCDEFGH\\IJKLMNOP""#,
+            // Bytes adjacent to the ones that need escaping
+            "ab !#.0[]^~{}|AZaz": #""ab !#.0[]^~{}|AZaz""#,
+            // Non-ASCII text
+            "café naïve 日本語 😀 résumé": #""café naïve 日本語 😀 résumé""#,
+        ]
+        for (string, json) in testCases {
+            _testRoundTrip(of: string, expectedJSON: Data(json.utf8))
+        }
+        _testRoundTrip(of: "https://swift.org/a/b/c/d", expectedJSON: Data(#""https://swift.org/a/b/c/d""#.utf8), outputFormatting: [.withoutEscapingSlashes])
+    }
+
     @Test(arguments: [
         "\\uD834", "\\uD834hello", "hello\\uD834", "\\uD834\\u1221", "\\uD8", "\\uD834x\\uDD1E"
     ])
