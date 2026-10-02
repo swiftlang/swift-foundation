@@ -1,0 +1,40 @@
+# editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown gives two trailing spaces the meaning of a hard line break, which the
+# proposals under Proposals/ rely on.
+[*.md]
+trim_trailing_whitespace = false
+
+# Test and benchmark inputs are byte-for-byte fixtures rather than source: many
+# deliberately end without a trailing newline, some use CR or CRLF line endings
+# on purpose (see Tests/FoundationEssentialsTests/Resources/JSON5/spec/new-lines,
+# which has its own .editorconfig and marks its contents binary in .gitattributes),
+# and others are binary property lists. Editors must not normalize any of that.
+[Tests/**/Resources/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[Benchmarks/**/Resources/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
