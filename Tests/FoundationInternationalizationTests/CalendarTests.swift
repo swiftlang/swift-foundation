@@ -1515,6 +1515,13 @@ private struct CalendarTests {
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
     }
 
+    @Test func addNaN_compatibility() throws {
+        let date = Date(timeIntervalSinceReferenceDate: .nan)
+        let calendar = Calendar(identifier: .gregorian)
+        let prevMonth = calendar.date(byAdding: .month, value: -1, to: date)
+        #expect(prevMonth != nil)
+    }
+
     @Test func testDateComponentsTimeZone() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
