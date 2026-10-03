@@ -173,27 +173,7 @@ extension JSONParserDecoder {
                 case .pureInteger(let integer):
                     return integer
                 case .retryAsFloatingPoint:
-                    // The number is spelled like a floating point value, but JSON numbers
-                    // are untyped, so it may still denote an exact integer.
-                    if let integer = try reader.parseIntegerFromFloatingPointForm(as: T.self) ^^ .jsonError {
-                        return integer
-                    }
-
-                    // Either the value is not a whole number, or the token is malformed. Fall back to Double
-                    // TODO: Slowpath? Lots of inlined code here.
-                    let double = try reader.parseFloatingPoint(as: Double.self) ^^ .jsonError
-                    guard let integer = T(exactly: double) else {
-                        // TODO: Include the parsed string? Explain we're trying to represent as an integer?
-                        throw .json(JSONError.numberIsNotRepresentableInSwift(parsed: String(double)))
-                    }
-                    
-                    // Double only has 53 bits of significand, so values with magnitude >= 2^53
-                    // may have been rounded. Reject them to avoid silently returning wrong integers.
-                    if double.magnitude >= Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
-                        throw .json(JSONError.numberIsNotRepresentableInSwift(parsed: String(double)))
-                    }
-                    
-                    return integer
+                    return try reader.parseIntegerFromFloatingPointForm(as: T.self) ^^ .jsonError
                 case .notANumber:
                     throw .decoding(decodingError(expectedTypeDescription: "integer number"))
                 }
@@ -1208,7 +1188,7 @@ extension JSONParserDecoder {
             @_lifetime(self: copy self)
             internal mutating func parseIntegerFromFloatingPointForm<Result: FixedWidthInteger>(
                 as _: Result.Type
-            ) throws(JSONError) -> Result? {
+            ) throws(JSONError) -> Result {
                 let startOffset = readOffset
 
                 var isNegative = false
@@ -1229,8 +1209,8 @@ extension JSONParserDecoder {
                 }
                 let intCount = readOffset - intStart
                 guard intCount > 0 else {
-                    self.readOffset = startOffset
-                    return nil
+                    // No digits at all, e.g. ".5".
+                    throw _numberNotRepresentableError(from: startOffset)
                 }
 
                 // Fraction part.
@@ -1245,8 +1225,7 @@ extension JSONParserDecoder {
                     fracCount = readOffset - fracStart
                     guard fracCount > 0 else {
                         // A '.' with no digits after it is malformed JSON.
-                        self.readOffset = startOffset
-                        return nil
+                        throw _numberNotRepresentableError(from: startOffset)
                     }
                 }
 
@@ -1276,8 +1255,7 @@ extension JSONParserDecoder {
                     }
                     guard readOffset > exponentDigitStart else {
                         // An exponent marker with no digits after it is malformed JSON.
-                        self.readOffset = startOffset
-                        return nil
+                        throw _numberNotRepresentableError(from: startOffset)
                     }
                     if exponentIsNegative {
                         exponent = -exponent
@@ -1305,13 +1283,11 @@ extension JSONParserDecoder {
                 if effectiveExponent < 0 {
                     let dropCount = -effectiveExponent
                     guard dropCount < significantCount else {
-                        self.readOffset = startOffset
-                        return nil
+                        throw _numberNotRepresentableError(from: startOffset)
                     }
                     for index in (totalCount - dropCount) ..< totalCount {
                         guard _combinedDigit(at: index, intStart: intStart, intCount: intCount, fracStart: fracStart) == _0 else {
-                            self.readOffset = startOffset
-                            return nil
+                            throw _numberNotRepresentableError(from: startOffset)
                         }
                     }
                     significantCount -= dropCount

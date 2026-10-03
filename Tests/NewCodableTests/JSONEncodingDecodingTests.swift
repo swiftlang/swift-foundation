@@ -1634,6 +1634,8 @@ struct JSONEncodingDecodingTests {
         try check(Int64.self, "-9007199254740992.0", -9007199254740992)
 
         // Malformed numbers are still diagnosed rather than silently accepted.
+        checkThrows(Int.self, ".5")
+        checkThrows(Int.self, "-.5")
         checkThrows(Int.self, "1.")
         checkThrows(Int.self, "1e")
         checkThrows(Int.self, "1e+")
@@ -1660,25 +1662,24 @@ struct JSONEncodingDecodingTests {
         }
     }
 
-    @Test func fractionalDigitsBeyondDoublePrecisionAreStillAcceptedAsIntegers() throws {
+    @Test func fractionalPartsAreRejected() throws {
         let decoder = NewJSONDecoder()
 
-        func check<T: FixedWidthInteger & CommonDecodable>(_ type: T.Type, _ json: String, _ expected: T, sourceLocation: SourceLocation = #_sourceLocation) throws {
-            let result = try decoder.decode(T.self, from: Data(json.utf8))
-            #expect(result == expected, "Unexpected result for input \"\(json)\"", sourceLocation: sourceLocation)
+        func checkThrows<T: FixedWidthInteger & CommonDecodable>(_ type: T.Type, _ json: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(throws: (any Error).self, "Expected input \"\(json)\" to be rejected", sourceLocation: sourceLocation) {
+                try decoder.decode(T.self, from: Data(json.utf8))
+            }
         }
 
-        try check(Int.self, "1.0000000000000001", 1)
-        try check(Int.self, "1.00000000000000000000000000001", 1)
-        try check(Int.self, "1.000000000000000000000000000000000000000000000001", 1)
-        try check(Int.self, "-1.0000000000000001", -1)
-        try check(Int.self, "42.0000000000000001", 42)
+        checkThrows(Int.self, "1.0000000000000001")
+        checkThrows(Int.self, "1.00000000000000000000000000001")
+        checkThrows(Int.self, "1.000000000000000000000000000000000000000000000001")
+        checkThrows(Int.self, "-1.0000000000000001")
+        checkThrows(Int.self, "42.0000000000000001")
+        checkThrows(Int128.self, "18446744073709551615.00000000000000000001")
 
-        // Stops at 2^53, where a Double may have been rounded to a
-        // different integer entirely.
-        #expect(throws: (any Error).self) {
-            try decoder.decode(Int128.self, from: Data("18446744073709551615.00000000000000000001".utf8))
-        }
+        #expect(try decoder.decode(Int.self, from: Data("1.0000000000000000".utf8)) == 1)
+        #expect(try decoder.decode(UInt64.self, from: Data("18446744073709551615.00000000000000000000".utf8)) == .max)
     }
 
     @Test func jsonPrimitiveNumberDecodesIntegersSpelledAsFloatingPoint() throws {
