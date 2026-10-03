@@ -1344,7 +1344,22 @@ extension FixedWidthInteger {
         return (nil, inexact)
     }
 
-    internal init(_ source: Decimal) {
+    /// Creates an integer from the given decimal floating-point value, rounding toward zero.
+    ///
+    /// Any fractional part of the value passed as `source` is removed, rounding the value toward zero.
+    ///
+    ///     let x = Int(Decimal(21.5))
+    ///     // x == 21
+    ///     let y = Int(Decimal(-21.5))
+    ///     // y == -21
+    ///
+    /// If `source` is NaN or is outside the bounds of this type after rounding toward zero,
+    /// a runtime error occurs.
+    ///
+    /// - Parameter source: A decimal floating-point value to convert to an integer.
+    ///   `source` must be representable in this type after rounding toward zero.
+    @available(FoundationPreview 6.5, *)
+    public init(_ source: Decimal) {
         // Truncating conversion, trapping if out of range or NaN.
         guard let value = Self._convert(from: source).value else {
             preconditionFailure("Decimal value cannot be converted to \(Self.self): out of range or NaN")
@@ -1352,7 +1367,22 @@ extension FixedWidthInteger {
         self = value
     }
 
-    internal init?(exactly source: Decimal) {
+    /// Creates an integer from the given decimal floating-point value, if it can be represented exactly.
+    ///
+    /// If the value passed as `source` is not representable exactly, the result is `nil`.
+    /// In the following example, `x` is successfully created from a value of `21`,
+    /// while the attempt to initialize `y` from `21.5` fails:
+    ///
+    ///     let x = Int(exactly: Decimal(21))
+    ///     // x == Optional(21)
+    ///     let y = Int(exactly: Decimal(21.5))
+    ///     // y == nil
+    ///
+    /// If `source` is NaN or is outside the bounds of this type, the result is `nil`.
+    ///
+    /// - Parameter source: A decimal floating-point value to convert to an integer.
+    @available(FoundationPreview 6.5, *)
+    public init?(exactly source: Decimal) {
         // Exact conversion, nil if inexact, out of range, or NaN.
         guard case (let value?, false) = Self._convert(from: source) else {
             return nil
