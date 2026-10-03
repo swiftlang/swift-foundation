@@ -1226,8 +1226,8 @@ private struct JSONEncoderTests {
     }
 
     @Test func jsonNumberFragments() {
-        let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10"]
-        let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0]
+        let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10", "0e1", "0E1", "0.00e1", "-0.0e5"]
+        let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0, 0, 0, 0, 0]
         for (json, expected) in zip(array, expected) {
             _test(JSONString: json, to: expected)
         }

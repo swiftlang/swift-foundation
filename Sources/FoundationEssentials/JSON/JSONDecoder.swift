@@ -998,17 +998,19 @@ extension JSONLegacyDecoderImpl: Decoder {
             remainingBuffer = remainingBuffer.dropFirst(4)
         }
 
-        // Process any remaining bytes in the same way.
+        // Process any remaining bytes in the same way, in forward order: an 'e'/'E' must be seen before the exponent digits that follow it.
+        var off = 0
         switch remainingBuffer.count {
         case 3:
-            if let res = check(2) { return res }
+            if let res = check(off) { return res }
+            off &+= 1
             fallthrough
         case 2:
-            if let res = check(1) { return res }
+            if let res = check(off) { return res }
+            off &+= 1
             fallthrough
         case 1:
-            if let res = check(0) { return res }
-            break
+            if let res = check(off) { return res }
         default:
             break
         }
