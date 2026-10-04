@@ -404,7 +404,8 @@ extension Decimal /* : FloatingPoint */ {
                 )
             }
         } else {
-            if _length != 0 && _exponent < 127 && _significand == .max {
+            if _length != 0 && _significand == .max {
+                guard _exponent < 127 else { return .nan }
                 return Decimal(
                     _exponent: _exponent &+ 1,
                     _length: 8,

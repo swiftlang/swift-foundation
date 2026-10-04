@@ -508,14 +508,19 @@ extension Decimal {
         var full = false
         // We're 'full' if the significand is at capacity and further digits need to be dropped.
         var halfFull = false
-        var round = 0
+        var guardDigit = 0
+        var roundDigit = 16 // Sentinel value that's not a single digit (which can be masked out).
         var sticky = false
         var exponent = 0
 
         @inline(__always)
         func consume(_ digit: Int, _ fraction: Bool) {
             if full {
-                if digit != 0 { sticky = true }
+                if roundDigit >= 10 { // Test for sentinel value that's not a single digit.
+                    roundDigit = digit
+                } else if digit != 0 {
+                    sticky = true
+                }
                 // Increment exponent if dropping a non-fractional digit.
                 if !fraction { exponent += 1 }
                 return
@@ -538,7 +543,7 @@ extension Decimal {
             let (sum, ov2) = product.addingReportingOverflow(UInt128(truncatingIfNeeded: digit))
             if ov1 || ov2 {
                 full = true
-                round = digit
+                guardDigit = digit
                 // Increment exponent if dropping a non-fractional digit.
                 if !fraction { exponent += 1 }
                 return
@@ -654,8 +659,7 @@ extension Decimal {
             let (result, inexact) = try Self._assemble(
                 isNegative: isNegative,
                 significand: (0, significand),
-                tail: (UInt128(truncatingIfNeeded: round &<< 1) | (sticky ? 1 : 0), 20),
-                // See `_assemble` itself for more on handling the round digit and sticky bit.
+                tail: (UInt128(truncatingIfNeeded: (guardDigit &* 10 &+ (roundDigit & 0xF)) &<< 1) | (sticky ? 1 : 0), 200),
                 exponent: Int32(exponent),
                 // Use the minimum exponent for *storage* irrespective of the default scale for arithmetic operations:
                 minExponent: -128,

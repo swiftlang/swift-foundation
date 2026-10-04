@@ -642,7 +642,7 @@ private struct DecimalTests {
         let quotient2 = Decimal(-1) / huge
         #expect(!quotient1.isZero)
         #expect(!quotient1.isNaN)
-        #expect(quotient1.description.hasSuffix("9387358770557187699218413430556141946")) // 2.9387358770557187699218413430556141946e-39
+        #expect(quotient1.description.hasSuffix("93873587705571876992184134305561419456")) // 2.93873587705571876992184134305561419456e-39
         #expect(!quotient2.isZero)
         #expect(!quotient2.isNaN)
         #expect(quotient2 < .zero)

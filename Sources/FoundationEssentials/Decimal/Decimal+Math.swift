@@ -548,14 +548,25 @@ extension Decimal {
             shift &+= 1
             scaled &*= 10
         }
-        let (hi, lo) = scaled.multipliedFullWidth(by: 100_000_000_000_000_000_000_000_000_000_000_000_000)
+        var (hi, lo) = scaled.multipliedFullWidth(by: 100_000_000_000_000_000_000_000_000_000_000_000_000)
+        var exponent = self._exponent - divisor._exponent - Int32(shift) - 38
+        if exponent > minExponent && scaled <= 115792089237316195423570985008687907853 /* UInt256.max / (10 ** 39) */ {
+            var hi_: UInt128
+            let lo_: UInt128
+            (hi_, lo_) = lo.multipliedFullWidth(by: 10)
+            hi_ += hi * 10
+            if hi_ < dm {
+                (hi, lo) = (hi_, lo_)
+                exponent -= 1
+            }
+        }
         let (q1, r1) = hi.quotientAndRemainder(dividingBy: dm)
         let (q2, r2) = dm.dividingFullWidth((r1, lo))
         return try Self._assemble(
             isNegative: isNegative,
             significand: (q1, q2),
             tail: (r2, dm),
-            exponent: self._exponent - divisor._exponent - Int32(shift) - 38,
+            exponent: exponent,
             minExponent: minExponent,
             roundingMode: roundingMode)
     }
@@ -1141,7 +1152,8 @@ extension Decimal {
 
         var (high, low) = significand
         var exponent = exponent
-        var round = 0 as UInt128
+        var guardDigit = 0 as UInt128
+        var ¾ = false // Whether discarded digits ≥ 0.75 ulp,
         var sticky = tail.numerator != 0
         var shifted = false
         var underflowed = false
@@ -1167,17 +1179,23 @@ extension Decimal {
             if q1 != 0 {
                 if r2 != 0 { sticky = true }
                 // Correct for underestimation.
-                (low, round) = UInt128._quotientAndRemainder(
+                (low, guardDigit) = UInt128._quotientAndRemainder(
                     fullWidth: (q1, q2), dividingBy1e: 1)
+                ¾ = guardDigit > 7 ||
+                    (guardDigit == 7 && r2 >= _uint128_pow10[estimate] &>> 1)
                 exponent += Int32(estimate &+ 1)
             } else {
                 if estimate == 1 {
-                    (low, round) = (q2, r2)
+                    (low, guardDigit) = (q2, r2)
+                    ¾ = guardDigit > 7 ||
+                        (guardDigit == 7 && tail.numerator >= tail.denominator - tail.numerator)
                 } else {
                     low = q2
                     let r3: UInt128
-                    (round, r3) = r2._quotientAndRemainder(
+                    (guardDigit, r3) = r2._quotientAndRemainder(
                         dividingBy1e: estimate &- 1)
+                    ¾ = guardDigit > 7 ||
+                        (guardDigit == 7 && r3 >= _uint128_pow10[estimate &- 1] &>> 1)
                     if r3 != 0 { sticky = true }
                 }
                 exponent += Int32(estimate)
@@ -1189,19 +1207,19 @@ extension Decimal {
         // Shrink significand further, if necessary, so that `exponent >= minExponent`.
         // This step and the regrowing step below are obviously mutually exclusive.
         if exponent < minExponent {
-            if round != 0 { sticky = true }
+            if guardDigit != 0 { sticky = true }
             let k = Int(minExponent - exponent)
             if k > 39 {
                 if low != 0 { sticky = true }
-                (low, round) = (0, 0)
+                (low, guardDigit) = (0, 0)
             } else {
                 if k == 1 {
-                    (low, round) = low._quotientAndRemainder(dividingBy1e: 1)
+                    (low, guardDigit) = low._quotientAndRemainder(dividingBy1e: 1)
                 } else {
                     let (q, r) = low._quotientAndRemainder(
                         dividingBy1e: k &- 1)
                     if r != 0 { sticky = true }
-                    (low, round) = q._quotientAndRemainder(dividingBy1e: 1)
+                    (low, guardDigit) = q._quotientAndRemainder(dividingBy1e: 1)
                 }
             }
             exponent = minExponent
@@ -1209,17 +1227,57 @@ extension Decimal {
             underflowed = (minExponent <= Self._minExponent)
         }
 
+        // Unlike IEEE 754 decimal formats, `Decimal` limits its significand to
+        // 128 bits rather than a fixed number of decimal digits. Consequently,
+        // for a positive value `x` with `_significand == UInt128.max`, the gap
+        // to `x.nextUp` is 5 units in the last place of `x` (except for
+        // `.greatestFiniteMagnitude`, as it has no finite successor).
+        //
+        // Account for this gap by using proxy values for either `tail` or
+        // `guardDigit` and `sticky` to control rounding. At the midpoint, both
+        // plain schoolbook and bankers' rounding would round away, so we don't
+        // have to distinguish an exact midpoint from a value above it.
+        var tail = tail
+        if sticky || (shifted && guardDigit != 0) {
+            if low == .max {
+                if shifted {
+                    guardDigit = 2
+                    sticky = false
+                } else {
+                    tail = (1, 5)
+                }
+            } else if low == 34028236692093846346337460743176821145 /* UInt128.max / 10 */
+                && exponent > minExponent {
+                if shifted {
+                    if guardDigit > 5 || (guardDigit == 5 && sticky) {
+                        guardDigit = ¾ ? 8 : 2
+                        sticky = false
+                        low = .max
+                        exponent -= 1
+                    }
+                } else {
+                    if tail.numerator > tail.denominator - tail.numerator {
+                        tail = tail.numerator / 3 >= tail.denominator - tail.numerator
+                            ? (4, 5)
+                            : (1, 5)
+                        low = .max
+                        exponent -= 1
+                    }
+                }
+            }
+        }
+
         // Round.
         var inexact = false
         if shifted {
-            // Double `round`; nudge to break ties if `sticky`.
-            round = (round &<< 1) | (sticky ? 1 : 0)
-            if round != 0 {
+            // Double `guardDigit`; nudge to break ties if `sticky`.
+            guardDigit = (guardDigit &<< 1) | (sticky ? 1 : 0)
+            if guardDigit != 0 {
                 inexact = true
                 if _roundAway(
                     isNegative: isNegative,
                     isSignificandOdd: (low & 1) != 0,
-                    tail: (round, 20),
+                    tail: (guardDigit, 20),
                     roundingMode: roundingMode
                 ) {
                     if low == .max {
