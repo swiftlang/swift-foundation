@@ -24,6 +24,12 @@ import ucrt
 import WASILibc
 #endif
 
+#if canImport(CollectionsInternal)
+internal import CollectionsInternal
+#elseif canImport(BasicContainers)
+internal import BasicContainers
+#endif
+
 // TODO: EMBEDDED: Don't use the `final class` Internals type for Embedded only. We shouldn't have the same typed-throws overhead there anyway.
 
 public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
@@ -1315,10 +1321,9 @@ extension JSONParserDecoder {
             switch self {
             case .root: return []
             case .dictionary(let buffer, let parentPtr):
-                // TODO: Actually parse the JSON
                 var components = parentPtr.pointee.pathComponents
                 if buffer.baseAddress != nil {
-                    components.append(.stringKey(String._tryFromUTF8(buffer.assumingMemoryBound(to: UInt8.self))!))
+                    components.append(.stringKey(Self.decodedDictionaryKey(buffer)))
                 }
                 return components
             case .array(let index, let parentPtr):
@@ -1328,6 +1333,27 @@ extension JSONParserDecoder {
                 }
                 return components
             }
+        }
+
+        static func decodedDictionaryKey(_ buffer: UnsafeRawBufferPointer) -> String {
+            guard buffer.contains(._backslash) else {
+                return String(decoding: buffer, as: UTF8.self)
+            }
+
+            // The stored contents exclude the closing quote required by the string parser.
+            var source = UniqueArray<UInt8>()
+            source.append(copying: buffer)
+            source.append(._quote)
+            var reader = ParserState.DocumentReader(bytes: source.span.bytes)
+            do {
+                let parsed = try reader.parsedStringContentAndTrailingQuote()
+                if reader.isEOF, case .string(let key, _) = parsed {
+                    return key
+                }
+            } catch {
+                // Optimized field matching can bypass validation. Preserve its raw diagnostic key on failure.
+            }
+            return String(decoding: buffer, as: UTF8.self)
         }
         
         var path: CodingPath {
