@@ -26,7 +26,9 @@ import WinSDK
 @preconcurrency import EmscriptenLibc
 #endif
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
 extension StringProtocol {
     fileprivate func _convertingSlashesIfNeeded() -> String {

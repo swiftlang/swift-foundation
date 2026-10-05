@@ -1173,11 +1173,9 @@ internal extension UInt8 {
     static var _formFeed: UInt8 { UInt8(0x0c) }
     static var _nbsp: UInt8 { UInt8(0xa0) }
     static var _asterisk: UInt8 { UInt8(ascii: "*") }
-    static var _slash: UInt8 { UInt8(ascii: "/") }
     static var _singleQuote: UInt8 { UInt8(ascii: "'") }
     static var _dollar: UInt8 { UInt8(ascii: "$") }
     static var _underscore: UInt8 { UInt8(ascii: "_") }
-    static var _dot: UInt8 { UInt8(ascii: ".") }
 }
 
 let _json5Infinity: InlineArray<_, UInt8> = [

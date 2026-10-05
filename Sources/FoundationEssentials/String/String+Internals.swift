@@ -160,12 +160,14 @@ extension String {
         case canonical
         case hfsPlus
         
+        #if !hasFeature(Embedded)
         fileprivate var setType: BuiltInUnicodeScalarSet.SetType {
             switch self {
             case .canonical: .canonicalDecomposable
             case .hfsPlus: .hfsPlusDecomposable
             }
         }
+        #endif
     }
 
     // Note: internal for use in URL
@@ -278,7 +280,9 @@ extension UnsafeBufferPointer {
     @specialized(where T == Unicode.UTF16)
     #endif
     internal func _decomposed<T: UnicodeCodec>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) throws -> Int where Element == T.CodeUnit {
+        #if FOUNDATION_FRAMEWORK
         let scalarSet = BuiltInUnicodeScalarSet(type: type.setType)
+        #endif
         var bufferIdx = 0
         let bufferLength = buffer.count
         var sortBuffer: [UnicodeScalar] = []
@@ -407,7 +411,9 @@ extension UTF8Span {
     }
     
     fileprivate func _decomposed(_ type: String._NormalizationType, into span: inout OutputSpan<UInt8>, nullTerminated: Bool = false) throws {
+        #if FOUNDATION_FRAMEWORK
         let scalarSet = BuiltInUnicodeScalarSet(type: type.setType)
+        #endif
         // Start at the end of the already-filled part of the span
         let start = span.count
         var sortBuffer: [UnicodeScalar] = []

@@ -2047,6 +2047,7 @@ extension URL: _CustomPlaygroundQuickLookable {
 }
 #endif // FOUNDATION_FRAMEWORK
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URL: Codable {
     private enum CodingKeys: Int, CodingKey {
@@ -2075,6 +2076,7 @@ extension URL: Codable {
         }
     }
 }
+#endif
 
 #if FOUNDATION_FRAMEWORK
 //===----------------------------------------------------------------------===//
