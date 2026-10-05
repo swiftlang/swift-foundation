@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
-internal import _FoundationICU
+#if canImport(FoundationEssentials)
+import FoundationEssentials
 #endif
+
+internal import _FoundationICU
 
 extension Locale {
 

@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#endif
+
 internal import _FoundationCShims
 
 // TODO: 185973387: Once `Span` is Hashable we can pass in `Span` directly from callsites

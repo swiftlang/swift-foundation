@@ -838,7 +838,12 @@ public struct Locale : Hashable, Equatable, Sendable {
     @available(tvOS, deprecated: 16, renamed: "identifier(_:from:)")
     @available(watchOS, deprecated: 9, renamed: "identifier(_:from:)")
     public static func canonicalIdentifier(from string: String) -> String {
+#if FOUNDATION_FRAMEWORK
         return _canonicalLocaleIdentifier(from: string)
+#else
+        // Intentionally not supported. This deprecated API will be removed in a future release.
+        return string
+#endif
     }
 
     /// Returns a canonical language identifier from the given string.
