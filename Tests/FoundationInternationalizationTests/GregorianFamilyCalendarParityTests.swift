@@ -98,8 +98,9 @@ private let gregorianFamilyProbes: [GregorianFamilyProbe] = [
     GregorianFamilyProbe("1912-07-30 Taisho start", era: 1, year: 1912, month: 7, day: 30, endsInsideABoundedJapaneseEra: true),
     GregorianFamilyProbe("1912-01-01 Minguo 1", era: 1, year: 1912, month: 1, day: 1, endsInsideABoundedJapaneseEra: true),
     GregorianFamilyProbe("1911-12-31 before Minguo", era: 1, year: 1911, month: 12, day: 31, endsInsideABoundedJapaneseEra: true),
-    GregorianFamilyProbe("1868-09-08 Meiji start", era: 1, year: 1868, month: 9, day: 8, endsInsideABoundedJapaneseEra: true),
-    GregorianFamilyProbe("1868-09-07 before Meiji", era: 1, year: 1868, month: 9, day: 7, isPreMeiji: true),
+    GregorianFamilyProbe("1868-10-23 Meiji start", era: 1, year: 1868, month: 10, day: 23, endsInsideABoundedJapaneseEra: true),
+    GregorianFamilyProbe("1868-10-22 before Meiji", era: 1, year: 1868, month: 10, day: 22, isPreMeiji: true),
+    GregorianFamilyProbe("1868-09-08 Meiji start in older data", era: 1, year: 1868, month: 9, day: 8, isPreMeiji: true),
     GregorianFamilyProbe("1600-01-15", era: 1, year: 1600, month: 1, day: 15, isPreMeiji: true),
     GregorianFamilyProbe("0900-06-15", era: 1, year: 900, month: 6, day: 15, isPreMeiji: true),
     GregorianFamilyProbe("0001-01-01", era: 1, year: 1, month: 1, day: 1, isPreMeiji: true),
@@ -335,15 +336,25 @@ private struct GregorianFamilyEraOrdinalityParityTests {
     static let units: [Calendar.Component] = [.year, .yearForWeekOfYear, .quarter, .month, .day, .hour, .minute, .second]
 
     /// Dates inside each calendar's own eras, including two era boundaries and a mid-year era start.
-    static let dates: [(label: String, date: Date)] = [
-        ("2025-08-20", gregorianDate(2025, 8, 20)),
-        ("2019-05-01 Reiwa start", gregorianDate(2019, 5, 1)),
-        ("1990-03-01 Heisei", gregorianDate(1990, 3, 1)),
-        ("1930-06-01 Showa", gregorianDate(1930, 6, 1)),
-        ("1912-01-01 Minguo 1", gregorianDate(1912, 1, 1)),
-        ("1911-06-30 Meiji 44", gregorianDate(1911, 6, 30)),
-        ("1868-09-08 Meiji start", gregorianDate(1868, 9, 8)),
+    ///
+    /// `isInMeiji` marks the dates whose Japanese count starts at Meiji, which `meijiStartMatchesICU` guards.
+    static let dates: [(label: String, date: Date, isInMeiji: Bool)] = [
+        ("2025-08-20", gregorianDate(2025, 8, 20), false),
+        ("2019-05-01 Reiwa start", gregorianDate(2019, 5, 1), false),
+        ("1990-03-01 Heisei", gregorianDate(1990, 3, 1), false),
+        ("1930-06-01 Showa", gregorianDate(1930, 6, 1), false),
+        ("1912-01-01 Minguo 1", gregorianDate(1912, 1, 1), true),
+        ("1911-06-30 Meiji 44", gregorianDate(1911, 6, 30), true),
+        ("1868-10-23 Meiji start", gregorianDate(1868, 10, 23), true),
     ]
+
+    /// Depending on its data, `_CalendarICU` starts Meiji on 1868-09-08 or on 1868-10-23, so a count inside Meiji can only match when both calendars start it on the same day.
+    ///
+    /// `JapaneseGregorianEraInheritanceTests` pins our start with fixed expected values instead.
+    static let meijiStartMatchesICU: Bool = {
+        let meijiDate = gregorianDate(1900, 1, 1)
+        return GregorianCalendarFamily.japanese.ours.dateInterval(of: .era, for: meijiDate)?.start == GregorianCalendarFamily.japanese.icu.dateInterval(of: .era, for: meijiDate)?.start
+    }()
 
     private static func gregorianDate(_ year: Int, _ month: Int, _ day: Int) -> Date {
         var calendar = Calendar(identifier: .gregorian)
@@ -358,6 +369,7 @@ private struct GregorianFamilyEraOrdinalityParityTests {
     func ordinalityInEraMatchesICU(_ family: GregorianCalendarFamily, _ unit: Calendar.Component) {
         let ours = family.ours, icu = family.icu
         for probe in Self.dates {
+            guard !(family == .japanese && probe.isInMeiji && !Self.meijiStartMatchesICU) else { continue }
             #expect(ours.ordinality(of: unit, in: .era, for: probe.date) == icu.ordinality(of: unit, in: .era, for: probe.date), "\(unit) in .era at \(probe.label)")
         }
     }
@@ -381,7 +393,7 @@ private struct GregorianFamilyEraOrdinalityParityTests {
 
     /// The year counted inside an era is the same number the calendar reports as its `.year` component.
     @Test(arguments: GregorianCalendarFamily.allCases, dates)
-    func yearInEraMatchesTheYearComponent(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date)) {
+    func yearInEraMatchesTheYearComponent(_ family: GregorianCalendarFamily, _ probe: (label: String, date: Date, isInMeiji: Bool)) {
         let calendar = family.ours
         #expect(calendar.ordinality(of: .year, in: .era, for: probe.date) == calendar.dateComponents([.year], from: probe.date).year, "at \(probe.label)")
     }
