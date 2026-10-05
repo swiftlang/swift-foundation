@@ -16,14 +16,15 @@ import Testing
 import TestSupport
 #endif
 
-#if canImport(FoundationEssentials)
-@testable import FoundationEssentials
-#else
+#if FOUNDATION_FRAMEWORK
 @testable import Foundation
-#endif
+#else
+@testable import FoundationEssentials
+@testable import FoundationInternationalization
+#endif // FOUNDATION_FRAMEWORK
 
-@Suite("Locale", .tags(.locale))
-private struct LocaleTests {
+@Suite("Locale Canonical Identifier", .tags(.locale))
+private struct LocaleCanonicalIdentifierTests {
     // Test cases derived from `CFLocaleCreateCanonicalLocaleIdentifierFromString`
     static let cases: [(identifier: String, expected: String)] = [
         // Old-style Apple English-word locale names
