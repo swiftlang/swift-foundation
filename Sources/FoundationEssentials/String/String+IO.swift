@@ -14,11 +14,26 @@
 internal import _ForSwiftFoundation
 #endif
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
+#if !NO_FILESYSTEM
 fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
+#endif
 
 #if !FOUNDATION_FRAMEWORK
+#if hasFeature(Embedded)
+// Embedded Swift doesn't support dynamic replacement.
+@_spi(SwiftCorelibsFoundation)
+public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
+    return nil
+}
+
+package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
+    return nil
+}
+#else
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
     // Provide swift-corelibs-foundation with an entry point to convert some bytes into a String
@@ -29,6 +44,7 @@ dynamic package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>
     // Concrete implementation is provided by FoundationInternationalization.
     return nil
 }
+#endif
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)

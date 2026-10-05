@@ -522,5 +522,9 @@ extension Platform {
 extension Platform {
     static let calloc = _FoundationPlatformExtras.calloc
     static let malloc = _FoundationPlatformExtras.malloc
+    static let free = _FoundationPlatformExtras.free
+    static let memset = _FoundationPlatformExtras.memset
+    static let memcpy = _FoundationPlatformExtras.memcpy
+    static let memcmp = _FoundationPlatformExtras.memcmp
 }
 #endif

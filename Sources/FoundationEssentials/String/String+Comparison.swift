@@ -733,34 +733,3 @@ extension ComparisonResult {
         }
     }
 }
-
-// Borrowed from stdlib
-internal func _allASCII(_ input: UnsafeBufferPointer<UInt8>) -> Bool {
-    if input.isEmpty { return true }
-    let ptr = input.baseAddress.unsafelyUnwrapped
-    var i = 0
-
-    let count = input.count
-    let stride = MemoryLayout<UInt>.stride
-    let address = Int(bitPattern: ptr)
-
-    let wordASCIIMask = UInt(truncatingIfNeeded: 0x8080_8080_8080_8080 as UInt64)
-    let byteASCIIMask = UInt8(truncatingIfNeeded: wordASCIIMask)
-
-    while (address &+ i) % stride != 0 && i < count {
-        guard ptr[i] & byteASCIIMask == 0 else { return false }
-        i &+= 1
-    }
-
-    while (i &+ stride) <= count {
-        let word: UInt = UnsafePointer(bitPattern: address &+ i).unsafelyUnwrapped.pointee
-        guard word & wordASCIIMask == 0 else { return false }
-        i &+= stride
-    }
-
-    while i < count {
-        guard ptr[i] & byteASCIIMask == 0 else { return false }
-        i &+= 1
-    }
-    return true
-}
