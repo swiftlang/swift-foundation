@@ -416,10 +416,9 @@ extension Base64 {
     /// The code below is compiled as branchless, which is needed for LLVM to vectorize the loop this func is called in.
     @inline(always)
     private static func encodeCharacter(_ value: UInt8, _ char62: UInt8, _ char63: UInt8) -> UInt8 {
-        var offset = UInt8(ascii: "A")
-        if value >= 26 { offset = UInt8(ascii: "a") &- 26 }
-        if value >= 52 { offset = UInt8(ascii: "0") &- 52 }
-        var character = value &+ offset
+        var character = value &+ UInt8(ascii: "A")
+        if value >= 26 { character = value &+ (UInt8(ascii: "a") &- 26) }
+        if value >= 52 { character = value &+ (UInt8(ascii: "0") &- 52) }
         if value == 62 { character = char62 }
         if value == 63 { character = char63 }
         return character
