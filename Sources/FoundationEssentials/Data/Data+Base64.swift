@@ -291,11 +291,8 @@ extension Base64 {
 
         assert(options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters))
 
-        let lineLength = if options.contains(.lineLength64Characters) {
-            48
-        } else {
-            57
-        }
+        let wantsLineLength64 = options.contains(.lineLength64Characters)
+        let lineLength = wantsLineLength64 ? 48 : 57
 
         let lines = input.count / lineLength
 
@@ -336,7 +333,13 @@ extension Base64 {
                 outIndex &+= 1
             }
 
-            self.loopEncode(char62, char63, input: input, from: lineInputIndex, to: lineInputIndex + lineLength, output: buffer, outIndex: &outIndex)
+            // Ensure the compiler inlines the loops for each line-length. This adds up to 20% to
+            // the performance of line-length-64 encoding with only adding ~70 extra instructions.
+            if wantsLineLength64 {
+                self.loopEncode(char62, char63, input: input, from: lineInputIndex, to: lineInputIndex + 48, output: buffer, outIndex: &outIndex)
+            } else {
+                self.loopEncode(char62, char63, input: input, from: lineInputIndex, to: lineInputIndex + 57, output: buffer, outIndex: &outIndex)
+            }
             lineInputIndex &+= lineLength
         }
 
