@@ -648,11 +648,8 @@ internal struct BPlistScanner {
         if count == 0xf {
             count = try reader.readInt(updatingIndex: &dataStartIdx, objectRangeEnd: objectRangeEndIndex, for: "UTF16 string")
         }
-        guard dataStartIdx.distance(to: objectRangeEndIndex) >= count else {
-            throw BPlistError.corruptedValue("UTF16 string")
-        }
         let (byteCount, overflow) = count.multipliedReportingOverflow(by: 2) // 2 bytes per character
-        guard !overflow else {
+        guard !overflow, byteCount <= UInt64(dataStartIdx.distance(to: objectRangeEndIndex)) else {
             throw BPlistError.corruptedValue("UTF16 string")
         }
 
