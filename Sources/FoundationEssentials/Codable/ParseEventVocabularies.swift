@@ -123,6 +123,24 @@ enum BPlistScalar: ~Copyable, ~Escapable {
     case asciiString(bytes: Span<UInt8>, objectOffset: Int)
     /// UTF-16BE string bytes (bplist's 0x6X marker). See `asciiString` for `objectOffset`.
     case utf16String(bytes: Span<UInt8>, objectOffset: Int)
+    
+    /// Whether the type should be de-duped for the given "mutable leaves" option.
+    func shouldDeduplicateInstancesForMutableLeaves(_ mutableLeaves: Bool) -> Bool {
+        switch self {
+        // Booleans are already shared instances and need don't de-duping
+        case .bool: false
+        // These types are always immutable and can always be deduped
+        case .int: true
+        case .uint: true
+        case .real: true
+        case .date: true
+        case .uid: true
+        // Do not de-dupe mutable datas or strings
+        case .data: mutableLeaves == false
+        case .asciiString: mutableLeaves == false
+        case .utf16String: mutableLeaves == false
+        }
+    }
 }
 
 enum BPlistKeyView: ~Copyable, ~Escapable {
