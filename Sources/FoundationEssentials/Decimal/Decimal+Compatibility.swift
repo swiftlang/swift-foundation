@@ -64,7 +64,7 @@ extension Decimal : _ObjectiveCBridgeable {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public func pow(_ x: Decimal, _ y: Int) -> Decimal {
     let result = try? x._power(
-        exponent: y, roundingMode: .plain
+        exponent: y, roundingMode: .bankers
     )
     return result ?? .nan
 }
