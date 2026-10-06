@@ -233,7 +233,7 @@ internal struct BuiltInUnicodeScalarSet {
                 } else {
                     // fix for fetching ptr to legal
                     guard let (dataSpan, shouldInvert) = _bitmapPtrForPlane(Int(planeNo)) else {
-                        return false
+                        return true
                     }
 
                     if planeNo < _numberOfPlanes {
