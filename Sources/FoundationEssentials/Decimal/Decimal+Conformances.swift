@@ -403,9 +403,14 @@ extension Decimal /* : FloatingPoint */ {
     /// The unit in the last place of this value.
     ///
     /// This is the unit of the least significant digit in this value's significand when represented with as much precision as possible.
-    /// For most numbers `x`, this is the difference between `x` and the next greater (in magnitude) representable number.
+    /// For most numbers `x`, this is the magnitude of the difference between `x` and the next representable number greater in magnitude.
     /// If `x` is NaN, then `x.ulp` is NaN.
-    /// `greatestFiniteMagnitude.ulp` is a finite number, even though no greater number is representable.
+    /// If `x.magnitude` is `greatestFiniteMagnitude`, `x.ulp` is finite even though no greater magnitude is representable.
+    ///
+    /// If `x` is a `Decimal` value with the same significand as that of `greatestFiniteMagnitude` but smaller magnitude,
+    /// then the distance from `x.magnitude` to the next greater representable number is `5 * x.ulp`,
+    /// and hence `x.magnitude + x.ulp` rounds back to `x.magnitude`.
+    /// Use `nextUp` or `nextDown` to step between representable values.
     public var ulp: Decimal {
         guard isFinite else { return .nan }
 
