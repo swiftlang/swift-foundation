@@ -13,7 +13,7 @@
 @available(FoundationPreview 6.2, *)
 extension DateComponents {
     /// Options for generating and parsing string representations of dates following the ISO 8601 standard.
-    public struct ISO8601FormatStyle : Hashable, Sendable, Codable {
+    public struct ISO8601FormatStyle : Hashable, Sendable {
         public internal(set) var timeSeparator: Date.ISO8601FormatStyle.TimeSeparator
         /// If set, fractional seconds will be present in formatted output. Fractional seconds may be present in parsing regardless of the setting of this property.
         public internal(set) var includingFractionalSeconds: Bool
@@ -21,7 +21,7 @@ extension DateComponents {
         public internal(set) var dateSeparator: Date.ISO8601FormatStyle.DateSeparator
         public internal(set) var dateTimeSeparator: Date.ISO8601FormatStyle.DateTimeSeparator
         
-        internal struct Fields : Codable, Hashable, OptionSet {
+        internal struct Fields : Hashable, OptionSet {
             package var rawValue: UInt
             package init(rawValue: UInt) {
                 self.rawValue = rawValue
@@ -33,16 +33,6 @@ extension DateComponents {
             package static var day: Self { Self(rawValue: 1 << 3) }
             package static var time: Self { Self(rawValue: 1 << 4) }
             package static var timeZone: Self { Self(rawValue: 1 << 5) }
-            
-            package init(from decoder: any Decoder) throws {
-                let c = try decoder.singleValueContainer()
-                rawValue = try c.decode(UInt.self)
-            }
-            
-            package func encode(to encoder: any Encoder) throws {
-                var c = encoder.singleValueContainer()
-                try c.encode(rawValue)
-            }
         }
         
         private var _formatFields: Fields = []
@@ -62,44 +52,7 @@ extension DateComponents {
         private mutating func insertFormatFields(_ fields: Fields) {
             _formatFields.insert(fields)
         }
-        
-        enum CodingKeys : String, CodingKey {
-            case timeZoneSeparator
-            case timeZone
-            case fields
-            case dateTimeSeparator
-            case includingFractionalSeconds
-            case dateSeparator
-            case timeSeparator
-        }
-        
-        // Encoding
-        
-        public init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            timeZoneSeparator = try c.decode(Date.ISO8601FormatStyle.TimeZoneSeparator.self, forKey: .timeZoneSeparator)
-            timeZone = try c.decode(TimeZone.self, forKey: .timeZone)
-            _formatFields = try c.decode(Fields.self, forKey: .fields)
-            dateTimeSeparator = try c.decode(Date.ISO8601FormatStyle.DateTimeSeparator.self, forKey: .dateTimeSeparator)
-            includingFractionalSeconds = try c.decode(Bool.self, forKey: .includingFractionalSeconds)
-            dateSeparator = try c.decode(Date.ISO8601FormatStyle.DateSeparator.self, forKey: .dateSeparator)
-            timeSeparator = try c.decode(Date.ISO8601FormatStyle.TimeSeparator.self, forKey: .timeSeparator)
-            
-            _calendar = Calendar(identifier: .iso8601)
-            _calendar.timeZone = timeZone
-        }
-        
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(timeZoneSeparator, forKey: .timeZoneSeparator)
-            try c.encode(timeZone, forKey: .timeZone)
-            try c.encode(_formatFields, forKey: .fields)
-            try c.encode(dateTimeSeparator, forKey: .dateTimeSeparator)
-            try c.encode(includingFractionalSeconds, forKey: .includingFractionalSeconds)
-            try c.encode(dateSeparator, forKey: .dateSeparator)
-            try c.encode(timeSeparator, forKey: .timeSeparator)
-        }
-        
+
         public func hash(into hasher: inout Hasher) {
             hasher.combine(timeZoneSeparator)
             hasher.combine(timeZone)
@@ -749,6 +702,7 @@ extension DateComponents.ISO8601FormatStyle: ParseableFormatStyle {
 
 // MARK: - Regex
 
+#if !hasFeature(Embedded)
 @available(FoundationPreview 6.2, *)
 extension DateComponents.ISO8601FormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = DateComponents
@@ -802,3 +756,57 @@ extension RegexComponent where Self == DateComponents.ISO8601FormatStyle {
         return DateComponents.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }
 }
+#endif
+
+// Codable is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
+@available(FoundationPreview 6.2, *)
+extension DateComponents.ISO8601FormatStyle : Codable {
+    enum CodingKeys : String, CodingKey {
+        case timeZoneSeparator
+        case timeZone
+        case fields
+        case dateTimeSeparator
+        case includingFractionalSeconds
+        case dateSeparator
+        case timeSeparator
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        timeZoneSeparator = try c.decode(Date.ISO8601FormatStyle.TimeZoneSeparator.self, forKey: .timeZoneSeparator)
+        timeZone = try c.decode(TimeZone.self, forKey: .timeZone)
+        _formatFields = try c.decode(Fields.self, forKey: .fields)
+        dateTimeSeparator = try c.decode(Date.ISO8601FormatStyle.DateTimeSeparator.self, forKey: .dateTimeSeparator)
+        includingFractionalSeconds = try c.decode(Bool.self, forKey: .includingFractionalSeconds)
+        dateSeparator = try c.decode(Date.ISO8601FormatStyle.DateSeparator.self, forKey: .dateSeparator)
+        timeSeparator = try c.decode(Date.ISO8601FormatStyle.TimeSeparator.self, forKey: .timeSeparator)
+
+        _calendar = Calendar(identifier: .iso8601)
+        _calendar.timeZone = timeZone
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(timeZoneSeparator, forKey: .timeZoneSeparator)
+        try c.encode(timeZone, forKey: .timeZone)
+        try c.encode(_formatFields, forKey: .fields)
+        try c.encode(dateTimeSeparator, forKey: .dateTimeSeparator)
+        try c.encode(includingFractionalSeconds, forKey: .includingFractionalSeconds)
+        try c.encode(dateSeparator, forKey: .dateSeparator)
+        try c.encode(timeSeparator, forKey: .timeSeparator)
+    }
+}
+@available(FoundationPreview 6.2, *)
+extension DateComponents.ISO8601FormatStyle.Fields : Codable {
+    package init(from decoder: any Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        rawValue = try c.decode(UInt.self)
+    }
+
+    package func encode(to encoder: any Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(rawValue)
+    }
+}
+#endif

@@ -62,6 +62,24 @@ extension Span<UInt8> {
 
         return true
     }
+    
+    /// Comparison against a prefix StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func starts(with prefix: StaticString) -> Bool {
+        let prefixLength = prefix.utf8CodeUnitCount
+        guard prefixLength > 0 else { return true }
+        guard self.count >= prefixLength else { return false }
+        // Precondition: self.count > 0
+        return withUnsafeBufferPointer { buffer in
+            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
+        }
+    }
+
+    /// Whole-span comparison against a StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func equals(_ other: StaticString) -> Bool {
+        count == other.utf8CodeUnitCount && starts(with: other)
+    }
 
     @inline(__always)
     var first: UInt8? {
@@ -116,6 +134,23 @@ extension OutputRawSpan {
             }
         }
     }
+
+    mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
+        of type: T.Type,
+        _ body: (inout OutputSpan<T>) throws(E) -> R
+    ) throws(E) -> R {
+        let stride = MemoryLayout<T>.stride
+        return try self.withUnsafeMutableBytes { buffer, initializedCount throws(E) in
+            precondition(initializedCount % stride == 0, "Initialized prefix of \(initializedCount) bytes is not a whole number of \(T.self)")
+            let typedBuffer = buffer.bindMemory(to: T.self)
+            var output = OutputSpan<T>(buffer: typedBuffer, initializedCount: initializedCount / stride)
+            defer {
+                initializedCount = output.finalize(for: typedBuffer) * stride
+                output = OutputSpan<T>()
+            }
+            return try body(&output)
+        }
+    }
 }
 
 extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
@@ -147,46 +182,27 @@ extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
     }
 }
 
-extension String {
-    // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
-    // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
-    package var utf8SpanMakingContiguous: UTF8Span {
-        mutating get {
-            #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
-            self.makeContiguousUTF8()
-            guard let span = self._utf8Span else {
-                preconditionFailure("Internal Inconsistency: A contiguous UTF-8 String produced nil for _utf8Span")
-            }
-            return span
-            #else
-            self.utf8Span
-            #endif
-        }
+extension OutputSpan<UInt8> {
+    @inline(__always)
+    mutating func _append(copying source: StaticString) {
+        source.withUTF8Buffer { _append(copying: $0.span) }
     }
 
+    @inline(__always)
+    var last: UInt8? {
+        guard count > 0 else {
+            return nil
+        }
+        return self[count - 1]
+    }
+}
+
+extension String {
     package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
         try self.init(unsafeUninitializedCapacity: capacity) { buffer throws(E) in
             var outputSpan = OutputSpan(buffer: buffer, initializedCount: 0)
             try body(&outputSpan)
             return outputSpan.finalize(for: buffer)
-        }
-    }
-}
-
-extension Substring {
-    // String's may not be able to vend a span on 32-bit watchOS (and the property is marked unavailable)
-    // In order to get a span on 32-bit watchOS, we must first guarantee that it is contiguous UTF-8
-    package var utf8SpanMakingContiguous: UTF8Span {
-        mutating get {
-            #if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
-            self.makeContiguousUTF8()
-            guard let span = self._utf8Span else {
-                preconditionFailure("Internal Inconsistency: A contiguous UTF-8 String produced nil for _utf8Span")
-            }
-            return span
-            #else
-            self.utf8Span
-            #endif
         }
     }
 }

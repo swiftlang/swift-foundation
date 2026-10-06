@@ -10,22 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
+// For Logger
 internal import os
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
 #endif
-
 
 /// Julian date helper
 /// Julian dates are noon-based. Gregorian dates are midnight-based.
@@ -71,7 +59,7 @@ enum ResolvedDateComponents {
     case weekOfMonth(year: Int, month: Int, weekOfMonth: Int, weekday: Int?)
 
     // Pick the year field between yearForWeekOfYear and year and resolves era
-    static func yearOrYearForWOYAdjustingEra(from components: DateComponents) -> (year: Int, month: Int) {
+    static func yearOrYearForWOYAdjustingEra(from components: DateComponents, era: GregorianFamilyCalendarEra?) -> (year: Int, month: Int) {
         var rawYear: Int
         // Don't adjust for era if week is also specified
         var adjustEra = true
@@ -86,8 +74,13 @@ enum ResolvedDateComponents {
             rawYear = 1
         }
 
-        if adjustEra && components.era == 0 /* BC */{
-           rawYear = 1 - rawYear
+        // With no era, as for Gregorian or a pre-Meiji Japanese date, the Gregorian eras apply.
+        if adjustEra {
+            if let era {
+                rawYear = era.extendedYear(fromEraYear: rawYear)
+            } else if components.era == 0 {
+                rawYear = 1 - rawYear
+            }
         }
 
         guard let rawMonth = components.month else {
@@ -118,8 +111,8 @@ enum ResolvedDateComponents {
         return (year,  month)
     }
 
-    init(dateComponents components: DateComponents) {
-        let (year, month) = Self.yearOrYearForWOYAdjustingEra(from: components)
+    init(dateComponents components: DateComponents, era: GregorianFamilyCalendarEra?) {
+        let (year, month) = Self.yearOrYearForWOYAdjustingEra(from: components, era: era)
         let minWeekdayOrdinal = 1
 
         if let d = components.day {
@@ -148,12 +141,12 @@ enum ResolvedDateComponents {
             self = .dayOfYear(year: year, dayOfYear: dayOfYear)
         } else if components.yearForWeekOfYear != nil  {
             self = .weekOfYear(year: year, weekOfYear: components.weekOfYear, weekday: components.weekday)
+        } else if let weekOfMonth = components.weekOfMonth {
+            self = .weekOfMonth(year: year, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
         } else if components.year != nil {
             self = .day(year: year, month: month, day: components.day, weekOfYear: components.weekOfYear)
         } else if let weekOfYear = components.weekOfYear {
             self = .weekOfYear(year: year, weekOfYear: weekOfYear, weekday: components.weekday)
-        } else if let weekOfMonth = components.weekOfMonth {
-            self = .weekOfMonth(year: year, month: month, weekOfMonth: weekOfMonth, weekday: components.weekday)
         } else if let weekdayOrdinal = components.weekdayOrdinal {
             self = .weekdayOrdinal(year: year, month: month, weekdayOrdinal: weekdayOrdinal, weekday: components.weekday)
         } else if let weekday = components.weekday {
@@ -175,7 +168,7 @@ package enum GregorianCalendarError : Error {
 /// This class is a placeholder and work-in-progress to provide an implementation of the Gregorian calendar.
 package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "gregorian_calendar")
     }()
@@ -200,6 +193,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         let defaultFirstWeekday: Int?
         let defaultMinimumDaysInFirstWeek: Int?
         
+        self.eraTable = .forCalendar(identifier)
+
         if identifier == .iso8601 {
             defaultLocale = Locale.unlocalized
             defaultFirstWeekday = 2
@@ -334,12 +329,17 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // MARK: - Range
 
+    /// How this calendar labels eras and numbers years inside them. The tables live in `CalendarEra.swift`.
+    ///
+    /// Nil for Gregorian and ISO8601, which use the default CE and BCE eras.
+    let eraTable: GregorianFamilyCalendarEras?
+
     // Returns the range of a component in Gregorian Calendar.
     // When there are multiple possible upper bounds, the smallest one is returned.
     package func minimumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: 0..<2
-        case .year: 1..<140743
+        case .era: 0..<(eraTable?.maxEraNumber ?? 1) + 1
+        case .year: eraTable?.erasCanEnd == true ? 1..<2 : 1..<140743
         case .month: 1..<13
         case .day: 1..<29
         case .hour: 0..<24
@@ -365,8 +365,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     // When there are multiple possible upper bounds, the largest one is returned.
     package func maximumRange(of component: Calendar.Component) -> Range<Int>? {
         switch component {
-        case .era: return 0..<2
-        case .year: return 1..<144684
+        case .era: return 0..<(eraTable?.maxEraNumber ?? 1) + 1
+        case .year: return eraTable?.erasCanEnd == true ? 1..<144684 - (eraTable?.newestAnchorYear ?? 0) : 1..<144684
         case .month: return 1..<13
         case .day: return 1..<32
         case .hour: return 0..<24
@@ -737,7 +737,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             let firstInstant = try _firstInstant(of: unit, at: at)
             return firstInstant
         } catch let error as GregorianCalendarError {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
             switch error {
             case .overflow(_, _, _):
                 _CalendarGregorian.logger.error("Overflowing in firstInstant(of:at:). unit: \(unit.debugDescription, privacy: .public), at: \(at.timeIntervalSinceReferenceDate, privacy: .public)")
@@ -877,24 +877,21 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
-            if time < -63113904000.0 {
-                return Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti)
-            } else {
-                return Date(timeIntervalSinceReferenceDate: -63113904000.0)
-            }
+            // The era start comes from the table, so the ordinality algorithms below count from this calendar's era rather than from the Gregorian one.
+            return eraStart(containing: at)?.start
 
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: at))
             var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti // compute GMT
             return Date(timeIntervalSinceReferenceDate: fixedTime)
         case .minute:
-            return Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0)
+            return Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0)
         case .second:
-            return Date(timeIntervalSinceReferenceDate: floor(time))
+            return Date(timeIntervalSinceReferenceDate: time.rounded(.down))
         case .nanosecond:
-            return Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9)
+            return Date(timeIntervalSinceReferenceDate: (time * 1.0e+9).rounded(.down) * 1.0e-9)
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .dayOfYear, .weekOfMonth, .weekOfYear:
             // Continue to below
             break
@@ -931,7 +928,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         do {
             result = try _ordinality(of: smaller, in: larger, for: date)
         } catch {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
             switch error {
             case .overflow(_, _, _):
                 _CalendarGregorian.logger.error("Overflowing in ordinality(of:in:for:). smaller: \(smaller.debugDescription, privacy: .public), larger: \(larger.debugDescription, privacy: .public), date: \(date.timeIntervalSinceReferenceDate, privacy: .public)")
@@ -967,12 +964,12 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 var test: Date
                 var month = 0
                 if let r = maximumRange(of: .day) {
-                    month = Int(floor(
+                    month = Int((
                         (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                         86400.0 /
                         Double(r.count + 1) *
-                        0.96875
-                    ))
+                        0.96875).rounded(.down)
+                    )
                     // low-ball the estimate
                     month = 10 < month ? month - 10 : 0
                     // low-ball the estimate further
@@ -1000,11 +997,11 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                     startMatchinWeekday -= 7 * 86400.0
                     start -=  7 * 86400.0
                 }
-                var week = Int(floor(
+                var week = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                     86400.0 /
-                    7.0
-                ))
+                    7.0).rounded(.down)
+                )
                 // low-ball the estimate
                 var test: Date
                 week = 10 < week ? week - 109 : 0
@@ -1025,11 +1022,11 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 let targetDOW = dateComponent(.weekday, from: date)
                 let (startMatchingWeekday, _) = try dateAfterDateWithTargetDoW(start, targetDOW)
 
-                var nthWeekday = Int(floor(
+                var nthWeekday = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
                     86400.0 /
-                    7.0
-                ))
+                    7.0).rounded(.down)
+                )
 
                 // Low-ball estimate
                 nthWeekday = (10 < nthWeekday) ? nthWeekday - 10 : 0
@@ -1051,10 +1048,10 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 guard let start = start(of: .era, at: date) else {
                     return nil
                 }
-                let day = Int(floor(
+                let day = Int((
                     (date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) /
-                    86400.0
-                )) + 1
+                    86400.0).rounded(.down)
+                ) + 1
                 return day
 
             case .hour:
@@ -1145,7 +1142,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .year, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1178,7 +1175,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .day, .dayOfYear:
                 guard let start = start(of: .yearForWeekOfYear, at: date) else { return nil }
-                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                let day = Int(((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0).rounded(.down)) + 1
                 return day
 
             case .hour:
@@ -1205,7 +1202,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .yearForWeekOfYear, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1248,7 +1245,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             case .day, .dayOfYear:
                 let start = start(of: .quarter, at: date)
                 guard let start else { return nil }
-                let day = Int(floor((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0)) + 1
+                let day = Int(((date.timeIntervalSinceReferenceDate - start.timeIntervalSinceReferenceDate) / 86400.0).rounded(.down)) + 1
                 return day
 
             case .hour:
@@ -1273,7 +1270,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .quarter, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1319,7 +1316,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .month, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1360,7 +1357,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .weekOfYear, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1387,7 +1384,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .day, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1408,7 +1405,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .hour, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1423,7 +1420,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
             case .nanosecond:
                 guard let second = try _ordinality(of: .second, in: .minute, for: date) else { return nil }
-                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate))
+                let dseconds = (Double(second) - 1.0) + (date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down))
                 return Int(dseconds * 1.0e9) + 1
 
             default:
@@ -1432,7 +1429,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .second:
             switch smaller {
             case .nanosecond:
-                return Int(((date.timeIntervalSinceReferenceDate - floor(date.timeIntervalSinceReferenceDate)) * 1.0e9) + 1)
+                return Int(((date.timeIntervalSinceReferenceDate - (date.timeIntervalSinceReferenceDate).rounded(.down)) * 1.0e9) + 1)
 
             default:
                 return nil
@@ -1456,24 +1453,20 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .calendar, .timeZone, .isLeapMonth, .isRepeatedDay:
             return nil
         case .era:
-            if time < -63113904000.0 {
-                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0 - inf_ti), duration: inf_ti)
-            } else {
-                return DateInterval(start: Date(timeIntervalSinceReferenceDate: -63113904000.0), duration: inf_ti)
-            }
+            return eraInterval(containing: date)
 
         case .hour:
             let ti = Double(timeZone.secondsFromGMT(for: date))
             var fixedTime = time + ti // compute local time
-            fixedTime = floor(fixedTime / 3600.0) * 3600.0
+            fixedTime = (fixedTime / 3600.0).rounded(.down) * 3600.0
             fixedTime = fixedTime - ti // compute GMT
             return DateInterval(start: Date(timeIntervalSinceReferenceDate: fixedTime), duration: 3600.0)
         case .minute:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time / 60.0) * 60.0), duration: 60.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0), duration: 60.0)
         case .second:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time)), duration: 1.0)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: time.rounded(.down)), duration: 1.0)
         case .nanosecond:
-            return DateInterval(start: Date(timeIntervalSinceReferenceDate: floor(time * 1.0e+9) * 1.0e-9), duration: 1.0e-9)
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time * 1.0e+9).rounded(.down) * 1.0e-9), duration: 1.0e-9)
         case .year, .yearForWeekOfYear, .quarter, .month, .day, .dayOfYear, .weekOfMonth, .weekOfYear:
             // Continue to below
             break
@@ -1631,11 +1624,66 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         }
     }
 
+    // MARK: - Era lookup
+
+    /// The proleptic 0001-01-01, where CE begins and BCE ends.
+    private static let commonEraStart = Date(timeIntervalSinceReferenceDate: -63113904000.0)
+
+    /// The start of the Gregorian era, BCE or CE, that holds `date`.
+    private func inheritedEraStart(for date: Date) -> Date {
+        date < Self.commonEraStart ? Self.commonEraStart - inf_ti : Self.commonEraStart
+    }
+
+    func eraBoundary(of entry: GregorianFamilyCalendarEra) -> Date? {
+        // `date(from:)` is Julian-cutover aware and would land two days before the proleptic CE start, so keep the reference instant.
+        if entry.anchorYear == 1 && entry.startMonth == 1 && entry.startDay == 1 {
+            return Self.commonEraStart
+        }
+        // Midnight on the boundary date, with era relabeling switched off since the year given here is already extended.
+        let components = DateComponents(year: entry.anchorYear, month: entry.startMonth, day: entry.startDay, hour: 0, minute: 0, second: 0)
+        return try? date(from: components, inTimeZone: timeZone, relabelsEras: false)
+    }
+
+    /// Where the era holding `date` starts, and its index in the table. The index is nil for an inherited Gregorian era.
+    func eraStart(containing date: Date) -> (start: Date, index: Int?)? {
+        guard let eraTable else { return (inheritedEraStart(for: date), nil) }
+
+        // Find the era by instant rather than by extended year. At the CE boundary the two disagree, because the boundary is proleptic while the arithmetic is Julian aware.
+        for index in eraTable.entries.indices where eraTable.entries[index].direction == .forward {
+            if let boundary = eraBoundary(of: eraTable.entries[index]), date >= boundary {
+                return (boundary, index)
+            }
+        }
+        // Older than every forward era. A backward era covers that, otherwise the era is inherited.
+        if let index = eraTable.entries.firstIndex(where: { $0.direction == .backward }), let boundary = eraBoundary(of: eraTable.entries[index]) {
+            return (boundary - Calendar._maxDateIntervalDuration, index)
+        }
+        // A table that numbers every date has no era to inherit, so there is nothing to report before its first era.
+        if eraTable.coversEveryDate { return nil }
+        return (inheritedEraStart(for: date), nil)
+    }
+
+    func eraInterval(containing date: Date) -> DateInterval? {
+        guard let era = eraStart(containing: date) else { return nil }
+        guard let eraTable, let index = era.index else {
+            // An inherited era, cut short where the table's oldest era begins.
+            let inherited = DateInterval(start: era.start, duration: inf_ti)
+            guard let oldest = eraTable?.entries.last, let oldestBoundary = eraBoundary(of: oldest), inherited.start < oldestBoundary, inherited.end > oldestBoundary else { return inherited }
+            return DateInterval(start: inherited.start, end: oldestBoundary)
+        }
+        // An era ends where the next one begins, so successive eras meet exactly. Entries run newest first, so the next era is the one before this index.
+        guard eraTable.entries[index].direction == .forward, index > 0, let end = eraBoundary(of: eraTable.entries[index - 1]) else {
+            return DateInterval(start: era.start, duration: Calendar._maxDateIntervalDuration)
+        }
+        return DateInterval(start: era.start, end: end)
+    }
+
     // MARK:
 
-    static func isComponentsInSupportedRange(_ components: DateComponents) -> Bool {
+    static func isComponentsInSupportedRange(_ components: DateComponents, maxEraNumber: Int) -> Bool {
         // `Date.validCalendarRange` supports approximately from year -4713 to year 506713. These valid ranges were chosen as if representing the entire supported date range in one calendar unit.
-        let validEra = -10...10
+        // The era bound comes from the table, because the Japanese era numbers run up to 236 where Gregorian only uses 0 and 1.
+        let validEra = -10...max(10, maxEraNumber)
         let validYear = -4714...506714
         let validQuarter = -4714*4...506714*4
         let validWeek = -4714*52...506714*52
@@ -1669,7 +1717,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     }
 
     package func date(from components: DateComponents) -> Date? {
-        guard _CalendarGregorian.isComponentsInSupportedRange(components) else {
+        guard _CalendarGregorian.isComponentsInSupportedRange(components, maxEraNumber: eraTable?.maxEraNumber ?? 1) else {
 
             // One or more values exceeds supported date range
             return nil
@@ -1814,9 +1862,11 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return julianDay
     }
 
-    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
+    func date(from components: DateComponents, inTimeZone timeZone: TimeZone, relabelsEras: Bool = true, dstRepeatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, dstSkippedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws (GregorianCalendarError) -> Date {
 
-        let resolvedComponents = ResolvedDateComponents(dateComponents: components)
+        // Pass one era, not the table, to avoid a copy.
+        let era = relabelsEras ? eraTable.flatMap { $0.entry(eraNumber: components.era ?? $0.defaultEraNumber) } : nil
+        let resolvedComponents = ResolvedDateComponents(dateComponents: components, era: era)
 
         var useJulianReference = false
         switch resolvedComponents {
@@ -2196,8 +2246,10 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
         }
 
-        let dcEra = components.contains(.era) ? (year < 1 ? 0 : 1) : nil
-        let dcYear = components.contains(.year) ? (year < 1 ? 1 - year : year) : nil
+        // `year` here is the extended year, so the era table decides both fields. A date with no matching entry, like a pre-Meiji Japanese date, keeps the inherited Gregorian era instead.
+        let eraEntry = components.contains(.era) || components.contains(.year) ? eraTable?.entry(extendedYear: year, month: month, day: day) : nil
+        let dcEra = components.contains(.era) ? (eraEntry?.eraNumber ?? (year < 1 ? 0 : 1)) : nil
+        let dcYear = components.contains(.year) ? (eraEntry?.eraYear(fromExtendedYear: year) ?? (year < 1 ? 1 - year : year)) : nil
         let dcMonth = components.contains(.month) ? month : nil
         let dcDay = components.contains(.day) ? day : nil
         let dcDayOfYear = components.contains(.dayOfYear) ? dayOfYear : nil
@@ -2379,7 +2431,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .yearForWeekOfYear:
             var dc = dateComponents(weekBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if let era = dc.era, era == 0 {
+            if eraTable?.era(numbered: dc.era).countsBackward ?? (dc.era == 0) {
                 amount = -amount
             }
 
@@ -2400,7 +2452,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         case .year:
             var dc = dateComponents(monthBasedComponents, from: dateInWholeSecond, in: timeZone)
             var amount = amount
-            if let era = dc.era, era == 0 {
+            if eraTable?.era(numbered: dc.era).countsBackward ?? (dc.era == 0) {
                 amount = -amount
             }
 
@@ -2559,8 +2611,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 preconditionFailure("dateComponents(:from:in:) unexpectedly returns nil for requested component")
             }
             var amount = amount
-            if dc.era == 0 /* BC */ {
-                // in BC year goes backwards
+            if eraTable?.era(numbered: dc.era).countsBackward ?? (dc.era == 0) {
                 amount = -amount
             }
 
@@ -2820,8 +2871,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             }
 
             var amount = amount
-            if dc.era == 0 /* BC */ {
-                // in BC year goes backwards
+            if eraTable?.era(numbered: dc.era).countsBackward ?? (dc.era == 0) {
                 amount = -amount
             }
 
@@ -3160,7 +3210,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                         let (diffInNano, overflow) = end >= start ? diff.addingReportingOverflow(diffsInNano) : diff.subtractingReportingOverflow(diffsInNano)
 
                         if overflow {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
                             _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(start.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")
 #endif
                             dc.nanosecond = diff
@@ -3172,7 +3222,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                         dc.setValue(diff, for: component)
                     }
                 } catch {
-#if canImport(os)
+#if FOUNDATION_FRAMEWORK
                     switch error {
                     case .overflow(_, _, _):
                         _CalendarGregorian.logger.error("Overflowing in dateComponents(from:start:end:). start: \(curr.timeIntervalSinceReferenceDate, privacy: .public). end: \(end.timeIntervalSinceReferenceDate, privacy: .public). component: \(component.debugDescription, privacy: .public)")
@@ -3194,13 +3244,6 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
         return dc
     }
-
-#if FOUNDATION_FRAMEWORK
-    package func bridgeToNSCalendar() -> NSCalendar {
-        _NSSwiftCalendar(calendar: Calendar(inner: self))
-    }
-#endif
-
 }
 
 

@@ -813,8 +813,9 @@ extension _URL {
         path: borrowing Span<UInt8>,
         encodingState: _URLInfo.PathEncodingState
     ) -> URL {
-        let info = _info.replacingPath(unsafeUninitializedCapacity: path.count) {
-            ($0.initialize(fromSpan: path), encodingState)
+        let info = _info.replacingPath(capacity: path.count) { newPath in
+            newPath._append(copying: path)
+            return encodingState
         }
         return replacing(info: info).url
     }
@@ -823,27 +824,23 @@ extension _URL {
         path: StaticString,
         encodingState: _URLInfo.PathEncodingState
     ) -> URL {
-        let info = _info.replacingPath(unsafeUninitializedCapacity: path.utf8CodeUnitCount) { buffer in
-            path.withUTF8Buffer { (buffer.initialize(fromContentsOf: $0), encodingState) }
+        let info = _info.replacingPath(capacity: path.utf8CodeUnitCount) { newPath in
+            newPath._append(copying: path)
+            return encodingState
         }
         return replacing(info: info).url
     }
 
     // Prepends "./" to a relative path whose first segment would
     // otherwise be mistaken for a scheme (RFC 3986 Section 4.2).
-    // Returns the final path length.
-    private func prependDotSlashIfNeeded(
-        _ buffer: UnsafeMutableBufferPointer<UInt8>,
-        pathLength: Int
-    ) -> Int {
-        // Callers must reserve 2 spare bytes
-        assert(pathLength + 2 <= buffer.count)
+    private func prependDotSlashIfNeeded(_ path: inout OutputSpan<UInt8>) {
+        precondition(path.freeCapacity >= 2, "prependDotSlashIfNeeded requires 2 spare bytes")
         guard flags.isDisjoint(with: [.hasScheme, .hasHost]) else {
-            return pathLength
+            return
         }
         let hasColonInFirstSegment = {
-            for i in 0..<pathLength {
-                let byte = buffer[i]
+            for i in 0..<path.count {
+                let byte = path[i]
                 if byte == ._slash {
                     return false
                 } else if byte == ._colon {
@@ -853,15 +850,15 @@ extension _URL {
             return false
         }()
         guard hasColonInFirstSegment else {
-            return pathLength
+            return
         }
         // Shift path by 2 and prepend "./"
-        for i in (0..<pathLength).reversed() {
-            buffer[i + 2] = buffer[i]
+        path.append(repeating: 0, count: 2)
+        for i in (2..<path.count).reversed() {
+            path[i] = path[i - 2]
         }
-        buffer[0] = ._dot
-        buffer[1] = ._slash
-        return pathLength + 2
+        path[0] = ._dot
+        path[1] = ._slash
     }
 
     private static func withEncodedURLPath<R>(
@@ -1093,7 +1090,7 @@ extension _URL {
             return isDirectory ? appendingTrailingSlash() : nil
         }
 
-        let info = _info.replacingPath(unsafeUninitializedCapacity: span.count + 1) { buffer in
+        let info = _info.replacingPath(capacity: span.count + 1) { newPath in
             var offset = 0
             // Compress leading slashes so "//" isn't mistaken as an authority
             if span[0] == ._slash {
@@ -1101,16 +1098,15 @@ extension _URL {
                     offset += 1
                 }
             }
-            var writeIndex = buffer.initialize(fromSpan: span.extracting(offset...))
+            newPath._append(copying: span.extracting(offset...))
             if !isDirectory {
-                while writeIndex > 1, buffer[writeIndex - 1] == ._slash {
-                    writeIndex -= 1
+                while newPath.count > 1, newPath.last == ._slash {
+                    _ = newPath.removeLast()
                 }
-            } else if buffer[writeIndex - 1] != ._slash {
-                buffer[writeIndex] = ._slash
-                writeIndex += 1
+            } else if newPath.last != ._slash {
+                newPath.append(._slash)
             }
-            return (writeIndex, encodingState)
+            return encodingState
         }
         return replacing(info: info)
     }
@@ -1125,13 +1121,12 @@ extension _URL {
         assert(!toAppend.contains(._backslash))
 
         let maxLength = path.count + toAppend.count + 2
-        let info = _info.replacingPath(unsafeUninitializedCapacity: maxLength) { buffer in
-            var writeIndex = buffer.initialize(fromSpan: path)
+        let info = _info.replacingPath(capacity: maxLength) { newPath in
+            newPath._append(copying: path)
             var offset = 0
             if path.last != ._slash && toAppend.first != ._slash {
                 // Insert a slash if one doesn't already exist
-                buffer[writeIndex] = ._slash
-                writeIndex += 1
+                newPath.append(._slash)
             } else if path.last == ._slash && toAppend.first == ._slash {
                 // Skip a slash if both parties already have one
                 offset += 1
@@ -1143,20 +1138,17 @@ extension _URL {
                     }
                 }
             }
-            writeIndex = buffer[writeIndex...].initialize(
-                fromSpan: toAppend.extracting(offset...)
-            )
+            newPath._append(copying: toAppend.extracting(offset...))
             if !isDirectory {
                 // Strip component's trailing slashes
-                while writeIndex > path.count + 1, buffer[writeIndex - 1] == ._slash {
-                    writeIndex -= 1
+                while newPath.count > path.count + 1, newPath.last == ._slash {
+                    _ = newPath.removeLast()
                 }
-            } else if writeIndex == 0 || buffer[writeIndex - 1] != ._slash {
+            } else if newPath.last != ._slash {
                 // Append a trailing slash if one doesn't already exist
-                buffer[writeIndex] = ._slash
-                writeIndex += 1
+                newPath.append(._slash)
             }
-            return (writeIndex, encodingState)
+            return encodingState
         }
         return replacing(info: info)
     }
@@ -1275,30 +1267,26 @@ extension _URL {
                component[0] == ._dot,
                component[1] == ._dot {
                 // ".." - append another "/../"
-                let info = _info.replacingPath(unsafeUninitializedCapacity: componentRange.endIndex + 4) { buffer in
-                    let writeIndex = buffer.initialize(
-                        fromSpan: path.extracting(..<componentRange.endIndex)
-                    )
-                    buffer[writeIndex + 0] = ._slash
-                    buffer[writeIndex + 1] = ._dot
-                    buffer[writeIndex + 2] = ._dot
-                    buffer[writeIndex + 3] = ._slash
-                    assert(writeIndex + 4 == buffer.count)
-                    return (writeIndex + 4, hasEncodedPath ? .unknown : .notEncoded)
+                let info = _info.replacingPath(capacity: componentRange.endIndex + 4) { newPath in
+                    newPath._append(copying: path.extracting(..<componentRange.endIndex))
+                    newPath.append(._slash)
+                    newPath.append(._dot)
+                    newPath.append(._dot)
+                    newPath.append(._slash)
+                    assert(newPath.isFull)
+                    return hasEncodedPath ? .unknown : .notEncoded
                 }
                 return replacing(info: info).url
             }
 
             if component.count == 1, component[0] == ._dot {
                 // "." - replace with "../" by appending "./"
-                let info = _info.replacingPath(unsafeUninitializedCapacity: componentRange.endIndex + 2) { buffer in
-                    let writeIndex = buffer.initialize(
-                        fromSpan: path.extracting(..<componentRange.endIndex)
-                    )
-                    buffer[writeIndex + 0] = ._dot
-                    buffer[writeIndex + 1] = ._slash
-                    assert(writeIndex + 2 == buffer.count)
-                    return (writeIndex + 2, hasEncodedPath ? .unknown : .notEncoded)
+                let info = _info.replacingPath(capacity: componentRange.endIndex + 2) { newPath in
+                    newPath._append(copying: path.extracting(..<componentRange.endIndex))
+                    newPath.append(._dot)
+                    newPath.append(._slash)
+                    assert(newPath.isFull)
+                    return hasEncodedPath ? .unknown : .notEncoded
                 }
                 return replacing(info: info).url
             }
@@ -1340,21 +1328,15 @@ extension _URL {
                     // Append ".\(pathExtension)" with a potential trailing
                     // slash and extra room to prepend "./" if needed.
                     let maxLength = componentRange.endIndex + ext.count + 4
-                    let info = _info.replacingPath(unsafeUninitializedCapacity: maxLength) { buffer in
-                        var writeIndex = buffer.initialize(
-                            fromSpan: path.extracting(first: componentRange.endIndex)
-                        )
-                        buffer[writeIndex] = ._dot
-                        writeIndex += 1
-                        writeIndex = buffer[writeIndex...].initialize(
-                            fromSpan: ext
-                        )
+                    let info = _info.replacingPath(capacity: maxLength) { newPath in
+                        newPath._append(copying: path.extracting(first: componentRange.endIndex))
+                        newPath.append(._dot)
+                        newPath._append(copying: ext)
                         if isDirectory {
-                            buffer[writeIndex] = ._slash
-                            writeIndex += 1
+                            newPath.append(._slash)
                         }
-                        let finalLength = prependDotSlashIfNeeded(buffer, pathLength: writeIndex)
-                        return (finalLength, encodingState)
+                        prependDotSlashIfNeeded(&newPath)
+                        return encodingState
                     }
                     return replacing(info: info).url
                 }
@@ -1380,15 +1362,12 @@ extension _URL {
                 return nil
             }
             let isDirectory = (path.last == ._slash)
-            let info = _info.replacingPath(unsafeUninitializedCapacity: dotIndex + 1) { buffer in
-                var writeIndex = buffer.initialize(
-                    fromSpan: path.extracting(first: dotIndex)
-                )
+            let info = _info.replacingPath(capacity: dotIndex + 1) { newPath in
+                newPath._append(copying: path.extracting(first: dotIndex))
                 if isDirectory {
-                    buffer[writeIndex] = ._slash
-                    writeIndex += 1
+                    newPath.append(._slash)
                 }
-                return (writeIndex, hasEncodedPath ? .unknown : .notEncoded)
+                return hasEncodedPath ? .unknown : .notEncoded
             }
             return replacing(info: info).url
         }
@@ -1425,18 +1404,13 @@ extension _URL {
                 let newString = _info.withSpan { stringSpan in
                     // Note: the new string must be path-preserving, since the
                     // resolution code below uses the original path span.
-                    String(unsafeUninitializedCapacity: stringSpan.count + 2) { buffer in
-                        var writeIndex = buffer.initialize(
-                            fromSpan: stringSpan.extracting(info.schemeRange)
-                        )
-                        buffer[writeIndex + 0] = ._colon
-                        buffer[writeIndex + 1] = ._slash
-                        buffer[writeIndex + 2] = ._slash
-                        writeIndex = buffer[(writeIndex + 3)...].initialize(
-                            fromSpan: stringSpan.extracting((info.schemeRange.endIndex + 1)...)
-                        )
-                        assert(writeIndex == buffer.count)
-                        return writeIndex
+                    String(_capacity: stringSpan.count + 2) { output in
+                        output._append(copying: stringSpan.extracting(info.schemeRange))
+                        output.append(._colon)
+                        output.append(._slash)
+                        output.append(._slash)
+                        output._append(copying: stringSpan.extracting((info.schemeRange.endIndex + 1)...))
+                        assert(output.isFull)
                     }
                 }
                 info = _URLInfo.parse(string: newString, encodingInvalidCharacters: true) ?? info
@@ -1444,18 +1418,20 @@ extension _URL {
             // The potential re-parse above must preserve the path bytes
             assert(path.count == info.pathRange.count)
             // + 2 reserves room to prepend "./" if needed
-            let newInfo = info.replacingPath(unsafeUninitializedCapacity: path.count + 2) { buffer in
-                _ = buffer.initialize(fromSpan: path)
-                let resolvedLength = resolveDotSegmentsInPlace(
-                    buffer: buffer[..<path.count],
-                    useRFC1808: true
-                )
-                // resolvedLength == path.count iff no resolution occurred
-                guard resolvedLength != path.count else {
-                    return (resolvedLength, hasEncodedPath ? .unknown : .notEncoded)
+            let newInfo = info.replacingPath(capacity: path.count + 2) { newPath in
+                newPath._append(copying: path)
+                newPath.withUnsafeMutableBufferPointer { pathBuffer, initializedCount in
+                    initializedCount = resolveDotSegmentsInPlace(
+                        buffer: .init(rebasing: pathBuffer[..<initializedCount]),
+                        useRFC1808: true
+                    )
                 }
-                let finalLength = prependDotSlashIfNeeded(buffer, pathLength: resolvedLength)
-                return (finalLength, hasEncodedPath ? .unknown : .notEncoded)
+                // newPath.count == path.count iff no resolution occurred
+                guard newPath.count != path.count else {
+                    return hasEncodedPath ? .unknown : .notEncoded
+                }
+                prependDotSlashIfNeeded(&newPath)
+                return hasEncodedPath ? .unknown : .notEncoded
             }
             return replacing(info: newInfo).url
         }
@@ -1471,11 +1447,7 @@ extension _URL {
             return nil
         }
         // The file-path initializers don't set .hasDirectoryPath for a trailing "." or ".." component, so re-check the unresolved path here.
-        let isDirectory = hasDirectoryPath || withPathSpan { pathSpan in
-            pathSpan.withUnsafeBufferPointer { buffer in
-                URL.hasDirectoryPath(buffer, pathEnd: buffer.count, pathLength: buffer.count)
-            }
-        }
+        let isDirectory = hasDirectoryPath || withPathSpan { $0.hasDirectoryPath }
         return _URL(filePath: path.standardizingPath, directoryHint: isDirectory ? .isDirectory : .notDirectory).url
     }
 

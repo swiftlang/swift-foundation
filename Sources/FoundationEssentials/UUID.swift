@@ -73,12 +73,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     ///
     /// - Parameter string: The string representation of a UUID, such as `E621E1F8-C36C-495A-93FC-0C247A3E6E5F`.
     public init?(uuidString string: __shared String) {
-#if FOUNDATION_FRAMEWORK && os(watchOS) && _pointerBitWidth(_32)
-        var string = string
-        let utf8Span = string.utf8SpanMakingContiguous
-#else
         let utf8Span = string.utf8Span
-#endif
         guard utf8Span.count == 36 else {
             return nil
         }

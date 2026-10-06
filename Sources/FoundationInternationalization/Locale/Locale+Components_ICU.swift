@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif

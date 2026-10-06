@@ -59,7 +59,20 @@ internal import unistd
 fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
 import stdlib_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
+fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
+
+#if canImport(Bionic)
+@preconcurrency import Bionic
+#endif
+#if canImport(WASILibc)
+@preconcurrency import WASILibc
+#endif
+#if canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
+#endif
 
 #if FOUNDATION_FRAMEWORK
 internal import CoreFoundation_Private
@@ -83,7 +96,7 @@ package struct Platform {
     static func copyMemoryPages(_ source: UnsafeRawPointer, _ dest: UnsafeMutableRawPointer, _ length: Int) {
 #if canImport(Darwin)
         if vm_copy(
-            _platform_mach_task_self(),
+            mach_task_self_,
             vm_address_t(UInt(bitPattern: source)),
             vm_size_t(length),
             vm_address_t(UInt(bitPattern: dest))) != KERN_SUCCESS {
@@ -325,7 +338,7 @@ extension Platform {
           }
           return String(decodingCString: $0.baseAddress!, as: UTF16.self)
         }
-#elseif os(WASI) || targetEnvironment(exclaveCore) // WASI does not have uname
+#elseif os(WASI) || targetEnvironment(exclaveCore) || hasFeature(Embedded) // WASI and embedded have no uname
         return "localhost"
 #else
         return withUnsafeTemporaryAllocation(of: CChar.self, capacity: Platform.MAX_HOSTNAME_LENGTH + 1) {
@@ -395,6 +408,8 @@ extension Platform {
     }
 }
 
+// The C-locale string helpers need a locale_t and the *_l libc entry points, neither of which the embedded libc shim provides. Embedded does not reference these.
+#if !hasFeature(Embedded)
 extension Platform {
     #if canImport(Darwin) || canImport(_FoundationDarwinExtras)
     private static var cLocale: locale_t? { /* LC_C_LOCALE */ nil }
@@ -439,4 +454,73 @@ extension Platform {
         return strtof_l(nptr, endptr, Self.cLocale)
         #endif
     }
+    
+#if canImport(Darwin)
+    static let calloc = Darwin.calloc
+    static let malloc = Darwin.malloc
+    static let free = Darwin.free
+    static let memset = Darwin.memset
+    static let memcpy = Darwin.memcpy
+    static let memcmp = Darwin.memcmp
+#elseif os(Windows)
+    static let calloc = ucrt.calloc
+    static let malloc = ucrt.malloc
+    static let free = ucrt.free
+    static let memset = ucrt.memset
+    static let memcpy = ucrt.memcpy
+    static let memcmp = ucrt.memcmp
+#elseif canImport(Bionic)
+    static let calloc = Bionic.calloc
+    static let malloc = Bionic.malloc
+    static let free = Bionic.free
+    static let memset = Bionic.memset
+    static let memcpy = Bionic.memcpy
+    static let memcmp = Bionic.memcmp
+#elseif canImport(Glibc)
+    static let calloc = Glibc.calloc
+    static let malloc = Glibc.malloc
+    static let free = Glibc.free
+    static let memset = Glibc.memset
+    static let memcpy = Glibc.memcpy
+    static let memcmp = Glibc.memcmp
+#elseif canImport(Musl)
+    static let calloc = Musl.calloc
+    static let malloc = Musl.malloc
+    static let free = Musl.free
+    static let memset = Musl.memset
+    static let memcpy = Musl.memcpy
+    static let memcmp = Musl.memcmp
+#elseif canImport(WASILibc)
+    static let calloc = WASILibc.calloc
+    static let malloc = WASILibc.malloc
+    static let free = WASILibc.free
+    static let memset = WASILibc.memset
+    static let memcpy = WASILibc.memcpy
+    static let memcmp = WASILibc.memcmp
+#elseif canImport(EmscriptenLibc)
+    static let calloc = EmscriptenLibc.calloc
+    static let malloc = EmscriptenLibc.malloc
+    static let free = EmscriptenLibc.free
+    static let memset = EmscriptenLibc.memset
+    static let memcpy = EmscriptenLibc.memcpy
+    static let memcmp = EmscriptenLibc.memcmp
+#elseif canImport(_FoundationDarwinExtras)
+    static let memset = _FoundationDarwinExtras.memset
+    static let memcpy = _FoundationDarwinExtras.memcpy
+    static let memcmp = _FoundationDarwinExtras.memcmp
+#elseif !NO_CSHIMS
+    // Fall back to the imported C headers
+    static let calloc = _FoundationCShims.calloc
+    static let malloc = _FoundationCShims.malloc
+    static let free = _FoundationCShims.free
+    static let memset = _FoundationCShims.memset
+    static let memcpy = _FoundationCShims.memcpy
+    static let memcmp = _FoundationCShims.memcmp
+#endif
 }
+#elseif canImport(_FoundationPlatformExtras)
+extension Platform {
+    static let calloc = _FoundationPlatformExtras.calloc
+    static let malloc = _FoundationPlatformExtras.malloc
+}
+#endif

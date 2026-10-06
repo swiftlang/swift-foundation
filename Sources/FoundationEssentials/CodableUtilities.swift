@@ -10,20 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(WASILibc)
-@preconcurrency import WASILibc
-#elseif canImport(EmscriptenLibc)
-@preconcurrency import EmscriptenLibc
-#endif
-
 //===----------------------------------------------------------------------===//
 // Coding Path Node
 //===----------------------------------------------------------------------===//
@@ -177,6 +163,9 @@ extension UInt8 {
     internal static var _e: UInt8 { UInt8(ascii: "e") }
     internal static var _E: UInt8 { UInt8(ascii: "E") }
 
+    /// One past the last ASCII control-character code point.
+    internal static var _asciiFirstPrintable: UInt8 { 0x20 }
+
     internal var digitValue: Int? {
         guard _asciiNumbers.contains(self) else { return nil }
         return Int(self &- UInt8(ascii: "0"))
@@ -184,6 +173,11 @@ extension UInt8 {
 
     internal var isLetter: Bool? {
         return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
+    }
+
+    /// Equivalent to `isspace()` in the C locale: space, `\t`, `\n`, `\v`, `\f`, `\r`.
+    internal var isASCIIWhitespace: Bool {
+        return self == ._space || (UInt8(ascii: "\t") ... UInt8(ascii: "\r")) ~= self
     }
 }
 
@@ -423,6 +417,39 @@ func _parseHexIntegerDigits<Result: FixedWidthInteger>(
     return result
 }
 
+/// Outcome of accumulating a run of ASCII decimal digits.
+enum DecimalDigitsScan<Value: FixedWidthInteger> {
+    /// Every byte scanned was a digit, and the accumulated value fits `Value`.
+    case value(Value)
+    /// Every byte scanned was a digit, but the value doesn't fit `Value`.
+    case overflow
+    /// Scanning stopped at a byte that isn't an ASCII digit.
+    case nonDigit(UInt8, offset: Int)
+}
+
+extension FixedWidthInteger {
+    static func scanDecimalDigits(of bytes: borrowing Span<UInt8>, from start: Int, isNegative: Bool = false) -> DecimalDigitsScan<Self> {
+        var result: Self = 0
+        var index = start
+        while index < bytes.count {
+            let byte = bytes[index]
+            guard _asciiNumbers.contains(byte) else {
+                return .nonDigit(byte, offset: index)
+            }
+            let digit = Self(truncatingIfNeeded: byte &- _asciiNumbers.lowerBound)
+            let (multiplied, mulOverflow) = result.multipliedReportingOverflow(by: 10)
+            guard !mulOverflow else { return .overflow }
+            let (combined, addOverflow) = isNegative
+                ? multiplied.subtractingReportingOverflow(digit)
+                : multiplied.addingReportingOverflow(digit)
+            guard !addOverflow else { return .overflow }
+            result = combined
+            index &+= 1
+        }
+        return .value(result)
+    }
+}
+
 //===----------------------------------------------------------------------===//
 // Error handling conveniences
 //===----------------------------------------------------------------------===//
@@ -578,7 +605,7 @@ struct BufferReader {
     @inline(__always)
     func string(at dataIdx: BufferViewIndex<UInt8>, matches ptr: UnsafePointer<UInt8>, length: Int) -> Bool {
         fullBuffer[dataIdx...].withUnsafeRawPointer { bufPtr, _ in
-            memcmp(bufPtr, ptr, length) == 0
+            Platform.memcmp(bufPtr, ptr, length) == 0
         }
     }
 
@@ -707,4 +734,91 @@ package enum DefaultAssociatedValueCodingKeys1: String, CodingKey {
 package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
     case _0
     case _1
+}
+
+extension RawSpan {
+    func bytesEqual(to other: RawSpan) -> Bool {
+        if isIdentical(to: other) {
+            return true
+        }
+        
+        guard byteCount == other.byteCount else {
+            return false
+        }
+        
+        guard byteCount > 0 else {
+            // Both at 0 bytes are equal
+            return true
+        }
+        
+        return withUnsafeBytes { myBytes in
+            other.withUnsafeBytes { otherBytes in
+                Platform.memcmp(myBytes.baseAddress!, otherBytes.baseAddress!, byteCount) == 0
+            }
+        }
+    }
+}
+
+//===----------------------------------------------------------------------===//
+// Missing-Key Decoder
+//===----------------------------------------------------------------------===//
+
+/// A `Decoder` returned by `keyedContainer.superDecoder(forKey:)` when the requested key is absent from the input. `decodeNil()` reports `true`; everything else throws `DecodingError.valueNotFound`.
+/// Lets format-specific decoders route the "no value for this key" case without synthesizing a fake null value.
+internal final class _MissingKeyDecoder: Decoder, SingleValueDecodingContainer {
+    let codingPath: [CodingKey]
+    let userInfo: [CodingUserInfoKey: Any]
+    let boolReportsTypeMismatch: Bool
+
+    init(codingPath: [CodingKey], userInfo: [CodingUserInfoKey: Any], boolReportsTypeMismatch: Bool = false) {
+        self.codingPath = codingPath
+        self.userInfo = userInfo
+        self.boolReportsTypeMismatch = boolReportsTypeMismatch
+    }
+
+    // MARK: Decoder
+
+    func container<Key: CodingKey>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key> {
+        throw valueNotFound(KeyedDecodingContainer<Key>.self)
+    }
+
+    func unkeyedContainer() throws -> UnkeyedDecodingContainer {
+        throw valueNotFound(UnkeyedDecodingContainer.self)
+    }
+
+    func singleValueContainer() throws -> SingleValueDecodingContainer { self }
+
+    // MARK: SingleValueDecodingContainer
+
+    func decodeNil() -> Bool { true }
+
+    func decode(_ type: Bool.Type) throws -> Bool {
+        if boolReportsTypeMismatch {
+            throw DecodingError.typeMismatch(type, .init(codingPath: codingPath, debugDescription: "Expected to decode \(type) but found null instead."))
+        }
+        throw valueNotFound(type)
+    }
+    func decode(_ type: String.Type) throws -> String { throw valueNotFound(type) }
+    func decode(_ type: Double.Type) throws -> Double { throw valueNotFound(type) }
+    func decode(_ type: Float.Type) throws -> Float { throw valueNotFound(type) }
+    func decode(_ type: Int.Type) throws -> Int { throw valueNotFound(type) }
+    func decode(_ type: Int8.Type) throws -> Int8 { throw valueNotFound(type) }
+    func decode(_ type: Int16.Type) throws -> Int16 { throw valueNotFound(type) }
+    func decode(_ type: Int32.Type) throws -> Int32 { throw valueNotFound(type) }
+    func decode(_ type: Int64.Type) throws -> Int64 { throw valueNotFound(type) }
+    func decode(_ type: UInt.Type) throws -> UInt { throw valueNotFound(type) }
+    func decode(_ type: UInt8.Type) throws -> UInt8 { throw valueNotFound(type) }
+    func decode(_ type: UInt16.Type) throws -> UInt16 { throw valueNotFound(type) }
+    func decode(_ type: UInt32.Type) throws -> UInt32 { throw valueNotFound(type) }
+    func decode(_ type: UInt64.Type) throws -> UInt64 { throw valueNotFound(type) }
+    func decode<T: Decodable>(_ type: T.Type) throws -> T { throw valueNotFound(type) }
+
+    // MARK: Helpers
+
+    private func valueNotFound<T>(_ type: T.Type) -> DecodingError {
+        .valueNotFound(type, .init(
+            codingPath: codingPath,
+            debugDescription: "Cannot get value of type \(type): no value was present"
+        ))
+    }
 }

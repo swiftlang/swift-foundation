@@ -514,8 +514,8 @@ private struct CalendarTests {
         }
 
         #expect(!loopedForever)
-        // Expected 1126-10-18 07:52:58 +0000
-        #expect(foundDate?.timeIntervalSinceReferenceDate == -27586714022)
+        // Expected 1107-10-18 07:52:58 +0000.
+        #expect(foundDate?.timeIntervalSinceReferenceDate == -28186330022)
     }
 
     @Test func dateFromComponentsNearDSTTransition() {
@@ -568,6 +568,16 @@ private struct CalendarTests {
         let first = try firstDateMatchingRepeatedHour(nanosecond: nil, .first, .backward)
         let last = try firstDateMatchingRepeatedHour(nanosecond: nil, .last, .backward)
         #expect(first != last)
+    }
+
+    @Test(arguments: [
+        (Calendar.RepeatedTimePolicy.first, Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1730622000.0)),  // 2024-11-03T01:20:00-0700
+        (Calendar.RepeatedTimePolicy.last, Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1730625600.0)),   // 2024-11-03T01:20:00-0800
+        (Calendar.RepeatedTimePolicy.first, Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1730625600.0)), // 2024-11-03T01:20:00-0800
+        (Calendar.RepeatedTimePolicy.last, Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1730622000.0)),  // 2024-11-03T01:20:00-0700
+    ])
+    func repeatedTimePolicyIsAppliedInSearchOrder(policy: Calendar.RepeatedTimePolicy, direction: Calendar.SearchDirection, expected: Date) throws {
+        #expect(try firstDateMatchingRepeatedHour(nanosecond: nil, policy, direction) == expected)
     }
 
     @Test func dayInWeekOfMonth() {
@@ -1503,6 +1513,13 @@ private struct CalendarTests {
 
         // 2024-03-03T02:34:36-0800, 2024-03-11T02:34:36-0700
         try test(Date(timeIntervalSinceReferenceDate: 731154876), Date(timeIntervalSinceReferenceDate: 731842476))
+    }
+
+    @Test func addNaN_compatibility() throws {
+        let date = Date(timeIntervalSinceReferenceDate: .nan)
+        let calendar = Calendar(identifier: .gregorian)
+        let prevMonth = calendar.date(byAdding: .month, value: -1, to: date)
+        #expect(prevMonth != nil)
     }
 
     @Test func testDateComponentsTimeZone() throws {

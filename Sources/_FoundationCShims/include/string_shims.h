@@ -13,14 +13,7 @@
 #ifndef CSHIMS_STRING_H
 #define CSHIMS_STRING_H
 
-#include "_CShimsMacros.h"
-#include "_CStdlib.h"
-
-#if __has_include(<locale.h>)
-#include <locale.h>
-#endif
-#include <stddef.h>
-
+// This header is not currently included in the Darwin module
 #if __has_include(<xlocale.h>)
 #include <xlocale.h>
 #endif
@@ -30,13 +23,10 @@ extern "C" {
 #endif
 
 #if !TARGET_OS_WINDOWS && !TARGET_OS_MAC
+#include <locale.h>
 inline static int _stringshims_LC_ALL_MASK() {
     return LC_ALL_MASK;
 }
-#endif
-
-#if defined(TARGET_OS_EXCLAVEKIT) && TARGET_OS_EXCLAVEKIT
-#include <strings.h>
 #endif
 
 #ifdef __cplusplus

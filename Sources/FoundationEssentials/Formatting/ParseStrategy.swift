@@ -27,6 +27,30 @@
 /// let parsed = try? Decimal("$12,345.67",
 /// strategy: style.parseStrategy) // 12345.67
 /// ```
+#if hasFeature(Embedded)
+// Embedded Swift makes Codable unavailable, so the protocol cannot refine it here. Every other platform keeps the original `: Codable, Hashable` refinement (the #else branch below).
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+public protocol ParseStrategy : Hashable {
+
+    /// The input type parsed by this strategy.
+    ///
+    /// Conforming types provide a value for this associated type to declare the type of values they parse.
+    associatedtype ParseInput
+
+    /// The output type returned by this strategy.
+    ///
+    /// Conforming types provide a value for this associated type to declare the type of values they return.
+    associatedtype ParseOutput
+
+    /// Parses a value, using this strategy.
+    ///
+    /// This method throws an error if the parse strategy can't parse `value`.
+    ///
+    /// - Parameter value: A value whose type matches the strategy's ``ParseStrategy/ParseInput`` type.
+    /// - Returns: A parsed value of the type declared by ``ParseStrategy/ParseOutput``.
+    func parse(_ value: ParseInput) throws -> ParseOutput
+}
+#else
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public protocol ParseStrategy : Codable, Hashable {
 
@@ -48,3 +72,4 @@ public protocol ParseStrategy : Codable, Hashable {
     /// - Returns: A parsed value of the type declared by ``ParseStrategy/ParseOutput``.
     func parse(_ value: ParseInput) throws -> ParseOutput
 }
+#endif

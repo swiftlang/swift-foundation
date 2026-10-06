@@ -24,6 +24,8 @@ import Darwin
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
+#elseif canImport(ucrt)
+@preconcurrency import ucrt
 #endif
 
 #if FOUNDATION_FRAMEWORK

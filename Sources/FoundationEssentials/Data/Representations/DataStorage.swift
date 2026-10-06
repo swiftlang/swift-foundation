@@ -28,6 +28,8 @@ import ucrt
 internal import _FoundationDarwinExtras
 #elseif canImport(stdlib_h)
 import stdlib_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 // Underlying storage representation for medium and large data.
@@ -56,9 +58,9 @@ internal final class __DataStorage : @unchecked Sendable {
         }
 #else
         if clear {
-            return calloc(1, size)
+            return Platform.calloc(1, size)
         } else {
-            return malloc(size)
+            return Platform.malloc(size)
         }
 #endif
     }

@@ -88,6 +88,14 @@ private typealias TemporaryFilePermissions = mode_t
 private typealias TemporaryFilePermissions = Void
 #endif
 
+private var minimalPermissionsForWritingAtomicTemporaryFiles: TemporaryFilePermissions {
+#if canImport(Darwin)
+    0o200
+#else
+    // Some operating systems report `EACCES` when attempting to open a file with only write permisisons.
+    0o600
+#endif
+}
 
 private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, reportProgress: Bool) throws -> Int {
     // Fetch this once
@@ -612,7 +620,7 @@ private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable 
         }
 
         // If we captured an existing file's mode, open the temp at the most restrictive mode that still lets us write to it (0o200) so other users' processes can't read or modify the half-written contents; fchmod restores the real mode after rename. For a brand-new file, use 0666 (subject to umask) so open(2)'s usual semantics apply.
-        let tempOpenMode: TemporaryFilePermissions = (mode != nil) ? 0o200 : 0o666
+        let tempOpenMode: TemporaryFilePermissions = (mode != nil) ? minimalPermissionsForWritingAtomicTemporaryFiles : 0o666
 
         // tempDirfd is the file descriptor of the temporary file's parent directory, which COULD be the same exact file descriptor as destDirfd.
         let (fd, auxName, tempDirfd, temporaryDirectoryPath) = try createProtectedTemporaryFile(destDirfd: destDirfd, destinationPath: newPath, inPath: inPath, options: options, permissions: tempOpenMode, variant: "Folder")

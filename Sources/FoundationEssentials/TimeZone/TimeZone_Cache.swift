@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Android)
+// For tzset, localtime
+
+#if canImport(Android)
 import unistd
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
@@ -26,7 +26,9 @@ import ucrt
 import WinSDK
 #endif
 
+#if !hasFeature(Embedded)
 internal import _FoundationCShims
+#endif
 internal import Synchronization
 
 #if FOUNDATION_FRAMEWORK
@@ -43,12 +45,21 @@ internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMTICU.self
 }
 #else
+#if hasFeature(Embedded)
+package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+    nil
+}
+package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+    _TimeZoneGMT.self
+}
+#else
 dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
     nil
 }
 dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMT.self
 }
+#endif
 #endif
 
 #if os(Windows)

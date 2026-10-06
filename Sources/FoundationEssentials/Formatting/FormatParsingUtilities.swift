@@ -144,8 +144,7 @@ extension OutputSpan<UTF8.CodeUnit> {
             self.append(Self.asciiZero + UInt8(ones))
         } else {
             // Special case - we don't do zero padding
-            var desc = i.numericStringRepresentation
-            self._append(copying: desc.utf8SpanMakingContiguous.span)
+            self._append(copying: i.numericStringRepresentation.utf8Span.span)
         }
     }
 

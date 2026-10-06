@@ -10,55 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Windows)
-@usableFromInline let calloc = ucrt.calloc
-@usableFromInline let malloc = ucrt.malloc
-@usableFromInline let free = ucrt.free
-@usableFromInline let memset = ucrt.memset
-@usableFromInline let memcpy = ucrt.memcpy
-@usableFromInline let memcmp = ucrt.memcmp
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-@usableFromInline let calloc = Bionic.calloc
-@usableFromInline let malloc = Bionic.malloc
-@usableFromInline let free = Bionic.free
-@usableFromInline let memset = Bionic.memset
-@usableFromInline let memcpy = Bionic.memcpy
-@usableFromInline let memcmp = Bionic.memcmp
-#elseif canImport(Glibc)
-@usableFromInline let calloc = Glibc.calloc
-@usableFromInline let malloc = Glibc.malloc
-@usableFromInline let free = Glibc.free
-@usableFromInline let memset = Glibc.memset
-@usableFromInline let memcpy = Glibc.memcpy
-@usableFromInline let memcmp = Glibc.memcmp
-#elseif canImport(Musl)
-@usableFromInline let calloc = Musl.calloc
-@usableFromInline let malloc = Musl.malloc
-@usableFromInline let free = Musl.free
-@usableFromInline let memset = Musl.memset
-@usableFromInline let memcpy = Musl.memcpy
-@usableFromInline let memcmp = Musl.memcmp
-#elseif canImport(WASILibc)
-@usableFromInline let calloc = WASILibc.calloc
-@usableFromInline let malloc = WASILibc.malloc
-@usableFromInline let free = WASILibc.free
-@usableFromInline let memset = WASILibc.memset
-@usableFromInline let memcpy = WASILibc.memcpy
-@usableFromInline let memcmp = WASILibc.memcmp
-#elseif canImport(EmscriptenLibc)
-@usableFromInline let calloc = EmscriptenLibc.calloc
-@usableFromInline let malloc = EmscriptenLibc.malloc
-@usableFromInline let free = EmscriptenLibc.free
-@usableFromInline let memset = EmscriptenLibc.memset
-@usableFromInline let memcpy = EmscriptenLibc.memcpy
-@usableFromInline let memcmp = EmscriptenLibc.memcmp
-#elseif canImport(_FoundationDarwinExtras)
-@usableFromInline let memset = _FoundationDarwinExtras.memset
-@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
-@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
-#endif
-
 #if !NO_CSHIMS
 internal import _FoundationCShims
 #endif
@@ -69,7 +20,7 @@ import Darwin
 
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
     guard vm_deallocate(
-        _platform_mach_task_self(),
+        mach_task_self_,
         vm_address_t(UInt(bitPattern: mem)),
         vm_size_t(length)) == ERR_SUCCESS else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
@@ -86,18 +37,43 @@ internal func malloc_good_size(_ size: Int) -> Int {
 
 #if canImport(Glibc)
 @preconcurrency import Glibc
+@usableFromInline let memcmp = Glibc.memcmp
+@usableFromInline let memset = Glibc.memset
+@usableFromInline let memcpy = Glibc.memcpy
 #elseif canImport(Musl)
 @preconcurrency import Musl
+@usableFromInline let memcmp = Musl.memcmp
+@usableFromInline let memset = Musl.memset
+@usableFromInline let memcpy = Musl.memcpy
 #elseif canImport(ucrt)
 import ucrt
+@usableFromInline let memcmp = ucrt.memcmp
+@usableFromInline let memset = ucrt.memset
+@usableFromInline let memcpy = ucrt.memcpy
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+@usableFromInline let memcmp = WASILibc.memcmp
+@usableFromInline let memset = WASILibc.memset
+@usableFromInline let memcpy = WASILibc.memcpy
 #elseif canImport(EmscriptenLibc)
 @preconcurrency import EmscriptenLibc
+@usableFromInline let memcmp = EmscriptenLibc.memcmp
+@usableFromInline let memset = EmscriptenLibc.memset
+@usableFromInline let memcpy = EmscriptenLibc.memcpy
 #elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras.POSIX.sys.mman
+@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
+@usableFromInline let memset = _FoundationDarwinExtras.memset
+@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+@usableFromInline let memcmp = Bionic.memcmp
+@usableFromInline let memset = Bionic.memset
+@usableFromInline let memcpy = Bionic.memcpy
 #elseif canImport(string_h)
 import string_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 #if os(Windows)
@@ -1217,6 +1193,7 @@ extension Data {
 
                     // Compare the contents
                     assert(length1 == b2.count)
+                    // Use the inlined memcmp above
                     return memcmp(b1Address, b2Address, length1) == 0
                 }
             }
@@ -1226,7 +1203,7 @@ extension Data {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension Data : CustomStringConvertible, CustomDebugStringConvertible {
     /// A human-readable description for the data.
     public var description: String {
         return "\(self.count) bytes"
@@ -1236,7 +1213,11 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data: CustomReflectable {
     public var customMirror: Mirror {
         let nBytes = self.count
         var children: [(label: String?, value: Any)] = []
@@ -1288,3 +1269,4 @@ extension Data : Codable {
         }
     }
 }
+#endif

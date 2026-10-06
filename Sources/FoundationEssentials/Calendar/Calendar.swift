@@ -10,22 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-internal import os
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif canImport(CRT)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
-#endif
-
 #if FOUNDATION_FRAMEWORK
 // For feature flag
 internal import _ForSwiftFoundation
@@ -109,34 +93,6 @@ public struct Calendar : Hashable, Equatable, Sendable {
         
         @available(FoundationPreview 6.2, *)
         case vietnamese
-        
-        private typealias GregorianCodingKeys = EmptyCodingKeys
-        private typealias ChineseCodingKeys = EmptyCodingKeys
-        private typealias BuddhistCodingKeys = EmptyCodingKeys
-        private typealias CopticCodingKeys = EmptyCodingKeys
-        private typealias EthiopicAmeteMihretCodingKeys = EmptyCodingKeys
-        private typealias EthiopicAmeteAlemCodingKeys = EmptyCodingKeys
-        private typealias HebrewCodingKeys = EmptyCodingKeys
-        private typealias Iso8601CodingKeys = EmptyCodingKeys
-        private typealias IndianCodingKeys = EmptyCodingKeys
-        private typealias IslamicCodingKeys = EmptyCodingKeys
-        private typealias IslamicCivilCodingKeys = EmptyCodingKeys
-        private typealias JapaneseCodingKeys = EmptyCodingKeys
-        private typealias PersianCodingKeys = EmptyCodingKeys
-        private typealias RepublicOfChinaCodingKeys = EmptyCodingKeys
-        private typealias IslamicTabularCodingKeys = EmptyCodingKeys
-        private typealias IslamicUmmAlQuraCodingKeys = EmptyCodingKeys
-        private typealias BanglaCodingKeys = EmptyCodingKeys
-        private typealias GujaratiCodingKeys = EmptyCodingKeys
-        private typealias KannadaCodingKeys = EmptyCodingKeys
-        private typealias MalayalamCodingKeys = EmptyCodingKeys
-        private typealias MarathiCodingKeys = EmptyCodingKeys
-        private typealias OdiaCodingKeys = EmptyCodingKeys
-        private typealias TamilCodingKeys = EmptyCodingKeys
-        private typealias TeluguCodingKeys = EmptyCodingKeys
-        private typealias VikramCodingKeys = EmptyCodingKeys
-        private typealias DangiCodingKeys = EmptyCodingKeys
-        private typealias VietnameseCodingKeys = EmptyCodingKeys
 
         package static let cldrKeywordKey = "ca"
         package static let legacyKeywordKey = ICULegacyKey("calendar")
@@ -484,7 +440,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// For use by `NSCoding` implementation in `NSCalendar` and `Codable` for `Calendar` only.
-    internal init(identifier: Calendar.Identifier, locale: Locale, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+    internal init(identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
@@ -915,8 +871,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
             // assumes that time zone or other adjustments are always whole minutes
             var int1 = date1.timeIntervalSinceReferenceDate.rounded(.down)
             var int2 = date2.timeIntervalSinceReferenceDate.rounded(.down)
-            int1 = floor(int1 / 60.0)
-            int2 = floor(int2 / 60.0)
+            int1 = (int1 / 60.0).rounded(.down)
+            int2 = (int2 / 60.0).rounded(.down)
             if int1 == int2 {
                 return .orderedSame
             } else if int2 < int1 {
@@ -1249,6 +1205,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     /// Determines which result to use when a time is repeated on a day in a calendar (for example, during a daylight saving transition when the times between 2:00am and 3:00am may happen twice).
+    ///
+    /// The policy is applied in the order the search encounters the repeated times. When searching with `SearchDirection.backward`, the "first" occurrence is therefore the later of the two in absolute time, and the "last" is the earlier.
     public enum RepeatedTimePolicy : Sendable {
         /// If there are two or more matching times (all the components are the same, including isLeapMonth) before the end of the next instance of the next higher component to the highest specified component, then the algorithm will return the first occurrence.
         case first
@@ -1307,7 +1265,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// There will be at least one intervening date which does not match all the components (or the given date itself must not match) between the given date and any result.
     ///
-    /// If `direction` is set to `.backward`, this method finds the previous match before the given date. The intent is that the same matches as for a `.forward` search will be found (that is, if you are enumerating forwards or backwards for each hour with minute "27", the seconds in the date you will get in forwards search would obviously be 00, and the same will be true in a backwards search in order to implement this rule.  Similarly for DST backwards jumps which repeats times, you'll get the first match by default, where "first" is defined from the point of view of searching forwards.  So, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of 59:59 for the matching hour (which would be the nominal first match within a given hour, given the other rules here, when searching backwards).
+    /// If `direction` is set to `.backward`, this method finds the previous match before the given date. The intent is that the same matches as for a `.forward` search will be found (that is, if you are enumerating forwards or backwards for each hour with minute "27", the seconds in the date you will get in forwards search would obviously be 00, and the same will be true in a backwards search in order to implement this rule.  Similarly for DST backwards jumps which repeats times, you'll get the first match by default, where "first" is defined from the point of view of the direction you are searching in, so a backwards search gives you the later of the two times.  So, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of 59:59 for the matching hour (which would be the nominal first match within a given hour, given the other rules here, when searching backwards).
     ///
     /// If an exact match is not possible, and requested with the `strict` option, nil is passed to the closure and the enumeration ends.  (Logically, since an exact match searches indefinitely into the future, if no match is found there's no point in continuing the enumeration.)
     ///
@@ -1341,7 +1299,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     
     /// Computes the dates which match (or most closely match) a given set of components, returned as a `Sequence`.
     ///
-    /// If `direction` is set to `.backward`, this method finds the previous match before the start date. The intent is that the same matches as for a `.forward` search will be found. For example, if you are searching forwards or backwards for each hour with minute "27", the seconds in the date you will get in both a `.forward` and `.backward` search would be `00`.  Similarly, for DST backwards jumps which repeat times, you'll get the first match by default, where "first" is defined from the point of view of searching forwards. Therefore, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of `59:59` for the matching hour but instead `00:00`.
+    /// If `direction` is set to `.backward`, this method finds the previous match before the start date. The intent is that the same matches as for a `.forward` search will be found. For example, if you are searching forwards or backwards for each hour with minute "27", the seconds in the date you will get in both a `.forward` and `.backward` search would be `00`.  Similarly, for DST backwards jumps which repeat times, you'll get the first match by default, where "first" is defined from the point of view of the direction you are searching in, so a `.backward` search gives you the later of the two times. Therefore, when searching backwards looking for a particular hour, with no minute and second specified, you don't get a minute and second of `59:59` for the matching hour but instead `00:00`.
     ///
     /// If a range is supplied, the sequence terminates if the next result is not contained in the range. The starting point does not need to be contained in the range, but if the first result is outside of the range then the result will be an empty sequence.
     ///
@@ -1490,7 +1448,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         // Apply an epsilon to comparison of nanosecond values
         if let nanosecond = comp.nanosecond, let tempNanosecond = tempComp.nanosecond {
-            if labs(CLong(nanosecond - tempNanosecond)) > 500 {
+            if (nanosecond - tempNanosecond).magnitude > 500 {
                 return false
             } else {
                 comp.nanosecond = 0
@@ -1653,6 +1611,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
     public var description: String {
@@ -1675,7 +1634,9 @@ extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, Cust
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -1741,7 +1702,37 @@ extension Calendar : Codable {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Calendar.Identifier : Codable {}
+extension Calendar.Identifier : Codable {
+    private typealias GregorianCodingKeys = EmptyCodingKeys
+    private typealias ChineseCodingKeys = EmptyCodingKeys
+    private typealias BuddhistCodingKeys = EmptyCodingKeys
+    private typealias CopticCodingKeys = EmptyCodingKeys
+    private typealias EthiopicAmeteMihretCodingKeys = EmptyCodingKeys
+    private typealias EthiopicAmeteAlemCodingKeys = EmptyCodingKeys
+    private typealias HebrewCodingKeys = EmptyCodingKeys
+    private typealias Iso8601CodingKeys = EmptyCodingKeys
+    private typealias IndianCodingKeys = EmptyCodingKeys
+    private typealias IslamicCodingKeys = EmptyCodingKeys
+    private typealias IslamicCivilCodingKeys = EmptyCodingKeys
+    private typealias JapaneseCodingKeys = EmptyCodingKeys
+    private typealias PersianCodingKeys = EmptyCodingKeys
+    private typealias RepublicOfChinaCodingKeys = EmptyCodingKeys
+    private typealias IslamicTabularCodingKeys = EmptyCodingKeys
+    private typealias IslamicUmmAlQuraCodingKeys = EmptyCodingKeys
+    private typealias BanglaCodingKeys = EmptyCodingKeys
+    private typealias GujaratiCodingKeys = EmptyCodingKeys
+    private typealias KannadaCodingKeys = EmptyCodingKeys
+    private typealias MalayalamCodingKeys = EmptyCodingKeys
+    private typealias MarathiCodingKeys = EmptyCodingKeys
+    private typealias OdiaCodingKeys = EmptyCodingKeys
+    private typealias TamilCodingKeys = EmptyCodingKeys
+    private typealias TeluguCodingKeys = EmptyCodingKeys
+    private typealias VikramCodingKeys = EmptyCodingKeys
+    private typealias DangiCodingKeys = EmptyCodingKeys
+    private typealias VietnameseCodingKeys = EmptyCodingKeys
+
+}
+#endif
 
 /// Internal-use struct for holding the range of a Weekend
 package struct WeekendRange: Equatable, Hashable {
@@ -1759,6 +1750,7 @@ package struct WeekendRange: Equatable, Hashable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.MatchingPolicy: Codable {
     public init(from decoder: Decoder) throws {
@@ -1816,6 +1808,7 @@ extension Calendar.RepeatedTimePolicy: Codable {
         }
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK

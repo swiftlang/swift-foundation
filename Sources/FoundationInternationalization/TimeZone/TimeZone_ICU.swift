@@ -14,10 +14,6 @@
 import FoundationEssentials
 #endif
 
-#if canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 #if canImport(ucrt)
 import ucrt
 #endif

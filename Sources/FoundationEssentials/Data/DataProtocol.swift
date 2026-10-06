@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// For memcpy
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -24,6 +26,8 @@ import ucrt
 @preconcurrency import EmscriptenLibc
 #elseif canImport(stdlib_h)
 import stdlib_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 //===--- DataProtocol -----------------------------------------------------===//

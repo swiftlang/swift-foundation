@@ -267,8 +267,26 @@ final class ICUCurrencyNumberFormatter : ICUNumberFormatterBase, @unchecked Send
         let localeIdentifier: String
     }
 
+    static func isValidCurrencyCode(_ currencyCode: String) -> Bool {
+        let utf8 = currencyCode.utf8Span.span
+        guard utf8.count == 3 else {
+            return false
+        }
+
+        for i in 0..<utf8.count {
+            let lowercased = utf8[i] | 0x20
+            guard lowercased >= UInt8(ascii: "a") && lowercased <= UInt8(ascii: "z") else {
+                return false
+            }
+        }
+
+        return true
+    }
+
     private static func skeleton(for signature: Signature) -> String {
-        var s = "currency/\(signature.currencyCode)"
+
+        let currencyCode = isValidCurrencyCode(signature.currencyCode) ? signature.currencyCode : "XXX"
+        var s = "currency/\(currencyCode)"
 
         let stem = signature.skeleton
         if stem.count > 0 {

@@ -10,24 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
-#endif
-
-#if canImport(CRT)
-import CRT
-#endif
-
 private struct _ParseInfo {
     let utf16 : String.UTF16View
     var curr : String.UTF16View.Index
@@ -324,12 +306,20 @@ private func parseOctal(startingWith ch: UInt16, _ pInfo: inout _ParseInfo) -> U
     return .init(nextStep: num)
 }
 
+extension UInt16 {
+    fileprivate var isHexDigit: Bool {
+        (self >= UInt16(ascii: "0") && self <= UInt16(ascii: "9")) ||
+        (self >= UInt16(ascii: "A") && self <= UInt16(ascii: "F")) ||
+        (self >= UInt16(ascii: "a") && self <= UInt16(ascii: "f"))
+    }
+}
+
 private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16? {
     var num : UInt16 = 0
     var numDigits = 4
     while !pInfo.isAtEnd && numDigits > 0 {
         let ch2 = pInfo.currChar
-        if ch2 < 128 && isxdigit(Int32(ch2)) != 0 {
+        if ch2 < 128 && ch2.isHexDigit {
             pInfo.advance()
             num = num << 4
             if ch2 <= UInt16(ascii: "9") {
@@ -440,7 +430,7 @@ private func getDataBytes(_ pInfo: inout _ParseInfo, bytes: UnsafeMutableBufferP
             guard let ch = UInt8(exactly: ch) else {
                 return nil
             }
-            if isdigit(Int32(ch)) != 0 {
+            if (ch >= UInt8(ascii: "0") && (ch <= UInt8(ascii: "9"))) {
                 return ch &- UInt8(ascii: "0")
             }
             if (ch >= UInt8(ascii: "a")) && (ch <= UInt8(ascii: "f")) {

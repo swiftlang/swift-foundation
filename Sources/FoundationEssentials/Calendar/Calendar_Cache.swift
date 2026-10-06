@@ -22,9 +22,15 @@ internal func _calendarICUClass() -> _CalendarProtocol.Type? {
     _CalendarICU.self
 }
 #else
+#if hasFeature(Embedded)
+package func _calendarICUClass() -> _CalendarProtocol.Type? {
+    nil
+}
+#else
 dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
     nil
 }
+#endif
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -36,24 +42,54 @@ internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool {
 }
 
 internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
-    // _foundation_swift_chinese_calendar_feature_enabled() — once Apple adds the underscored binding
+    _foundation_swift_chinese_calendar_feature_enabled()
+}
+
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool {
+    // TODO: Return the runtime feature flag value, _foundation_swift_buddhist_calendar_feature_enabled(), once Apple adds the underscored binding.
+    return false
+}
+
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool {
+    // TODO: Return the runtime feature flag value, _foundation_swift_japanese_calendar_feature_enabled(), once Apple adds the underscored binding.
+    return false
+}
+
+internal func foundation_swift_roc_calendar_feature_enabled() -> Bool {
+    // TODO: Return the runtime feature flag value, _foundation_swift_roc_calendar_feature_enabled(), once Apple adds the underscored binding.
     return false
 }
 #else
-internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return false }
-internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return true }
+internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return true }
+internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_roc_calendar_feature_enabled() -> Bool { return false }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
     if identifier == .gregorian || identifier == .iso8601 {
         return _CalendarGregorian.self
-    } else if foundation_swift_hebrew_calendar_feature_enabled() && identifier == .hebrew {
-        return _CalendarHebrew.self
-    } else if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
-        return _CalendarChinese.self
-    } else {
-        return _calendarICUClass()
     }
+#if !hasFeature(Embedded)
+    if foundation_swift_hebrew_calendar_feature_enabled() && identifier == .hebrew {
+        return _CalendarHebrew.self
+    }
+    if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
+        return _CalendarChinese.self
+    }
+    // These three share Gregorian arithmetic and differ only in how they label eras, which `_CalendarGregorian` reads from an era table chosen by identifier.
+    if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
+        return _CalendarGregorian.self
+    }
+    if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
+        return _CalendarGregorian.self
+    }
+    if foundation_swift_roc_calendar_feature_enabled() && identifier == .republicOfChina {
+        return _CalendarGregorian.self
+    }
+#endif
+    return _calendarICUClass()
 }
 
 /// Singleton which listens for notifications about preference changes for Calendar and holds cached singletons for the current locale, calendar, and time zone.

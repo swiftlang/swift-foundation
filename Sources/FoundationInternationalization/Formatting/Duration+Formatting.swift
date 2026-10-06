@@ -14,22 +14,6 @@
 import FoundationEssentials
 #endif
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(Windows)
-import CRT
-#elseif os(WASI)
-@preconcurrency import WASILibc
-#elseif os(Emscripten)
-@preconcurrency import EmscriptenLibc
-#endif
-
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
 extension Duration {
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
@@ -187,9 +171,36 @@ extension Duration {
         case ...9:
             return .nanoseconds(intervalMod3)
         default:
-            return .seconds(pow(0.1, Double(fractionalSecondsLength)))
+            // Finer than a nanosecond: the interval is 10^(18 - length) attoseconds, and zero once it is finer than one attosecond
+            guard fractionalSecondsLength <= 18 else {
+                return .zero
+            }
+            return .init(secondsComponent: 0, attosecondsComponent: powersOfTen[18 - fractionalSecondsLength])
         }
     }
+
+    /// `powersOfTen[n]` is 10 raised to `n`. 18 is the largest exponent that fits in an `Int64`.
+    private static let powersOfTen: InlineArray<19, Int64> = [
+        1,
+        10,
+        100,
+        1_000,
+        10_000,
+        100_000,
+        1_000_000,
+        10_000_000,
+        100_000_000,
+        1_000_000_000,
+        10_000_000_000,
+        100_000_000_000,
+        1_000_000_000_000,
+        10_000_000_000_000,
+        100_000_000_000_000,
+        1_000_000_000_000_000,
+        10_000_000_000_000_000,
+        100_000_000_000_000_000,
+        1_000_000_000_000_000_000,
+    ]
 
     func factor(intoUnits units: [UnitsFormatStyle.Unit]) -> (values: [Double], remainder: Duration) {
         var value = self
@@ -216,7 +227,7 @@ extension Duration {
                 var unitValue = Double(quotient)
 
                 if value.components.seconds != .zero {
-                    unitValue += Double(value.components.seconds) * pow(10, Double(Self.fractionalDigitOffsetToSecond(from: unit.unit)!))
+                    unitValue += Double(value.components.seconds) * Double(Self.powersOfTen[Self.fractionalDigitOffsetToSecond(from: unit.unit)!])
                 }
 
                 values.append(unitValue)
@@ -231,7 +242,7 @@ extension Duration {
         if let c: Int64 = secondCoefficient(for: unit) {
             return Double(c)
         } else {
-            return pow(0.1, Double(fractionalDigitOffsetToSecond(from: unit)!))
+            return 1 / Double(powersOfTen[fractionalDigitOffsetToSecond(from: unit)!])
         }
     }
 

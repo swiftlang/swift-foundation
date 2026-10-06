@@ -764,7 +764,7 @@ extension URL {
             return false
         }
         if T.self == UInt8.self {
-            return memcmp(buffer.baseAddress!.advanced(by: pathStart), "/.file/id=", 10) == 0
+            return Platform.memcmp(buffer.baseAddress!.advanced(by: pathStart), "/.file/id=", 10) == 0
         }
         return (
             buffer[pathStart] == UInt8(ascii: "/") &&
@@ -822,7 +822,7 @@ extension URL {
             return false
         }
         if T.self == UInt8.self {
-            return memcmp(buffer.baseAddress!, "addressbook", 11) == 0
+            return Platform.memcmp(buffer.baseAddress!, "addressbook", 11) == 0
         }
         return (
             buffer[0] == UInt8(ascii: "a") &&
