@@ -360,17 +360,43 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
     // MARK: Leaf decoding
 
-    /// Decode this `.integer` primitive as `T`. Accepts leading whitespace, optional sign, decimal or hex. `.real`-typed primitives are accepted by rounding the parsed double to `T` via `T(exactly:)`.
+    // Whether `decimal` is exactly `value`, compared without a Double intermediate.
+    private static func decimal<I: FixedWidthInteger>(_ decimal: Decimal, isExactly value: I) -> Bool {
+        if value < 0 {
+            guard let signed = Int64(exactly: value) else { return false }
+            return decimal == Decimal(signed)
+        }
+        guard let unsigned = UInt64(exactly: value) else { return false }
+        return decimal == Decimal(unsigned)
+    }
+
+    /// Decode this `.integer` primitive as `T`. Accepts leading whitespace, optional sign, decimal or hex. `.real`-typed primitives are accepted only when their text is exactly an integer representable as `T`.
     func decodeInteger<T: FixedWidthInteger & Sendable>(as type: T.Type = T.self) throws -> T {
         switch rawDescriptor {
         case .integer:
             return try decodeXMLInteger(from: try integerBytes, source: documentSpan)
         case .real:
             let d: Double = try decodeXMLReal(from: try realBytes, source: documentSpan)
-            guard let v = T(exactly: d) else {
-                throw XMLPlistError.corruptedValue("integer")
+            let rounded = T(exactly: d)
+
+            // The distance between Doubles is >=2 from ±2^53, so below that every integer is exactly representable and the value strtod produced is the value that appeared in the element text.
+            if d.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
+                guard let rounded else {
+                    throw XMLPlistError.corruptedValue("integer")
+                }
+                return rounded
             }
-            return v
+
+            // Above that, strtod may have rounded, so only accept an integer that exactly equals the element text.
+            if let exact = Decimal._decimal(from: try realBytes, matchEntireString: true).asOptional.result {
+                if let rounded, Self.decimal(exact, isExactly: rounded) {
+                    return rounded
+                }
+                if let recovered = T(exactly: exact), Self.decimal(exact, isExactly: recovered) {
+                    return recovered
+                }
+            }
+            throw XMLPlistError.corruptedValue("integer")
         default:
             throw XMLPlistError.typeMismatch(expected: "integer", actual: rawDescriptor)
         }
