@@ -242,17 +242,13 @@ extension Base64 {
 
         let (char62, char63) = Self.encodingCharacters(options: options)
 
-        // Note: It's safe to use overflowing math here, as input and output are valid pointers
-        //       with a length that is smaller than Int here. For this reason index and outIndex
-        //       can never wrap.
-
         // first full line
         if input.byteCount >= lineLength {
             self.loopEncode(char62, char63, input: input.extracting(0..<lineLength), output: &buffer)
         }
 
         // following full lines
-        // Ensure the compiler inlines the loops for each line-length. This adds up to 29% to
+        // Ensure the compiler inlines the loops for each line-length. This adds up to ~40% to
         // the performance of line-length-64 encoding with only adding ~100 extra instructions.
         if wantsLineLength64 {
             self.encodeFollowingLines(lineLength: 48, lines: lines, separatorByte1, separatorByte2, char62, char63, input: input, buffer: &buffer)
@@ -305,18 +301,21 @@ extension Base64 {
         input: borrowing RawSpan,
         buffer: inout OutputRawSpan
     ) {
-        buffer.withUnsafeMutableBytes { outPtr, initializedCount in
+        // Note: It's safe to use overflowing math here, as input and output are valid pointers
+        //       with a length that is smaller than Int here. For this reason index and outIndex
+        //       can never wrap.
+        buffer.withUnsafeMutableBytes { outPtr, outIndex in
             var lineInputIndex = lineLength
             while lineInputIndex < lines * lineLength {
-                outPtr[initializedCount] = separatorByte1
-                initializedCount &+= 1
+                outPtr[outIndex] = separatorByte1
+                outIndex &+= 1
                 if let separatorByte2 {
-                    outPtr[initializedCount] = separatorByte2
-                    initializedCount &+= 1
+                    outPtr[outIndex] = separatorByte2
+                    outIndex &+= 1
                 }
 
                 let inputSpan = input.extracting(lineInputIndex..<lineInputIndex + lineLength)
-                self.loopEncode(char62, char63, input: inputSpan, output: outPtr, outIndex: &initializedCount)
+                self.loopEncode(char62, char63, input: inputSpan, output: outPtr, outIndex: &outIndex)
                 lineInputIndex &+= lineLength
             }
         }
