@@ -1271,7 +1271,19 @@ extension Decimal {
         }
 
         let tail: (numerator: UInt128, denominator: UInt128) =
-            remainder == (0, 0) ? (0, 1) : (remainder <= (0, root) ? (1, 3) : (2, 3))
+            if remainder == (0, 0) {
+                (0, 3)
+            } else if remainder <= (0, root) {
+                (1, 3)
+            } else if root == 34028236692093846346337460743176821145 /* UInt128.max / 10 */
+                && exponent > minExponent {
+                // Test `sqrt(root * root + remainder) > root + 3/4`.
+                // By squaring and rearranging, for integer `remainder`, `remainder > floor(3/2 * root + 9/16)`.
+                // Since `root` is odd, the rhs is equivalent to `root + floor(root / 2) + 1`.
+                remainder > (0, root + (root &>> 1) + 1) ? (5, 6) : (2, 3)
+            } else {
+                (2, 3)
+            }
         return try Self._assemble(
             isNegative: false,
             significand: (0, root),

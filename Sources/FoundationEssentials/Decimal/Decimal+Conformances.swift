@@ -112,15 +112,6 @@ extension Decimal /* : FloatingPoint */ {
     /// The radix used by decimal numbers.
     public static var radix: Int { 10 }
 
-    /// The unit in the last place of 1.0.
-    ///
-    /// The positive difference between 1.0 and the next greater representable number.
-    @export(implementation)
-    @inline(always)
-    public static var ulpOfOne: Decimal {
-        (1 as Decimal).ulp
-    }
-
     /// Creates a new decimal floating-point value from the given unsigned integer value.
     ///
     /// - Parameter value: The integer to convert to a decimal floating-point value.
