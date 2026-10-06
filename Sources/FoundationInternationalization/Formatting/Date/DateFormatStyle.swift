@@ -454,10 +454,11 @@ extension Date {
                 return _symbols
             }
 
-            return DateFieldCollection().collection(date: .numeric).collection(time: .shortened)
+            return DateFieldCollection().collection(date: _dateStyle ?? .numeric).collection(time: _timeStyle ?? .shortened)
         }
 
         var _dateStyle: DateStyle? // For accessing locale pref's custom date format
+        var _timeStyle: TimeStyle?
 
         /// The locale to use when formatting date and time values.
         ///
@@ -520,15 +521,19 @@ extension Date {
         ///   - calendar: The calendar to use for date values.
         ///   - timeZone: The time zone with which to specify date and time values.
         ///   - capitalizationContext: The capitalization formatting context used when formatting date and time values.
-        /// - Note: Always specify the date style, time style, or the date components to be included in the formatted string with the symbol modifiers. Otherwise, an empty string will be returned when you use the instance to format a `Date`.
+        /// - Note: With no styles or symbol modifiers, the format uses a numeric date and shortened time. If one style is `.omitted` and the other is `nil`, only the other part uses its default style. If both styles are `.omitted`, the format produces an empty string unless symbol modifiers select fields.
         public init(date: DateStyle? = nil, time: TimeStyle? = nil, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, timeZone: TimeZone = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
             if let dateStyle = date, dateStyle != .omitted {
                 _dateStyle = dateStyle
                 _symbols = (_symbols ?? .init()).collection(date: dateStyle)
+            } else if date == .omitted {
+                _dateStyle = .omitted
             }
 
             if let timeStyle = time, timeStyle != .omitted {
                 _symbols = (_symbols ?? .init()).collection(time: timeStyle)
+            } else if time == .omitted {
+                _timeStyle = .omitted
             }
 
             self.locale = locale
@@ -537,9 +542,10 @@ extension Date {
             self.capitalizationContext = capitalizationContext
         }
 
-        private init(symbols: DateFieldCollection, dateStyle: DateStyle?, locale: Locale, timeZone: TimeZone, calendar: Calendar, capitalizationContext: FormatStyleCapitalizationContext) {
+        private init(symbols: DateFieldCollection, dateStyle: DateStyle?, timeStyle: TimeStyle?, locale: Locale, timeZone: TimeZone, calendar: Calendar, capitalizationContext: FormatStyleCapitalizationContext) {
             self._symbols = symbols
             self._dateStyle = dateStyle
+            self._timeStyle = timeStyle
             self.locale = locale
             self.timeZone = timeZone
             self.calendar = calendar
@@ -1075,6 +1081,7 @@ extension Date.FormatStyle : Codable, Hashable {
         case calendar
         case capitalizationContext
         case dateStyle
+        case timeStyle
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1085,6 +1092,7 @@ extension Date.FormatStyle : Codable, Hashable {
         try container.encode(self.calendar, forKey: .calendar)
         try container.encode(self.capitalizationContext, forKey: .capitalizationContext)
         try container.encodeIfPresent(self._dateStyle, forKey: .dateStyle)
+        try container.encodeIfPresent(self._timeStyle, forKey: .timeStyle)
     }
 
     public init(from decoder: Decoder) throws {
@@ -1095,7 +1103,8 @@ extension Date.FormatStyle : Codable, Hashable {
         let calendar = try container.decode(Calendar.self, forKey: .calendar)
         let context = try container.decode(FormatStyleCapitalizationContext.self, forKey: .capitalizationContext)
         let dateStyle = try container.decodeIfPresent(DateStyle.self, forKey: .dateStyle)
-        self.init(symbols: symbols, dateStyle: dateStyle, locale: locale, timeZone: timeZone, calendar: calendar, capitalizationContext: context)
+        let timeStyle = try container.decodeIfPresent(TimeStyle.self, forKey: .timeStyle)
+        self.init(symbols: symbols, dateStyle: dateStyle, timeStyle: timeStyle, locale: locale, timeZone: timeZone, calendar: calendar, capitalizationContext: context)
     }
 }
 
