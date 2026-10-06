@@ -69,12 +69,12 @@ extension FormatStyle where Self == Date.VerbatimFormatStyle {
     /// Use this format style only when you need to produce or parse an exact format, such as
     /// when working with programmatically-produced date strings. For formatting dates that
     /// people read, use ``FormatStyle/dateTime`` to get a localized ``Date/FormatStyle``
-    /// instead. To use the ISO-8601 standard, use ``FormatStyle/iso8601`` to get a
-    /// ``Date/ISO8601FormatStyle``.
+    /// instead. To use the ISO-8601 standard, use `FormatStyle.iso8601` to get a
+    /// `Date.ISO8601FormatStyle`.
     ///
     /// Use the dot-notation form of this type method when the call point allows the use of
     /// ``Date/VerbatimFormatStyle``. You typically do this when calling the
-    /// ``Date/formatted(_:)`` method of ``Date``.
+    /// `Date.formatted(_:)` method of ``Date``.
     ///
     /// The following example formats the current date with a verbatim format that uses a
     /// two-digit month, two-digit day, and default-digits year, separated by slashes. This
