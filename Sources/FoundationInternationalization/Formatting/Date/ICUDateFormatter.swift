@@ -301,7 +301,7 @@ extension ICUDateFormatter.DateFormatInfo {
         let calendarIdentifier = format.calendar.identifier
         let datePatternOverride: String?
 #if FOUNDATION_FRAMEWORK
-        if let dateStyle = format._dateStyle {
+        if let dateStyle = format._dateStyle, dateStyle != .omitted {
             datePatternOverride = format.locale.customDateFormat(dateStyle)
         } else {
             datePatternOverride = nil
