@@ -978,6 +978,7 @@ extension Decimal {
         self = self.truncatingRemainder(dividingBy: other)
     }
 
+#if false
     /// Returns the value with greater magnitude.
     ///
     /// This method returns the value with greater magnitude of the two given values,
@@ -1075,6 +1076,7 @@ extension Decimal {
         if y.isNaN { return x }
         return x < y ? x : y
     }
+#endif
 
     /// Returns the remainder of this value divided by the given value.
     ///
