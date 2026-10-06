@@ -408,7 +408,7 @@ private func write(buffer: RawSpan, toFileDescriptor fd: Int32, path: borrowing 
         if res < 0 {
             let savedErrno = errno
             let error = CocoaError.errorWithFilePath(path, errno: savedErrno, reading: false)
-            #if os(Linux)
+            #if os(Linux) || os(FreeBSD)
             // Linux returns -1 and errno == EINVAL if trying to sync a special file, eg a fifo, character device etc which can be ignored.
             if savedErrno != EINVAL {
                 throw error
