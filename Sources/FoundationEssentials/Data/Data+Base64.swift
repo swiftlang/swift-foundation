@@ -190,8 +190,8 @@ extension Base64 {
         if to < input.byteCount {
             let index = to
 
-            let i1 = input[unchecked: index] // fine, since index = to and to < input.count
-            let i2 = index &+ 1 < input.byteCount ? input[unchecked: index &+ 1] : nil // range check in the same line
+            let i1 = input[index]
+            let i2 = index &+ 1 < input.byteCount ? input[index &+ 1] : nil
 
             buffer.append(Self.encodeCharacter(i1 &>> 2, char62, char63))
 
@@ -252,21 +252,12 @@ extension Base64 {
         }
 
         // following full lines
-        var lineInputIndex = lineLength
-        while lineInputIndex < lines * lineLength {
-            buffer.append(separatorByte1)
-            if let separatorByte2 {
-                buffer.append(separatorByte2)
-            }
-
-            // Ensure the compiler inlines the loops for each line-length. This adds up to 20% to
-            // the performance of line-length-64 encoding with only adding ~70 extra instructions.
-            if wantsLineLength64 {
-                self.loopEncode(char62, char63, input: input.extracting(lineInputIndex..<lineInputIndex + 48), output: &buffer)
-            } else {
-                self.loopEncode(char62, char63, input: input.extracting(lineInputIndex..<lineInputIndex + 57), output: &buffer)
-            }
-            lineInputIndex &+= lineLength
+        // Ensure the compiler inlines the loops for each line-length. This adds up to 29% to
+        // the performance of line-length-64 encoding with only adding ~100 extra instructions.
+        if wantsLineLength64 {
+            self.encodeFollowingLines(lineLength: 48, lines: lines, separatorByte1, separatorByte2, char62, char63, input: input, buffer: &buffer)
+        } else {
+            self.encodeFollowingLines(lineLength: 57, lines: lines, separatorByte1, separatorByte2, char62, char63, input: input, buffer: &buffer)
         }
 
         // last line beginning
@@ -304,34 +295,71 @@ extension Base64 {
         }
     }
 
+    private static func encodeFollowingLines(
+        lineLength: Int,
+        lines: Int,
+        _ separatorByte1: UInt8,
+        _ separatorByte2: UInt8?,
+        _ char62: UInt8,
+        _ char63: UInt8,
+        input: borrowing RawSpan,
+        buffer: inout OutputRawSpan
+    ) {
+        buffer.withUnsafeMutableBytes { outPtr, initializedCount in
+            var lineInputIndex = lineLength
+            while lineInputIndex < lines * lineLength {
+                outPtr[initializedCount] = separatorByte1
+                initializedCount &+= 1
+                if let separatorByte2 {
+                    outPtr[initializedCount] = separatorByte2
+                    initializedCount &+= 1
+                }
+
+                let inputSpan = input.extracting(lineInputIndex..<lineInputIndex + lineLength)
+                self.loopEncode(char62, char63, input: inputSpan, output: outPtr, outIndex: &initializedCount)
+                lineInputIndex &+= lineLength
+            }
+        }
+    }
+
     private static func loopEncode(
         _ char62: UInt8,
         _ char63: UInt8,
         input: borrowing RawSpan,
         output: inout OutputRawSpan
     ) {
+        output.withUnsafeMutableBytes { outPtr, initializedCount in
+            self.loopEncode(char62, char63, input: input, output: outPtr, outIndex: &initializedCount)
+        }
+    }
+
+    private static func loopEncode(
+        _ char62: UInt8,
+        _ char63: UInt8,
+        input: borrowing RawSpan,
+        output: UnsafeMutableRawBufferPointer,
+        outIndex: inout Int
+    ) {
         assert(input.byteCount.isMultiple(of: 3))
-        assert(output.freeCapacity >= 4 * (input.byteCount / 3))
+        assert(output.count - outIndex >= 4 * (input.byteCount / 3))
         // Note: It's safe to use overflowing math here, as input and output are valid pointers
         //       with a length that is smaller than Int here. For this reason index and outIndex
         //       can never wrap.
-        output.withUnsafeMutableBytes { outPtr, initializedCount in
-            let triples = input.byteCount / 3
-            let outStart = initializedCount
-            // This loop is auto-vectorized by LLVM
-            for triple in 0..<triples {
-                let index = triple &* 3
-                let out = outStart &+ triple &* 4
-                let i1 = input[unchecked: index]
-                let i2 = input[unchecked: index &+ 1]
-                let i3 = input[unchecked: index &+ 2]
-                outPtr[out] = Self.encodeCharacter(i1 &>> 2, char62, char63)
-                outPtr[out &+ 1] = Self.encodeCharacter(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F), char62, char63)
-                outPtr[out &+ 2] = Self.encodeCharacter(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03), char62, char63)
-                outPtr[out &+ 3] = Self.encodeCharacter(i3 & 0x3F, char62, char63)
-            }
-            initializedCount &+= triples &* 4
+        let triples = input.byteCount / 3
+        let outStart = outIndex
+        // This loop is auto-vectorized by LLVM
+        for triple in 0..<triples {
+            let index = triple &* 3
+            let out = outStart &+ triple &* 4
+            let i1 = input[unchecked: index]
+            let i2 = input[unchecked: index &+ 1]
+            let i3 = input[unchecked: index &+ 2]
+            output[out] = Self.encodeCharacter(i1 &>> 2, char62, char63)
+            output[out &+ 1] = Self.encodeCharacter(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F), char62, char63)
+            output[out &+ 2] = Self.encodeCharacter(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03), char62, char63)
+            output[out &+ 3] = Self.encodeCharacter(i3 & 0x3F, char62, char63)
         }
+        outIndex &+= triples &* 4
     }
 
     /// The base64 alphabet computed arithmetically rather than through a lookup table.
