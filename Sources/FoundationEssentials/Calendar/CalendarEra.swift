@@ -145,13 +145,13 @@ extension GregorianFamilyCalendarEras {
 
     /// The five modern eras. Earlier ones are not listed, so a date before Meiji reports the inherited Gregorian era and numbers 2 through 231 are unused.
     ///
-    /// Meiji starts 1868-09-08. Some sources date it to 1868-10-23 instead, so the tests pin this boundary.
+    /// Meiji starts 1868-10-23, the Gregorian date of the proclamation. Older data uses 1868-09-08, which is the same day in the Japanese lunisolar calendar, so the tests pin this boundary.
     static let japanese = GregorianFamilyCalendarEras([
         GregorianFamilyCalendarEra(eraNumber: 236, anchorYear: 2019, startMonth: 5, startDay: 1, direction: .forward),
         GregorianFamilyCalendarEra(eraNumber: 235, anchorYear: 1989, startMonth: 1, startDay: 8, direction: .forward),
         GregorianFamilyCalendarEra(eraNumber: 234, anchorYear: 1926, startMonth: 12, startDay: 25, direction: .forward),
         GregorianFamilyCalendarEra(eraNumber: 233, anchorYear: 1912, startMonth: 7, startDay: 30, direction: .forward),
-        GregorianFamilyCalendarEra(eraNumber: 232, anchorYear: 1868, startMonth: 9, startDay: 8, direction: .forward),
+        GregorianFamilyCalendarEra(eraNumber: 232, anchorYear: 1868, startMonth: 10, startDay: 23, direction: .forward),
     ], erasCanEnd: true)
 
     /// Before-Minguo and Minguo, sharing the 1912 boundary.

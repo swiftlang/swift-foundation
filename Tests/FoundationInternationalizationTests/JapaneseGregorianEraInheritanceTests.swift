@@ -50,9 +50,11 @@ private struct JapaneseGregorianEraInheritanceTests {
         // The modern eras are numbered 232 through 236.
         EraCase(label: "Reiwa 2020", sourceEra: ce, year: 2020, month: 6, day: 15, expectedEra: reiwa, expectedYear: 2),
         EraCase(label: "Heisei start 1989-01-08", sourceEra: ce, year: 1989, month: 1, day: 8, expectedEra: heisei, expectedYear: 1),
-        EraCase(label: "Meiji start 1868-09-08", sourceEra: ce, year: 1868, month: 9, day: 8, expectedEra: meiji, expectedYear: 1),
+        EraCase(label: "Meiji start 1868-10-23", sourceEra: ce, year: 1868, month: 10, day: 23, expectedEra: meiji, expectedYear: 1),
         // Day before Meiji, and earlier CE dates, inherit Gregorian CE (era 1) with the Gregorian year.
-        EraCase(label: "day before Meiji 1868-09-07", sourceEra: ce, year: 1868, month: 9, day: 7, expectedEra: ce, expectedYear: 1868),
+        EraCase(label: "day before Meiji 1868-10-22", sourceEra: ce, year: 1868, month: 10, day: 22, expectedEra: ce, expectedYear: 1868),
+        // Older data starts Meiji on this day. This calendar does not.
+        EraCase(label: "1868-09-08 is not yet Meiji", sourceEra: ce, year: 1868, month: 9, day: 8, expectedEra: ce, expectedYear: 1868),
         EraCase(label: "early 1868-01-01", sourceEra: ce, year: 1868, month: 1, day: 1, expectedEra: ce, expectedYear: 1868),
         EraCase(label: "1776-07-04", sourceEra: ce, year: 1776, month: 7, day: 4, expectedEra: ce, expectedYear: 1776),
         EraCase(label: "0900-06-15", sourceEra: ce, year: 900, month: 6, day: 15, expectedEra: ce, expectedYear: 900),
@@ -69,7 +71,7 @@ private struct JapaneseGregorianEraInheritanceTests {
     }
 
     @Test func prolepticEraYearRollsIntoGregorian() throws {
-        // Setting Meiji year 1, Jan 1 resolves to CE, because Meiji 1 Jan 1 is Gregorian 1868-01-01, which falls before Meiji's September 8 start.
+        // Setting Meiji year 1, Jan 1 resolves to CE, because Meiji 1 Jan 1 is Gregorian 1868-01-01, which falls before Meiji's October 23 start.
         let calendar = Self.japanese()
         var components = DateComponents()
         components.era = Self.meiji; components.year = 1; components.month = 1; components.day = 1; components.hour = 12
@@ -89,7 +91,7 @@ private struct JapaneseGregorianEraInheritanceTests {
     static let roundTrips: [RoundTrip] = [
         RoundTrip(era: reiwa, year: 2, month: 6, day: 15),
         RoundTrip(era: heisei, year: 1, month: 1, day: 8),
-        RoundTrip(era: meiji, year: 1, month: 9, day: 8),
+        RoundTrip(era: meiji, year: 1, month: 10, day: 23),
         RoundTrip(era: ce, year: 1867, month: 6, day: 1),
         RoundTrip(era: ce, year: 1500, month: 3, day: 20),
         RoundTrip(era: bce, year: 15, month: 7, day: 10),
@@ -120,11 +122,11 @@ private struct JapaneseGregorianEraInheritanceTests {
 
     // date(byAdding:) works in Gregorian year-space and only relabels the era on read-back, so crossing the Meiji lower edge downward lands on the inherited Gregorian era (CE, then BCE).
     static let addAcrossMeijiCases: [AddCase] = [
-        AddCase(label: "Meiji 1 + day(-1) -> CE 1868", fromEra: meiji, fromYear: 1, fromMonth: 9, fromDay: 8, component: .day, amount: -1, expectedEra: ce, expectedYear: 1868, expectedMonth: 9, expectedDay: 7),
-        AddCase(label: "Meiji 1 + month(-1) -> CE 1868", fromEra: meiji, fromYear: 1, fromMonth: 9, fromDay: 8, component: .month, amount: -1, expectedEra: ce, expectedYear: 1868, expectedMonth: 8, expectedDay: 8),
-        AddCase(label: "Meiji 1 + year(-1) -> CE 1867", fromEra: meiji, fromYear: 1, fromMonth: 9, fromDay: 8, component: .year, amount: -1, expectedEra: ce, expectedYear: 1867, expectedMonth: 9, expectedDay: 8),
-        AddCase(label: "Meiji 1 + year(-1867) -> CE 1", fromEra: meiji, fromYear: 1, fromMonth: 9, fromDay: 8, component: .year, amount: -1867, expectedEra: ce, expectedYear: 1, expectedMonth: 9, expectedDay: 8),
-        AddCase(label: "Meiji 1 + year(-1868) -> BCE 1", fromEra: meiji, fromYear: 1, fromMonth: 9, fromDay: 8, component: .year, amount: -1868, expectedEra: bce, expectedYear: 1, expectedMonth: 9, expectedDay: 8),
+        AddCase(label: "Meiji 1 + day(-1) -> CE 1868", fromEra: meiji, fromYear: 1, fromMonth: 10, fromDay: 23, component: .day, amount: -1, expectedEra: ce, expectedYear: 1868, expectedMonth: 10, expectedDay: 22),
+        AddCase(label: "Meiji 1 + month(-1) -> CE 1868", fromEra: meiji, fromYear: 1, fromMonth: 10, fromDay: 23, component: .month, amount: -1, expectedEra: ce, expectedYear: 1868, expectedMonth: 9, expectedDay: 23),
+        AddCase(label: "Meiji 1 + year(-1) -> CE 1867", fromEra: meiji, fromYear: 1, fromMonth: 10, fromDay: 23, component: .year, amount: -1, expectedEra: ce, expectedYear: 1867, expectedMonth: 10, expectedDay: 23),
+        AddCase(label: "Meiji 1 + year(-1867) -> CE 1", fromEra: meiji, fromYear: 1, fromMonth: 10, fromDay: 23, component: .year, amount: -1867, expectedEra: ce, expectedYear: 1, expectedMonth: 10, expectedDay: 23),
+        AddCase(label: "Meiji 1 + year(-1868) -> BCE 1", fromEra: meiji, fromYear: 1, fromMonth: 10, fromDay: 23, component: .year, amount: -1868, expectedEra: bce, expectedYear: 1, expectedMonth: 10, expectedDay: 23),
         AddCase(label: "Meiji 1 Dec + month(-4) -> CE 1868", fromEra: meiji, fromYear: 1, fromMonth: 12, fromDay: 1, component: .month, amount: -4, expectedEra: ce, expectedYear: 1868, expectedMonth: 8, expectedDay: 1),
     ]
 
@@ -177,7 +179,7 @@ private struct JapaneseGregorianEraInheritanceTests {
     @Test func inheritedCeEraIsClippedAtMeiji() throws {
         let calendar = Self.japanese()
         let preMeiji = try Self.gregorianDate(era: Self.ce, 1600, 1, 15)
-        let meijiStart = try Self.gregorianDate(era: Self.ce, 1868, 9, 8)
+        let meijiStart = try Self.gregorianDate(era: Self.ce, 1868, 10, 23)
 
         let inherited = try #require(calendar.dateInterval(of: .era, for: preMeiji))
         #expect(inherited.end == calendar.startOfDay(for: meijiStart))
