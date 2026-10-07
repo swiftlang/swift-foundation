@@ -14,7 +14,7 @@
 extension Date {
     /// Generates a locale-aware string representation of a date using the ISO 8601 date format.
     ///
-    /// Calling this method is equivalent to passing a ``Date/ISO8601FormatStyle`` to a date's ``Date/formatted()`` method.
+    /// Calling this method is equivalent to passing a ``Date/ISO8601FormatStyle`` to a date's `Date.formatted()` method.
     ///
     /// - Parameter style: A customized ``Date/ISO8601FormatStyle`` to apply. By default, the method applies an unmodified ISO 8601 format style.
     /// - Returns: A string, formatted according to the specified style.
@@ -27,7 +27,7 @@ extension Date {
 extension Date {
     /// A type that converts between dates and their ISO-8601 string representations.
     ///
-    /// The ``Date/ISO8601FormatStyle`` type generates and parses string representations of dates following the [ISO-8601](https://www.iso.org/iso-8601-date-and-time-format.html) standard, like `2024-04-01T12:34:56.789Z`. Use this type to create ISO-8601 representations of dates and create dates from text strings in ISO 8601 format. For other formatting conventions, like human-readable, localized date formats, use ``Date/FormatStyle``.
+    /// The ``Date/ISO8601FormatStyle`` type generates and parses string representations of dates following the [ISO-8601](https://www.iso.org/iso-8601-date-and-time-format.html) standard, like `2024-04-01T12:34:56.789Z`. Use this type to create ISO-8601 representations of dates and create dates from text strings in ISO 8601 format. For other formatting conventions, like human-readable, localized date formats, use `Date.FormatStyle`.
     ///
     /// Instance modifier methods applied to an ISO-8601 format style customize the formatted output, as the following example illustrates.
     ///
@@ -38,7 +38,7 @@ extension Date {
     /// ```
     ///
     ///
-    /// Use the static factory property ``FormatStyle/iso8601`` to create an instance of ``Date/ISO8601FormatStyle``. Then apply instance modifier methods to customize the format, as in the example below.
+    /// Use the static factory property `FormatStyle.iso8601` to create an instance of ``Date/ISO8601FormatStyle``. Then apply instance modifier methods to customize the format, as in the example below.
     ///
     /// ```swift
     /// let meetNow = Date()

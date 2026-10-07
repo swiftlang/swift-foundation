@@ -143,7 +143,17 @@ private struct BuiltInUnicodeScalarSetTests {
         let illegal = BuiltInUnicodeScalarSet(type: .illegal)
         setContainsScalar(illegal, "\u{10000}", false) // LINEAR B SYLLABLE B008 A
         setContainsScalar(illegal, "\u{1D7CF}", false) // MATHEMATICAL BOLD DIGIT ZERO
-        setContainsScalar(illegal, "\u{D0000}", false)
+        setContainsScalar(illegal, "\u{D0000}", true)
+    }
+
+    @Test(arguments: UInt32(4)...13)
+    func illegalSetContainsUnassignedPlanes(plane: UInt32) {
+        let illegal = BuiltInUnicodeScalarSet(type: .illegal)
+        var missing = 0
+        for offset in UInt32(0)..<0x10000 where !illegal.contains(Unicode.Scalar(plane << 16 | offset)!) {
+            missing += 1
+        }
+        #expect(missing == 0)
     }
 
     @Test func illegalSetUnsupportedPlane15And16Membership() {
