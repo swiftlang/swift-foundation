@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 // Engine for the Chinese, Dangi and Vietnamese calendars: a baked table for 1901 to 2100, astronomy for the other years. `Docs/Chinese_Family_Calendars.md` explains the variants.
 
 // MARK: - Variants
@@ -1201,6 +1203,11 @@ extension _CalendarChinese {
         return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: _CalendarAstronomy.gregorianRataDie(relatedISOYear, 1, 19) + Int((entry >> 17) & 0x3F), monthLengthBits: UInt16(entry & 0x1FFF), monthCount: leap == 0 ? 12 : 13, leapMonthNumber: leap)
     }
 
+    // Two slots retain neighboring years and matched larger capacities in the
+    // measured search and conversion workloads. Only fallback years use them.
+    private static let yearCacheCapacity = 2
+    private static let yearCache = Mutex<[_ChineseYear?]>(Array(repeating: nil, count: yearCacheCapacity))
+
     /// Month structure for the Chinese year whose New Year falls in Gregorian `relatedISOYear`.
     ///
     /// In the baked range (1901...2100) this is a direct table decode.
@@ -1212,8 +1219,15 @@ extension _CalendarChinese {
         if idx >= 0 && idx < tableYearCount {
             return decodeTableYear(relatedISOYear: relatedISOYear, variant)
         }
-        // Out-of-range: compute the month structure from astronomy. No caching; see the note on the rule functions above.
-        // Join the baked table with no gap and no overlap at its edges.
+        // Consecutive years occupy different slots, including years before the common era.
+        let remainder = relatedISOYear % yearCacheCapacity
+        let slot = remainder < 0 ? remainder + yearCacheCapacity : remainder
+        if case .chinese = variant, let cached = yearCache.withLock({ $0[slot] }), cached.relatedISOYear == relatedISOYear {
+            return cached
+        }
+        // Astronomy is deliberately outside the lock. Concurrent misses can compute
+        // the same immutable value independently; only lookup and publication serialize.
+        // Tile exactly with the baked table at the seams.
         let ny: Int
         if relatedISOYear == firstTableYear + tableYearCount {
             ny = decodeTableYear(relatedISOYear: relatedISOYear - 1, variant).endRataDie
@@ -1245,7 +1259,11 @@ extension _CalendarChinese {
             let label = chineseMonthLabel(startingAt: s, gregorianYear: _CalendarAstronomy.gregorianYear(ofRataDie: s), variant)
             if label.isLeap { leapMonthNumber = UInt8(label.month) }
         }
-        return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
+        let result = _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
+        if case .chinese = variant {
+            yearCache.withLock { $0[slot] = result }
+        }
+        return result
     }
 
     static func year(containingRataDie rataDie: Int, _ variant: ChineseCalendarVariant) -> _ChineseYear {
