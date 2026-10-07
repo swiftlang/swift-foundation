@@ -3059,7 +3059,14 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             let currEra = dateComponent(.era, from: start)
             let goalEra = dateComponent(.era, from: end)
 
-            return (goalEra - currEra, start)
+            // A calendar with an era table moves the start into the goal era and keeps the year in the era, the month, the day and the time, so the smaller components count from there.
+            guard eraTable != nil, goalEra != currEra else {
+                return (goalEra - currEra, start)
+            }
+            var startComponents = dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: start, in: timeZone)
+            startComponents.era = goalEra
+            let newStart = try date(from: startComponents, inTimeZone: timeZone)
+            return (goalEra - currEra, newStart)
         case .nanosecond:
             let diffInNano = end.timeIntervalSince(start) * 1.0e+9
             let diff = if diffInNano >= Double(Int32.max) {

@@ -166,7 +166,56 @@ private struct GregorianFamilyCalendarParityTests {
         #expect(calendar.date(byAdding: .era, value: 1, to: probe.date) == probe.date)
         #expect(calendar.date(byAdding: .era, value: -1, to: probe.date) == probe.date)
     }
+
+    /// The difference across an era change must match `_CalendarICU`. The start moves into the era of the end first, so the smaller components can be negative.
+    @Test(arguments: GregorianCalendarFamily.allCases, gregorianFamilyEraSpans)
+    func differenceAcrossErasMatchesICU(_ family: GregorianCalendarFamily, _ span: GregorianFamilyEraSpan) {
+        let components: Set<Calendar.Component> = [.era, .year, .month, .day, .hour, .minute, .second]
+        let ours = family.ours.dateComponents(components, from: span.start, to: span.end)
+        let icu = family.icu.dateComponents(components, from: span.start, to: span.end)
+        #expect(ours.era == icu.era)
+        #expect(ours.year == icu.year)
+        #expect(ours.month == icu.month)
+        #expect(ours.day == icu.day)
+        #expect(ours.hour == icu.hour)
+        #expect(ours.minute == icu.minute)
+        #expect(ours.second == icu.second)
+    }
 }
+
+/// Two GMT instants for a difference test, given as Gregorian dates in the Common Era.
+private struct GregorianFamilyEraSpan: Sendable, CustomTestStringConvertible {
+    let label: String
+    let start, end: Date
+
+    init(_ label: String, from start: (Int, Int, Int, Int, Int, Int), to end: (Int, Int, Int, Int, Int, Int)) {
+        self.label = label
+        self.start = Self.date(start)
+        self.end = Self.date(end)
+    }
+
+    var testDescription: String { label }
+
+    private static func date(_ value: (year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int)) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let components = DateComponents(year: value.year, month: value.month, day: value.day, hour: value.hour, minute: value.minute, second: value.second)
+        guard let date = calendar.date(from: components) else {
+            preconditionFailure("invalid Gregorian span date \(value)")
+        }
+        return date
+    }
+}
+
+/// Japanese spans cross Meiji, Showa, Heisei and Reiwa. ROC spans cross from Before Minguo to Minguo. Buddhist has one era, so it checks the case with no era change.
+private let gregorianFamilyEraSpans: [GregorianFamilyEraSpan] = [
+    GregorianFamilyEraSpan("1900 to 2010", from: (1900, 1, 1, 1, 23, 34), to: (2010, 9, 8, 7, 59, 54)),
+    GregorianFamilyEraSpan("2010 to 1900", from: (2010, 9, 8, 7, 59, 54), to: (1900, 1, 1, 1, 23, 34)),
+    GregorianFamilyEraSpan("1950 to 2020", from: (1950, 6, 15, 12, 0, 0), to: (2020, 2, 29, 8, 30, 15)),
+    GregorianFamilyEraSpan("1989-01-08 to 1950", from: (1989, 1, 8, 0, 0, 0), to: (1950, 6, 15, 12, 0, 0)),
+    GregorianFamilyEraSpan("1911-12-31 to 1912-01-01", from: (1911, 12, 31, 23, 0, 0), to: (1912, 1, 1, 1, 0, 0)),
+    GregorianFamilyEraSpan("2020 to 2025", from: (2020, 3, 1, 0, 0, 0), to: (2025, 8, 20, 12, 0, 0)),
+]
 
 /// Expected values for the ROC calendar's backward-counting Before-Minguo era, which no other calendar in the family exercises.
 @Suite("ROC Backward Era")
