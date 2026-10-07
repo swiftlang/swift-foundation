@@ -87,12 +87,9 @@ private typealias TemporaryFilePermissions = Void
 #endif
 
 private var minimalPermissionsForWritingAtomicTemporaryFiles: TemporaryFilePermissions {
-#if canImport(Darwin)
-    0o200
-#else
     // Some operating systems report `EACCES` when attempting to open a file with only write permisisons.
+    // Also, we don't want to leave unreadable temporary files around in case the process is terminated before the rename.
     0o600
-#endif
 }
 
 private func writeToFileDescriptorWithProgress(_ fd: Int32, buffer: RawSpan, reportProgress: Bool) throws -> Int {
