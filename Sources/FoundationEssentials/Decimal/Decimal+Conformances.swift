@@ -2136,3 +2136,199 @@ extension Decimal {
         }
     }
 }
+
+@available(FoundationPreview 6.5, *)
+extension Decimal {
+    /// Creates a value by rounding the given value to a multiple of the specified increment.
+    ///
+    /// For a finite `value` and a finite, nonzero `increment`,
+    /// the integer multiplier is obtained by rounding the exact quotient `value / increment.magnitude` to an integer using `rule`.
+    /// Note that the multiplier is *not* computed in floating-point arithmetic,
+    /// and that it may not be representable in any available integer type.
+    ///
+    ///     let amount: Decimal = 1.02
+    ///     let nickel: Decimal = 0.05
+    ///     let x = Decimal(amount, rounding: .toNearestOrEven, multipleOf: nickel)
+    ///     // x == 1.00
+    ///
+    /// The result is the exact product of `increment.magnitude` and the integer multiplier.
+    /// If that product cannot be represented exactly as a `Decimal`, the result is `nil`.
+    ///
+    /// If `value` is NaN, the result is NaN. Otherwise, if `increment` is NaN, the result is `nil`.
+    /// If `value` is zero and `increment` is a number, the result is zero.
+    /// Otherwise, if `increment` is zero and `value` is a number, the result is `nil`.
+    ///
+    /// - Parameters:
+    ///   - value: The value to round.
+    ///   - rule: The rounding rule to use in finding the integer multiplier.
+    ///   - increment: The value whose integer multiples are to be used for rounding.
+    @export(implementation)
+    public init?(
+        _ value: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        multipleOf increment: Decimal
+    ) {
+        self = value
+        guard !self.isNaN else { return }
+        guard !increment.isNaN else { return nil }
+        guard !self.isZero else { return }
+        guard !increment.isZero else { return nil }
+
+        let increment = increment.magnitude
+        if rule == .toNearestOrEven {
+            let inexact = self.subtractReportingInexact(
+                self.remainder(dividingBy: increment),
+                rounding: .toNearestOrEven,
+                scale: .max
+            )
+            guard !inexact else { return nil }
+            return
+        }
+        let truncatingRemainder =
+            self.truncatingRemainder(dividingBy: increment)
+        guard !truncatingRemainder.isZero else { return }
+        let complement = increment.subtracting(
+            truncatingRemainder.magnitude,
+            rounding: .up,
+            scale: .max
+        ) // Exact if `self.magnitude >= increment`.
+        let roundAway =
+            switch rule {
+            case .awayFromZero: true
+            case .down: self.isSignMinus
+            case .toNearestOrAwayFromZero:
+                truncatingRemainder.magnitude >= complement
+            case .toNearestOrEven: fatalError("Unreachable")
+            case .towardZero: false
+            case .up: !self.isSignMinus
+            @unknown default: fatalError("Unknown rounding rule")
+            }
+        if !roundAway {
+            let inexact = self.subtractReportingInexact(
+                truncatingRemainder,
+                rounding: .toNearestOrEven,
+                scale: .max
+            )
+            guard !inexact else { return nil }
+            return
+        }
+        if self.magnitude < increment { // `complement` may be inexact.
+            self = self.isSignMinus ? -increment : increment
+            return
+        }
+        let inexact = self.addReportingInexact(
+            self.isSignMinus ? -complement : complement,
+            rounding: .toNearestOrEven,
+            scale: .max)
+        guard !inexact else { return nil }
+        return
+    }
+
+#if false
+    /// Rounds this value in place using the specified rounding rules and increment.
+    ///
+    /// For a finite value `x` and a finite, nonzero `increment`,
+    /// the integer multiplier is obtained by rounding the exact quotient `x / increment.magnitude` to an integer using `rule`.
+    /// Note that the multiplier is *not* computed in floating-point arithmetic,
+    /// and that it may not be representable in any available integer type.
+    ///
+    /// The result is either the product of `increment.magnitude` and the integer multiplier or,
+    /// if the exact product requires more precision than the `Decimal` type can provide,
+    /// the product rounded using `ruleForResult` to a representable value.
+    /// If the final rounding overflows, the result is NaN.
+    ///
+    /// If either operand is NaN or `increment` is zero, the result is NaN.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use in finding the integer multiplier.
+    ///   - increment: The value whose integer multiples are to be used for rounding.
+    ///   - ruleForResult: The rounding rule to use for the final result, if necessary.
+    @export(implementation)
+    public mutating func round(
+        _ rule: FloatingPointRoundingRule,
+        multipleOf increment: Decimal,
+        rerounding ruleForResult: FloatingPointRoundingRule = .toNearestOrEven
+    ) {
+        self = self.rounded(
+            rule,
+            multipleOf: increment,
+            rerounding: ruleForResult
+        )
+    }
+
+    /// Returns this value rounded using the specified rounding rules and increment.
+    ///
+    /// For a finite value `x` and a finite, nonzero `increment`,
+    /// the integer multiplier is obtained by rounding the exact quotient `x / increment.magnitude` to an integer using `rule`.
+    /// Note that the multiplier is *not* computed in floating-point arithmetic,
+    /// and that it may not be representable in any available integer type.
+    ///
+    /// The result is either the product of `increment.magnitude` and the integer multiplier or,
+    /// if the exact product requires more precision than the `Decimal` type can provide,
+    /// the product rounded using `ruleForResult` to a representable value.
+    /// If the final rounding overflows, the result is NaN.
+    ///
+    /// If either operand is NaN or `increment` is zero, the result is NaN.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use in finding the integer multiplier.
+    ///   - increment: The value whose integer multiples are to be used for rounding.
+    ///   - ruleForResult: The rounding rule to use for the final result, if necessary.
+    /// - Returns: The value found by rounding using `rule` to a multiple of `increment`,
+    ///   rerounded if necessary using `ruleForResult`.
+    @export(implementation)
+    public func rounded(
+        _ rule: FloatingPointRoundingRule,
+        multipleOf increment: Decimal,
+        rerounding ruleForResult: FloatingPointRoundingRule = .toNearestOrEven
+    ) -> Decimal {
+        guard !self.isNaN && !increment.isNaN && !increment.isZero else {
+            return .nan
+        }
+
+        let increment = increment.magnitude
+        if rule == .toNearestOrEven {
+            let remainder = self.remainder(dividingBy: increment)
+            return self.subtracting(
+                remainder,
+                rounding: ruleForResult,
+                scale: .max
+            )
+        }
+        let remainder = self.truncatingRemainder(dividingBy: increment)
+        if remainder.isZero {
+            return self
+        }
+        let complement = increment.subtracting(
+            remainder.magnitude,
+            rounding: .up,
+            scale: .max
+        ) // Exact if `self.magnitude >= increment`.
+        let roundAway =
+            switch rule {
+            case .awayFromZero: true
+            case .down: self.isSignMinus
+            case .toNearestOrAwayFromZero: remainder.magnitude >= complement
+            case .toNearestOrEven: fatalError("Unreachable")
+            case .towardZero: false
+            case .up: !self.isSignMinus
+            @unknown default: fatalError("Unknown rounding rule")
+            }
+        if !roundAway {
+            return self.subtracting(
+                remainder,
+                rounding: ruleForResult,
+                scale: .max
+            )
+        }
+        if self.magnitude < increment { // `complement` may be inexact.
+            return self.isSignMinus ? -increment : increment
+        }
+        return self.adding(
+            self.isSignMinus ? -complement : complement,
+            rounding: ruleForResult,
+            scale: .max
+        )
+    }
+#endif
+}
