@@ -38,7 +38,7 @@ let total = /* 🆕 */ subtotal.adding(tip, rounding: .toNearestOrEven, scale: 2
 // `total` is 12.35; addition and rounding are one operation.
 
 let third = /* 🆕 */ (1 as Decimal).dividedReportingInexact(by: 3, rounding: .toNearestOrEven, scale: 2)
-// `third.result` is 0.33; `third.inexact` is `true`.
+// `third.value` is 0.33; `third.inexact` is `true`.
 ```
 
 Also, add conversions to a fixed-width integer that preserve the familiar distinction between truncating and exact conversion, and add conversion from a 128-bit integer that's exact without going through `Double`:
@@ -102,7 +102,7 @@ As with standard library floating-point types, `round(_:)` and `rounded(_:)` ope
 
 ### Exceptional results and inexactness
 
-None of the proposed APIs throw a legacy `NSDecimalNumber.CalculationError`. Instead, each nonmutating `*ReportingInexact` method returns `(result: Decimal, inexact: Bool)`, and each mutating counterpart stores the result in `self` and returns a `Bool` indicating inexactness, with behavior outlined in the table below. (Methods that don't report inexactness simply return or store the corresponding result.)
+None of the proposed APIs throw a legacy `NSDecimalNumber.CalculationError`. Instead, each nonmutating `*ReportingInexact` method returns `(value: Decimal, inexact: Bool)`, and each mutating counterpart stores the result in `self` and returns a `Bool` indicating inexactness, with behavior outlined in the table below. (Methods that don't report inexactness simply return or store the corresponding result.)
 
 | Condition | Result | `inexact` |
 | --- | --- | --- |
@@ -387,7 +387,7 @@ extension Decimal {
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 
     /// Subtracts the given value from this value in place.
     ///
@@ -470,7 +470,7 @@ extension Decimal {
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 
     /// Multiplies this value by the given value in place.
     ///
@@ -553,7 +553,7 @@ extension Decimal {
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 
     /// Multiplies this value by the given power of ten in place.
     ///
@@ -607,7 +607,7 @@ extension Decimal {
     ///   - rule: The rounding rule to use.
     ///   - scale: The maximum number of digits after the decimal separator;
     ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
-    /// - Returns: This value multiplied by ten raised to `power`, rounded as specified.
+    /// - Returns: The result of this value multiplied by ten raised to `power`, rounded as specified.
     public func multiplied(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
@@ -630,13 +630,13 @@ extension Decimal {
     ///   - rule: The rounding rule to use.
     ///   - scale: The maximum number of digits after the decimal separator;
     ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
-    /// - Returns: A tuple containing this value multiplied by ten raised to `power`, rounded as specified,
+    /// - Returns: A tuple containing the result of this value multiplied by ten raised to `power`, rounded as specified,
     ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func multipliedReportingInexact(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 
     /// Divides this value by the given value in place.
     ///
@@ -719,7 +719,7 @@ extension Decimal {
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 
     /// Adds the product of the two given values to this value in place,
     /// computed without intermediate rounding.
@@ -821,7 +821,7 @@ extension Decimal {
         _ rhs: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 
     /// Replaces this value with its square root.
     ///
@@ -926,7 +926,7 @@ extension Decimal {
     public func squareRootReportingInexact(
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool)
+    ) -> (value: Decimal, inexact: Bool)
 }
 ```
 
