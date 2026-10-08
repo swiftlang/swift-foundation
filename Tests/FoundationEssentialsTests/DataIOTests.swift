@@ -91,6 +91,35 @@ private final class DataIOTests {
         // Perform an atomic write to a file that already exists
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
     }
+
+    @Test func atomicWriteWithoutOverwriting() throws {
+        // Use a dedicated directory so that leftover temporary files can be detected reliably
+        let directory = URL.temporaryDirectory.appendingPathComponent("atomicwithoutoverwriting-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let destination = directory.appendingPathComponent("testfile")
+
+        // Writing to a destination that does not exist succeeds
+        try writeAndVerifyTestData(to: destination, writeOptions: [.atomic, .withoutOverwriting])
+
+        // Writing to an existing destination fails and leaves the existing contents untouched
+        let existing = try Data(contentsOf: destination)
+        #expect {
+            try generateTestData().write(to: destination, options: [.atomic, .withoutOverwriting])
+        } throws: {
+            ($0 as? CocoaError)?.code == .fileWriteFileExists
+        }
+        let afterFailure = try Data(contentsOf: destination)
+        #expect(afterFailure == existing)
+
+        // The failed write does not leave a temporary file behind
+        let directoryContents = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        #expect(directoryContents == ["testfile"])
+
+        // Clearing the error condition allows the write to succeed
+        try FileManager.default.removeItem(at: destination)
+        try writeAndVerifyTestData(to: destination, writeOptions: [.atomic, .withoutOverwriting])
+    }
     #endif
 
     @Test func readWriteMapped() throws {
