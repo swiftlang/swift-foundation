@@ -79,7 +79,7 @@ private func __NSDecimalAdd(
         let addition = try lhs.pointee._addingReportingInexact(
             rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
-        result.pointee = addition.result
+        result.pointee = addition.value
         if addition.inexact {
             return .lossOfPrecision
         } else {
@@ -115,7 +115,7 @@ private func __NSDecimalSubtract(
         let subtraction = try lhs.pointee._subtractingReportingInexact(
             rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
-        result.pointee = subtraction.result
+        result.pointee = subtraction.value
         if subtraction.inexact {
             return .lossOfPrecision
         }
@@ -150,7 +150,7 @@ private func __NSDecimalMultiply(
         let product = try lhs.pointee._multipliedReportingInexact(
             by: rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
-        result.pointee = product.result
+        result.pointee = product.value
         if product.inexact {
             return .lossOfPrecision
         }
@@ -187,7 +187,7 @@ private func __NSDecimalDivide(
         let quotient = try lhs.pointee._dividedReportingInexact(
             by: rhs.pointee, rounding: _convertRoundingMode(roundingMode)
         )
-        result.pointee = quotient.result
+        result.pointee = quotient.value
         if quotient.inexact {
             return .lossOfPrecision
         }
@@ -256,7 +256,7 @@ private func __NSDecimalMultiplyByPowerOf10(
         let product = try decimal.pointee._multipliedReportingInexact(
             byPowerOfTen: Int(power), rounding: _convertRoundingMode(roundingMode)
         )
-        result.pointee = product.result
+        result.pointee = product.value
         if product.inexact {
             return .lossOfPrecision
         }

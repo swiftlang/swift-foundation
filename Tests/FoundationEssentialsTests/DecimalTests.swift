@@ -638,8 +638,8 @@ private struct DecimalTests {
         let b = Decimal(3)
         #expect(try! a._dividedReportingInexact(by: b, rounding: .plain).inexact)
         #expect((a / b).description.hasSuffix("7"))
-        #expect(try! (-a)._dividedReportingInexact(by: b, rounding: .up).result.description.hasSuffix("6"))
-        #expect(try! (-a)._dividedReportingInexact(by: b, rounding: .down).result.description.hasSuffix("7"))
+        #expect(try! (-a)._dividedReportingInexact(by: b, rounding: .up).value.description.hasSuffix("6"))
+        #expect(try! (-a)._dividedReportingInexact(by: b, rounding: .down).value.description.hasSuffix("7"))
 
         #expect((Decimal(1) / Decimal.pi).description.hasSuffix("1830988618379067153776752674502872407")) // 0.31830988618379067153776752674502872407
 

@@ -268,7 +268,7 @@ extension Decimal {
         _ rhs: Decimal,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || rhs.isNaN {
             throw .overflow
         }
@@ -393,14 +393,14 @@ extension Decimal {
             rhs,
             rounding: rule,
             minExponent: minExponent
-        ).result
+        ).value
     }
 
     internal func _subtractingReportingInexact(
         _ rhs: Decimal,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         var right = rhs
         if right._length != 0 {
             right._isNegative ^= 1
@@ -420,14 +420,14 @@ extension Decimal {
             rhs,
             rounding: rule,
             minExponent: minExponent
-        ).result
+        ).value
     }
 
     internal func _multipliedReportingInexact(
         by multiplicand: Decimal,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || multiplicand.isNaN {
             throw .overflow
         }
@@ -460,14 +460,14 @@ extension Decimal {
             by: multiplicand,
             rounding: rule,
             minExponent: minExponent
-        ).result
+        ).value
     }
 
     internal func _multipliedReportingInexact(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN {
             throw .overflow
         }
@@ -503,14 +503,14 @@ extension Decimal {
             byPowerOfTen: power,
             rounding: rule,
             minExponent: minExponent
-        ).result
+        ).value
     }
 
     internal func _dividedReportingInexact(
         by divisor: Decimal,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         guard !self.isNaN && !divisor.isNaN else {
             throw .overflow
         }
@@ -580,7 +580,7 @@ extension Decimal {
             by: divisor,
             rounding: rule,
             minExponent: minExponent
-        ).result
+        ).value
     }
 
     internal func _power(
@@ -869,7 +869,7 @@ extension Decimal {
     internal func _roundedReportingInexact(
         _ rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self._length == 0 {
             return (self, false)
         }
@@ -902,7 +902,7 @@ extension Decimal {
         return try _roundedReportingInexact(
             rule,
             minExponent: minExponent
-        ).result
+        ).value
     }
 }
 
@@ -912,7 +912,7 @@ extension Decimal {
         _ rhs: Decimal,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || lhs.isNaN || rhs.isNaN {
             throw .overflow
         }
@@ -1200,7 +1200,7 @@ extension Decimal {
     internal func _squareRootReportingInexact(
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         guard !self.isNaN else {
             throw .overflow
         }
@@ -1566,7 +1566,7 @@ extension Decimal {
         exponent: Int32,
         rounding rule: FloatingPointRoundingRule,
         minExponent: Int32 = Self._minExponent
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if significand == (0, 0) && tail.numerator == 0 {
             return (.zero, false)
         }

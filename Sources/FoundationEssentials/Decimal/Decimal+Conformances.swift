@@ -928,7 +928,7 @@ extension Decimal {
                 lhs,
                 rhs,
                 rounding: .toNearestOrEven
-            ).result
+            ).value
         } catch _CalculationError.underflow {
             return .zero
         } catch {
@@ -1138,7 +1138,7 @@ extension Decimal {
     /// - Returns: The square root of the value.
     public func squareRoot() -> Decimal {
         do {
-            return try self._squareRootReportingInexact(rounding: .toNearestOrEven).result
+            return try self._squareRootReportingInexact(rounding: .toNearestOrEven).value
         } catch _CalculationError.underflow {
             return .zero
         } catch {
@@ -1223,7 +1223,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = addition.result
+        self = addition.value
         return addition.inexact
     }
 
@@ -1281,7 +1281,7 @@ extension Decimal {
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || other.isNaN {
             return (.nan, false)
         }
@@ -1352,7 +1352,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = subtraction.result
+        self = subtraction.value
         return subtraction.inexact
     }
 
@@ -1411,7 +1411,7 @@ extension Decimal {
         _ other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || other.isNaN {
             return (.nan, false)
         }
@@ -1482,7 +1482,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = multiplication.result
+        self = multiplication.value
         return multiplication.inexact
     }
 
@@ -1541,7 +1541,7 @@ extension Decimal {
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || other.isNaN {
             return (.nan, false)
         }
@@ -1612,7 +1612,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = multiplication.result
+        self = multiplication.value
         return multiplication.inexact
     }
 
@@ -1628,7 +1628,7 @@ extension Decimal {
     ///   - rule: The rounding rule to use.
     ///   - scale: The maximum number of digits after the decimal separator;
     ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
-    /// - Returns: This value multiplied by ten raised to `power`, rounded as specified.
+    /// - Returns: The result of this value multiplied by ten raised to `power`, rounded as specified.
     public func multiplied(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
@@ -1665,13 +1665,13 @@ extension Decimal {
     ///   - rule: The rounding rule to use.
     ///   - scale: The maximum number of digits after the decimal separator;
     ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
-    /// - Returns: A tuple containing this value multiplied by ten raised to `power`, rounded as specified,
+    /// - Returns: A tuple containing the result of this value multiplied by ten raised to `power`, rounded as specified,
     ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
     public func multipliedReportingInexact(
         byPowerOfTen power: Int,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN {
             return (.nan, false)
         }
@@ -1738,7 +1738,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = division.result
+        self = division.value
         return division.inexact
     }
 
@@ -1800,7 +1800,7 @@ extension Decimal {
         by other: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || other.isNaN {
             return (.nan, false)
         }
@@ -1886,7 +1886,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = addition.result
+        self = addition.value
         return addition.inexact
     }
 
@@ -1919,7 +1919,7 @@ extension Decimal {
                 rhs,
                 rounding: rule,
                 minExponent: _boundedMinExponent(scale: scale)
-            ).result
+            ).value
         } catch .overflow {
             return .nan
         } catch .underflow {
@@ -1955,7 +1955,7 @@ extension Decimal {
         _ rhs: Decimal,
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || lhs.isNaN || rhs.isNaN {
             return (.nan, false)
         }
@@ -2017,7 +2017,7 @@ extension Decimal {
             rounding: rule,
             scale: scale
         )
-        self = root.result
+        self = root.value
         return root.inexact
     }
 
@@ -2060,7 +2060,7 @@ extension Decimal {
             return try self._roundedReportingInexact(
                 rule,
                 minExponent: _boundedMinExponent(scale: scale)
-            ).result
+            ).value
         } catch .overflow {
             return .nan
         } catch .underflow {
@@ -2090,7 +2090,7 @@ extension Decimal {
             return try self._squareRootReportingInexact(
                 rounding: rule,
                 minExponent: _boundedMinExponent(scale: scale)
-            ).result
+            ).value
         } catch .overflow {
             return .nan
         } catch .underflow {
@@ -2118,7 +2118,7 @@ extension Decimal {
     public func squareRootReportingInexact(
         rounding rule: FloatingPointRoundingRule,
         scale: Int
-    ) -> (result: Decimal, inexact: Bool) {
+    ) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || self < .zero {
             return (.nan, false)
         }
