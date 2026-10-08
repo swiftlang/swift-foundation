@@ -146,8 +146,8 @@ internal struct JSONWriter {
                     writer(ascii: valueToASCII(cursor.pointee / 16))
                     writer(ascii: valueToASCII(cursor.pointee % 16))
                 default:
-                    // Accumulate this byte
-                    cursor += 1
+                    // Accumulate this byte and any following bytes that are known not to need escaping
+                    cursor = Self.skipBytesNotNeedingEscape(from: cursor + 1, to: end, escapingSlashes: !withoutEscapingSlashes)
                     continue
                 }
 
@@ -159,6 +159,43 @@ internal struct JSONWriter {
         }
         let unquotedStringLength = unquotedStringStart.distance(to: self.bytes.endIndex)
         return unquotedStringLength
+    }
+
+    // Skips 8 bytes at a time until reaching a word that contains a byte needing escaping, then returns a pointer to that byte (or to where fewer than 8 bytes remain)
+    @inline(never)
+    private static func skipBytesNotNeedingEscape(from start: UnsafePointer<UInt8>, to end: UnsafePointer<UInt8>, escapingSlashes: Bool) -> UnsafePointer<UInt8> {
+        var cursor = start
+        while end - cursor >= MemoryLayout<UInt64>.size {
+            let word = UInt64(littleEndian: UnsafeRawPointer(cursor).loadUnaligned(as: UInt64.self))
+            let flags = escapeFlags(in: word, escapingSlashes: escapingSlashes)
+            if flags != 0 {
+                return cursor + flags.trailingZeroBitCount / 8
+            }
+            cursor += MemoryLayout<UInt64>.size
+        }
+        return cursor
+    }
+
+    // Sets the high bit of each byte in `word` that needs escaping. Bytes after the first flagged byte may be flagged spuriously, but the first flagged byte is always accurate.
+    @inline(__always)
+    private static func escapeFlags(in word: UInt64, escapingSlashes: Bool) -> UInt64 {
+        let ones: UInt64 = 0x0101_0101_0101_0101
+        let highBits: UInt64 = 0x8080_8080_8080_8080
+
+        // High bit set for each zero byte of `x`
+        @inline(__always)
+        func zeroBytes(_ x: UInt64) -> UInt64 {
+            (x &- ones) & ~x & highBits
+        }
+
+        // Control characters: bytes less than 0x20
+        var flags = (word &- ones &* 0x20) & ~word & highBits
+        flags |= zeroBytes(word ^ (ones &* UInt64(UInt8._quote)))
+        flags |= zeroBytes(word ^ (ones &* UInt64(UInt8._backslash)))
+        if escapingSlashes {
+            flags |= zeroBytes(word ^ (ones &* UInt64(UInt8._forwardslash)))
+        }
+        return flags
     }
 
     @discardableResult
