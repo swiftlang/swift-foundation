@@ -591,8 +591,10 @@ extension Base64 {
         }
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
+        // `_decodeIgnoringErrors` stores 4 bytes per chunk but only advances past 3, so it needs 1 more byte.
+        let capacity = options.contains(.ignoreUnknownCharacters) ? outputLength + 1 : outputLength
 
-        return try Data(capacity: outputLength) { (span) throws(DecodingError) in
+        return try Data(capacity: capacity) { (span) throws(DecodingError) in
             try span.withUnsafeMutableBytes { (buffer, initializedCount) throws(DecodingError) in
                 let target = buffer.bindMemory(to: UInt8.self)
                 
@@ -616,16 +618,16 @@ extension Base64 {
         let bytesToParseLength: Int
         let fullchunks: Int
         if options.contains(.omitPaddingCharacter) {
-            // No padding character is expected. If we find one anywhere, the input is invalid.
-            if inBuffer.contains(Self.encodePaddingCharacter) {
-                throw DecodingError.invalidCharacter(Self.encodePaddingCharacter)
-            }
             let remaining = inBuffer.count % 4
             if remaining == 1 {
                 throw DecodingError.invalidLength
             }
             bytesToParseLength = inBuffer.count
             fullchunks = remaining == 0 ? inBuffer.count / 4 - 1 : inBuffer.count / 4
+            // No padding character is expected. The full chunks reject it like any other character outside the alphabet, so only the last chunk is checked here.
+            if inBuffer[(fullchunks * 4)...].contains(Self.encodePaddingCharacter) {
+                throw DecodingError.invalidCharacter(Self.encodePaddingCharacter)
+            }
         } else {
             guard let lastNonPaddedIndex = inBuffer.lastIndex(where: { $0 != Self.encodePaddingCharacter }) else {
                 if inBuffer.count >= 4 {
@@ -656,29 +658,11 @@ extension Base64 {
 
         try Self.withDecodingTables(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
-            if fullchunks > 0 {
-                for chunk in 0 ..< fullchunks {
-                    let inIndex = chunk * 4
-                    let a0 = inBuffer[inIndex]
-                    let a1 = inBuffer[inIndex + 1]
-                    let a2 = inBuffer[inIndex + 2]
-                    let a3 = inBuffer[inIndex + 3]
-                    var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
-
-                    if x >= Self.badCharacter {
-                        // TODO: Inspect characters here better
-                        throw DecodingError.invalidCharacter(inBuffer[inIndex])
-                    }
-
-                    withUnsafePointer(to: &x) { ptr in
-                        ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
-                            outBuffer[outIndex] = newPtr[0]
-                            outBuffer[outIndex + 1] = newPtr[1]
-                            outBuffer[outIndex + 2] = newPtr[2]
-                            outIndex += 3
-                        }
-                    }
-                }
+            if fullchunks >= Self.minimumVectorChunks {
+                try Self.vectorizedDecode(fullchunks, from: inBuffer, into: outBuffer, options: options)
+                outIndex = fullchunks * 3
+            } else if fullchunks > 0 {
+                try Self.scalarDecode(fullchunks, from: inBuffer, into: outBuffer, outIndex: &outIndex, d0, d1, d2, d3)
             }
 
             // inIndex is the first index in the last chunk
@@ -694,29 +678,163 @@ extension Base64 {
                 a3 = inBuffer[inIndex + 3]
             }
 
-            var x: UInt32 = d0[a0] | d1[a1] | d2[a2 ?? 65] | d3[a3 ?? 65]
+            let x: UInt32 = d0[a0] | d1[a1] | d2[a2 ?? 65] | d3[a3 ?? 65]
             if x >= Self.badCharacter {
                 // TODO: Inspect characters here better
                 throw DecodingError.invalidCharacter(inBuffer[inIndex])
             }
 
-            withUnsafePointer(to: &x) { ptr in
-                ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
-                    outBuffer[outIndex] = newPtr[0]
-                    outIndex += 1
-                    if a2 != nil {
-                        outBuffer[outIndex] = newPtr[1]
-                        outIndex += 1
-                    }
-                    if a3 != nil {
-                        outBuffer[outIndex] = newPtr[2]
-                        outIndex += 1
-                    }
-                }
+            outBuffer[outIndex] = UInt8(truncatingIfNeeded: x)
+            outIndex += 1
+            if a2 != nil {
+                outBuffer[outIndex] = UInt8(truncatingIfNeeded: x >> 8)
+                outIndex += 1
+            }
+            if a3 != nil {
+                outBuffer[outIndex] = UInt8(truncatingIfNeeded: x >> 16)
+                outIndex += 1
             }
 
             length = outIndex
         }
+    }
+
+    /// The number of chunks decoded per block.
+    static let maxDecodingBlockChunks = 1024
+
+    /// Below this many chunks, the scalar table loop is faster than setting up the vectorized loops.
+    static let minimumVectorChunks = 16
+
+    private static func scalarDecode(
+        _ chunks: Int,
+        from inBuffer: UnsafeBufferPointer<UInt8>,
+        into outBuffer: UnsafeMutableBufferPointer<UInt8>,
+        outIndex: inout Int,
+        _ d0: Base64DecodingTable,
+        _ d1: Base64DecodingTable,
+        _ d2: Base64DecodingTable,
+        _ d3: Base64DecodingTable
+    ) throws(DecodingError) {
+        precondition(outIndex + chunks * 3 + 1 <= outBuffer.count)
+        // `1 <= outBuffer.count` per the precondition above, so baseAddress is always non-nil.
+        let output = UnsafeMutableRawPointer(outBuffer.baseAddress.unsafelyUnwrapped)
+        for chunk in 0..<chunks {
+            let inIndex = chunk * 4
+            let a0 = inBuffer[inIndex]
+            let a1 = inBuffer[inIndex + 1]
+            let a2 = inBuffer[inIndex + 2]
+            let a3 = inBuffer[inIndex + 3]
+            let x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
+
+            if x >= Self.badCharacter {
+                // TODO: Inspect characters here better
+                throw DecodingError.invalidCharacter(inBuffer[inIndex])
+            }
+
+            // Stores all 4 bytes of `x` but only advance past 3 indices.
+            // 1 store is faster than 3 x 1-byte stores.
+            output.storeBytes(of: x.littleEndian, toByteOffset: outIndex, as: UInt32.self)
+            outIndex &+= 3
+        }
+    }
+
+    /// Decodes the first `chunks` chunks of `inBuffer`.
+    /// `chunks` must be at least 16.
+    @inline(never)
+    private static func vectorizedDecode(
+        _ chunks: Int,
+        from inBuffer: UnsafeBufferPointer<UInt8>,
+        into outBuffer: UnsafeMutableBufferPointer<UInt8>,
+        options: Data.Base64DecodingOptions
+    ) throws(DecodingError) {
+        assert(chunks >= 16)
+
+        let (char62, char63) = Self.decodingCharacters(options: options)
+
+        // `chunks & ~0b11111` == `chunks - (chunks % 32)`; turns off the lowest 5 bits. This optimization is only applied for unsigned
+        // integers (or via `_assumeNonNegative`), so we have to manually do it here for `chunks` which is an `Int`.
+        let bigChunks = chunks & ~0b11111
+        var chunk = 0
+        while chunk < bigChunks {
+            let blockChunks = min(Self.maxDecodingBlockChunks, bigChunks &- chunk)
+            let orResult = Self.loopDecodeChunks(char62, char63, input: inBuffer, from: chunk, chunks: blockChunks, output: outBuffer)
+            if orResult & 0x80 != 0 {
+                try Self.throwFirstInvalidCharacter(char62, char63, input: inBuffer, chunks: chunk ..< chunk &+ blockChunks)
+            }
+            chunk &+= blockChunks
+        }
+
+        // The other chunks are decoded in groups of 16. The last group can overlap chunks already decoded, which writes the same bytes again.
+        // This keeps them vectorized: LLVM doesn't vectorize loops with fewer than 16 iterations here (which makes sense).
+        while chunk < chunks {
+            let orResult = Self.loopDecodeChunks(char62, char63, input: inBuffer, from: min(chunk, chunks &- 16), chunks: 16, output: outBuffer)
+            if orResult & 0x80 != 0 {
+                try Self.throwFirstInvalidCharacter(char62, char63, input: inBuffer, chunks: chunk ..< chunks)
+            }
+            chunk &+= 16
+        }
+    }
+
+    /// Throws for the first chunk in `chunks` with a character outside the alphabet.
+    private static func throwFirstInvalidCharacter(
+        _ char62: UInt8,
+        _ char63: UInt8,
+        input: UnsafeBufferPointer<UInt8>,
+        chunks: Range<Int>
+    ) throws(DecodingError) {
+        let idxOfFirstInvalidValue = input[(chunks.lowerBound &* 4) ..< (chunks.upperBound &* 4)].firstIndex { Self.decodeCharacter($0, char62, char63) & 0x80 != 0 } ?? 0
+        let invalidChunk = idxOfFirstInvalidValue / 4
+        throw DecodingError.invalidCharacter(input[invalidChunk * 4])
+    }
+
+    /// Decodes each 4 characters of `chunks` chunks into 3 bytes, starting at chunk `from`.
+    /// Returns all values OR-ed together, so the high bit is set when any character is outside the alphabet and is invalid.
+    @inline(always)
+    private static func loopDecodeChunks(
+        _ char62: UInt8,
+        _ char63: UInt8,
+        input: UnsafeBufferPointer<UInt8>,
+        from: Int,
+        chunks: Int,
+        output: UnsafeMutableBufferPointer<UInt8>
+    ) -> UInt8 {
+        var orResult: UInt8 = 0
+        // This loop is auto-vectorized by LLVM
+        for chunk in 0 ..< chunks {
+            let index = (from &+ chunk) &* 4
+            let out = (from &+ chunk) &* 3
+            let v0 = Self.decodeCharacter(input[index], char62, char63)
+            let v1 = Self.decodeCharacter(input[index &+ 1], char62, char63)
+            let v2 = Self.decodeCharacter(input[index &+ 2], char62, char63)
+            let v3 = Self.decodeCharacter(input[index &+ 3], char62, char63)
+            orResult |= v0 | v1 | v2 | v3
+            output[out] = (v0 &<< 2) | (v1 &>> 4)
+            output[out &+ 1] = (v1 &<< 4) | (v2 &>> 2)
+            output[out &+ 2] = (v2 &<< 6) | v3
+        }
+        return orResult
+    }
+
+    /// The value of a base64 character, or 0xFF if the character isn't part of the alphabet and is invalid.
+    /// The code below is compiled as branchless, which is needed for LLVM to vectorize the loop this func is called in.
+    @inline(always)
+    private static func decodeCharacter(_ character: UInt8, _ char62: UInt8, _ char63: UInt8) -> UInt8 {
+        let isDigit = character &- UInt8(ascii: "0") < 10
+        let isUpper = character &- UInt8(ascii: "A") < 26
+        let isLower = character &- UInt8(ascii: "a") < 26
+        if isDigit { return character &+ (52 &- UInt8(ascii: "0")) }
+        if character == char62 { return 62 }
+        if character == char63 { return 63 }
+        if isUpper { return character &- UInt8(ascii: "A") }
+        if isLower { return character &- (UInt8(ascii: "a") &- 26) }
+        return 0xFF
+    }
+
+    private static func decodingCharacters(options: Data.Base64DecodingOptions) -> (UInt8, UInt8) {
+        let wantsBase64URLAlphabet = options.contains(.base64URLAlphabet)
+        let lhs = wantsBase64URLAlphabet ? UInt8(ascii: "-") : UInt8(ascii: "+")
+        let rhs = wantsBase64URLAlphabet ? UInt8(ascii: "_") : UInt8(ascii: "/")
+        return (lhs, rhs)
     }
 
     static func _decodeIgnoringErrors(
@@ -728,9 +846,11 @@ extension Base64 {
         assert(options.contains(.ignoreUnknownCharacters))
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
-        guard outBuffer.count >= outputLength else {
-            preconditionFailure("Expected the out buffer to be at least as long as outputLength")
-        }
+
+        // The fast loop stores 4 bytes per chunk but only advances past 3, so it needs 1 headroom byte.
+        precondition(outBuffer.count >= outputLength + 1, "Expected the out buffer to be at least 1 byte longer than outputLength")
+        // `outBuffer.count >= 1` per the guard above, so baseAddress is always non-nil.
+        let output = UnsafeMutableRawPointer(outBuffer.baseAddress.unsafelyUnwrapped)
 
         try Self.withDecodingTables(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
@@ -809,14 +929,10 @@ extension Base64 {
                     inIndex &+= 4
                 }
 
-                withUnsafePointer(to: &x) { ptr in
-                    ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
-                        outBuffer[outIndex] = newPtr[0]
-                        outBuffer[outIndex &+ 1] = newPtr[1]
-                        outBuffer[outIndex &+ 2] = newPtr[2]
-                        outIndex &+= 3
-                    }
-                }
+                // Stores all 4 bytes of `x` but only advance past 3 indices.
+                // 1 store is faster than 3 x 1-byte stores.
+                output.storeBytes(of: x.littleEndian, toByteOffset: outIndex, as: UInt32.self)
+                outIndex &+= 3
             }
 
             if inIndex == inBuffer.count {
@@ -907,19 +1023,15 @@ extension Base64 {
                 assert(x < Self.badCharacter)
             }
 
-            withUnsafePointer(to: &x) { ptr in
-                ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { newPtr in
-                    outBuffer[outIndex] = newPtr[0]
-                    outIndex += 1
-                    if !padding2 {
-                        outBuffer[outIndex] = newPtr[1]
-                        outIndex += 1
-                    }
-                    if !padding3 {
-                        outBuffer[outIndex] = newPtr[2]
-                        outIndex += 1
-                    }
-                }
+            outBuffer[outIndex] = UInt8(truncatingIfNeeded: x)
+            outIndex += 1
+            if !padding2 {
+                outBuffer[outIndex] = UInt8(truncatingIfNeeded: x >> 8)
+                outIndex += 1
+            }
+            if !padding3 {
+                outBuffer[outIndex] = UInt8(truncatingIfNeeded: x >> 16)
+                outIndex += 1
             }
 
             length = outIndex
@@ -942,6 +1054,7 @@ extension Base64 {
         }
     }
 
+    @inline(always)
     private static func withDecodingTables<R, E: Swift.Error>(
         options: Data.Base64DecodingOptions,
         _ body: (
@@ -952,16 +1065,16 @@ extension Base64 {
         ) throws(E) -> R
     ) throws(E) -> R {
         let (decoding0, decoding1, decoding2, decoding3) = if options.contains(.base64URLAlphabet) {
-            (Self.decoding0url, Self.decoding1url, Self.decoding2url, Self.decoding3url)
+            (Self.decoding0url.span, Self.decoding1url.span, Self.decoding2url.span, Self.decoding3url.span)
         } else {
-            (Self.decoding0, Self.decoding1, Self.decoding2, Self.decoding3)
+            (Self.decoding0.span, Self.decoding1.span, Self.decoding2.span, Self.decoding3.span)
         }
 
         return try body(
-            Base64DecodingTable(decoding0.span),
-            Base64DecodingTable(decoding1.span),
-            Base64DecodingTable(decoding2.span),
-            Base64DecodingTable(decoding3.span)
+            Base64DecodingTable(decoding0),
+            Base64DecodingTable(decoding1),
+            Base64DecodingTable(decoding2),
+            Base64DecodingTable(decoding3)
         )
     }
 
