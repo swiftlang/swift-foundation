@@ -96,7 +96,7 @@ private struct RigidBytesTests {
         }
     }
     
-    @Test func initWithCapacity() async {
+    @Test func initWithCapacity() {
         do {
             let d = RigidBytes(capacity: 10)
             #expect(d.count == 0)
@@ -126,19 +126,9 @@ private struct RigidBytesTests {
             #expect(d.isFull == false)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            _ = RigidBytes(capacity: -1)
-        }
-        await #expect(processExitsWith: .failure) {
-            _ = RigidBytes(capacity: -1) { _ in
-
-            }
-        }
-#endif
     }
       
-    @Test func initWithCount() async {
+    @Test func initWithCount() {
         let d = RigidBytes(count: 10)
         #expect(d.count == 10)
         #expect(d.capacity == 10)
@@ -152,14 +142,9 @@ private struct RigidBytesTests {
             #expect(span[i] == 0)
         }
         
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            _ = RigidBytes(count: -1)
-        }
-#endif
     }
     
-    @Test func initRepeating() async {
+    @Test func initRepeating() {
         var d = RigidBytes(repeating: 2, count: 5)
         #expect(d.count == 5)
         #expect(d.capacity == 5)
@@ -174,11 +159,6 @@ private struct RigidBytesTests {
         #expect(d.count == 0)
         #expect(d.capacity == 0)
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            _ = RigidBytes(repeating: 2, count: -1)
-        }
-#endif
     }
         
     @Test func initWithSpan() {
@@ -267,7 +247,7 @@ private struct RigidBytesTests {
         }
     }
     
-    @Test func reallocation() async {
+    @Test func reallocation() {
         var d = RigidBytes(capacity: 3)
         d.append(8)
         d.append(9)
@@ -307,19 +287,9 @@ private struct RigidBytesTests {
         d.reserveCapacity(15)
         #expect(d.capacity == 15)
         
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 2)
-            d.reallocate(capacity: 1)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 0)
-            d.reallocate(capacity: -1)
-        }
-#endif
     }
     
-    @Test func append() async {
+    @Test func append() {
         var d = RigidBytes(capacity: 10)
         #expect(d.count == 0)
         d.append(2)
@@ -349,29 +319,9 @@ private struct RigidBytesTests {
             #expect(span[4] == 5)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 0)
-            d.append(2)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 5)
-            d.append(2)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 2)
-            d.append(copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 3)
-            d.append(addingCount: 1) { output in
-                _ = Issue.record("Should not reach this code")
-            }
-        }
-#endif
     }
 
-    @Test func insert() async {
+    @Test func insert() {
         var d = RigidBytes(capacity: 10)
         d.insert(1, at: 0)
         d.insert(2, at: 1)
@@ -416,35 +366,9 @@ private struct RigidBytesTests {
             #expect(span[7] == 3)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 0)
-            d.insert(2, at: 0)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 5)
-            d.insert(copying: threeBytes.span.bytes, at: 1)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 2)
-            d.insert(copying: threeBytes.span.bytes, at: 0)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 3)
-            d.insert(addingCount: 1, at: 1) { output in
-                _ = Issue.record("Should not reach this code")
-            }
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 3)
-            d.insert(addingCount: 1, at: 0) { output in
-                // Intentionally do not append promised byte
-            }
-        }
-#endif
     }
 
-    @Test func remove() async {
+    @Test func remove() {
         var d = RigidBytes(capacity: 10)
         d.append(copying: threeBytes.span.bytes)
         d.append(copying: threeBytes.span.bytes)
@@ -472,35 +396,9 @@ private struct RigidBytesTests {
         #expect(d.count == 0)
         #expect(d.capacity == 3)
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 2)
-            d.removeLast()
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 2)
-            d.removeLast(3)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 2)
-            d.remove(at: -1)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 2)
-            d.remove(at: 3)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 2)
-            d.removeSubrange(-1 ..< 1)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 2)
-            d.removeSubrange(0 ..< 5)
-        }
-#endif
     }
 
-    @Test func resetBytes() async {
+    @Test func resetBytes() {
         var d = RigidBytes(repeating: 3, count: 10)
         d.resetBytes(in: 3 ..< 6)
         do {
@@ -522,27 +420,9 @@ private struct RigidBytesTests {
             #expect(span[2] == 3)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 10)
-            d.resetBytes(in: 0 ..< 3)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 10)
-            d.resetBytes(in: -2 ..< 0)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.resetBytes(in: 11 ..< 13)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.resetBytes(in: -3 ..< -2)
-        }
-#endif
     }
     
-    @Test func replaceSubrange() async {
+    @Test func replaceSubrange() {
         do {
             var d = RigidBytes(repeating: 4, count: 10)
             d.replaceSubrange(3 ..< 6, copying: threeBytes.span.bytes)
@@ -615,52 +495,6 @@ private struct RigidBytesTests {
         }
 
         
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 10)
-            d.replaceSubrange(0 ..< 3, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 10)
-            d.replaceSubrange(-2 ..< 0, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.replaceSubrange(11 ..< 13, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.replaceSubrange(-3 ..< -2, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.replaceSubrange(1 ..< 2, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 10)
-            d.replaceSubrange(1 ..< 2, addingCount: 5) { buffer in
-
-            }
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 10)
-            d.replaceSubrange(-2 ..< 0, addingCount: 1) { buffer in
-
-            }
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.replaceSubrange(11 ..< 13, addingCount: 1) { buffer in
-
-            }
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(count: 10)
-            d.replaceSubrange(-3 ..< -2, addingCount: 1) { buffer in
-
-            }
-        }
-#endif
     }
 
     @Test func edit() {

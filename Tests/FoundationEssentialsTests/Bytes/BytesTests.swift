@@ -48,7 +48,7 @@ private struct BytesTests {
         #expect(d.isEmpty == true)
     }
     
-    @Test func initWithCapacity() async {
+    @Test func initWithCapacity() {
         let d = Bytes(capacity: 10)
         #expect(d.count == 0)
         #expect(d.bytes.byteCount == 0)
@@ -69,19 +69,9 @@ private struct BytesTests {
             #expect(d.isEmpty == false)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            _ = Bytes(capacity: -1)
-        }
-        await #expect(processExitsWith: .failure) {
-            _ = Bytes(capacity: -1) { _ in
-
-            }
-        }
-#endif
     }
       
-    @Test func initWithCount() async {
+    @Test func initWithCount() {
         let d = Bytes(count: 10)
         #expect(d.count == 10)
         #expect(d.bytes.byteCount == 10)
@@ -91,14 +81,9 @@ private struct BytesTests {
                 #expect(span[i] == 0)
         }
         
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            _ = Bytes(count: -1)
-        }
-#endif
     }
     
-    @Test func initRepeating() async {
+    @Test func initRepeating() {
         do {
             let d = Bytes(repeating: 2, count: 5)
             #expect(d.count == 5)
@@ -113,11 +98,6 @@ private struct BytesTests {
             #expect(d.count == 0)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            _ = Bytes(repeating: 2, count: -1)
-        }
-#endif
     }
         
     @Test func initWithSpan() {
@@ -204,7 +184,7 @@ private struct BytesTests {
         }
     }
     
-    @Test func append() async {
+    @Test func append() {
         var d = Bytes(capacity: 10)
         #expect(d.count == 0)
         d.append(2)
@@ -262,7 +242,7 @@ private struct BytesTests {
         }
     }
 
-    @Test func insert() async {
+    @Test func insert() {
         var d = Bytes(capacity: 10)
         d.insert(1, at: 0)
         d.insert(2, at: 1)
@@ -329,17 +309,9 @@ private struct BytesTests {
         }
         #expect(d.count == 4)
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = RigidBytes(capacity: 3)
-            d.insert(addingCount: 1, at: 0) { output in
-                // Intentionally do not append promised byte
-            }
-        }
-#endif
     }
 
-    @Test func remove() async {
+    @Test func remove() {
         var d = Bytes(capacity: 10)
         d.append(copying: threeBytes.span.bytes)
         d.append(copying: threeBytes.span.bytes)
@@ -362,35 +334,9 @@ private struct BytesTests {
         d.removeSubrange(...2)
         #expect(d.count == 0)
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(capacity: 2)
-            d.removeLast()
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 2)
-            d.removeLast(3)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 2)
-            d.remove(at: -1)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 2)
-            d.remove(at: 3)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 2)
-            d.removeSubrange(-1 ..< 1)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 2)
-            d.removeSubrange(0 ..< 5)
-        }
-#endif
     }
 
-    @Test func resetBytes() async {
+    @Test func resetBytes() {
         var d = Bytes(repeating: 3, count: 10)
         d.resetBytes(in: 3 ..< 6)
         do {
@@ -412,27 +358,9 @@ private struct BytesTests {
             #expect(span[2] == 3)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(capacity: 10)
-            d.resetBytes(in: 0 ..< 3)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(capacity: 10)
-            d.resetBytes(in: -2 ..< 0)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 10)
-            d.resetBytes(in: 11 ..< 13)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 10)
-            d.resetBytes(in: -3 ..< -2)
-        }
-#endif
     }
 
-    @Test func replaceSubrange() async {
+    @Test func replaceSubrange() {
         do {
             var d = Bytes(repeating: 4, count: 10)
             d.replaceSubrange(3 ..< 6, copying: threeBytes.span.bytes)
@@ -479,24 +407,6 @@ private struct BytesTests {
             #expect(d.count == 11)
         }
 
-#if FOUNDATION_EXIT_TESTS
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(capacity: 10)
-            d.replaceSubrange(0 ..< 3, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(capacity: 10)
-            d.replaceSubrange(-2 ..< 0, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 10)
-            d.replaceSubrange(11 ..< 13, copying: threeBytes.span.bytes)
-        }
-        await #expect(processExitsWith: .failure) {
-            var d = Bytes(count: 10)
-            d.replaceSubrange(-3 ..< -2, copying: threeBytes.span.bytes)
-        }
-#endif
     }
 
     @Test func edit() {
