@@ -1589,3 +1589,51 @@ private struct GregorianCalendarTests {
     }
 }
 
+/// The difference across an era change in the calendars that label eras from a table. The start moves into the era of the end first, so the smaller components can be negative.
+@Suite("Gregorian Family Era Difference", .tags(.calendar))
+private struct GregorianFamilyEraDifferenceTests {
+
+    struct EraSpan: Sendable, CustomTestStringConvertible {
+        let identifier: Calendar.Identifier
+        let start, end: Date
+        let expected: DateComponents
+        let testDescription: String
+
+        init(_ identifier: Calendar.Identifier, from start: (Int, Int, Int, Int, Int, Int), to end: (Int, Int, Int, Int, Int, Int), expected: (era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int)) {
+            self.identifier = identifier
+            self.start = Self.date(start)
+            self.end = Self.date(end)
+            self.expected = DateComponents(era: expected.era, year: expected.year, month: expected.month, day: expected.day, hour: expected.hour, minute: expected.minute, second: expected.second)
+            self.testDescription = "\(identifier) from \(start.0) to \(end.0)"
+        }
+
+        private static func date(_ value: (year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int)) -> Date {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
+            guard let date = calendar.date(from: DateComponents(year: value.year, month: value.month, day: value.day, hour: value.hour, minute: value.minute, second: value.second)) else {
+                preconditionFailure("invalid Gregorian date \(value)")
+            }
+            return date
+        }
+    }
+
+    /// Japanese spans cross Meiji, Showa, Heisei and Reiwa. ROC spans cross from Before Minguo to Minguo. The last span stays in one era.
+    static let spans: [EraSpan] = [
+        EraSpan(.japanese, from: (1900, 1, 1, 1, 23, 34), to: (2010, 9, 8, 7, 59, 54), expected: (3, -10, -3, -22, -17, -23, -40)),
+        EraSpan(.japanese, from: (2010, 9, 8, 7, 59, 54), to: (1900, 1, 1, 1, 23, 34), expected: (-3, 10, 3, 23, 17, 23, 40)),
+        EraSpan(.japanese, from: (1950, 6, 15, 12, 0, 0), to: (2020, 2, 29, 8, 30, 15), expected: (2, -23, -3, -15, -3, -29, -45)),
+        EraSpan(.japanese, from: (1989, 1, 8, 0, 0, 0), to: (1950, 6, 15, 12, 0, 0), expected: (-1, 24, 5, 7, 12, 0, 0)),
+        EraSpan(.republicOfChina, from: (1900, 1, 1, 1, 23, 34), to: (2010, 9, 8, 7, 59, 54), expected: (1, 87, 8, 7, 6, 36, 20)),
+        EraSpan(.republicOfChina, from: (2010, 9, 8, 7, 59, 54), to: (1900, 1, 1, 1, 23, 34), expected: (-1, 86, 3, 23, 17, 23, 40)),
+        EraSpan(.republicOfChina, from: (1911, 12, 31, 23, 0, 0), to: (1912, 1, 1, 1, 0, 0), expected: (1, 0, -11, -30, -22, 0, 0)),
+        EraSpan(.japanese, from: (2020, 3, 1, 0, 0, 0), to: (2025, 8, 20, 12, 0, 0), expected: (0, 5, 5, 19, 12, 0, 0)),
+    ]
+
+    @Test(arguments: spans)
+    func differenceAcrossEras(_ span: EraSpan) {
+        let calendar = Calendar(inner: _CalendarGregorian(identifier: span.identifier, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+        let difference = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second], from: span.start, to: span.end)
+        #expect(difference == span.expected)
+    }
+}
+
