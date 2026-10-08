@@ -5,8 +5,8 @@
 * Authors: [Xiaodi Wu](https://github.com/xwu)
 * Review Manager: TBD
 * Status: **Awaiting review**
-* Implementation: [1](https://github.com/xwu/swift-foundation/tree/decimal-additional-api-implementation)
-* Review: TBD
+* Implementation: [swiftlang/swift-foundation#2294](https://github.com/swiftlang/swift-foundation/pull/2294)
+* Review: ([pitch](https://forums.swift.org/t/pitch-additional-apis-for-decimal/89915))
 
 ## Introduction
 
