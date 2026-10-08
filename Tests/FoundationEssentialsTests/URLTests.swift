@@ -1415,9 +1415,9 @@ private struct URLTests {
         base = try #require(URL(string: "file://"))
 
         check(base, "",
-              notDirectory:     "file:///",
+              notDirectory:     "file://",
               isDirectory:      "file:///",
-              inferFromPath:    "file:///")
+              inferFromPath:    "file://")
         check(base, "/",
               notDirectory:     "file:///",
               isDirectory:      "file:///",
@@ -2151,9 +2151,9 @@ private struct URLTests {
         base = try #require(URL(string: "http://"))
 
         check(base, "",
-              notDirectory:     "http:///",
+              notDirectory:     "http://",
               isDirectory:      "http:///",
-              inferFromPath:    "http:///")
+              inferFromPath:    "http://")
         check(base, "/",
               notDirectory:     "http:///",
               isDirectory:      "http:///",
@@ -3088,16 +3088,22 @@ private struct URLTests {
         var emptyHost = try #require(URL(string: "scheme://"))
         #expect(emptyHost.host() == nil)
         #expect(emptyHost.path().isEmpty)
+        #expect(emptyHost.absoluteString == "scheme://")
 
+        // Appending an empty path component to an empty host must not change the URL
         emptyHost.append(path: "")
         #expect(emptyHost.host() == nil)
-        if foundation_swift_url_v2_enabled() {
-            // Treat "scheme://" the same as other URLs with an authority
-            // component and insert a "/" to separate authority from path.
-            #expect(emptyHost.path() == "/")
-        } else {
-            #expect(emptyHost.path().isEmpty)
-        }
+        #expect(emptyHost.path().isEmpty)
+        #expect(emptyHost.absoluteString == "scheme://")
+
+        #expect(emptyHost.appendingPathComponent("").absoluteString == "scheme://")
+        #expect(emptyHost.appending(component: "").absoluteString == "scheme://")
+
+        // It should also match the result from a bridged NSURL
+        #if FOUNDATION_FRAMEWORK
+        let bridgedEmptyHost = try #require(NSURL(string: "scheme://")) as URL
+        #expect(bridgedEmptyHost.appendingPathComponent("") == emptyHost.appendingPathComponent(""))
+        #endif
 
         emptyHost.append(path: "foo")
         #expect(emptyHost.host()?.isEmpty ?? true)
