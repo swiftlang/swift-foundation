@@ -642,10 +642,16 @@ private struct DecimalTests {
         let quotient2 = Decimal(-1) / huge
         #expect(!quotient1.isZero)
         #expect(!quotient1.isNaN)
-        #expect(quotient1.description.hasSuffix("9387358770557187699218413430556141946")) // 2.9387358770557187699218413430556141946e-39
+        #expect(quotient1.description.hasSuffix("93873587705571876992184134305561419456")) // 2.93873587705571876992184134305561419456e-39
         #expect(!quotient2.isZero)
         #expect(!quotient2.isNaN)
         #expect(quotient2 < .zero)
+
+        // (UInt128.max / 5) / (2 * 10**38) == UInt128.max * 10**-39, exactly.
+        let numerator = Decimal(exactly: UInt128.max / 5)!
+        let denominator = Decimal(sign: .plus, exponent: 38, significand: 2)
+        let expected = Decimal(sign: .plus, exponent: -39, significand: Decimal(exactly: UInt128.max)!)
+        #expect(try numerator._divideReportingInexact(by: denominator, roundingMode: .plain) == (expected, false))
     }
 
     @Test func power() throws {
@@ -1133,7 +1139,7 @@ private struct DecimalTests {
         #expect(y.hashValue == Decimal(string: "1e126")!.hashValue)
     }
 
-    @Test func ULP() {
+    @Test func ULP() throws {
         var x = 0.1 as Decimal
         #expect(!(x.ulp > x))
 
@@ -1146,6 +1152,10 @@ private struct DecimalTests {
         #expect(x.ulp == Decimal(string: "1e127")!)
         #expect(x.nextDown == x - Decimal(string: "1e127")!)
         #expect(x.nextUp.isNaN)
+        #expect(try x._addReportingInexact(rhs: x.ulp, roundingMode: .plain) == (x, true))
+
+        x.negate()
+        #expect(x.nextDown.isNaN)
 
         // '4' is an important value to test because the max supported
         // significand of this type is not 10 ** 38 - 1 but rather 2 ** 128 - 1,
@@ -1358,6 +1368,45 @@ private struct DecimalTests {
 #endif
         #expect(!x.isNaN)
         #expect(x == Decimal.zero)
+    }
+
+    @Test func additionAcrossSignificandBoundary() throws {
+        let a = Decimal(exactly: UInt128.max)!
+        let b = Decimal(sign: .plus, exponent: 1, significand: Decimal(exactly: UInt128.max / 10 + 1)!)
+
+        // The midpoint of the five-unit gap is 2.5 units above `a`.
+        #expect(try a._addReportingInexact(rhs: Decimal(string: "0.75")!, roundingMode: .plain) == (a, true))
+        #expect(try a._addReportingInexact(rhs: Decimal(1), roundingMode: .plain) == (a, true))
+        #expect(try a._addReportingInexact(rhs: Decimal(1), roundingMode: .up) == (b, true))
+        #expect(try (-a)._addReportingInexact(rhs: Decimal(-1), roundingMode: .down) == (-b, true))
+        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.49")!, roundingMode: .plain) == (a, true))
+        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.5")!, roundingMode: .plain) == (b, true))
+        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.5")!, roundingMode: .bankers) == (b, true))
+        #expect(try a._addReportingInexact(rhs: Decimal(string: "2.51")!, roundingMode: .plain) == (b, true))
+
+        // Restricting the scale excludes the finer endpoint.
+        #expect(try a._addReportingInexact(rhs: Decimal(1), minExponent: 1, roundingMode: .plain) == (b, true))
+    }
+
+    @Test func stringRoundingAcrossSignificandBoundary() throws {
+        let a = Decimal(exactly: UInt128.max)!
+        let b = Decimal(sign: .plus, exponent: 1, significand: Decimal(exactly: UInt128.max / 10 + 1)!)
+
+        let cases: [(String, Decimal)] = [
+            ("340282366920938463463374607431768211455", a),
+            ("340282366920938463463374607431768211456", a),
+            ("340282366920938463463374607431768211457", a),
+            ("340282366920938463463374607431768211457.49999", a),
+            ("340282366920938463463374607431768211457.5", b),
+            ("340282366920938463463374607431768211457.50000", b),
+            ("340282366920938463463374607431768211457.50001", b),
+            ("340282366920938463463374607431768211457.6", b),
+        ]
+
+        for (text, expected) in cases {
+            #expect(Decimal(string: text) == expected)
+            #expect(Decimal(string: "-" + text) == -expected)
+        }
     }
 
     @Test func testDecodingLengthOverflowThrows() throws {
