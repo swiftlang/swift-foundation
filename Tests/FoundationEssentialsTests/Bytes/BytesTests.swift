@@ -56,7 +56,7 @@ private struct BytesTests {
         #expect(d.isEmpty == true)
     }
     
-    @Test func initWithCapacity() {
+    @Test func initWithCapacity() async {
         let d = Bytes(capacity: 10)
         #expect(d.count == 0)
         #expect(d.bytes.byteCount == 0)
@@ -77,6 +77,16 @@ private struct BytesTests {
             #expect(d.isEmpty == false)
         }
 
+#if FOUNDATION_EXIT_TESTS
+        await #expect(processExitsWith: .failure) {
+            _ = Bytes(capacity: -1)
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = Bytes(capacity: -1) { _ in
+
+            }
+        }
+#endif
     }
       
     @Test func initWithCount() {
