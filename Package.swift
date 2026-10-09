@@ -90,7 +90,9 @@ let testOnlySwiftSettings: [SwiftSetting] = [
 
 let silDebugSettings: [SwiftSetting] = [
     .unsafeFlags([
-        "-Xfrontend", "-sil-verify-all",
+        "-Xllvm", "-sil-print-functions=initWithCapacity",
+        "-Xllvm", "-sil-print-around=MovedAsyncVarDebugInfoPropagator",
+        "-Xllvm", "-sil-print-debuginfo",
     ], .when(platforms: [.linux, .macOS]))
 ]
 
