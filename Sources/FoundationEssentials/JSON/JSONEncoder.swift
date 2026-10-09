@@ -430,11 +430,16 @@ open class JSONEncoder {
                                              EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values."))
         }
 
+        if case .nonPrettyDirectArray(let serialized) = topLevel {
+            return serialized
+        }
+
         let writingOptions = self.outputFormatting
         do {
             var writer = JSONWriter(options: writingOptions)
+            writer.reserveCapacity(forSerializing: topLevel)
             try writer.serializeJSON(topLevel)
-            return Data(writer.bytes)
+            return writer.makeData()
         } catch let error as JSONError {
             #if FOUNDATION_FRAMEWORK
             let underlyingError: Error? = error.nsError
@@ -576,8 +581,8 @@ internal enum JSONEncoderValue: Equatable {
     case array([JSONEncoderValue])
     case object([String: JSONEncoderValue])
 
-    case directArray([UInt8], lengths: [Int])
-    case nonPrettyDirectArray([UInt8])
+    case directArray(Data, lengths: [Int])
+    case nonPrettyDirectArray(Data)
 }
 
 enum JSONFuture {
@@ -1283,8 +1288,8 @@ private extension __JSONEncoder {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
         } else if let array = _asDirectArrayEncodable(value) {
             if options.outputFormatting.contains(.prettyPrinted) {
-                let (bytes, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
-                return .directArray(bytes, lengths: lengths)
+                let (elements, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
+                return .directArray(elements, lengths: lengths)
             } else {
                 return .nonPrettyDirectArray(try array.nonPrettyJSONRepresentation(encoder: self, additionalKey))
             }
@@ -1481,9 +1486,9 @@ extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String,
 /// strings as passing that down to the JSONWriter.
 fileprivate protocol _JSONDirectArrayEncodable {
     @inline(__always)
-    func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> [UInt8]
+    func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Data
     @inline(__always)
-    func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> ([UInt8], lengths: [Int])
+    func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> (Data, lengths: [Int])
 }
 fileprivate protocol _JSONSimpleValueArrayElement {
     @inline(__always)
@@ -1542,7 +1547,7 @@ extension Double: _JSONSimpleValueArrayElement {
 // This is not yet extended to Double & Float. That case is more complicated, given the possibility of Infinity or NaN values, which require nonConformingFloatEncodingStrategy and the ability to throw errors.
 
 extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArrayElement {
-    func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> [UInt8] {
+    func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Data {
         var writer = JSONWriter(options: encoder.options.outputFormatting)
 
         writer.writer(ascii: ._openbracket)
@@ -1558,10 +1563,10 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
         }
 
         writer.writer(ascii: ._closebracket)
-        return writer.bytes
+        return writer.makeData()
     }
     
-    func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> ([UInt8], lengths: [Int]) {
+    func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> (Data, lengths: [Int]) {
         var writer = JSONWriter(options: encoder.options.outputFormatting)
         var byteLengths = [Int]()
         byteLengths.reserveCapacity(self.count)
@@ -1571,7 +1576,7 @@ extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArray
             byteLengths.append(length)
         }
 
-        return (writer.bytes, lengths: byteLengths)
+        return (writer.makeData(), lengths: byteLengths)
     }
 }
 

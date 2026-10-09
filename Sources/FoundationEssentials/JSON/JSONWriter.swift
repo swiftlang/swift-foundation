@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct JSONWriter {
+internal struct JSONWriter: ~Copyable {
 
     // Structures with container nesting deeper than this limit are not valid.
     private static let maximumRecursionDepth = 512
@@ -20,12 +20,65 @@ internal struct JSONWriter {
     private let sortedKeys: Bool
     private let withoutEscapingSlashes: Bool
 
-    var bytes = [UInt8]()
+    var bytes = Bytes()
 
     init(options: JSONEncoder.OutputFormatting) {
         pretty = options.contains(.prettyPrinted)
         sortedKeys = options.contains(.sortedKeys)
         withoutEscapingSlashes = options.contains(.withoutEscapingSlashes)
+    }
+
+    consuming func makeData() -> Data {
+        Data(consuming: bytes)
+    }
+
+    mutating func reserveCapacity(forSerializing value: JSONEncoderValue) {
+        let estimate = estimatedSerializedByteCount(of: value)
+        // Extra 1/16 for string escapes, which the estimate doesn't count
+        bytes.reserveCapacity(estimate + estimate / 16)
+    }
+
+    func estimatedSerializedByteCount(of value: JSONEncoderValue, level: Int = 0) -> Int {
+        switch value {
+        case .string(let string):
+            // String content + 2 quotes
+            return string.utf8.count + 2
+        case .number(let number):
+            return number.utf8.count
+        case .bool(let bool):
+            return bool ? 4 : 5
+        case .null:
+            return 4
+        case .nonPrettyDirectArray(let serialized):
+            return serialized.count
+        case let .directArray(elements, lengths):
+            return containerOverhead(elementCount: lengths.count, level: level) + elements.count
+        case .array(let array):
+            var count = containerOverhead(elementCount: array.count, level: level)
+            for element in array {
+                count += estimatedSerializedByteCount(of: element, level: level + 1)
+            }
+            return count
+        case .object(let object):
+            var count = containerOverhead(elementCount: object.count, level: level)
+            for (key, value) in object {
+                // Key content + 2 quotes + ":" (or " : " when pretty)
+                count += key.utf8.count + (pretty ? 5 : 3) + estimatedSerializedByteCount(of: value, level: level + 1)
+            }
+            return count
+        }
+    }
+
+    private func containerOverhead(elementCount: Int, level: Int) -> Int {
+        let separatorCount = max(elementCount - 1, 0)
+        if pretty {
+            // 2 brackets + 2 newlines inside them, 2 spaces per level indenting the closing bracket,
+            // 2 spaces per level indenting each element, and a ",\n" between elements
+            return 4 + 2 * level + elementCount * 2 * (level + 1) + 2 * separatorCount
+        } else {
+            // 2 brackets + a "," between elements
+            return 2 + separatorCount
+        }
     }
 
     mutating func serializeJSON(_ value: JSONEncoderValue, depth: Int = 0) throws {
@@ -56,7 +109,14 @@ internal struct JSONWriter {
 
     @inline(__always)
     mutating func writer<S: Sequence>(contentsOf sequence: S) where S.Element == UInt8 {
-        bytes.append(contentsOf: sequence)
+        let appended: Void? = sequence.withContiguousStorageIfAvailable {
+            bytes.append(copying: $0.span.bytes)
+        }
+        if appended == nil {
+            for byte in sequence {
+                bytes.append(byte)
+            }
+        }
     }
 
     @inline(__always)
@@ -66,18 +126,18 @@ internal struct JSONWriter {
 
     @inline(__always)
     mutating func writer(pointer: UnsafePointer<UInt8>, count: Int) {
-        bytes.append(contentsOf: UnsafeBufferPointer(start: pointer, count: count))
+        bytes.append(copying: UnsafeBufferPointer(start: pointer, count: count).span.bytes)
     }
 
     // Shortcut for strings known not to require escapes, like numbers.
     @inline(__always)
     mutating func serializeSimpleStringContents(_ str: String) -> Int {
-        let stringStart = self.bytes.endIndex
+        let stringStart = self.bytes.count
         var mutStr = str
         mutStr.withUTF8 {
             writer(contentsOf: $0)
         }
-        let length = stringStart.distance(to: self.bytes.endIndex)
+        let length = stringStart.distance(to: self.bytes.count)
         return length
     }
 
@@ -93,7 +153,7 @@ internal struct JSONWriter {
 
     @inline(__always)
     mutating func serializeStringContents(_ str: String) -> Int {
-        let unquotedStringStart = self.bytes.endIndex
+        let unquotedStringStart = self.bytes.count
         var mutStr = str
         mutStr.withUTF8 {
 
@@ -157,7 +217,7 @@ internal struct JSONWriter {
 
             appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [])
         }
-        let unquotedStringLength = unquotedStringStart.distance(to: self.bytes.endIndex)
+        let unquotedStringLength = unquotedStringStart.distance(to: self.bytes.count)
         return unquotedStringLength
     }
 
@@ -203,7 +263,7 @@ internal struct JSONWriter {
         writer(ascii: ._closebracket)
     }
     
-    mutating func serializePreformattedByteArray(_ bytes: [UInt8], _ lengths: [Int], depth: Int) throws {
+    mutating func serializePreformattedByteArray(_ bytes: Data, _ lengths: [Int], depth: Int) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -214,7 +274,7 @@ internal struct JSONWriter {
             incIndent()
         }
 
-        var lowerBound: [UInt8].Index = bytes.startIndex
+        var lowerBound: Data.Index = bytes.startIndex
 
         var first = true
         for length in lengths {
