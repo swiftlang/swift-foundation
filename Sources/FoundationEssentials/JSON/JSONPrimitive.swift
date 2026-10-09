@@ -33,6 +33,28 @@ internal enum JSONPrimitiveError: Error, Sendable {
     case invalidMarker
     /// Sentinel for leaf decoders that haven't been implemented for this format variant.
     case notImplemented
+
+    var debugDescription: String {
+        switch self {
+        case let .typeMismatch(expected, actual):
+            return "Expected to decode \(expected) but found \(actual.map(String.init(describing:)) ?? "no value") instead."
+        case let .corruptedValue(message):
+            return message
+        case .invalidMarker:
+            return "The parsed JSON contained an unrecognized value marker."
+        case .notImplemented:
+            return "Decoding this value is not implemented for this format."
+        }
+    }
+
+#if FOUNDATION_FRAMEWORK
+    var nsError: NSError {
+        let userInfo: [String: Any] = [
+            NSDebugDescriptionErrorKey : self.debugDescription
+        ]
+        return .init(domain: NSCocoaErrorDomain, code: CocoaError.propertyListReadCorrupt.rawValue, userInfo: userInfo)
+    }
+#endif // FOUNDATION_FRAMEWORK
 }
 
 internal struct JSONPrimitive: ~Escapable, ~Sendable {
@@ -325,9 +347,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
                     append(Self.scalar(lead: unit, trail: trail), to: &out)
                     readIdx &+= 12
                 } else if UTF16.isTrailSurrogate(unit) {
-                    // For compatibility, treat an isolated low surrogate as a bare UTF-16 code unit and emit U+FFFD.
-                    append(Unicode.Scalar(0xFFFD)!, to: &out)
-                    readIdx &+= 6
+                    throw JSONPrimitiveError.corruptedValue("string: low surrogate without high surrogate")
                 } else {
                     if json5Mode && unit == 0 {
                         throw JSONPrimitiveError.corruptedValue("string: \\u0000 escape not allowed in JSON5")
@@ -460,9 +480,9 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
     /// Reject octal-like leading zeros (`00`, `01`, `-01`). A lone `0` is fine, as is `0` introducing a fraction, an exponent, or a JSON5 hex literal.
     @inline(__always)
-    private static func checkNoLeadingZero(_ bytes: borrowing Span<UInt8>, from digitStart: Int, allowingHex: Bool) throws {
-        guard bytes.count > digitStart &+ 1, bytes[digitStart] == UInt8(ascii: "0") else { return }
-        let next = bytes[digitStart &+ 1]
+    private static func checkNoLeadingZero(_ bytes: borrowing Span<UInt8>, allowingHex: Bool) throws {
+        guard bytes.count > 1, bytes[0] == UInt8(ascii: "0") else { return }
+        let next = bytes[1]
         if next == ._period || next == ._e || next == ._E {
             return
         }
@@ -474,11 +494,10 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
     /// Strict JSON requires a digit immediately after any sign. JSON5 doesn't (`-.5` == -0.5).
     @inline(__always)
-    private static func checkDigitAfterSign(_ bytes: borrowing Span<UInt8>, from digitStart: Int) throws {
-        guard digitStart < bytes.count else {
+    private static func checkDigitAfterSign(_ bytes: borrowing Span<UInt8>) throws {
+        guard let first = bytes.first else {
             throw JSONPrimitiveError.corruptedValue("number: sign without digits")
         }
-        let first = bytes[digitStart]
         guard _asciiNumbers.contains(first) else {
             throw JSONPrimitiveError.corruptedValue("number: '\(Character(UnicodeScalar(first)))' where a digit was expected")
         }
@@ -486,28 +505,27 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
     /// JSON5 spells infinity and NaN out longhand.
     @inline(__always)
-    private static func json5NamedLiteral(_ bytes: borrowing Span<UInt8>, from digitStart: Int, isNegative: Bool) -> DecodedNumber? {
-        let tail = bytes.extracting(digitStart ..< bytes.count)
-        if tail.equals("Infinity") {
+    private static func json5NamedLiteral(_ bytes: borrowing Span<UInt8>, isNegative: Bool) -> DecodedNumber? {
+        if bytes.equals("Infinity") {
             return DecodedNumber(value: isNegative ? .negativeInfinity : .positiveInfinity)
         }
-        if tail.equals("NaN") {
+        if bytes.equals("NaN") {
             return DecodedNumber(value: .notANumber)
         }
         return nil
     }
 
     /// JSON5 `0xHHHH`, after any sign. Returns nil when this isn't a hex literal.
-    private static func json5HexLiteral(_ bytes: borrowing Span<UInt8>, from digitStart: Int, isNegative: Bool) throws -> DecodedNumber? {
+    private static func json5HexLiteral(_ bytes: borrowing Span<UInt8>, isNegative: Bool) throws -> DecodedNumber? {
         let count = bytes.count
-        guard count &- digitStart >= 3, bytes[digitStart] == UInt8(ascii: "0") else { return nil }
-        let marker = bytes[digitStart &+ 1]
+        guard count >= 3, bytes[0] == UInt8(ascii: "0") else { return nil }
+        let marker = bytes[1]
         guard marker == UInt8(ascii: "x") || marker == UInt8(ascii: "X") else { return nil }
 
         var value: UInt64 = 0
         var overflow = false
-        for i in (digitStart &+ 2) ..< count {
-            let c = bytes[i]
+        let postHexPrefixSpan = bytes.extracting(droppingFirst: 2)
+        for c in postHexPrefixSpan {
             let digit: UInt64
             switch c {
             case _asciiNumbers: digit = UInt64(c &- _asciiNumbers.lowerBound)
@@ -536,37 +554,45 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         throw JSONPrimitiveError.corruptedValue("number: JSON5 hex literal too large")
     }
 
-    /// Integer fast path. Returns nil when a `.` shows the literal is really fractional, so the caller falls through to `strtod`. Overflow isn't an error: the digits just need more range than `Int64`/`UInt64` offers.
-    private static func integerLiteral(_ bytes: borrowing Span<UInt8>, sign: NumberSign) throws -> DecodedNumber? {
-        guard sign.digitStart < bytes.count else {
+    /// Integer fast path. Returns nil when the literal isn't one the caller can use directly: a `.` shows it's really fractional, or the digits need more range than `Int64`/`UInt64` offers.
+    private static func integerLiteral(_ bytes: borrowing Span<UInt8>, isNegative: Bool, json5Mode: Bool) throws -> DecodedNumber? {
+        guard bytes.count > 0 else {
             throw JSONPrimitiveError.corruptedValue("number: no digits")
         }
         // Accumulate signed when negative so `-9223372036854775808` lands on `Int64.min` rather than overflowing.
         let stopper: UInt8
-        if sign.isNegative {
-            switch Int64.scanDecimalDigits(of: bytes, from: sign.digitStart, isNegative: true) {
+        let stopOffset: Int
+        if isNegative {
+            switch Int64.scanDecimalDigits(of: bytes, isNegative: true) {
             case .value(let signed): return DecodedNumber(value: .int64(signed))
-            case .overflow: return DecodedNumber(value: .decimalString)
-            case .nonDigit(let byte, _): stopper = byte
+            case .overflow: return nil
+            case .nonDigit(let byte, let offset):
+                stopper = byte
+                stopOffset = offset
             }
         } else {
-            switch UInt64.scanDecimalDigits(of: bytes, from: sign.digitStart) {
+            switch UInt64.scanDecimalDigits(of: bytes) {
             case .value(let value): return DecodedNumber(value: .uint64(value))
-            case .overflow: return DecodedNumber(value: .decimalString)
-            case .nonDigit(let byte, _): stopper = byte
+            case .overflow: return nil
+            case .nonDigit(let byte, let offset):
+                stopper = byte
+                stopOffset = offset
             }
         }
         // The JSON5 scanner is permissive and can hand over leftover `Inf`/`Na` prefixes or unquoted identifiers misclassified as numbers, so anything but `.` here is garbage.
         guard stopper == ._period else {
             throw JSONPrimitiveError.corruptedValue("number: non-digit in integer literal")
         }
+        // A trailing `.` is allowed in JSON5. Reparse the digits as an integer instead of falling through unnecessarily to strtod.
+        // This is a minor compatibility nod to legacy NSJSONSerialization creating NSNumbers of these as integers instead of doubles.
+        if json5Mode, stopOffset == bytes.count &- 1 {
+            return try integerLiteral(bytes.extracting(droppingLast: 1), isNegative: isNegative, json5Mode: json5Mode)
+        }
         return nil
     }
 
     /// `strtod` happily consumes `1e` or `1.` and returns garbage, so reject truncated literals first. A trailing `.` is invalid in strict JSON but legal in JSON5 (`5.` == 5.0), and strict JSON also requires a digit immediately before `e`/`E` (`1.e2` is invalid).
-    ///
-    /// Kept separate from `mantissaDigitCount` deliberately. Fusing the two into one walk measured slower in Release: this scan only runs for strict JSON with an exponent, and the extra per-byte bookkeeping a combined loop needs costs more than the walk it saves. See `.claude/notes/json-number-divergences.md`.
-    private static func checkFractionalSyntax(_ bytes: borrowing Span<UInt8>, from digitStart: Int, containsExponent: Bool, json5Mode: Bool) throws {
+    private static func checkFractionalSyntax(_ bytes: borrowing Span<UInt8>, containsExponent: Bool, json5Mode: Bool) throws {
         let count = bytes.count
         let last = bytes[count &- 1]
         if last == ._e || last == ._E || last == ._plus || last == ._minus {
@@ -577,11 +603,10 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
             throw JSONPrimitiveError.corruptedValue("number: trailing decimal without digits")
         }
         guard containsExponent else { return }
-        for i in digitStart ..< count {
+        for i in 0 ..< count {
             let c = bytes[i]
             if c == ._e || c == ._E {
-                // `checkDigitAfterSign` already rejected a leading `e`, so `i > digitStart` here; the guard keeps a future reordering from indexing off the front.
-                guard i > digitStart, _asciiNumbers.contains(bytes[i &- 1]) else {
+                guard i > 0, _asciiNumbers.contains(bytes[i &- 1]) else {
                     throw JSONPrimitiveError.corruptedValue("number: '\(Character(UnicodeScalar(c)))' must be preceded by a digit")
                 }
                 return
@@ -589,21 +614,44 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         }
     }
 
-    /// Mantissa digits, ignoring leading zeros and anything from `e`/`E` onward.
-    @inline(__always)
-    private static func mantissaDigitCount(_ bytes: borrowing Span<UInt8>, from digitStart: Int) -> Int {
+    /// Walk the mantissa counting significant digits, ignoring leading zeros. If a `Double` can hold them all, returns nil: the caller's `strtod` parse handles the value and rejects a malformed tail on its own. Otherwise `strtod` would silently truncate, so validate the rest of the token — exponent and end-of-span — in the same walk and hand the source bytes to the consumer as `.decimalString`.
+    private static func makeDecimalStringIfNecessary(_ bytes: borrowing Span<UInt8>) throws -> DecodedNumber? {
+        let count = bytes.count
+        var i = 0
         var digits = 0
         var sawNonZero = false
-        for i in digitStart ..< bytes.count {
+        var sawPeriod = false
+
+        while i < count {
             let c = bytes[i]
-            if c == ._e || c == ._E { break }
-            guard _asciiNumbers.contains(c) else { continue }
-            if c != UInt8(ascii: "0") || sawNonZero {
-                sawNonZero = true
-                digits &+= 1
+            if _asciiNumbers.contains(c) {
+                if c != UInt8(ascii: "0") || sawNonZero {
+                    sawNonZero = true
+                    digits &+= 1
+                }
+                i &+= 1
+                continue
             }
+            if c == ._period, !sawPeriod {
+                sawPeriod = true
+                i &+= 1
+                continue
+            }
+            break
         }
-        return digits
+
+        guard digits > doubleLosslessDigits else { return nil }
+
+        if i < count, bytes[i] == ._e || bytes[i] == ._E {
+            i &+= 1
+            if i < count, bytes[i] == ._plus || bytes[i] == ._minus { i &+= 1 }
+            while i < count, _asciiNumbers.contains(bytes[i]) { i &+= 1 }
+        }
+
+        guard i == count else {
+            throw JSONPrimitiveError.corruptedValue("number: unexpected character '\(Character(UnicodeScalar(bytes[i])))'")
+        }
+        return DecodedNumber(value: .decimalString)
     }
 
     /// Distinguish a literal zero (`0`, `0.0`, `0e5`) from a `strtod` underflow-to-zero (`2.01e-1234`). A non-zero digit in the mantissa means `strtod` rounded a non-zero value down; digits after `e`/`E` are exponent-only and don't count.
@@ -619,7 +667,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
     }
 
     /// Parse via `strtod_l`, which needs a `char *` terminating on NUL or a non-numeric byte. When the document already has a non-numeric byte right after `bytes` — the common case for a nested number — it can read in place; a number that ends the document is copied into a NUL-terminated scratch.
-    private static func parseDouble(_ bytes: borrowing Span<UInt8>, source: borrowing Span<UInt8>) throws -> Double {
+    internal static func parseDouble(_ bytes: borrowing Span<UInt8>, source: borrowing Span<UInt8>) throws -> Double {
         let count = bytes.count
 
         @inline(__always)
@@ -660,33 +708,37 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         }
 
         let sign = try numberSign(of: bytes, json5Mode: json5Mode)
+        let postSignSpan = bytes.extracting(droppingFirst: sign.digitStart)
         if !json5Mode {
-            try checkDigitAfterSign(bytes, from: sign.digitStart)
-            try checkNoLeadingZero(bytes, from: sign.digitStart, allowingHex: false)
-        } else if !containsExponent {
-            // A JSON5 literal with an exponent skips this, matching the legacy reader.
-            try checkNoLeadingZero(bytes, from: sign.digitStart, allowingHex: true)
+            try checkDigitAfterSign(postSignSpan)
+            try checkNoLeadingZero(postSignSpan, allowingHex: false)
+        } else {
+            try checkNoLeadingZero(postSignSpan, allowingHex: true)
         }
 
         if json5Mode {
-            if let named = json5NamedLiteral(bytes, from: sign.digitStart, isNegative: sign.isNegative) {
+            if let named = json5NamedLiteral(postSignSpan, isNegative: sign.isNegative) {
                 return named
             }
-            if let hex = try json5HexLiteral(bytes, from: sign.digitStart, isNegative: sign.isNegative) {
+            if let hex = try json5HexLiteral(postSignSpan, isNegative: sign.isNegative) {
                 return hex
             }
         }
 
+        try checkFractionalSyntax(bytes, containsExponent: containsExponent, json5Mode: json5Mode)
+
         // The scanner already told us whether there's an exponent; if there is, this can't be an integer.
-        if !containsExponent, let integer = try integerLiteral(bytes, sign: sign) {
+        if !containsExponent, let integer = try integerLiteral(postSignSpan, isNegative: sign.isNegative, json5Mode: json5Mode) {
+            // Catch '-0' like inputs here so that they can be surfaced as -0.0 floating point numbers.
+            if sign.isNegative, case .int64(0) = integer.value {
+                return DecodedNumber(value: .double(-0.0))
+            }
             return integer
         }
 
-        try checkFractionalSyntax(bytes, from: sign.digitStart, containsExponent: containsExponent, json5Mode: json5Mode)
-
         // `strtod` silently truncates mantissas longer than `Double` can represent, so hand those to the caller as source bytes instead, delegating responsibility of how to interpret them.
-        if mantissaDigitCount(bytes, from: sign.digitStart) > doubleLosslessDigits {
-            return DecodedNumber(value: .decimalString)
+        if let decimalString = try makeDecimalStringIfNecessary(postSignSpan) {
+            return decimalString
         }
 
         return DecodedNumber(value: .double(try parseDouble(bytes, source: source)))
