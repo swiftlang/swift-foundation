@@ -22,6 +22,14 @@ private let threeBytes: [UInt8] = [1, 2, 3]
 
 @Suite("Bytes")
 private struct BytesTests {
+    @Test func repro() async {
+        do {
+            let d = Bytes(capacity: 10)
+            #expect(d.count == 0)   // the capture creates the box
+        }                           // the box is destroyed before the suspension
+        await Task.yield()          // the copied debug_value lands after the destroy
+    }
+    
     @Test func empty() {
         var d = Bytes()
         #expect(d.count == 0)
