@@ -822,3 +822,11 @@ internal final class _MissingKeyDecoder: Decoder, SingleValueDecodingContainer {
         ))
     }
 }
+
+// This is a workaround for the lack of a "set value only if absent" function for Dictionary.
+extension Optional {
+    internal mutating func _setIfNil(to value: Wrapped) {
+        guard _fastPath(self == nil) else { return }
+        self = value
+    }
+}

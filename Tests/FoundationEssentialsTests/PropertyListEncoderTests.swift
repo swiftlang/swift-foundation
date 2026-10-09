@@ -890,6 +890,24 @@ private struct PropertyListEncoderTests {
         try test(Double.self)
     }
 
+    // A binary plist dict with a duplicate key resolves first-wins, matching canonical CoreFoundation. Here keys [obj1, obj1] with values ["A", "B"] must decode to ["k": "A"].
+    @Test func binaryDuplicateKeyIsFirstWins() throws {
+        let bplist = Data([
+            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // "bplist00"
+            0xd2, 0x01, 0x01, 0x02, 0x03,                   // dict, count 2: keys [obj1, obj1], values [obj2, obj3]
+            0x51, 0x6b,                                     // obj1: "k"
+            0x51, 0x41,                                     // obj2: "A"
+            0x51, 0x42,                                     // obj3: "B"
+            0x08, 0x0d, 0x0f, 0x11,                         // offset table
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, // trailer: offsetIntSize 1, objectRefSize 1
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, // numObjects 4
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // topObject 0
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // offsetTableOffset 0x13
+        ])
+        let decoded = try PropertyListDecoder().decode([String: String].self, from: bplist)
+        #expect(decoded == ["k": "A"])
+    }
+
     @Test func xmlReals() throws {
         let xml = "<plist><array><real>1.5</real><real>2</real><real>  -3.14</real><real>1.000000000000000000000001</real><real>31415.9e-4</real><real>-iNf</real><real>infInItY</real></array></plist>"
         let array = try PropertyListDecoder().decode([Float].self, from: xml.data(using: .utf8)!)
