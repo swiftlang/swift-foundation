@@ -96,7 +96,7 @@ private struct RigidBytesTests {
         }
     }
     
-    @Test func initWithCapacity() async {
+    @Test func initWithCapacity() {
         do {
             let d = RigidBytes(capacity: 10)
             #expect(d.count == 0)
@@ -125,8 +125,10 @@ private struct RigidBytesTests {
             #expect(d.isEmpty == false)
             #expect(d.isFull == false)
         }
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func initWithCapacity_preconditions() async {
         await #expect(processExitsWith: .failure) {
             _ = RigidBytes(capacity: -1)
         }
@@ -135,10 +137,10 @@ private struct RigidBytesTests {
 
             }
         }
-#endif
     }
+#endif
       
-    @Test func initWithCount() async {
+    @Test func initWithCount() {
         let d = RigidBytes(count: 10)
         #expect(d.count == 10)
         #expect(d.capacity == 10)
@@ -151,15 +153,17 @@ private struct RigidBytesTests {
         for i in 0 ..< 10 {
             #expect(span[i] == 0)
         }
+    }
         
 #if FOUNDATION_EXIT_TESTS
+    @Test func initWithCount_preconditions() async {
         await #expect(processExitsWith: .failure) {
             _ = RigidBytes(count: -1)
         }
-#endif
     }
+#endif
     
-    @Test func initRepeating() async {
+    @Test func initRepeating() {
         var d = RigidBytes(repeating: 2, count: 5)
         #expect(d.count == 5)
         #expect(d.capacity == 5)
@@ -173,13 +177,15 @@ private struct RigidBytesTests {
         d = RigidBytes(repeating: 2, count: 0)
         #expect(d.count == 0)
         #expect(d.capacity == 0)
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func initRepeating() async {
         await #expect(processExitsWith: .failure) {
             _ = RigidBytes(repeating: 2, count: -1)
         }
-#endif
     }
+#endif
         
     @Test func initWithSpan() {
         var d = RigidBytes(copying: threeBytes.span.bytes)
@@ -267,7 +273,7 @@ private struct RigidBytesTests {
         }
     }
     
-    @Test func reallocation() async {
+    @Test func reallocation() {
         var d = RigidBytes(capacity: 3)
         d.append(8)
         d.append(9)
@@ -306,8 +312,10 @@ private struct RigidBytesTests {
         
         d.reserveCapacity(15)
         #expect(d.capacity == 15)
-        
+    }
+    
 #if FOUNDATION_EXIT_TESTS
+    @Test func reallocation_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(count: 2)
             d.reallocate(capacity: 1)
@@ -316,10 +324,10 @@ private struct RigidBytesTests {
             var d = RigidBytes(count: 0)
             d.reallocate(capacity: -1)
         }
-#endif
     }
+#endif
     
-    @Test func append() async {
+    @Test func append() {
         var d = RigidBytes(capacity: 10)
         #expect(d.count == 0)
         d.append(2)
@@ -348,8 +356,10 @@ private struct RigidBytesTests {
             #expect(span[3] == 3)
             #expect(span[4] == 5)
         }
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func append_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(capacity: 0)
             d.append(2)
@@ -368,10 +378,10 @@ private struct RigidBytesTests {
                 _ = Issue.record("Should not reach this code")
             }
         }
-#endif
     }
+#endif
 
-    @Test func insert() async {
+    @Test func insert() {
         var d = RigidBytes(capacity: 10)
         d.insert(1, at: 0)
         d.insert(2, at: 1)
@@ -415,8 +425,10 @@ private struct RigidBytesTests {
             #expect(span[6] == 2)
             #expect(span[7] == 3)
         }
-
+    }
+    
 #if FOUNDATION_EXIT_TESTS
+    @Test func insert_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(capacity: 0)
             d.insert(2, at: 0)
@@ -441,10 +453,10 @@ private struct RigidBytesTests {
                 // Intentionally do not append promised byte
             }
         }
-#endif
     }
+#endif
 
-    @Test func remove() async {
+    @Test func remove() {
         var d = RigidBytes(capacity: 10)
         d.append(copying: threeBytes.span.bytes)
         d.append(copying: threeBytes.span.bytes)
@@ -471,8 +483,10 @@ private struct RigidBytesTests {
         d.removeSubrange(...2)
         #expect(d.count == 0)
         #expect(d.capacity == 3)
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func remove_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(capacity: 2)
             d.removeLast()
@@ -497,10 +511,10 @@ private struct RigidBytesTests {
             var d = RigidBytes(count: 2)
             d.removeSubrange(0 ..< 5)
         }
-#endif
     }
+#endif
 
-    @Test func resetBytes() async {
+    @Test func resetBytes() {
         var d = RigidBytes(repeating: 3, count: 10)
         d.resetBytes(in: 3 ..< 6)
         do {
@@ -521,8 +535,10 @@ private struct RigidBytesTests {
             #expect(span[1] == 3)
             #expect(span[2] == 3)
         }
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func resetBytes_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(capacity: 10)
             d.resetBytes(in: 0 ..< 3)
@@ -539,10 +555,10 @@ private struct RigidBytesTests {
             var d = RigidBytes(count: 10)
             d.resetBytes(in: -3 ..< -2)
         }
-#endif
     }
+#endif
     
-    @Test func replaceSubrange() async {
+    @Test func replaceSubrange() {
         do {
             var d = RigidBytes(repeating: 4, count: 10)
             d.replaceSubrange(3 ..< 6, copying: threeBytes.span.bytes)
@@ -613,9 +629,10 @@ private struct RigidBytesTests {
             #expect(d.count == 6)
             #expect(d.capacity == 10)
         }
-
+    }
         
 #if FOUNDATION_EXIT_TESTS
+    @Test func replaceSubrange_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(capacity: 10)
             d.replaceSubrange(0 ..< 3, copying: threeBytes.span.bytes)
@@ -660,8 +677,8 @@ private struct RigidBytesTests {
 
             }
         }
-#endif
     }
+#endif
 
     @Test func edit() {
         var d = RigidBytes(capacity: 10)

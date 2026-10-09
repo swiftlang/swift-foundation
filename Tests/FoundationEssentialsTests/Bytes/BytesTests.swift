@@ -48,7 +48,7 @@ private struct BytesTests {
         #expect(d.isEmpty == true)
     }
     
-    @Test func initWithCapacity() async {
+    @Test func initWithCapacity() {
         let d = Bytes(capacity: 10)
         #expect(d.count == 0)
         #expect(d.bytes.byteCount == 0)
@@ -68,8 +68,10 @@ private struct BytesTests {
             #expect(span[1] == 2)
             #expect(d.isEmpty == false)
         }
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func initWithCapacity_preconditions() async {
         await #expect(processExitsWith: .failure) {
             _ = Bytes(capacity: -1)
         }
@@ -78,27 +80,29 @@ private struct BytesTests {
 
             }
         }
-#endif
     }
+#endif
       
-    @Test func initWithCount() async {
+    @Test func initWithCount() {
         let d = Bytes(count: 10)
         #expect(d.count == 10)
         #expect(d.bytes.byteCount == 10)
         #expect(d.isEmpty == false)
         let span = d.span
         for i in 0 ..< 9 {
-                #expect(span[i] == 0)
+            #expect(span[i] == 0)
         }
+    }
         
 #if FOUNDATION_EXIT_TESTS
+    @Test func initWithCount_preconditions() async {
         await #expect(processExitsWith: .failure) {
             _ = Bytes(count: -1)
         }
-#endif
     }
+#endif
     
-    @Test func initRepeating() async {
+    @Test func initRepeating() {
         do {
             let d = Bytes(repeating: 2, count: 5)
             #expect(d.count == 5)
@@ -112,13 +116,15 @@ private struct BytesTests {
             let d = Bytes(repeating: 2, count: 0)
             #expect(d.count == 0)
         }
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func initRepeating_preconditions() async {
         await #expect(processExitsWith: .failure) {
             _ = Bytes(repeating: 2, count: -1)
         }
-#endif
     }
+#endif
         
     @Test func initWithSpan() {
         do {
@@ -262,7 +268,7 @@ private struct BytesTests {
         }
     }
 
-    @Test func insert() async {
+    @Test func insert() {
         var d = Bytes(capacity: 10)
         d.insert(1, at: 0)
         d.insert(2, at: 1)
@@ -328,18 +334,20 @@ private struct BytesTests {
             output.append(2)
         }
         #expect(d.count == 4)
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func insert_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = RigidBytes(capacity: 3)
             d.insert(addingCount: 1, at: 0) { output in
                 // Intentionally do not append promised byte
             }
         }
-#endif
     }
+#endif
 
-    @Test func remove() async {
+    @Test func remove() {
         var d = Bytes(capacity: 10)
         d.append(copying: threeBytes.span.bytes)
         d.append(copying: threeBytes.span.bytes)
@@ -361,8 +369,10 @@ private struct BytesTests {
         d = Bytes(copying: threeBytes.span.bytes)
         d.removeSubrange(...2)
         #expect(d.count == 0)
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func remove_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = Bytes(capacity: 2)
             d.removeLast()
@@ -387,10 +397,10 @@ private struct BytesTests {
             var d = Bytes(count: 2)
             d.removeSubrange(0 ..< 5)
         }
-#endif
     }
+#endif
 
-    @Test func resetBytes() async {
+    @Test func resetBytes() {
         var d = Bytes(repeating: 3, count: 10)
         d.resetBytes(in: 3 ..< 6)
         do {
@@ -411,8 +421,10 @@ private struct BytesTests {
             #expect(span[1] == 3)
             #expect(span[2] == 3)
         }
+    }
 
 #if FOUNDATION_EXIT_TESTS
+    @Test func resetBytes_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = Bytes(capacity: 10)
             d.resetBytes(in: 0 ..< 3)
@@ -429,10 +441,10 @@ private struct BytesTests {
             var d = Bytes(count: 10)
             d.resetBytes(in: -3 ..< -2)
         }
-#endif
     }
+#endif
 
-    @Test func replaceSubrange() async {
+    @Test func replaceSubrange() {
         do {
             var d = Bytes(repeating: 4, count: 10)
             d.replaceSubrange(3 ..< 6, copying: threeBytes.span.bytes)
@@ -478,8 +490,10 @@ private struct BytesTests {
             d.replaceSubrange(1 ..< 3, copying: threeBytes.span.bytes)
             #expect(d.count == 11)
         }
-
+    }
+    
 #if FOUNDATION_EXIT_TESTS
+    @Test func replaceSubrange_preconditions() async {
         await #expect(processExitsWith: .failure) {
             var d = Bytes(capacity: 10)
             d.replaceSubrange(0 ..< 3, copying: threeBytes.span.bytes)
@@ -496,8 +510,8 @@ private struct BytesTests {
             var d = Bytes(count: 10)
             d.replaceSubrange(-3 ..< -2, copying: threeBytes.span.bytes)
         }
-#endif
     }
+#endif
 
     @Test func edit() {
         var d = Bytes(capacity: 10)
