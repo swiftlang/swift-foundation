@@ -34,6 +34,12 @@ protocol PlistArrayIterator<ValueReference> {
     mutating func next() throws -> ValueReference?
 }
 
+/// How duplicate dictionary keys should be resolved during `stringify`.
+internal enum PlistDuplicateKeyResolution {
+    case keepFirst
+    case keepLast
+}
+
 protocol PlistDecodingFormat {
     associatedtype Document : PlistDecodingDocument
 
@@ -289,7 +295,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     // MARK: - Initialization
 
-    static func stringify(iterator: consuming Format.Document.DictionaryIterator, count: Int, using decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode) throws -> [String:Format.Document.ContainedValueReference] {
+    static func stringify(iterator: consuming Format.Document.DictionaryIterator, count: Int, duplicateKeys: PlistDuplicateKeyResolution, using decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode) throws -> [String:Format.Document.ContainedValueReference] {
         var result = [String:Format.Document.ContainedValueReference]()
         result.reserveCapacity(count / 2)
 
@@ -297,15 +303,18 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
         while let (keyRef, valueRef) = try iter.next() {
             let keyValue = try decoder.document.value(from: keyRef)
             let key = try decoder.unwrapString(from: keyValue, for: codingPathNode)
-            result[key] = valueRef
+            switch duplicateKeys {
+            case .keepFirst: result[key]._setIfNil(to: valueRef)
+            case .keepLast: result[key] = valueRef
+            }
         }
         return result
     }
 
     /// Initializes `self` by referencing the given decoder and container.
-    internal init(referencing decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode, iterator: consuming Format.Document.DictionaryIterator, count: Int) throws {
+    internal init(referencing decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode, iterator: consuming Format.Document.DictionaryIterator, count: Int, duplicateKeys: PlistDuplicateKeyResolution) throws {
         self.decoder = decoder
-        self.container = try Self.stringify(iterator: iterator, count: count, using: decoder, codingPathNode: codingPathNode)
+        self.container = try Self.stringify(iterator: iterator, count: count, duplicateKeys: duplicateKeys, using: decoder, codingPathNode: codingPathNode)
         self.codingPathNode = codingPathNode
     }
 

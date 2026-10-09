@@ -17,7 +17,8 @@ struct BPlistLegacyDecodingFormat : PlistDecodingFormat {
         switch value {
         case let .dict(dict):
             let iter = Document.DictionaryIterator.init(iter: dict.makeIterator())
-            let container = try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: dict.count)
+            // The legacy binary PropertyListDecoder implementation was non-deterministic in terms of the order of resolving duplicate keys. Here we make it explicitly keep-first to match historical PropertyListSerialization behavior.
+            let container = try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: dict.count, duplicateKeys: .keepFirst)
             return KeyedDecodingContainer(container)
         case .nativeNull, .sentinelNull:
             throw DecodingError.valueNotFound([String: Any].self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Cannot get keyed decoding container -- found null value instead"))
