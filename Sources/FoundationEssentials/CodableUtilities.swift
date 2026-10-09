@@ -431,7 +431,8 @@ extension FixedWidthInteger {
     static func scanDecimalDigits(of bytes: borrowing Span<UInt8>, isNegative: Bool = false) -> DecimalDigitsScan<Self> {
         var result: Self = 0
         var index = 0
-        for byte in bytes {
+        for idx in bytes.indices {
+            let byte = bytes[idx]
             guard _asciiNumbers.contains(byte) else {
                 return .nonDigit(byte, offset: index)
             }
