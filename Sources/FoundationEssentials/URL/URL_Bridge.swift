@@ -366,9 +366,10 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
             isDirectory = hasTrailingSlash
         }
 
+        // _CFURLCreateCopyAppendingPathComponent can return NULL, e.g. if the URL has no path
         let cf = _url._cfurl().takeUnretainedValue()
         if let isDirectory {
-            return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectory).takeRetainedValue() as URL
+            return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectory)?.takeRetainedValue() as URL?
         }
 
         #if !NO_FILESYSTEM
@@ -377,12 +378,12 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
         // See if it refers to a directory
         if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey]),
            let isDirectoryValue = resourceValues.isDirectory {
-            return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectoryValue).takeRetainedValue() as URL
+            return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, isDirectoryValue)?.takeRetainedValue() as URL?
         }
         #endif
 
         // Fall back to inferring from the trailing slash
-        return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, hasTrailingSlash).takeRetainedValue() as URL
+        return _CFURLCreateCopyAppendingPathComponent(cf, pathComponent as CFString, hasTrailingSlash)?.takeRetainedValue() as URL?
     }
     
     var standardized: URL? {
