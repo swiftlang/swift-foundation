@@ -1063,6 +1063,10 @@ extension _URL {
                 )
             }
         }
+        if pathIsEmpty && span.isEmpty && !isDirectory && !flags.contains(.hasOldNetLocation) {
+            // E.g. "scheme://", return the URL unchanged for compatibility.
+            return nil
+        }
         return withPathSpan { path in
             appending(
                 currentPath: path,
