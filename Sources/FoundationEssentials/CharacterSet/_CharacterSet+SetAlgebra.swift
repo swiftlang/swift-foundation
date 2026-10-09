@@ -669,8 +669,8 @@ extension _CharacterSet {
         let wordStride = MemoryLayout<UInt>.stride
         var offset = 0
         while offset < Self.__kCFBitmapSize {
-            let subsetWord = subset.load(fromByteOffset: offset, as: UInt.self, .littleEndian)
-            let supersetWord = superset.load(fromByteOffset: offset, as: UInt.self, .littleEndian)
+            let subsetWord = subset.load(fromByteOffset: offset, as: UInt.self).littleEndian
+            let supersetWord = superset.load(fromByteOffset: offset, as: UInt.self).littleEndian
             if (subsetWord & ~supersetWord) != 0 {
                 return false
             }

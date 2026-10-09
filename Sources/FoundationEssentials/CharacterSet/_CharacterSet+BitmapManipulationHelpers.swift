@@ -21,7 +21,7 @@ extension _CharacterSet {
         let pattern = UInt64(0x0101_0101_0101_0101) &* UInt64(value)
         var offset = 0
         while offset + wordStride <= span.count {
-            if bytes.load(fromByteOffset: offset, as: UInt64.self, .littleEndian) != pattern {
+            if bytes.load(fromByteOffset: offset, as: UInt64.self).littleEndian != pattern {
                 return false
             }
             offset += wordStride
@@ -127,6 +127,6 @@ extension _CharacterSet {
     }
 
     internal static func _asciiMask(fromBitmap bitmap: Span<UInt8>) -> UInt128 {
-        return bitmap.bytes.load(fromByteOffset: 0, as: UInt128.self, .littleEndian)
+        return bitmap.bytes.load(fromByteOffset: 0, as: UInt128.self).littleEndian
     }
 }

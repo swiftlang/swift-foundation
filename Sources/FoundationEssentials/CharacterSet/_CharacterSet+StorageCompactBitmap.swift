@@ -52,8 +52,8 @@ extension _CharacterSet {
             var selfBodyOffset = numPages
             var subBodyOffset = numPages
             for p in 0..<numPages {
-                let selfHeader = selfBytes.load(fromByteOffset: p, as: UInt8.self, .littleEndian)
-                let subHeader = subBytes.load(fromByteOffset: p, as: UInt8.self, .littleEndian)
+                let selfHeader = selfBytes.load(fromByteOffset: p, as: UInt8.self).littleEndian
+                let subHeader = subBytes.load(fromByteOffset: p, as: UInt8.self).littleEndian
                 let selfPartial = (selfHeader != 0 && selfHeader != UInt8.max)
                 let subPartial = (subHeader != 0 && subHeader != UInt8.max)
 
@@ -65,8 +65,8 @@ extension _CharacterSet {
                     } else {
                         var w = 0
                         while w < pageSize {
-                            let subWord = subBytes.load(fromByteOffset: subBodyOffset + w, as: UInt.self, .littleEndian)
-                            let selfWord = selfBytes.load(fromByteOffset: selfBodyOffset + w, as: UInt.self, .littleEndian)
+                            let subWord = subBytes.load(fromByteOffset: subBodyOffset + w, as: UInt.self).littleEndian
+                            let selfWord = selfBytes.load(fromByteOffset: selfBodyOffset + w, as: UInt.self).littleEndian
                             if (subWord & ~selfWord) != 0 {
                                 return false
                             }
@@ -92,13 +92,13 @@ extension _CharacterSet {
             
             var bodyOffset = numPages
             for p in 0..<numPages {
-                let header = subsetBytes.load(fromByteOffset: p, as: UInt8.self, .littleEndian)
+                let header = subsetBytes.load(fromByteOffset: p, as: UInt8.self).littleEndian
                 if header == 0 { continue }
                 let pageOffset = p * pageSize
                 if header == UInt8.max {
                     var w = 0
                     while w < pageSize {
-                        if superset.load(fromByteOffset: pageOffset + w, as: UInt.self, .littleEndian) != UInt.max {
+                        if superset.load(fromByteOffset: pageOffset + w, as: UInt.self).littleEndian != UInt.max {
                             return false
                         }
                         w += wordStride
@@ -106,8 +106,8 @@ extension _CharacterSet {
                 } else {
                     var w = 0
                     while w < pageSize {
-                        let subsetWord = subsetBytes.load(fromByteOffset: bodyOffset + w, as: UInt.self, .littleEndian)
-                        let supersetWord = superset.load(fromByteOffset: pageOffset + w, as: UInt.self, .littleEndian)
+                        let subsetWord = subsetBytes.load(fromByteOffset: bodyOffset + w, as: UInt.self).littleEndian
+                        let supersetWord = superset.load(fromByteOffset: pageOffset + w, as: UInt.self).littleEndian
                         if (subsetWord & ~supersetWord) != 0 {
                             return false
                         }
