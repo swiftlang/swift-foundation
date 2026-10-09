@@ -12,6 +12,16 @@
 
 import Testing
 
+#if os(Linux) || os(Android)
+#if canImport(Android)
+@preconcurrency import Android
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#endif
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -31,6 +41,39 @@ private func generateTestData(count: Int = 16_777_216) -> Data {
         ptr.deallocate()
     }))
 }
+
+#if os(Linux) || os(Android)
+/// Read a whole file with `read(2)`, including short reads. Used as the reference for files that report a size of 0.
+private func readEntireFile(_ path: String) -> Data? {
+    let fd = open(path, O_RDONLY)
+    guard fd >= 0 else {
+        return nil
+    }
+    defer { close(fd) }
+
+    var result = Data()
+    var storage = [UInt8](repeating: 0, count: 4096)
+    while true {
+        let count = storage.withUnsafeMutableBytes { raw -> Int in
+            guard let base = raw.baseAddress else {
+                return -1
+            }
+            return read(fd, base, raw.count)
+        }
+        if count == 0 {
+            break
+        }
+        if count < 0 {
+            if errno == EINTR {
+                continue
+            }
+            return nil
+        }
+        result.append(contentsOf: storage[..<count])
+    }
+    return result
+}
+#endif
 
 @Suite("Data I/O")
 private final class DataIOTests {
@@ -192,6 +235,26 @@ private final class DataIOTests {
         // Ensure that these files can still be read despite appearing to be empty
         let maps = try String(contentsOfFile: "/proc/self/maps", encoding: .utf8)
         #expect(!maps.isEmpty)
+    }
+
+    #if os(Linux) || os(Android)
+    @Test
+    #else
+    @Test(.disabled("This test is not applicable on this platform"))
+    #endif
+    func zeroSizeFileReadsEntireContents() throws {
+        #if os(Linux) || os(Android)
+        // /proc/crypto reports a size of 0 and is larger than one 4KB read, returned in short reads.
+        let path = "/proc/crypto"
+        let expected = try #require(readEntireFile(path))
+        let url = URL(fileURLWithPath: path)
+        let data = try Data(contentsOf: url)
+        let text = try String(contentsOfFile: path, encoding: .utf8)
+        #expect(data == expected)
+        #expect(Data(text.utf8) == expected)
+        #expect(FileManager.default.contents(atPath: path) == expected)
+        #expect(data.count > 4096)
+        #endif
     }
 
     @Test
