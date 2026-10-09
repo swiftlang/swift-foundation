@@ -367,7 +367,7 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
     
     if fileSize == 0 {
         #if os(Linux) || os(Android)
-        // Some files report a size of 0 but still have contents. A short read is not the end of the file, so keep going until a read stops short of a full chunk.
+        // Some files report a size of 0 but still have contents. read(2) may return before EOF, so fill each chunk and stop only when a chunk comes back short, which means read(2) returned 0.
         let chunkSize = 1024 * 4
         guard var ptr = malloc(chunkSize) else {
             throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)

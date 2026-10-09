@@ -193,6 +193,19 @@ private final class DataIOTests {
         let read = try Data(contentsOf: url, options: [])
         #expect(data == read)
     }
+
+    @Test func emptyFileDoesNotReturnReadBuffer() throws {
+        try Data().write(to: url)
+        var attributes: [String: Data] = [:]
+        let result = try readBytesFromFile(path: url, reportProgress: false, maxLength: nil, options: [], attributesToRead: [], attributes: &attributes)
+        defer {
+            if let bytes = result.bytes, let deallocator = result.deallocator {
+                deallocator._deallocator(bytes, result.length)
+            }
+        }
+        #expect(result.length == 0)
+        #expect(result.bytes == nil)
+    }
     
 #if FOUNDATION_FRAMEWORK
     // String(contentsOf:) is not available outside the framework yet
@@ -244,16 +257,35 @@ private final class DataIOTests {
     #endif
     func zeroSizeFileReadsEntireContents() throws {
         #if os(Linux) || os(Android)
-        // /proc/crypto reports a size of 0 and is larger than one 4KB read, returned in short reads.
+        // /proc/crypto reports a size of 0 and is read in short chunks. Its text includes live reference counts, so require exact bytes only when the file is unchanged around the reads. A kernel without this file, or with less than one chunk of text, cannot exercise the path.
         let path = "/proc/crypto"
-        let expected = try #require(readEntireFile(path))
         let url = URL(fileURLWithPath: path)
-        let data = try Data(contentsOf: url)
-        let text = try String(contentsOfFile: path, encoding: .utf8)
-        #expect(data == expected)
-        #expect(Data(text.utf8) == expected)
-        #expect(FileManager.default.contents(atPath: path) == expected)
-        #expect(data.count > 4096)
+        for _ in 0..<5 {
+            guard let before = readEntireFile(path) else {
+                return
+            }
+            guard before.count > 4096 else {
+                return
+            }
+            let data = try Data(contentsOf: url)
+            let text = try String(contentsOfFile: path, encoding: .utf8)
+            let viaManager = FileManager.default.contents(atPath: path)
+            guard let after = readEntireFile(path) else {
+                return
+            }
+            let baseline = max(before.count, after.count)
+            for count in [data.count, text.utf8.count, viaManager?.count ?? -1] {
+                // A truncated read stops inside the first chunk. Live fields move by much less than that.
+                #expect(abs(count - baseline) < 1024)
+                #expect(count > 4096)
+            }
+            if before == after {
+                #expect(data == before)
+                #expect(Data(text.utf8) == before)
+                #expect(viaManager == before)
+                return
+            }
+        }
         #endif
     }
 
