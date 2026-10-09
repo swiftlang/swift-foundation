@@ -264,25 +264,25 @@ extension Decimal {
         case divideByZero
     }
 
-    internal func _addReportingInexact(
-        rhs: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    internal func _addingReportingInexact(
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || rhs.isNaN {
             throw .overflow
         }
         if self._length == 0 {
             if minExponent <= rhs._exponent { return (rhs, false) }
-            return try rhs._roundReportingInexact(
-                minExponent: minExponent,
-                roundingMode: roundingMode)
+            return try rhs._roundedReportingInexact(
+                rule,
+                minExponent: minExponent)
         }
         if rhs._length == 0 {
             if minExponent <= self._exponent { return (self, false) }
-            return try self._roundReportingInexact(
-                minExponent: minExponent,
-                roundingMode: roundingMode)
+            return try self._roundedReportingInexact(
+                rule,
+                minExponent: minExponent)
         }
 
         var a = self
@@ -300,16 +300,16 @@ extension Decimal {
                     result._isCompact = 0
                     result.compact()
                     if minExponent <= a._exponent { return (result, false) }
-                    return try result._roundReportingInexact(
-                        minExponent: minExponent,
-                        roundingMode: roundingMode)
+                    return try result._roundedReportingInexact(
+                        rule,
+                        minExponent: minExponent)
                 }
                 return try Self._assemble(
                     isNegative: a._isNegative != 0,
                     significand: (1, sum),
                     exponent: a._exponent,
-                    minExponent: minExponent,
-                    roundingMode: roundingMode)
+                    rounding: rule,
+                    minExponent: minExponent)
             } else {
                 if a._significand == b._significand {
                     return (.zero, false)
@@ -322,9 +322,9 @@ extension Decimal {
                 result._isCompact = 0
                 result.compact()
                 if minExponent <= a._exponent { return (result, false) }
-                return try result._roundReportingInexact(
-                    minExponent: minExponent,
-                    roundingMode: roundingMode)
+                return try result._roundedReportingInexact(
+                    rule,
+                    minExponent: minExponent)
             }
         }
         if a._exponent < b._exponent { swap(&a, &b) }
@@ -380,54 +380,54 @@ extension Decimal {
             significand: (hi, lo),
             tail: (r, divisor),
             exponent: commonExponent,
-            minExponent: minExponent,
-            roundingMode: roundingMode)
+            rounding: rule,
+            minExponent: minExponent)
     }
 
-    internal func _add(
-        rhs: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
+    internal func _adding(
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
     ) throws(_CalculationError) -> Decimal {
-        return try self._addReportingInexact(
-            rhs: rhs,
-            minExponent: minExponent,
-            roundingMode: roundingMode
-        ).result
+        return try self._addingReportingInexact(
+            rhs,
+            rounding: rule,
+            minExponent: minExponent
+        ).value
     }
 
-    internal func _subtractReportingInexact(
-        rhs: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    internal func _subtractingReportingInexact(
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         var right = rhs
         if right._length != 0 {
             right._isNegative ^= 1
         }
-        return try self._addReportingInexact(
-            rhs: right,
-            minExponent: minExponent,
-            roundingMode: roundingMode)
+        return try self._addingReportingInexact(
+            right,
+            rounding: rule,
+            minExponent: minExponent)
     }
 
-    internal func _subtract(
-        rhs: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
+    internal func _subtracting(
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
     ) throws(_CalculationError) -> Decimal {
-        return try self._subtractReportingInexact(
-            rhs: rhs,
-            minExponent: minExponent,
-            roundingMode: roundingMode
-        ).result
+        return try self._subtractingReportingInexact(
+            rhs,
+            rounding: rule,
+            minExponent: minExponent
+        ).value
     }
 
-    internal func _multiplyReportingInexact(
+    internal func _multipliedReportingInexact(
         by multiplicand: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN || multiplicand.isNaN {
             throw .overflow
         }
@@ -447,27 +447,27 @@ extension Decimal {
             isNegative: self._isNegative != multiplicand._isNegative,
             significand: product,
             exponent: self._exponent + multiplicand._exponent,
-            minExponent: minExponent,
-            roundingMode: roundingMode)
+            rounding: rule,
+            minExponent: minExponent)
     }
 
-    internal func _multiply(
+    internal func _multiplied(
         by multiplicand: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
     ) throws(_CalculationError) -> Decimal {
-        return try self._multiplyReportingInexact(
+        return try self._multipliedReportingInexact(
             by: multiplicand,
-            minExponent: minExponent,
-            roundingMode: roundingMode
-        ).result
+            rounding: rule,
+            minExponent: minExponent
+        ).value
     }
 
-    internal func _multiplyByPowerOfTenReportingInexact(
-        power: Int,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    internal func _multipliedReportingInexact(
+        byPowerOfTen power: Int,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self.isNaN {
             throw .overflow
         }
@@ -490,27 +490,27 @@ extension Decimal {
             isNegative: self._isNegative != 0,
             significand: (0, self._significand),
             exponent: max(exponent, -167), // Clamp lower bound and reuse rounding logic.
-            minExponent: minExponent,
-            roundingMode: roundingMode)
+            rounding: rule,
+            minExponent: minExponent)
     }
 
-    internal func _multiplyByPowerOfTen(
-        power: Int,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
+    internal func _multiplied(
+        byPowerOfTen power: Int,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
     ) throws(_CalculationError) -> Decimal {
-        return try self._multiplyByPowerOfTenReportingInexact(
-            power: power,
-            minExponent: minExponent,
-            roundingMode: roundingMode
-        ).result
+        return try self._multipliedReportingInexact(
+            byPowerOfTen: power,
+            rounding: rule,
+            minExponent: minExponent
+        ).value
     }
 
-    internal func _divideReportingInexact(
+    internal func _dividedReportingInexact(
         by divisor: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         guard !self.isNaN && !divisor.isNaN else {
             throw .overflow
         }
@@ -534,8 +534,8 @@ extension Decimal {
                 isNegative: isNegative,
                 significand: (0, self._significand),
                 exponent: self._exponent - divisor._exponent,
-                minExponent: minExponent,
-                roundingMode: roundingMode)
+                rounding: rule,
+                minExponent: minExponent)
         }
         // Scale dividend significand maximally for quotient precision.
         let sm = self._significand
@@ -567,24 +567,24 @@ extension Decimal {
             significand: (q1, q2),
             tail: (r2, dm),
             exponent: exponent,
-            minExponent: minExponent,
-            roundingMode: roundingMode)
+            rounding: rule,
+            minExponent: minExponent)
     }
 
-    internal func _divide(
+    internal func _divided(
         by divisor: Decimal,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
     ) throws(_CalculationError) -> Decimal {
-        return try self._divideReportingInexact(
+        return try self._dividedReportingInexact(
             by: divisor,
-            minExponent: minExponent,
-            roundingMode: roundingMode
-        ).result
+            rounding: rule,
+            minExponent: minExponent
+        ).value
     }
 
     internal func _power(
-        exponent: Int, roundingMode: RoundingMode
+        exponent: Int, rounding rule: FloatingPointRoundingRule
     ) throws -> Decimal {
         if self.isNaN {
             throw _CalculationError.overflow
@@ -601,27 +601,27 @@ extension Decimal {
         var temporary = Decimal(1)
         while power > 1 {
             if power & 1 == 1 {
-                temporary = try temporary._multiply(
-                    by: result, roundingMode: roundingMode
+                temporary = try temporary._multiplied(
+                    by: result, rounding: rule
                 )
                 power -= 1
             }
             if power != 0 {
-                result = try result._multiply(
-                    by: result, roundingMode: roundingMode
+                result = try result._multiplied(
+                    by: result, rounding: rule
                 )
                 power /= 2
             }
         }
-        result = try temporary._multiply(
-            by: result, roundingMode: roundingMode
+        result = try temporary._multiplied(
+            by: result, rounding: rule
         )
         // Negative Exponent Rule
         // x^-n = 1/(x^n)
         if exponent < 0 {
-            result = try Decimal(1)._divide(
+            result = try Decimal(1)._divided(
                 by: result,
-                roundingMode: roundingMode
+                rounding: rule
             )
         }
         return result
@@ -697,7 +697,7 @@ extension Decimal {
     internal static func _normalize(
         a: inout Decimal,
         b: inout Decimal,
-        roundingMode: RoundingMode
+        rounding rule: FloatingPointRoundingRule
     ) -> Bool {
         let diffExp = Int(a._exponent - b._exponent)
         // If the two numbers share the same exponents,
@@ -740,7 +740,7 @@ extension Decimal {
             large: inout Decimal,
             small: inout Decimal,
             diffExp: Int,
-            roundingMode: RoundingMode
+            rounding rule: FloatingPointRoundingRule
         ) -> Bool {
             let lm = large._significand
             if diffExp <= 38 {
@@ -783,7 +783,7 @@ extension Decimal {
                 isNegative: small._isNegative != 0,
                 isSignificandOdd: (q & 1) != 0,
                 tail: (r, divisor),
-                roundingMode: roundingMode
+                rounding: rule
             ) {
                 q &+= 1
             }
@@ -796,9 +796,9 @@ extension Decimal {
         }
 
         if diffExp < 0 {
-            return __normalize(large: &b, small: &a, diffExp: -diffExp, roundingMode: roundingMode)
+            return __normalize(large: &b, small: &a, diffExp: -diffExp, rounding: rule)
         }
-        return __normalize(large: &a, small: &b, diffExp: diffExp, roundingMode: roundingMode)
+        return __normalize(large: &a, small: &b, diffExp: diffExp, rounding: rule)
     }
 
     internal mutating func compact() {
@@ -866,10 +866,10 @@ extension Decimal {
         }
     }
 
-    internal func _roundReportingInexact(
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+    internal func _roundedReportingInexact(
+        _ rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if self._length == 0 {
             return (self, false)
         }
@@ -892,18 +892,405 @@ extension Decimal {
             significand: (0, q),
             tail: (r, divisor),
             exponent: minExponent,
-            roundingMode: roundingMode)
+            rounding: rule)
     }
 
-    internal func _round(
-        scale: Int,
-        roundingMode: RoundingMode
+    internal func _rounded(
+        _ rule: FloatingPointRoundingRule,
+        minExponent: Int32
     ) throws(_CalculationError) -> Decimal {
-        let scale = min(max(scale, -32768), 32767)
-        return try _roundReportingInexact(
-            minExponent: Int32(-scale),
-            roundingMode: roundingMode
-        ).result
+        return try _roundedReportingInexact(
+            rule,
+            minExponent: minExponent
+        ).value
+    }
+}
+
+extension Decimal {
+    internal func _addingProductReportingInexact(
+        _ lhs: Decimal,
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || lhs.isNaN || rhs.isNaN {
+            throw .overflow
+        }
+        if lhs._length == 0 || rhs._length == 0 {
+            return try self._roundedReportingInexact(
+                rule,
+                minExponent: minExponent)
+        }
+
+        // Multiply.
+        let product: (high: UInt128, low: UInt128)
+        let lm = lhs._significand, rm = rhs._significand
+        if lm <= 0xffff_ffff_ffff_ffff && rm <= 0xffff_ffff_ffff_ffff {
+            let (hi, lo) = UInt64(truncatingIfNeeded: lm)
+                .multipliedFullWidth(by: UInt64(truncatingIfNeeded: rm))
+            product = (0, UInt128(truncatingIfNeeded: hi) &<< 64 | UInt128(truncatingIfNeeded: lo))
+        } else {
+            product = lm.multipliedFullWidth(by: rm)
+        }
+        if product == (0, 0) {
+            return try self._roundedReportingInexact(
+                rule,
+                minExponent: minExponent)
+        }
+        let productIsNegative = lhs._isNegative != rhs._isNegative
+        let productExponent = lhs._exponent + rhs._exponent
+        let sm = self._significand
+        if self._length == 0 || sm == 0 {
+            return try Self._assemble(
+                isNegative: productIsNegative,
+                significand: product,
+                exponent: productExponent,
+                rounding: rule,
+                minExponent: minExponent)
+        }
+
+        // 256-bit addition.
+        var a = (
+            isNegative: productIsNegative,
+            significand: product,
+            exponent: productExponent,
+            shift: 0
+        )
+        var b = (
+            isNegative: self._isNegative != 0,
+            significand: (high: 0 as UInt128, low: sm),
+            exponent: self._exponent,
+            shift: 0
+        )
+        if a.exponent < b.exponent { swap(&a, &b) }
+        let exponentDifference = Int(a.exponent - b.exponent)
+
+        // Scale `a` significand as much as possible.
+        // Deliberately underestimate the max "headroom" for scaling up,
+        // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
+        let clz = (a.significand.high == 0)
+            ? 128 &+ (a.significand.low|1).leadingZeroBitCount
+            : (a.significand.high|1).leadingZeroBitCount
+        a.shift = min(exponentDifference, (clz &* 1233) &>> 12)
+        let x: Int
+        if a.shift > 38 {
+            let n: UInt128 = 100_000_000_000_000_000_000_000_000_000_000_000_000
+            let (hi, lo) = a.significand.low.multipliedFullWidth(by: n)
+            a.significand = (a.significand.high * n + hi, lo)
+            x = a.shift &- 38
+        } else {
+            x = a.shift
+        }
+        let (hi, lo) = a.significand.low._multipliedFullWidth(by1e: x)
+        let hi_ = a.significand.high._multipliedFullWidth(by1e: x).low + hi
+        a.significand = (hi_, lo)
+        // Top up our estimate, if needed.
+        let threshold: (high: UInt128, low: UInt128) = (
+            0x1999_9999_9999_9999_9999_9999_9999_9999,
+            0x9999_9999_9999_9999_9999_9999_9999_9999
+        ) // UInt256.max / 10
+        if a.shift < exponentDifference && a.significand <= threshold {
+            let (hi, lo) = a.significand.low.multipliedFullWidth(by: 10)
+            a.significand = (a.significand.high * 10 + hi, lo)
+            a.shift &+= 1
+        }
+        // `a.exponent` is stale now but won't be used further.
+
+        var commonExponent = a.exponent - Int32(a.shift)
+        b.shift = Int(commonExponent - b.exponent)
+        var numerator: UInt128 = 0
+        var denominator: UInt128 = 1
+
+        if b.shift == 0 {
+            denominator = 1
+            numerator = 0
+        } else if b.shift == 1 {
+            denominator = 10
+            let (q1, r1) =
+                b.significand.high._quotientAndRemainder(dividingBy1e: 1)
+            let (q2, r2) =
+                UInt128._quotientAndRemainder(
+                    fullWidth: (r1, b.significand.low),
+                    dividingBy1e: 1)
+            numerator = r2
+            b.significand = (q1, q2)
+        } else if b.shift < 78 {
+            denominator = 10
+            var sticky = false
+            var x = b.shift
+            while x > 38 {
+                let (q1, r1) =
+                    b.significand.high._quotientAndRemainder(dividingBy1e: 38)
+                let (q2, r2) =
+                    UInt128._quotientAndRemainder(
+                        fullWidth: (r1, b.significand.low),
+                        dividingBy1e: 38)
+                if r2 != 0 { sticky = true }
+                b.significand = (q1, q2)
+                x &-= 38
+            }
+            let (q1, r1) =
+                b.significand.high._quotientAndRemainder(dividingBy1e: x)
+            let (q2, r2) =
+                UInt128._quotientAndRemainder(
+                    fullWidth: (r1, b.significand.low),
+                    dividingBy1e: x)
+            if r2 != 0 { sticky = true }
+            numerator = sticky ? 1 : 0
+            b.significand = (q1, q2)
+        } else {
+            denominator = 10
+            numerator = 1
+            b.significand = (0, 0)
+        }
+        // `b.exponent` is stale now but won't be used further.
+
+        var significand: (high: UInt128, low: UInt128)
+        if a.isNegative == b.isNegative {
+            // Same sign: add magnitudes.
+            let (lo, carry1) =
+                a.significand.low.addingReportingOverflow(b.significand.low)
+            let (hi, carry2) =
+                a.significand.high.addingReportingOverflow(b.significand.high)
+            let (hi_, carry3) = hi.addingReportingOverflow(carry1 ? 1 : 0)
+            significand = (hi_, lo)
+            if carry2 || carry3 {
+                let (q1, r1) =
+                    UInt128._quotientAndRemainder(
+                        fullWidth: (1, significand.high),
+                        dividingBy1e: 1)
+                let (q2, r2) =
+                    UInt128._quotientAndRemainder(
+                        fullWidth: (r1, significand.low),
+                        dividingBy1e: 1)
+                significand = (q1, q2)
+                denominator = 10
+                numerator = (numerator != 0 || r2 != 0) ? 1 : 0
+                commonExponent += 1
+            }
+        } else if a.significand > b.significand {
+            let (lo, borrow) =
+                a.significand.low.subtractingReportingOverflow(b.significand.low)
+            let hi = a.significand.high - b.significand.high - (borrow ? 1 : 0)
+            significand = (hi, lo)
+            if numerator != 0 {
+                // We have a "negative" remainder, so we need to borrow.
+                let borrow: Bool
+                (significand.low, borrow) = significand.low.subtractingReportingOverflow(1)
+                if borrow { significand.high -= 1 }
+                numerator = denominator - numerator
+                // Restore a digit if necessary.
+                if significand.high == 0 {
+                    assert(b.shift == 1)
+                    let (hi, lo) = significand.low.multipliedFullWidth(by: 10)
+                    let (lo_, carry) = lo.addingReportingOverflow(numerator)
+                    significand = (hi + (carry ? 1 : 0), lo_)
+                    denominator = 1
+                    numerator = 0
+                    commonExponent -= 1
+                }
+            }
+        } else {
+            // If `b.shift > 0`, then `a.significand` has been scaled to exceed
+            // UInt256.max / 10 and `b.significand` must be less than that. So,
+            // if `b.significand >= a.significand`, then we know `b.shift == 0`
+            // and hence `numerator == 0`.
+            swap(&a, &b)
+            let (lo, borrow) =
+                a.significand.low.subtractingReportingOverflow(b.significand.low)
+            let hi = a.significand.high - b.significand.high - (borrow ? 1 : 0)
+            significand = (hi, lo)
+        }
+
+        return try Self._assemble(
+            isNegative: a.isNegative,
+            significand: significand,
+            tail: (numerator, denominator),
+            exponent: commonExponent,
+            rounding: rule,
+            minExponent: minExponent)
+    }
+
+    // N.B.: `_remainder` is always exact.
+    internal func _remainder(
+        truncating: Bool,
+        dividingBy divisor: Decimal
+    ) throws(_CalculationError) -> Decimal {
+        guard !self.isNaN && !divisor.isNaN else {
+            throw .overflow
+        }
+        let dm = divisor._significand
+        guard divisor._length > 0 && dm != 0 else {
+            throw .divideByZero
+        }
+        let sm = self._significand
+        guard self._length > 0 && sm != 0 else {
+            return .zero
+        }
+
+        var isNegative = (self._isNegative != 0)
+        var exponent: Int32
+        var shift = Int(self._exponent - divisor._exponent)
+        var residue: UInt128
+
+        if shift < 0 {
+            exponent = self._exponent
+            if -shift > 38 {
+                // Both truncated and nearest quotient are zero.
+                residue = sm
+            } else {
+                let (hi, lo) = dm._multipliedFullWidth(by1e: -shift)
+                if hi != 0 {
+                    // Truncated quotient is zero.
+                    residue = sm
+                    // If `hi > 1` or `lo >= residue`, then the complement,
+                    // which is notionally given by `(hi, lo) - residue`, must
+                    // exceed `UInt128.max` and thus must be greater than `residue`.
+                    if !truncating && hi == 1 && lo < residue {
+                        let complement = lo &- residue
+                        if residue > complement { // Truncated quotient isn't odd, since it's zero.
+                            residue = complement
+                            isNegative.toggle()
+                        }
+                    }
+                } else {
+                    if truncating {
+                        residue = sm % lo
+                    } else {
+                        let quotient: UInt128
+                        (quotient, residue) = sm.quotientAndRemainder(dividingBy: lo)
+                        let complement = lo - residue
+                        if residue > complement || (residue == complement && (quotient & 1) != 0) {
+                            residue = complement
+                            isNegative.toggle()
+                        }
+                    }
+                }
+            }
+        } else {
+            exponent = divisor._exponent
+            var quotient: UInt128
+            (quotient, residue) = sm.quotientAndRemainder(dividingBy: dm)
+            while shift > 0 && residue != 0 { // (Stopping when `residue == 0` can leave a stale `quotient`, but in that case we never test for quotient parity.)
+                let chunk = min(shift, 38)
+                (quotient, residue) = dm.dividingFullWidth(residue._multipliedFullWidth(by1e: chunk))
+                shift &-= chunk
+            }
+            if !truncating {
+                let complement = dm - residue
+                if residue > complement || (residue == complement && (quotient & 1) != 0) {
+                    residue = complement
+                    isNegative.toggle()
+                }
+            }
+        }
+
+        if residue == 0 {
+            return .zero
+        }
+        var result = Decimal()
+        result._significand = residue
+        result._isNegative = isNegative ? 1 : 0
+        result._exponent = exponent
+        result._isCompact = 0
+        result.compact()
+        return result
+    }
+
+    internal func _squareRootReportingInexact(
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
+        guard !self.isNaN else {
+            throw .overflow
+        }
+        let sm = self._significand
+        guard self._length > 0 && sm != 0 else {
+            return (.zero, false)
+        }
+        // It's deliberate that we check `_isNegative` after we check `sm != 0`.
+        guard self._isNegative == 0 else {
+            throw .overflow
+        }
+
+        // Deliberately underestimate the max "headroom" for scaling up to 256 bits,
+        // using 1233/4096 as a close approximation of 1/log2(10) -- cf. Hacker's Delight, ch. 11.
+        var shift = ((128 &+ (sm|1).leadingZeroBitCount) &* 1233) &>> 12
+        // ...but in this case also preserve exponent parity:
+        shift &-= (shift &- Int(self._exponent)) & 1
+        var scaled: (high: UInt128, low: UInt128)
+        if shift > 38 {
+            let n: UInt128 = 100_000_000_000_000_000_000_000_000_000_000_000_000
+            scaled = sm.multipliedFullWidth(by: n)
+            let x = shift &- 38
+            let hi: UInt128
+            (hi, scaled.low) = scaled.low._multipliedFullWidth(by1e: x)
+            scaled.high = scaled.high._multipliedFullWidth(by1e: x).low + hi
+        } else {
+            scaled = sm.multipliedFullWidth(by: _uint128_pow10[shift])
+        }
+        // Top up our estimate, if needed.
+        let threshold: (high: UInt128, low: UInt128) = (
+            0x028f_5c28_f5c2_8f5c_28f5_c28f_5c28_f5c2,
+            0x8f5c_28f5_c28f_5c28_f5c2_8f5c_28f5_c28f
+        ) // UInt256.max / 100
+        if scaled <= threshold {
+            let hi: UInt128
+            (hi, scaled.low) = scaled.low.multipliedFullWidth(by: 100)
+            scaled.high = scaled.high * 100 + hi
+            shift &+= 2
+        }
+
+        let exponent = (self._exponent &- Int32(shift)) / 2
+        // Compute the significand.
+        let upperBound =
+            Double(UInt64(truncatingIfNeeded: scaled.high &>> 64)).nextUp
+                .squareRoot().nextUp * 0x1p96
+        var root: UInt128
+        var remainder: (high: UInt128, low: UInt128)
+        if upperBound >= 0x1p128 {
+            root = .max
+        } else {
+            // root = UInt128(upperBound)
+            let m = upperBound.significandBitPattern | 0x0010_0000_0000_0000
+            let shift = Int(upperBound.exponentBitPattern) &- 1075
+            root = UInt128(truncatingIfNeeded: m) &<< shift
+        }
+        while true {
+            let square = root.multipliedFullWidth(by: root)
+            if square <= scaled {
+                let borrow: Bool
+                (remainder.low, borrow) =
+                    scaled.low.subtractingReportingOverflow(square.low)
+                remainder.high = scaled.high &- square.high &- (borrow ? 1 : 0)
+                break
+            }
+            let quotient = root.dividingFullWidth(scaled).quotient
+            // root = floor((root + quotient) / 2), avoiding overflow.
+            root = (root &>> 1) &+ (quotient &>> 1) &+ (root & quotient & 1)
+        }
+
+        let tail: (numerator: UInt128, denominator: UInt128) =
+            if remainder == (0, 0) {
+                (0, 3)
+            } else if remainder <= (0, root) {
+                (1, 3)
+            } else if root == 34028236692093846346337460743176821145 /* UInt128.max / 10 */
+                && exponent > minExponent {
+                // Test `sqrt(root * root + remainder) > root + 3/4`.
+                // By squaring and rearranging, for integer `remainder`, `remainder > floor(3/2 * root + 9/16)`.
+                // Since `root` is odd, the rhs is equivalent to `root + floor(root / 2) + 1`.
+                remainder > (0, root + (root &>> 1) + 1) ? (5, 6) : (2, 3)
+            } else {
+                (2, 3)
+            }
+        return try Self._assemble(
+            isNegative: false,
+            significand: (0, root),
+            tail: tail,
+            exponent: exponent,
+            rounding: rule,
+            minExponent: minExponent)
     }
 }
 
@@ -969,7 +1356,22 @@ extension FixedWidthInteger {
         return (nil, inexact)
     }
 
-    internal init(_ source: Decimal) {
+    /// Creates an integer from the given decimal floating-point value, rounding toward zero.
+    ///
+    /// Any fractional part of the value passed as `source` is removed, rounding the value toward zero.
+    ///
+    ///     let x = Int(Decimal(21.5))
+    ///     // x == 21
+    ///     let y = Int(Decimal(-21.5))
+    ///     // y == -21
+    ///
+    /// If `source` is NaN or is outside the bounds of this type after rounding toward zero,
+    /// a runtime error occurs.
+    ///
+    /// - Parameter source: A decimal floating-point value to convert to an integer.
+    ///   `source` must be representable in this type after rounding toward zero.
+    @available(FoundationPreview 6.5, *)
+    public init(_ source: Decimal) {
         // Truncating conversion, trapping if out of range or NaN.
         guard let value = Self._convert(from: source).value else {
             preconditionFailure("Decimal value cannot be converted to \(Self.self): out of range or NaN")
@@ -977,7 +1379,22 @@ extension FixedWidthInteger {
         self = value
     }
 
-    internal init?(exactly source: Decimal) {
+    /// Creates an integer from the given decimal floating-point value, if it can be represented exactly.
+    ///
+    /// If the value passed as `source` is not representable exactly, the result is `nil`.
+    /// In the following example, `x` is successfully created from a value of `21`,
+    /// while the attempt to initialize `y` from `21.5` fails:
+    ///
+    ///     let x = Int(exactly: Decimal(21))
+    ///     // x == Optional(21)
+    ///     let y = Int(exactly: Decimal(21.5))
+    ///     // y == nil
+    ///
+    /// If `source` is NaN or is outside the bounds of this type, the result is `nil`.
+    ///
+    /// - Parameter source: A decimal floating-point value to convert to an integer.
+    @available(FoundationPreview 6.5, *)
+    public init?(exactly source: Decimal) {
         // Exact conversion, nil if inexact, out of range, or NaN.
         guard case (let value?, false) = Self._convert(from: source) else {
             return nil
@@ -1121,20 +1538,24 @@ extension Decimal {
         isNegative: Bool,
         isSignificandOdd: Bool,
         tail: (numerator: UInt128, denominator: UInt128),
-        roundingMode: RoundingMode
+        rounding rule: FloatingPointRoundingRule
     ) -> Bool {
         let cmp = UInt128._compare(tail.numerator, tail.denominator - tail.numerator)
-        switch roundingMode {
+        switch rule {
         case .down:
             return isNegative
         case .up:
             return !isNegative
-        case .bankers:
+        case .toNearestOrEven:
             return cmp == .orderedDescending || (cmp == .orderedSame && isSignificandOdd)
-        case .plain:
-            fallthrough
-        @unknown default:
+        case .toNearestOrAwayFromZero:
             return cmp != .orderedAscending
+        case .towardZero:
+            return false
+        case .awayFromZero:
+            return true
+        @unknown default:
+            fatalError("Unknown rounding rule")
         }
     }
 
@@ -1143,9 +1564,9 @@ extension Decimal {
         significand: (high: UInt128, low: UInt128),
         tail: (numerator: UInt128, denominator: UInt128) = (0, 1),
         exponent: Int32,
-        minExponent: Int32 = Self._minExponent,
-        roundingMode: RoundingMode
-    ) throws(_CalculationError) -> (result: Decimal, inexact: Bool) {
+        rounding rule: FloatingPointRoundingRule,
+        minExponent: Int32 = Self._minExponent
+    ) throws(_CalculationError) -> (value: Decimal, inexact: Bool) {
         if significand == (0, 0) && tail.numerator == 0 {
             return (.zero, false)
         }
@@ -1291,7 +1712,7 @@ extension Decimal {
                 isNegative: isNegative,
                 isSignificandOdd: (low & 1) != 0,
                 tail: tail,
-                roundingMode: roundingMode
+                rounding: rule
             ) {
                 if low == .max {
                     low = 34028236692093846346337460743176821146 // 2**128 / 10, rounded away.
