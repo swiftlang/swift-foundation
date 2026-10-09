@@ -30,7 +30,8 @@ struct XMLPlistDecodingFormat: PlistDecodingFormat {
             try decoder.document.withPrimitive(for: value) { primitive in
                 let primitiveIter = try primitive.dictionaryIterator
                 let iter = XMLPlistDecodingDocument.DictionaryIterator(primitiveIter)
-                return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count &* 2)
+                // The legacy XML PropertyListDecoder and PropertyListSerialization implementations historically used keep-last behavior when resolving duplicate keys.
+                return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count &* 2, duplicateKeys: .keepLast)
             }
         }
         return KeyedDecodingContainer(container)

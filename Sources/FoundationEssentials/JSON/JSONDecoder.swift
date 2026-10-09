@@ -473,7 +473,7 @@ open class JSONDecoder {
         #if FOUNDATION_FRAMEWORK
         return _foundation_swift_json_deserialization_enabled()
         #else
-        return false
+        return true
         #endif
     }
 
@@ -509,6 +509,13 @@ open class JSONDecoder {
                 return result
             }
         } catch let error as JSONError {
+            #if FOUNDATION_FRAMEWORK
+            let underlyingError: Error? = error.nsError
+            #else
+            let underlyingError: Error? = nil
+            #endif
+            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "The given data was not valid JSON.", underlyingError: underlyingError))
+        } catch let error as JSONPrimitiveError {
             #if FOUNDATION_FRAMEWORK
             let underlyingError: Error? = error.nsError
             #else
@@ -991,17 +998,19 @@ extension JSONLegacyDecoderImpl: Decoder {
             remainingBuffer = remainingBuffer.dropFirst(4)
         }
 
-        // Process any remaining bytes in the same way.
+        // Process any remaining bytes in the same way, in forward order: an 'e'/'E' must be seen before the exponent digits that follow it.
+        var off = 0
         switch remainingBuffer.count {
         case 3:
-            if let res = check(2) { return res }
+            if let res = check(off) { return res }
+            off &+= 1
             fallthrough
         case 2:
-            if let res = check(1) { return res }
+            if let res = check(off) { return res }
+            off &+= 1
             fallthrough
         case 1:
-            if let res = check(0) { return res }
-            break
+            if let res = check(off) { return res }
         default:
             break
         }
@@ -1958,14 +1967,6 @@ extension EncodingError {
         return .invalidValue(value, EncodingError.Context(codingPath: codingPath, debugDescription: debugDescription))
     }
 }
-
-// This is a workaround for the lack of a "set value only if absent" function for Dictionary.
- extension Optional {
-     fileprivate mutating func _setIfNil(to value: Wrapped) {
-         guard _fastPath(self == nil) else { return }
-         self = value
-     }
- }
 
 internal extension JSONDecoder.KeyDecodingStrategy {
     var isDefault: Bool {
