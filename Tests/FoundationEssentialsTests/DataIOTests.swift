@@ -12,6 +12,16 @@
 
 import Testing
 
+#if os(Linux) || os(Android)
+#if canImport(Android)
+@preconcurrency import Android
+#elseif canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#endif
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -31,6 +41,39 @@ private func generateTestData(count: Int = 16_777_216) -> Data {
         ptr.deallocate()
     }))
 }
+
+#if os(Linux) || os(Android)
+/// Read a whole file with `read(2)`, including short reads. Used as the reference for files that report a size of 0.
+private func readEntireFile(_ path: String) -> Data? {
+    let fd = open(path, O_RDONLY)
+    guard fd >= 0 else {
+        return nil
+    }
+    defer { close(fd) }
+
+    var result = Data()
+    var storage = [UInt8](repeating: 0, count: 4096)
+    while true {
+        let count = storage.withUnsafeMutableBytes { raw -> Int in
+            guard let base = raw.baseAddress else {
+                return -1
+            }
+            return read(fd, base, raw.count)
+        }
+        if count == 0 {
+            break
+        }
+        if count < 0 {
+            if errno == EINTR {
+                continue
+            }
+            return nil
+        }
+        result.append(contentsOf: storage[..<count])
+    }
+    return result
+}
+#endif
 
 @Suite("Data I/O")
 private final class DataIOTests {
@@ -150,6 +193,19 @@ private final class DataIOTests {
         let read = try Data(contentsOf: url, options: [])
         #expect(data == read)
     }
+
+    @Test func emptyFileDoesNotReturnReadBuffer() throws {
+        try Data().write(to: url)
+        var attributes: [String: Data] = [:]
+        let result = try readBytesFromFile(path: url, reportProgress: false, maxLength: nil, options: [], attributesToRead: [], attributes: &attributes)
+        defer {
+            if let bytes = result.bytes, let deallocator = result.deallocator {
+                deallocator._deallocator(bytes, result.length)
+            }
+        }
+        #expect(result.length == 0)
+        #expect(result.bytes == nil)
+    }
     
 #if FOUNDATION_FRAMEWORK
     // String(contentsOf:) is not available outside the framework yet
@@ -192,6 +248,45 @@ private final class DataIOTests {
         // Ensure that these files can still be read despite appearing to be empty
         let maps = try String(contentsOfFile: "/proc/self/maps", encoding: .utf8)
         #expect(!maps.isEmpty)
+    }
+
+    #if os(Linux) || os(Android)
+    @Test
+    #else
+    @Test(.disabled("This test is not applicable on this platform"))
+    #endif
+    func zeroSizeFileReadsEntireContents() throws {
+        #if os(Linux) || os(Android)
+        // /proc/crypto reports a size of 0 and is read in short chunks. Its text includes live reference counts, so require exact bytes only when the file is unchanged around the reads. A kernel without this file, or with less than one chunk of text, cannot exercise the path.
+        let path = "/proc/crypto"
+        let url = URL(fileURLWithPath: path)
+        for _ in 0..<5 {
+            guard let before = readEntireFile(path) else {
+                return
+            }
+            guard before.count > 4096 else {
+                return
+            }
+            let data = try Data(contentsOf: url)
+            let text = try String(contentsOfFile: path, encoding: .utf8)
+            let viaManager = FileManager.default.contents(atPath: path)
+            guard let after = readEntireFile(path) else {
+                return
+            }
+            let baseline = max(before.count, after.count)
+            for count in [data.count, text.utf8.count, viaManager?.count ?? -1] {
+                // A truncated read stops inside the first chunk. Live fields move by much less than that.
+                #expect(abs(count - baseline) < 1024)
+                #expect(count > 4096)
+            }
+            if before == after {
+                #expect(data == before)
+                #expect(Data(text.utf8) == before)
+                #expect(viaManager == before)
+                return
+            }
+        }
+        #endif
     }
 
     @Test

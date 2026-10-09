@@ -367,23 +367,46 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
     
     if fileSize == 0 {
         #if os(Linux) || os(Android)
-        // Linux has some files that may report a size of 0 but actually have contents
+        // Some files report a size of 0 but still have contents. read(2) may return before EOF, so fill each chunk and stop only when a chunk comes back short, which means read(2) returned 0.
         let chunkSize = 1024 * 4
-        var ptr = malloc(chunkSize)!
-        var totalRead = 0
-        while true {
-            let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: totalRead + chunkSize)
-            var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: totalRead)
-            try readBytesFromFileDescriptor(fd, path: inPath, buffer: &outputSpan, readUntilLength: false, reportProgress: false)
-            
-            let length = outputSpan.finalize(for: buffer)
-            totalRead += length
-            if length != chunkSize {
-                break
-            }
-            ptr = realloc(ptr, totalRead + chunkSize)!
+        guard var ptr = malloc(chunkSize) else {
+            throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
-        result = ReadBytesResult(bytes: ptr, length: totalRead, deallocator: .free)
+        var totalRead = 0
+        do {
+            while true {
+                let (capacity, overflowed) = totalRead.addingReportingOverflow(chunkSize)
+                guard !overflowed else {
+                    throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
+                }
+                let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: capacity)
+                var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: totalRead)
+                try readBytesFromFileDescriptor(fd, path: inPath, buffer: &outputSpan, readUntilLength: true, reportProgress: false)
+
+                // `finalize` reports every initialized byte in the buffer, including bytes from earlier iterations.
+                let initialized = outputSpan.finalize(for: buffer)
+                let bytesRead = initialized - totalRead
+                totalRead = initialized
+                if bytesRead != chunkSize {
+                    break
+                }
+                let (nextCapacity, nextOverflowed) = totalRead.addingReportingOverflow(chunkSize)
+                guard !nextOverflowed, let grown = realloc(ptr, nextCapacity) else {
+                    throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
+                }
+                ptr = grown
+            }
+        } catch {
+            free(ptr)
+            throw error
+        }
+        if totalRead == 0 {
+            // Callers drop a zero-length result and do not free its bytes.
+            free(ptr)
+            result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
+        } else {
+            result = ReadBytesResult(bytes: ptr, length: totalRead, deallocator: .free)
+        }
         #else
         result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
         #endif
