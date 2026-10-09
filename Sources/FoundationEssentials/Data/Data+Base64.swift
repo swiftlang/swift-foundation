@@ -133,23 +133,6 @@ extension Data {
 
 enum Base64 {}
 
-/// A base64 encoding lookup table.
-///
-/// The table holds exactly 256 bytes and is only indexable by `UInt8`. Every possible index is therefore in bounds, which is why the subscript can forward to the span's unchecked subscript: a buffer overflow is impossible by construction and no bounds check is emitted in the hot encoding loops.
-private struct Base64EncodingTable: ~Escapable {
-    private let table: Span<UInt8>
-
-    @_lifetime(copy table)
-    init(_ table: Span<UInt8>) {
-        assert(table.count == 256)
-        self.table = table
-    }
-
-    subscript(index: UInt8) -> UInt8 {
-        unsafe self.table[unchecked: Int(index)]
-    }
-}
-
 /// A base64 decoding lookup table.
 ///
 /// The table holds exactly 256 elements and is only indexable by `UInt8`. Every possible index is therefore in bounds, which is why the subscript can forward to the span's unchecked subscript: a buffer overflow is impossible by construction and no bounds check is emitted in the hot decoding loops.
@@ -171,122 +154,6 @@ private struct Base64DecodingTable: ~Escapable {
 
 extension Base64 {
     static let encodePaddingCharacter: UInt8 = 61
-
-    static let encoding0: [UInt8] = [
-        UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "C"),
-        UInt8(ascii: "C"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "E"), UInt8(ascii: "E"), UInt8(ascii: "E"),
-        UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "H"),
-        UInt8(ascii: "H"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "J"), UInt8(ascii: "J"), UInt8(ascii: "J"),
-        UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "M"),
-        UInt8(ascii: "M"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "O"), UInt8(ascii: "O"), UInt8(ascii: "O"),
-        UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "R"),
-        UInt8(ascii: "R"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "T"), UInt8(ascii: "T"), UInt8(ascii: "T"),
-        UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "W"),
-        UInt8(ascii: "W"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Y"), UInt8(ascii: "Y"), UInt8(ascii: "Y"),
-        UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "b"),
-        UInt8(ascii: "b"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "d"), UInt8(ascii: "d"), UInt8(ascii: "d"),
-        UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "g"),
-        UInt8(ascii: "g"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "i"), UInt8(ascii: "i"), UInt8(ascii: "i"),
-        UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "l"),
-        UInt8(ascii: "l"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "n"), UInt8(ascii: "n"), UInt8(ascii: "n"),
-        UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "q"),
-        UInt8(ascii: "q"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "s"), UInt8(ascii: "s"), UInt8(ascii: "s"),
-        UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "v"),
-        UInt8(ascii: "v"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "x"), UInt8(ascii: "x"), UInt8(ascii: "x"),
-        UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "0"),
-        UInt8(ascii: "0"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "2"), UInt8(ascii: "2"), UInt8(ascii: "2"),
-        UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "5"),
-        UInt8(ascii: "5"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "7"), UInt8(ascii: "7"), UInt8(ascii: "7"),
-        UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "+"),
-        UInt8(ascii: "+"), UInt8(ascii: "+"), UInt8(ascii: "/"), UInt8(ascii: "/"), UInt8(ascii: "/"), UInt8(ascii: "/"),
-    ]
-
-    static let encoding1: [UInt8] = [
-        UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"),
-        UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"),
-        UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"),
-        UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"),
-        UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"),
-        UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"),
-        UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"),
-        UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"),
-        UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"),
-        UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"),
-        UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"),
-        UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"),
-        UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"), UInt8(ascii: "A"), UInt8(ascii: "B"),
-        UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"),
-        UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"),
-        UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"),
-        UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"),
-        UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"),
-        UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"),
-        UInt8(ascii: "+"), UInt8(ascii: "/"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"),
-        UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"),
-        UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"),
-        UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"),
-        UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"),
-        UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"),
-        UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"),
-    ]
-
-    static let encoding0url: [UInt8] = [
-        UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "C"),
-        UInt8(ascii: "C"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "E"), UInt8(ascii: "E"), UInt8(ascii: "E"),
-        UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "H"),
-        UInt8(ascii: "H"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "J"), UInt8(ascii: "J"), UInt8(ascii: "J"),
-        UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "M"),
-        UInt8(ascii: "M"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "O"), UInt8(ascii: "O"), UInt8(ascii: "O"),
-        UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "R"),
-        UInt8(ascii: "R"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "T"), UInt8(ascii: "T"), UInt8(ascii: "T"),
-        UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "W"),
-        UInt8(ascii: "W"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Y"), UInt8(ascii: "Y"), UInt8(ascii: "Y"),
-        UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "b"),
-        UInt8(ascii: "b"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "d"), UInt8(ascii: "d"), UInt8(ascii: "d"),
-        UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "g"),
-        UInt8(ascii: "g"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "i"), UInt8(ascii: "i"), UInt8(ascii: "i"),
-        UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "l"),
-        UInt8(ascii: "l"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "n"), UInt8(ascii: "n"), UInt8(ascii: "n"),
-        UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "q"),
-        UInt8(ascii: "q"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "s"), UInt8(ascii: "s"), UInt8(ascii: "s"),
-        UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "v"),
-        UInt8(ascii: "v"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "x"), UInt8(ascii: "x"), UInt8(ascii: "x"),
-        UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "0"),
-        UInt8(ascii: "0"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "2"), UInt8(ascii: "2"), UInt8(ascii: "2"),
-        UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "5"),
-        UInt8(ascii: "5"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "7"), UInt8(ascii: "7"), UInt8(ascii: "7"),
-        UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "-"),
-        UInt8(ascii: "-"), UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "_"), UInt8(ascii: "_"), UInt8(ascii: "_"),
-    ]
-
-    static let encoding1url: [UInt8] = [
-        UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"),
-        UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"),
-        UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"),
-        UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"),
-        UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"),
-        UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"),
-        UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"),
-        UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"),
-        UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"),
-        UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"),
-        UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"),
-        UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"),
-        UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "A"), UInt8(ascii: "B"),
-        UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"), UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"),
-        UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"), UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"),
-        UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"),
-        UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"), UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"),
-        UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"), UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"),
-        UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"), UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"),
-        UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"), UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"),
-        UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"), UInt8(ascii: "M"), UInt8(ascii: "N"), UInt8(ascii: "O"), UInt8(ascii: "P"), UInt8(ascii: "Q"), UInt8(ascii: "R"),
-        UInt8(ascii: "S"), UInt8(ascii: "T"), UInt8(ascii: "U"), UInt8(ascii: "V"), UInt8(ascii: "W"), UInt8(ascii: "X"), UInt8(ascii: "Y"), UInt8(ascii: "Z"), UInt8(ascii: "a"), UInt8(ascii: "b"),
-        UInt8(ascii: "c"), UInt8(ascii: "d"), UInt8(ascii: "e"), UInt8(ascii: "f"), UInt8(ascii: "g"), UInt8(ascii: "h"), UInt8(ascii: "i"), UInt8(ascii: "j"), UInt8(ascii: "k"), UInt8(ascii: "l"),
-        UInt8(ascii: "m"), UInt8(ascii: "n"), UInt8(ascii: "o"), UInt8(ascii: "p"), UInt8(ascii: "q"), UInt8(ascii: "r"), UInt8(ascii: "s"), UInt8(ascii: "t"), UInt8(ascii: "u"), UInt8(ascii: "v"),
-        UInt8(ascii: "w"), UInt8(ascii: "x"), UInt8(ascii: "y"), UInt8(ascii: "z"), UInt8(ascii: "0"), UInt8(ascii: "1"), UInt8(ascii: "2"), UInt8(ascii: "3"), UInt8(ascii: "4"), UInt8(ascii: "5"),
-        UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"),
-    ]
 
     static func encodeToString(bytes: RawSpan, options: Data.Base64EncodingOptions = []) -> String {
         let newCapacity = self.encodeComputeCapacity(bytes: bytes.byteCount, options: options)
@@ -314,37 +181,31 @@ extension Base64 {
 
         let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
-        Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
-            let to = input.byteCount / 3 * 3
+        let (char62, char63) = Self.encodingCharacters(options: options)
+        let to = input.byteCount / 3 * 3
 
-            self.loopEncode(e0, e1, input: input.extracting(0..<to), output: &buffer)
+        self.loopEncode(char62, char63, input: input.extracting(0..<to), output: &buffer)
 
-            if to < input.byteCount {
-                let index = to
+        // last 1-2 input bytes
+        if to < input.byteCount {
+            let index = to
 
-                let i1 = input[unchecked: index] // fine, since index = to and to < input.count
-                let i2 = index &+ 1 < input.byteCount ? input[unchecked: index &+ 1] : nil // range check in the same line
-                let i3 = index &+ 2 < input.byteCount ? input[unchecked: index &+ 2] : nil // range check in the same line
+            let i1 = input[index]
+            let i2 = index &+ 1 < input.byteCount ? input[index &+ 1] : nil
 
-                buffer.append(e0[i1])
+            buffer.append(Self.encodeCharacter(i1 &>> 2, char62, char63))
 
-                if let i2 = i2 {
-                    buffer.append(e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)])
-                    if let i3 = i3 {
-                        buffer.append(e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)])
-                        buffer.append(e1[i3])
-                    } else {
-                        buffer.append(e1[(i2 & 0x0F) &<< 2])
-                        if !omitPaddingCharacter {
-                            buffer.append(Self.encodePaddingCharacter)
-                        }
-                    }
-                } else {
-                    buffer.append(e1[(i1 & 0x03) << 4])
-                    if !omitPaddingCharacter {
-                        buffer.append(Self.encodePaddingCharacter)
-                        buffer.append(Self.encodePaddingCharacter)
-                    }
+            if let i2 = i2 {
+                buffer.append(Self.encodeCharacter(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F), char62, char63))
+                buffer.append(Self.encodeCharacter((i2 & 0x0F) &<< 2, char62, char63))
+                if !omitPaddingCharacter {
+                    buffer.append(Self.encodePaddingCharacter)
+                }
+            } else {
+                buffer.append(Self.encodeCharacter((i1 & 0x03) &<< 4, char62, char63))
+                if !omitPaddingCharacter {
+                    buffer.append(Self.encodePaddingCharacter)
+                    buffer.append(Self.encodePaddingCharacter)
                 }
             }
         }
@@ -359,11 +220,8 @@ extension Base64 {
 
         assert(options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters))
 
-        let lineLength = if options.contains(.lineLength64Characters) {
-            48
-        } else {
-            57
-        }
+        let wantsLineLength64 = options.contains(.lineLength64Characters)
+        let lineLength = wantsLineLength64 ? 48 : 57
 
         let lines = input.byteCount / lineLength
 
@@ -382,96 +240,137 @@ extension Base64 {
             separatorByte2 = nil
         }
 
-        Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
-            // Note: It's safe to use overflowing math here, as input and output are valid pointers
-            //       with a length that is smaller than Int here. For this reason index and outIndex
-            //       can never wrap.
+        let (char62, char63) = Self.encodingCharacters(options: options)
 
-            // first full line
-            if input.byteCount >= lineLength {
-                self.loopEncode(e0, e1, input: input.extracting(0..<lineLength), output: &buffer)
+        // first full line
+        if input.byteCount >= lineLength {
+            self.loopEncode(char62, char63, input: input.extracting(0..<lineLength), output: &buffer)
+        }
+
+        // following full lines
+        // Ensure the compiler inlines the loops for each line-length. This adds up to ~40% to
+        // the performance of line-length-64 encoding with only adding ~100 extra instructions.
+        if wantsLineLength64 {
+            self.encodeFollowingLines(lineLength: 48, lines: lines, separatorByte1, separatorByte2, char62, char63, input: input, buffer: &buffer)
+        } else {
+            self.encodeFollowingLines(lineLength: 57, lines: lines, separatorByte1, separatorByte2, char62, char63, input: input, buffer: &buffer)
+        }
+
+        // last line beginning
+        if lines > 0 && lines * lineLength < input.byteCount {
+            buffer.append(separatorByte1)
+            if let separatorByte2 {
+                buffer.append(separatorByte2)
             }
+        }
+        let to = input.byteCount / 3 * 3
+        self.loopEncode(char62, char63, input: input.extracting((lines * lineLength)..<to), output: &buffer)
 
-            // following full lines
-            var lineInputIndex = lineLength
-            while lineInputIndex < lines * lineLength {
-                buffer.append(separatorByte1)
-                if let separatorByte2 {
-                    buffer.append(separatorByte2)
+        // last 1-2 input bytes
+        if to < input.byteCount {
+            let index = to
+
+            let i1 = input[index]
+            let i2 = index + 1 < input.byteCount ? input[index + 1] : nil
+
+            buffer.append(Self.encodeCharacter(i1 &>> 2, char62, char63))
+
+            if let i2 = i2 {
+                buffer.append(Self.encodeCharacter(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F), char62, char63))
+                buffer.append(Self.encodeCharacter((i2 & 0x0F) << 2, char62, char63))
+                if !omitPaddingCharacter {
+                    buffer.append(Self.encodePaddingCharacter)
                 }
-
-                self.loopEncode(e0, e1, input: input.extracting(lineInputIndex..<lineInputIndex + lineLength), output: &buffer)
-                lineInputIndex &+= lineLength
-            }
-
-            // last line beginning
-            if lines > 0 && lines * lineLength < input.byteCount {
-                buffer.append(separatorByte1)
-                if let separatorByte2 {
-                    buffer.append(separatorByte2)
-                }
-            }
-            let to = input.byteCount / 3 * 3
-            self.loopEncode(e0, e1, input: input.extracting((lines * lineLength)..<to), output: &buffer)
-
-            // last 2-4 bytes
-            if to < input.byteCount {
-                let index = to
-
-                let i1 = input[index]
-                let i2 = index + 1 < input.byteCount ? input[index + 1] : nil
-                let i3 = index + 2 < input.byteCount ? input[index + 2] : nil
-
-                buffer.append(e0[i1])
-
-                if let i2 = i2, let i3 = i3 {
-                    buffer.append(e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)])
-                    buffer.append(e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)])
-                    buffer.append(e1[i3])
-                } else if let i2 = i2 {
-                    buffer.append(e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)])
-                    buffer.append(e1[(i2 & 0x0F) << 2])
-                    if !omitPaddingCharacter {
-                        buffer.append(Self.encodePaddingCharacter)
-                    }
-                } else {
-                    buffer.append(e1[(i1 & 0x03) << 4])
-                    if !omitPaddingCharacter {
-                        buffer.append(Self.encodePaddingCharacter)
-                        buffer.append(Self.encodePaddingCharacter)
-                    }
+            } else {
+                buffer.append(Self.encodeCharacter((i1 & 0x03) << 4, char62, char63))
+                if !omitPaddingCharacter {
+                    buffer.append(Self.encodePaddingCharacter)
+                    buffer.append(Self.encodePaddingCharacter)
                 }
             }
         }
     }
 
-    private static func loopEncode(
-        _ e0: Base64EncodingTable,
-        _ e1: Base64EncodingTable,
+    private static func encodeFollowingLines(
+        lineLength: Int,
+        lines: Int,
+        _ separatorByte1: UInt8,
+        _ separatorByte2: UInt8?,
+        _ char62: UInt8,
+        _ char63: UInt8,
         input: borrowing RawSpan,
-        output: inout OutputRawSpan
+        buffer: inout OutputRawSpan
     ) {
-        assert(input.byteCount.isMultiple(of: 3))
-        assert(output.freeCapacity >= 4 * (input.byteCount / 3))
         // Note: It's safe to use overflowing math here, as input and output are valid pointers
         //       with a length that is smaller than Int here. For this reason index and outIndex
         //       can never wrap.
-        output.withUnsafeMutableBytes { outPtr, initializedCount in
-            var index = 0
-            var outIndex = initializedCount
-            while index < input.byteCount {
-                let i1 = input[unchecked: index]
-                let i2 = input[unchecked: index &+ 1]
-                let i3 = input[unchecked: index &+ 2]
-                outPtr[outIndex] = e0[i1]
-                outPtr[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
-                outPtr[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
-                outPtr[outIndex &+ 3] = e1[i3]
-                index &+= 3
-                outIndex &+= 4
+        buffer.withUnsafeMutableBytes { outPtr, outIndex in
+            var lineInputIndex = lineLength
+            while lineInputIndex < lines * lineLength {
+                outPtr[outIndex] = separatorByte1
+                outIndex &+= 1
+                if let separatorByte2 {
+                    outPtr[outIndex] = separatorByte2
+                    outIndex &+= 1
+                }
+
+                let inputSpan = input.extracting(lineInputIndex..<lineInputIndex + lineLength)
+                self.loopEncode(char62, char63, input: inputSpan, output: outPtr, outIndex: &outIndex)
+                lineInputIndex &+= lineLength
             }
-            initializedCount = outIndex
         }
+    }
+
+    private static func loopEncode(
+        _ char62: UInt8,
+        _ char63: UInt8,
+        input: borrowing RawSpan,
+        output: inout OutputRawSpan
+    ) {
+        output.withUnsafeMutableBytes { outPtr, initializedCount in
+            self.loopEncode(char62, char63, input: input, output: outPtr, outIndex: &initializedCount)
+        }
+    }
+
+    private static func loopEncode(
+        _ char62: UInt8,
+        _ char63: UInt8,
+        input: borrowing RawSpan,
+        output: UnsafeMutableRawBufferPointer,
+        outIndex: inout Int
+    ) {
+        assert(input.byteCount.isMultiple(of: 3))
+        assert(output.count - outIndex >= 4 * (input.byteCount / 3))
+        // Note: It's safe to use overflowing math here, as input and output are valid pointers
+        //       with a length that is smaller than Int here. For this reason index and outIndex
+        //       can never wrap.
+        let triples = input.byteCount / 3
+        let outStart = outIndex
+        // This loop is auto-vectorized by LLVM
+        for triple in 0..<triples {
+            let index = triple &* 3
+            let out = outStart &+ triple &* 4
+            let i1 = input[unchecked: index]
+            let i2 = input[unchecked: index &+ 1]
+            let i3 = input[unchecked: index &+ 2]
+            output[out] = Self.encodeCharacter(i1 &>> 2, char62, char63)
+            output[out &+ 1] = Self.encodeCharacter(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F), char62, char63)
+            output[out &+ 2] = Self.encodeCharacter(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03), char62, char63)
+            output[out &+ 3] = Self.encodeCharacter(i3 & 0x3F, char62, char63)
+        }
+        outIndex &+= triples &* 4
+    }
+
+    /// The base64 alphabet computed arithmetically rather than through a lookup table.
+    /// The code below is compiled as branchless, which is needed for LLVM to vectorize the loop this func is called in.
+    @inline(always)
+    private static func encodeCharacter(_ value: UInt8, _ char62: UInt8, _ char63: UInt8) -> UInt8 {
+        var character = value &+ UInt8(ascii: "A")
+        if value >= 26 { character = value &+ (UInt8(ascii: "a") &- 26) }
+        if value >= 52 { character = value &+ (UInt8(ascii: "0") &- 52) }
+        if value == 62 { character = char62 }
+        if value == 63 { character = char63 }
+        return character
     }
 
     static func encodeComputeCapacity(bytes: Int, options: Data.Base64EncodingOptions) -> Int {
@@ -506,17 +405,11 @@ extension Base64 {
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
-    private static func withEncodingTables<R, E: Swift.Error>(
-        options: Data.Base64EncodingOptions,
-        _ body: (Base64EncodingTable, Base64EncodingTable) throws(E) -> R
-    ) throws(E) -> R {
-        let (encoding0, encoding1) = if options.contains(.base64URLAlphabet) {
-            (Self.encoding0url, Self.encoding1url)
-        } else {
-            (Self.encoding0, Self.encoding1)
-        }
-
-        return try body(Base64EncodingTable(encoding0.span), Base64EncodingTable(encoding1.span))
+    private static func encodingCharacters(options: Data.Base64EncodingOptions) -> (UInt8, UInt8) {
+        let wantsBase64URLAlphabet = options.contains(.base64URLAlphabet)
+        let lhs = wantsBase64URLAlphabet ? UInt8(ascii: "-") : UInt8(ascii: "+")
+        let rhs = wantsBase64URLAlphabet ? UInt8(ascii: "_") : UInt8(ascii: "/")
+        return (lhs, rhs)
     }
 }
 
