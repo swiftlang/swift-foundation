@@ -1226,8 +1226,8 @@ private struct JSONEncoderTests {
     }
 
     @Test func jsonNumberFragments() {
-        let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10"]
-        let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0]
+        let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10", "0e1", "0E1", "0.00e1", "-0.0e5"]
+        let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0, 0, 0, 0, 0]
         for (json, expected) in zip(array, expected) {
             _test(JSONString: json, to: expected)
         }
@@ -1241,6 +1241,26 @@ private struct JSONEncoderTests {
                 _ = try JSONDecoder().decode(Float.self, from: data)
             }
         }
+    }
+
+    @Test func negativeZero() throws {
+        let negZero = Data("-0".utf8)
+
+        let d = try JSONDecoder().decode(Double.self, from: negZero)
+        #expect(d == 0)
+        #expect(d.sign == .minus)
+
+        let f = try JSONDecoder().decode(Float.self, from: negZero)
+        #expect(f == 0)
+        #expect(f.sign == .minus)
+
+        // Integer decodes drop the sign of zero: `-0` is the integer 0.
+        #expect(try JSONDecoder().decode(Int.self, from: negZero) == 0)
+        #expect(try JSONDecoder().decode(UInt.self, from: negZero) == 0)
+
+        // A positive `0` stays positive zero, and the fractional `-0.0` form is likewise negative.
+        #expect(try JSONDecoder().decode(Double.self, from: Data("0".utf8)).sign == .plus)
+        #expect(try JSONDecoder().decode(Double.self, from: Data("-0.0".utf8)).sign == .minus)
     }
 
     func _checkExpectedThrownDataCorruptionUnderlyingError(contains substring: String, sourceLocation: SourceLocation = #_sourceLocation, closure: () throws -> Void) {
@@ -1352,6 +1372,9 @@ private struct JSONEncoderTests {
             ( "9223372036854775808", nil),            //  2^63        (Double:  2^63)
             ( "9223372036854776832", nil),            //  2^63 + 1024 (Double:  2^63)
             ( "9223372036854776833", nil),            //  2^63 + 1025 (Double:  2^63 + 2048)
+
+            // An integral literal written with an exponent parses through a Double (rounded above 2^53) but must coerce to the exact source integer, not the nearest Double.
+            (  "92233720368595512e0",  92233720368595512), // >2^53, exponent form: exact, not nearest Double (…520)
         ]
         
         let uint64s: [(String, UInt64?)] = [
@@ -1364,6 +1387,8 @@ private struct JSONEncoderTests {
             ("18446744073709551616", nil),            //  2^64        (Double:  2^64)
             ("18446744073709553664", nil),            //  2^64 + 2048 (Double:  2^64)
             ("18446744073709553665", nil),            //  2^64 + 2049 (Double:  2^64 + 4096)
+
+            ( "92233720368595512e0", 92233720368595512), // >2^53, exponent form: exact, not nearest Double (…520)
         ]
         
         for json5 in [true, false] {
@@ -1379,6 +1404,23 @@ private struct JSONEncoderTests {
                 let result = try? decoder.decode(UInt64.self, from: json.data(using: .utf8)!)
                 #expect(result == value, "Unexpected \(decoder) result for input \"\(json)\"")
             }
+        }
+    }
+
+    @Test func longMantissaDoubleIsCorrectlyRounded() throws {
+        let decoder = JSONDecoder()
+        // More significant digits than a Double holds losslessly must still round to the nearest Double, matching a correctly-rounded parse rather than an approximate narrowing.
+        let cases = [
+            "6.8567125748313281724118833107250630e-37",
+            "9532897707105712955449594938418935855741",
+            "553254383491997013609552689141502945",
+            "130792879449993459016464914",
+            "1.7976931348623157081452742373170435e+308", // near Double.greatestFiniteMagnitude
+        ]
+        for s in cases {
+            let expected = try #require(Double(s), "\(s)")   // Swift's correctly-rounded parse
+            let got = try decoder.decode(Double.self, from: Data(s.utf8))
+            #expect(got.bitPattern == expected.bitPattern, "\(s): got \(got.bitPattern), expected \(expected.bitPattern)")
         }
     }
 
@@ -2054,6 +2096,8 @@ extension JSONEncoderTests {
             ("-0X1f", -0x1f),
             ("+0X1f", +0x1f),
             ("1.", 1),
+            ("0.", 0),
+            ("10.", 10),
             ("1.e2", 100),
             ("1e2", 100),
             ("1E2", 100),
@@ -2088,6 +2132,8 @@ extension JSONEncoderTests {
             ("NaN", Double.nan),
             (".1", 0.1),
             ("1.", 1.0),
+            ("0.", 0.0),
+            ("10.", 10.0),
             ("-.1", -0.1),
             ("+.1", +0.1),
             ("1e-2", 1e-2),
@@ -2100,6 +2146,7 @@ extension JSONEncoderTests {
             ("1E+2", 1E+2),
             ("1e+02", 1e+02),
             ("1E+02", 1E+02),
+            ("8e-0185", 8e-185), // leading zeros are legal in the exponent, unlike the mantissa
             ("0x1F", Double(0x1F)),
             ("-0X1f", Double(-0x1f)),
             ("+0X1f", Double(+0x1f)),
@@ -2165,6 +2212,12 @@ extension JSONEncoderTests {
             "0x2.2",
             ".e1",
             "0xFFFFFFFFFFFFFFFFFFFFFF",
+            "00",
+            "01",
+            "-01",
+            "00.5",
+            "00e2",
+            "008885e8",
         ];
         for json in unsuccessfulDoubles {
             #expect(throws: (any Error).self, "Expected failure for input \"\(json)\"") {
