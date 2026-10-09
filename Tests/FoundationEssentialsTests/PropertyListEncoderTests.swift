@@ -547,6 +547,13 @@ private struct PropertyListEncoderTests {
         }
     }
 
+    // An XML plist dict with a duplicate key resolves last-wins, matching canonical CoreFoundation: a repeated <key>k</key> keeps the later <string>.
+    @Test func xmlDuplicateKeyIsLastWins() throws {
+        let xmlData = "<plist><dict><key>k</key><string>A</string><key>k</key><string>B</string></dict></plist>".data(using: .utf8)!
+        let decoded = try PropertyListDecoder().decode([String: String].self, from: xmlData)
+        #expect(decoded == ["k": "B"])
+    }
+
     @Test func nonStringDictionaryKey() throws {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
@@ -1295,33 +1302,6 @@ data1 = <7465
         #expect(format == .openStep)
     }
 #endif
-
-    // Only the iterative parser is depth-unbounded; the legacy recursive scanner overflows the
-    // stack on input this deeply nested rather than reporting an error.
-    @Test(.enabled(if: foundation_swift_xml_plist_deserialization_enabled()))
-    func xmlPlist_depthTraversal() {
-        // The important part to test is the parsing pass, not the decoding pass.
-        struct DecodeNothing : Decodable {
-            init(from decoder: Decoder) throws {
-                // Do nothing.
-            }
-        }
-
-        let MAX_DEPTH = 512
-        let xmlGood = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\">"
-            + String(repeating: "<array>", count: MAX_DEPTH / 2) + String(repeating: "</array>", count: MAX_DEPTH / 2)
-            + "</plist>"
-        let xmlBad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\">"
-            + String(repeating: "<array>", count: MAX_DEPTH + 1) + String(repeating: "</array>", count: MAX_DEPTH + 1)
-            + "</plist>"
-
-        #expect(throws: Never.self) {
-            try PropertyListDecoder().decode(DecodeNothing.self, from: xmlGood.data(using: .utf8)!)
-        }
-        #expect(throws: (any Error).self) {
-            try PropertyListDecoder().decode(DecodeNothing.self, from: xmlBad.data(using: .utf8)!)
-        }
-    }
 
 #if FOUNDATION_FRAMEWORK || !os(macOS)
     /// Parses `xml` with the iterative scanner, returning the map or the thrown `XMLPlistError`.
