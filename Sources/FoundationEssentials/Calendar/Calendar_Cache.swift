@@ -37,34 +37,11 @@ dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
 // For feature flag
 internal import _ForSwiftFoundation
 
-internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool {
-    _foundation_swift_hebrew_calendar_feature_enabled()
-}
-
-internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool {
-    _foundation_swift_chinese_calendar_feature_enabled()
-}
-
-internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool {
-    // TODO: Return the runtime feature flag value, _foundation_swift_buddhist_calendar_feature_enabled(), once Apple adds the underscored binding.
-    return false
-}
-
-internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool {
-    // TODO: Return the runtime feature flag value, _foundation_swift_japanese_calendar_feature_enabled(), once Apple adds the underscored binding.
-    return false
-}
-
-internal func foundation_swift_roc_calendar_feature_enabled() -> Bool {
-    // TODO: Return the runtime feature flag value, _foundation_swift_roc_calendar_feature_enabled(), once Apple adds the underscored binding.
-    return false
+internal func foundation_swift_calendar_feature_enabled() -> Bool {
+    _foundation_swift_calendar_feature_enabled()
 }
 #else
-internal func foundation_swift_hebrew_calendar_feature_enabled() -> Bool { return true }
-internal func foundation_swift_chinese_calendar_feature_enabled() -> Bool { return true }
-internal func foundation_swift_buddhist_calendar_feature_enabled() -> Bool { return false }
-internal func foundation_swift_japanese_calendar_feature_enabled() -> Bool { return false }
-internal func foundation_swift_roc_calendar_feature_enabled() -> Bool { return false }
+internal func foundation_swift_calendar_feature_enabled() -> Bool { return true }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
@@ -72,21 +49,17 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
         return _CalendarGregorian.self
     }
 #if !hasFeature(Embedded)
-    if foundation_swift_hebrew_calendar_feature_enabled() && identifier == .hebrew {
-        return _CalendarHebrew.self
-    }
-    if foundation_swift_chinese_calendar_feature_enabled() && identifier == .chinese {
-        return _CalendarChinese.self
-    }
-    // These three share Gregorian arithmetic and differ only in how they label eras, which `_CalendarGregorian` reads from an era table chosen by identifier.
-    if foundation_swift_buddhist_calendar_feature_enabled() && identifier == .buddhist {
-        return _CalendarGregorian.self
-    }
-    if foundation_swift_japanese_calendar_feature_enabled() && identifier == .japanese {
-        return _CalendarGregorian.self
-    }
-    if foundation_swift_roc_calendar_feature_enabled() && identifier == .republicOfChina {
-        return _CalendarGregorian.self
+    if foundation_swift_calendar_feature_enabled() {
+        switch identifier {
+        case .hebrew:
+            return _CalendarHebrew.self
+        case .chinese:
+            return _CalendarChinese.self
+        case .buddhist, .japanese, .republicOfChina:
+            return _CalendarGregorian.self
+        default:
+            return _calendarICUClass()
+        }
     }
 #endif
     return _calendarICUClass()
