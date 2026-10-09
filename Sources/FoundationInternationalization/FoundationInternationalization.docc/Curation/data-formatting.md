@@ -46,4 +46,4 @@ The arrangement is similar with parsing:
 
 ### Configuring format styles
 
-<doc:format-style-configurations>
+- <doc:format-style-configurations>

@@ -13,3 +13,4 @@ Behaviors for traits like numeric precision, rounding, and scale, used for forma
 ### Textual configurations
 
 - ``DescriptiveNumberFormatConfiguration``
+
