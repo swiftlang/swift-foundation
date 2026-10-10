@@ -31,6 +31,149 @@ private struct DateFormatStyleTests {
         #expect(referenceDate.formatted(style) == "Dec 31, 2000 at 04:00")
     }
 
+    static let omittedStyleArguments: [(name: String, dateStyle: Date.FormatStyle.DateStyle?, timeStyle: Date.FormatStyle.TimeStyle?, localeIdentifier: String, expected: String)] = [
+        ("omittedTime", nil, .omitted, "en_US", "1/1/2001"),
+        ("omittedDate", .omitted, nil, "en_US", "12:00\u{202f}AM"),
+        ("bothOmitted", .omitted, .omitted, "en_US", ""),
+        ("defaultStyles", nil, nil, "en_US", "1/1/2001, 12:00\u{202f}AM"),
+        ("numericDate", .numeric, nil, "en_US", "1/1/2001"),
+        ("shortenedTime", nil, .shortened, "en_US", "12:00\u{202f}AM"),
+        ("numericDateOmittedTime", .numeric, .omitted, "en_US", "1/1/2001"),
+        ("omittedDateShortenedTime", .omitted, .shortened, "en_US", "12:00\u{202f}AM"),
+        ("numericDateShortenedTime", .numeric, .shortened, "en_US", "1/1/2001, 12:00\u{202f}AM"),
+        ("omittedTime", nil, .omitted, "en_GB", "01/01/2001"),
+        ("omittedDate", .omitted, nil, "en_GB", "0:00"),
+        ("bothOmitted", .omitted, .omitted, "en_GB", ""),
+        ("defaultStyles", nil, nil, "en_GB", "01/01/2001, 0:00"),
+        ("numericDate", .numeric, nil, "en_GB", "01/01/2001"),
+        ("shortenedTime", nil, .shortened, "en_GB", "0:00"),
+        ("numericDateOmittedTime", .numeric, .omitted, "en_GB", "01/01/2001"),
+        ("omittedDateShortenedTime", .omitted, .shortened, "en_GB", "0:00"),
+        ("numericDateShortenedTime", .numeric, .shortened, "en_GB", "01/01/2001, 0:00"),
+        ("omittedTime", nil, .omitted, "fr_FR", "01/01/2001"),
+        ("omittedDate", .omitted, nil, "fr_FR", "0:00"),
+        ("bothOmitted", .omitted, .omitted, "fr_FR", ""),
+        ("defaultStyles", nil, nil, "fr_FR", "01/01/2001 0:00"),
+        ("numericDate", .numeric, nil, "fr_FR", "01/01/2001"),
+        ("shortenedTime", nil, .shortened, "fr_FR", "0:00"),
+        ("numericDateOmittedTime", .numeric, .omitted, "fr_FR", "01/01/2001"),
+        ("omittedDateShortenedTime", .omitted, .shortened, "fr_FR", "0:00"),
+        ("numericDateShortenedTime", .numeric, .shortened, "fr_FR", "01/01/2001 0:00"),
+    ]
+
+    @Test(arguments: omittedStyleArguments)
+    func omittedStyles(name: String, dateStyle: Date.FormatStyle.DateStyle?, timeStyle: Date.FormatStyle.TimeStyle?, localeIdentifier: String, expected: String) {
+        let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: Locale(identifier: localeIdentifier), calendar: Calendar(identifier: .gregorian), timeZone: .gmt)
+        #expect(style.format(referenceDate) == expected)
+        #expect(String(style.attributedStyle.format(referenceDate).characters) == expected)
+    }
+
+    @Test func formattedWithBothStylesOmitted() {
+        #expect(referenceDate.formatted(date: .omitted, time: .omitted) == "")
+    }
+
+    @Test(arguments: omittedStyleArguments)
+    func omittedStylesCodableRoundTrip(name: String, dateStyle: Date.FormatStyle.DateStyle?, timeStyle: Date.FormatStyle.TimeStyle?, localeIdentifier: String, expected: String) throws {
+        let style = Date.FormatStyle(date: dateStyle, time: timeStyle, locale: Locale(identifier: localeIdentifier), calendar: Calendar(identifier: .gregorian), timeZone: .gmt)
+        let decoded = try JSONDecoder().decode(Date.FormatStyle.self, from: JSONEncoder().encode(style))
+        #expect(decoded._dateStyle == style._dateStyle)
+        #expect(decoded._timeStyle == style._timeStyle)
+        #expect(decoded.format(referenceDate) == expected)
+        #expect(String(decoded.attributedStyle.format(referenceDate).characters) == expected)
+    }
+
+    enum OmittedStyleModifier {
+        case monthAndDay, hourAndMinute, omittedYear, omittedHour
+        case yearAfterBothOmitted, hourAfterBothOmitted, omittedYearAfterBothOmitted, omittedHourAfterBothOmitted
+    }
+
+    @Test(arguments: [
+        (OmittedStyleModifier.monthAndDay, "en_US", "01/01"),
+        (OmittedStyleModifier.hourAndMinute, "en_US", "12:00"),
+        (OmittedStyleModifier.omittedYear, "en_US", "1/1"),
+        (OmittedStyleModifier.omittedHour, "en_US", "00"),
+        (OmittedStyleModifier.yearAfterBothOmitted, "en_US", "2001"),
+        (OmittedStyleModifier.hourAfterBothOmitted, "en_US", "12\u{202f}AM"),
+        (OmittedStyleModifier.omittedYearAfterBothOmitted, "en_US", ""),
+        (OmittedStyleModifier.omittedHourAfterBothOmitted, "en_US", ""),
+        (OmittedStyleModifier.monthAndDay, "en_GB", "01/01"),
+        (OmittedStyleModifier.hourAndMinute, "en_GB", "00:0"),
+        (OmittedStyleModifier.omittedYear, "en_GB", "01/01"),
+        (OmittedStyleModifier.omittedHour, "en_GB", "00"),
+        (OmittedStyleModifier.yearAfterBothOmitted, "en_GB", "2001"),
+        (OmittedStyleModifier.hourAfterBothOmitted, "en_GB", "00"),
+        (OmittedStyleModifier.omittedYearAfterBothOmitted, "en_GB", ""),
+        (OmittedStyleModifier.omittedHourAfterBothOmitted, "en_GB", ""),
+        (OmittedStyleModifier.monthAndDay, "fr_FR", "01/01"),
+        (OmittedStyleModifier.hourAndMinute, "fr_FR", "00:0"),
+        (OmittedStyleModifier.omittedYear, "fr_FR", "01/01"),
+        (OmittedStyleModifier.omittedHour, "fr_FR", "00"),
+        (OmittedStyleModifier.yearAfterBothOmitted, "fr_FR", "2001"),
+        (OmittedStyleModifier.hourAfterBothOmitted, "fr_FR", "00 h"),
+        (OmittedStyleModifier.omittedYearAfterBothOmitted, "fr_FR", ""),
+        (OmittedStyleModifier.omittedHourAfterBothOmitted, "fr_FR", ""),
+    ])
+    func omittedStylesWithSymbolModifiers(modifier: OmittedStyleModifier, localeIdentifier: String, expected: String) {
+        let locale = Locale(identifier: localeIdentifier)
+        let calendar = Calendar(identifier: .gregorian)
+        let style: Date.FormatStyle
+        switch modifier {
+        case .monthAndDay:
+            style = Date.FormatStyle(time: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).month(.twoDigits).day(.twoDigits)
+        case .hourAndMinute:
+            style = Date.FormatStyle(date: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).hour(.twoDigits(amPM: .omitted)).minute()
+        case .omittedYear:
+            style = Date.FormatStyle(time: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).year(.omitted)
+        case .omittedHour:
+            style = Date.FormatStyle(date: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).hour(.omitted)
+        case .yearAfterBothOmitted:
+            style = Date.FormatStyle(date: .omitted, time: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).year()
+        case .hourAfterBothOmitted:
+            style = Date.FormatStyle(date: .omitted, time: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).hour()
+        case .omittedYearAfterBothOmitted:
+            style = Date.FormatStyle(date: .omitted, time: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).year(.omitted)
+        case .omittedHourAfterBothOmitted:
+            style = Date.FormatStyle(date: .omitted, time: .omitted, locale: locale, calendar: calendar, timeZone: .gmt).hour(.omitted)
+        }
+        #expect(style.format(referenceDate) == expected)
+        #expect(String(style.attributedStyle.format(referenceDate).characters) == expected)
+    }
+
+    @Test(arguments: [
+        (
+            "defaultSymbols",
+            #"{"calendar":{"current":0,"firstWeekday":1,"identifier":"gregorian","locale":{"current":0,"identifier":"en_US"},"minimumDaysInFirstWeek":1,"timeZone":{"identifier":"GMT"}},"capitalizationContext":{"option":0},"locale":{"current":0,"identifier":"en_US"},"symbols":{"day":"d","hour":"j","minute":"mm","month":"M","year":"y"},"timeZone":{"identifier":"GMT"}}"#,
+            "1/1/2001, 12:00\u{202f}AM"
+        ),
+        (
+            "numericDate",
+            #"{"calendar":{"current":0,"firstWeekday":1,"identifier":"gregorian","locale":{"current":0,"identifier":"en_US"},"minimumDaysInFirstWeek":1,"timeZone":{"identifier":"GMT"}},"capitalizationContext":{"option":0},"dateStyle":{"rawValue":1},"locale":{"current":0,"identifier":"en_US"},"symbols":{"day":"d","month":"M","year":"y"},"timeZone":{"identifier":"GMT"}}"#,
+            "1/1/2001"
+        ),
+        (
+            "shortenedTime",
+            #"{"calendar":{"current":0,"firstWeekday":1,"identifier":"gregorian","locale":{"current":0,"identifier":"en_US"},"minimumDaysInFirstWeek":1,"timeZone":{"identifier":"GMT"}},"capitalizationContext":{"option":0},"locale":{"current":0,"identifier":"en_US"},"symbols":{"hour":"j","minute":"mm"},"timeZone":{"identifier":"GMT"}}"#,
+            "12:00\u{202f}AM"
+        ),
+        (
+            "longDateAndCompleteTime",
+            #"{"calendar":{"current":0,"firstWeekday":1,"identifier":"gregorian","locale":{"current":0,"identifier":"en_US"},"minimumDaysInFirstWeek":1,"timeZone":{"identifier":"GMT"}},"capitalizationContext":{"option":0},"dateStyle":{"rawValue":3},"locale":{"current":0,"identifier":"en_US"},"symbols":{"day":"d","hour":"j","minute":"mm","month":"MMMM","second":"ss","timeZoneSymbol":"z","year":"y"},"timeZone":{"identifier":"GMT"}}"#,
+            "January 1, 2001 at 12:00:00\u{202f}AM GMT"
+        ),
+    ])
+    func decodingLegacyStyles(name: String, json: String, expected: String) throws {
+        let decoded = try JSONDecoder().decode(Date.FormatStyle.self, from: Data(json.utf8))
+        #expect(decoded.locale.identifier == "en_US")
+        #expect(decoded.calendar.identifier == .gregorian)
+        #expect(decoded.calendar.locale?.identifier == "en_US")
+        #expect(decoded.calendar.timeZone == .gmt)
+        #expect(decoded.calendar.firstWeekday == 1)
+        #expect(decoded.calendar.minimumDaysInFirstWeek == 1)
+        #expect(decoded.timeZone == .gmt)
+        #expect(decoded.format(referenceDate) == expected)
+        #expect(String(decoded.attributedStyle.format(referenceDate).characters) == expected)
+    }
+
     @Test func era() {
         let abbreviatedStyle = Date.FormatStyle(locale: .init(identifier: "en_US"), calendar: .init(identifier: .gregorian), timeZone: TimeZone(identifier: "America/Los_Angeles")!)
             .era(.abbreviated)
@@ -368,15 +511,21 @@ private struct DateFormatStyleTests {
             .complete: "'<complete>' yyyy-MMM-dd"
         ]
 
+        let localeWithOmittedOverride = Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: [.omitted: "'unexpected date' yyyy-MMM-dd"]))
+        let implicitTime = Date.FormatStyle(date: .omitted, locale: localeWithOmittedOverride, calendar: Calendar(identifier: .gregorian), timeZone: .gmt)
+        let explicitTime = Date.FormatStyle(date: .omitted, time: .shortened, locale: localeWithOmittedOverride, calendar: Calendar(identifier: .gregorian), timeZone: .gmt)
+        for style in [implicitTime, explicitTime] {
+            #expect(style.format(date) == "12:00\u{202F}AM")
+            #expect(String(style.attributedStyle.format(date).characters) == "12:00\u{202F}AM")
+        }
+
 #if FOUNDATION_FRAMEWORK
         let expectTimeString = "4:00:00\u{202F}PM"
-        let expectedShortTimeString = "4:00\u{202F}PM"
 #else
         let expectTimeString = "4:00:00 PM"
-        let expectedShortTimeString = "4:00 PM"
 #endif
 
-        try test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "12/31/1969, \(expectedShortTimeString)") // Ignoring override since there's no match for the specific style
+        #expect(Date.FormatStyle(date: .omitted, time: .omitted, locale: Locale.localeAsIfCurrent(name: enUS, overrides: .init(dateFormats: dateFormatOverride)), calendar: Calendar(identifier: .gregorian), timeZone: .gmt).format(date) == "")
         try test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<short> 1969-Dec-31")
         try test(dateStyle: .numeric, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<numeric> 1969-Dec-31")
         try test(dateStyle: .long, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: "<long> 1969-Dec-31")
@@ -740,19 +889,7 @@ private struct DateAttributedFormatStyleTests {
             .complete: "'<complete>' yyyy-MMM-dd"
         ]
 
-        test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
-            ("12", .month),
-            ("/", nil),
-            ("31", .day),
-            ("/", nil),
-            ("1969", .year),
-            (", ", nil),
-            ("4", .hour),
-            (":", nil),
-            ("00", .minute),
-            (" ", nil),
-            ("PM", .amPM),
-        ]) // Ignoring override since there's no match for the specific style
+        test(dateStyle: .omitted, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [])
 
         test(dateStyle: .abbreviated, timeStyle: .omitted, dateFormatOverride: dateFormatOverride, expected: [
             ("<short> ", nil),
