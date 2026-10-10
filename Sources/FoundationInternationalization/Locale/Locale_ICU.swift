@@ -1593,24 +1593,27 @@ extension Locale {
     }
 
     internal static func identifierWithKeywordValue(_ identifier: String, key: ICULegacyKey, value: String) -> String {
-        var identifierWithKeywordValue: String?
-        withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(ULOC_FULLNAME_CAPACITY) + 1) { buffer in
-            guard let buf: UnsafeMutablePointer<CChar> = buffer.baseAddress else {
-                return
-            }
+        identifierWithKeywordValues(identifier, keyValues: [(key, value)])
+    }
+
+    internal static func identifierWithKeywordValues(_ identifier: String, keyValues: [(key: ICULegacyKey, value: String)]) -> String {
+        let newCapacity = max(Int(ULOC_FULLNAME_CAPACITY), identifier.utf8.count)
+        return String(unsafeUninitializedCapacity: newCapacity + 1) { buffer in
+            let buf = UnsafeMutableRawPointer(buffer.baseAddress!).assumingMemoryBound(to: CChar.self)
             var status = U_ZERO_ERROR
-            Platform.copyCString(dst: buf, src: identifier, size: Int(ULOC_FULLNAME_CAPACITY))
 
-            // TODO: This could probably be lifted out of ICU; it is mostly string concatenation
-            let len = uloc_setKeywordValue(key.key, value, buf, ULOC_FULLNAME_CAPACITY, &status)
-            if status.isSuccess && len > 0 {
-                let last = buf.advanced(by: Int(len))
-                last.pointee = 0
-                identifierWithKeywordValue = String(cString: buf)
+            var len = Platform.copyCString(dst: buf, src: identifier, size: newCapacity)
+
+            for (key, value) in keyValues {
+                guard status.isSuccess else { break }
+                let newLen = uloc_setKeywordValue(key.key, value, buf, Int32(newCapacity), &status)
+                if status.isSuccess && newLen > 0 {
+                    len = Int(newLen)
+                }
             }
-        }
 
-        return identifierWithKeywordValue ?? identifier
+            return len
+        }
     }
     // MARK: -
 

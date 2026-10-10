@@ -12,6 +12,10 @@
 
 import Testing
 
+#if canImport(TestSupport)
+import TestSupport
+#endif
+
 #if FOUNDATION_FRAMEWORK
 import Foundation
 #else
