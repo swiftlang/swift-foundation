@@ -613,9 +613,57 @@ func calendarBenchmarks() {
 
     // MARK: - ChineseCalendar
 
-    let chineseCal = Calendar(identifier: .chinese)
+    var chineseCal = Calendar(identifier: .chinese)
+    chineseCal.timeZone = .gmt
     let chineseStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
     let chineseNewYearComponents = DateComponents(month: 1, day: 1)
+
+    let (chineseBirthdayCalendar, chineseBirthdayComponents) = {
+        var calendar = Calendar(identifier: .chinese)
+        calendar.timeZone = .gmt
+        var components = DateComponents(calendar: calendar, timeZone: TimeZone(identifier: "America/Los_Angeles"), month: 9, day: 1)
+        components.isLeapMonth = true
+        return (components.calendar, components)
+    }()
+    let chineseBirthdayStart = Date(timeIntervalSinceReferenceDate: -12_496_550_400) // 1605-01-01 00:00:00 UTC
+
+    for (policyName, matchingPolicy) in [("", Calendar.MatchingPolicy.strict), ("NextTime", .nextTime)] {
+        let expectedBirthday: Double = matchingPolicy == .strict ? -28_186_330_022 : -12_533_242_022
+        Benchmark("ChineseCalendar-yearlessLeapMonthBirthday\(policyName)", configuration: .init(warmupIterations: 0, scalingFactor: .one, maxDuration: .seconds(30), maxIterations: 3)) { benchmark in
+            guard let chineseBirthdayCalendar else {
+                benchmark.error("Missing calendar for the yearless leap-month birthday")
+                return
+            }
+            var foundDate: Date?
+            var foundExactMatch = false
+            chineseBirthdayCalendar.enumerateDates(startingAfter: chineseBirthdayStart, matching: chineseBirthdayComponents, matchingPolicy: matchingPolicy, direction: .backward) { result, exactMatch, stop in
+                foundDate = result
+                foundExactMatch = exactMatch
+                stop = true
+            }
+            benchmark.stopMeasurement()
+            if foundExactMatch != (matchingPolicy == .strict) || foundDate?.timeIntervalSinceReferenceDate != expectedBirthday {
+                benchmark.error("Unexpected date for the yearless leap-month birthday")
+            }
+        }
+
+        #if compiler(>=6.0)
+        if #available(macOS 15, *) {
+            Benchmark("ChineseCalendar-yearlessLeapMonthBirthdaySequence\(policyName)", configuration: .init(warmupIterations: 0, scalingFactor: .one, maxDuration: .seconds(30), maxIterations: 3)) { benchmark in
+                guard let chineseBirthdayCalendar else {
+                    benchmark.error("Missing calendar for the yearless leap-month birthday")
+                    return
+                }
+                var dates = chineseBirthdayCalendar.dates(byMatching: chineseBirthdayComponents, startingAt: chineseBirthdayStart, matchingPolicy: matchingPolicy, direction: .backward).makeIterator()
+                let foundDate = dates.next()
+                benchmark.stopMeasurement()
+                if foundDate?.timeIntervalSinceReferenceDate != expectedBirthday {
+                    benchmark.error("Unexpected date for the yearless leap-month birthday")
+                }
+            }
+        }
+        #endif
+    }
 
     Benchmark("ChineseCalendar-nextThousandNewYears") { benchmark in
         var count = 1000
@@ -654,18 +702,75 @@ func calendarBenchmarks() {
     }()
 
     Benchmark("ChineseCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        var yearSum = 0
+        var monthSum = 0
+        var daySum = 0
         for date in chineseTestDates {
             let dc = chineseCal.dateComponents([.year, .month, .day], from: date)
+            yearSum += dc.year ?? 0
+            monthSum += dc.month ?? 0
+            daySum += dc.day ?? 0
             blackHole(dc)
+        }
+        benchmark.stopMeasurement()
+        if yearSum != 467_597 || monthSum != 65_020 || daySum != 152_708 {
+            benchmark.error("Unexpected modern Chinese date components")
         }
     }
 
     Benchmark("ChineseCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        var timestampSum = 0.0
         for date in chineseTestDates {
             var comps = chineseCal.dateComponents([.year, .month, .day, .era], from: date)
             comps.isLeapMonth = chineseCal.dateComponents([.month], from: date).isLeapMonth
             let rt = chineseCal.date(from: comps)
+            timestampSum += rt?.timeIntervalSinceReferenceDate ?? 0
             blackHole(rt)
+        }
+        benchmark.stopMeasurement()
+        if timestampSum != 9_283_744_281_600 {
+            benchmark.error("Unexpected modern Chinese round-trip dates")
+        }
+    }
+
+    var chineseFallbackCalendar = Calendar(identifier: .chinese)
+    chineseFallbackCalendar.timeZone = .gmt
+    let chineseFallbackDates = (0..<64).map {
+        Date(timeIntervalSinceReferenceDate: -6_341_716_800 + Double($0 * 86400)) // 1800-01-15 noon UTC onward
+    }
+    Benchmark("ChineseCalendar-fallbackDateComponents", configuration: .init(warmupIterations: 0, scalingFactor: .one, maxIterations: 3)) { benchmark in
+        var values = [DateComponents]()
+        for date in chineseFallbackDates {
+            values.append(chineseFallbackCalendar.dateComponents([.era, .year, .month, .day, .isLeapMonth], from: date))
+        }
+        benchmark.stopMeasurement()
+        for (date, value) in zip(chineseFallbackDates, values) {
+            var components = value
+            components.hour = chineseFallbackCalendar.component(.hour, from: date)
+            components.minute = chineseFallbackCalendar.component(.minute, from: date)
+            components.second = chineseFallbackCalendar.component(.second, from: date)
+            if chineseFallbackCalendar.date(from: components) != date { benchmark.error("Fallback conversion did not round trip") }
+        }
+    }
+    let chineseWideFallbackDates = (0..<64).map {
+        Date(timeIntervalSinceReferenceDate: -7_288_848_000 + Double($0 * 365 * 86400)) // 1770-01-10 08:00 UTC, then 365-day steps
+    }
+    Benchmark("ChineseCalendar-fallbackWideDateComponents", configuration: .init(warmupIterations: 0, scalingFactor: .one, maxIterations: 3)) { benchmark in
+        var values = [DateComponents]()
+        for date in chineseWideFallbackDates {
+            values.append(chineseFallbackCalendar.dateComponents([.era, .year, .month, .day, .isLeapMonth, .hour, .minute, .second], from: date))
+        }
+        benchmark.stopMeasurement()
+        for (date, components) in zip(chineseWideFallbackDates, values) {
+            if chineseFallbackCalendar.date(from: components) != date { benchmark.error("Wide fallback conversion did not round trip") }
+        }
+    }
+    let chineseOrdinaryComponents = DateComponents(month: 1, day: 1)
+    Benchmark("ChineseCalendar-fallbackOrdinarySearch", configuration: .init(warmupIterations: 0, scalingFactor: .one, maxIterations: 3)) { benchmark in
+        let result = chineseFallbackCalendar.nextDate(after: chineseBirthdayStart, matching: chineseOrdinaryComponents, matchingPolicy: .nextTime)
+        benchmark.stopMeasurement()
+        if result?.timeIntervalSinceReferenceDate != -12_492_403_200 {
+            benchmark.error("Unexpected ordinary Chinese New Year")
         }
     }
 

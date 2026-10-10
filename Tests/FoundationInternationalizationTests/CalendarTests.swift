@@ -518,6 +518,107 @@ private struct CalendarTests {
         #expect(foundDate?.timeIntervalSinceReferenceDate == -28186330022)
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @Test(arguments: [Calendar.MatchingPolicy.strict, .nextTime])
+    func chineseYearlessBirthdayFirstResult(matchingPolicy: Calendar.MatchingPolicy) throws {
+        var calendar = Calendar(identifier: .chinese)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        var components = DateComponents(month: 9, day: 1)
+        components.isLeapMonth = true
+        let start = Date(timeIntervalSinceReferenceDate: -12_496_550_400)
+        // Non-strict matching returns an adjusted date rather than searching for
+        // the next exact leap-month birthday. Both APIs expose that first result.
+        let expectedTimestamp: Double = matchingPolicy == .strict ? -28_186_330_022 : -12_533_242_022
+        var callbackDate: Date?
+        calendar.enumerateDates(startingAfter: start, matching: components, matchingPolicy: matchingPolicy, direction: .backward) { date, exact, stop in
+            #expect(exact == (matchingPolicy == .strict))
+            callbackDate = date
+            stop = true
+        }
+        #expect(callbackDate?.timeIntervalSinceReferenceDate == expectedTimestamp)
+        var dates = calendar.dates(byMatching: components, startingAt: start, matchingPolicy: matchingPolicy, direction: .backward).makeIterator()
+        #expect(dates.next()?.timeIntervalSinceReferenceDate == expectedTimestamp)
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @Test(arguments: [
+        // Leap sixth months begin on 2025-07-25 and 2036-07-23.
+        (1729641600.0, Calendar.SearchDirection.forward, 1753401600.0), // 2024-10-23 -> 2025-07-25
+        (1755043200.0, Calendar.SearchDirection.backward, 1753401600.0), // 2025-08-13 -> 2025-07-25
+        (1753401600.0, Calendar.SearchDirection.forward, 2100384000.0), // Exact start is excluded.
+        (1753488000.0, Calendar.SearchDirection.forward, 2100384000.0), // Inside the leap month.
+        (1753488000.0, Calendar.SearchDirection.backward, 1753401600.0),
+        (2100384000.0, Calendar.SearchDirection.backward, 1753401600.0),
+        (2100470400.0, Calendar.SearchDirection.backward, 2100384000.0),
+    ], [-8 * 3600, 0, 8 * 3600])
+    func chineseLeapMonthSearch(fixture: (Double, Calendar.SearchDirection, Double), offset: Int) throws {
+        let (startTimestamp, direction, expectedTimestamp) = fixture
+        var calendar = Calendar(identifier: .chinese)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: offset))
+        let start = Date(timeIntervalSince1970: startTimestamp - Double(offset))
+        var components = DateComponents(month: 6, day: 1)
+        components.isLeapMonth = true
+
+        for matchingPolicy in [Calendar.MatchingPolicy.strict, .nextTime, .nextTimePreservingSmallerComponents, .previousTimePreservingSmallerComponents] {
+            var timestamp = expectedTimestamp
+            var expectedExact = true
+            if matchingPolicy != .strict {
+                switch (startTimestamp, direction) {
+                case (1_753_401_600, .forward), (1_753_488_000, .forward):
+                    timestamp = matchingPolicy == .previousTimePreservingSmallerComponents ? 1_783_987_200 : 1_786_579_200
+                    expectedExact = false
+                case (2_100_384_000, .backward):
+                    timestamp = matchingPolicy == .previousTimePreservingSmallerComponents ? 2_067_206_400 : 2_069_798_400
+                    expectedExact = false
+                default:
+                    break
+                }
+            }
+            let expected = Date(timeIntervalSince1970: timestamp - Double(offset))
+            var callbackDate: Date?
+            calendar.enumerateDates(startingAfter: start, matching: components, matchingPolicy: matchingPolicy, direction: direction) { date, exact, stop in
+                #expect(exact == expectedExact)
+                callbackDate = date
+                stop = true
+            }
+            #expect(callbackDate == expected)
+            var dates = calendar.dates(byMatching: components, startingAt: start, matchingPolicy: matchingPolicy, direction: direction).makeIterator()
+            #expect(dates.next() == expected)
+        }
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @Test(arguments: [
+        (1729641600.0, Calendar.SearchDirection.forward, 1, 13, 27, 1753450020.0),
+        (1755043200.0, Calendar.SearchDirection.backward, 1, 13, 27, 1753450020.0),
+        (1753401600.0, Calendar.SearchDirection.forward, 1, 13, 27, 1753450020.0),
+        (1729641600.0, Calendar.SearchDirection.forward, 29, 0, 0, 1755820800.0),
+        (1755907200.0, Calendar.SearchDirection.backward, 29, 0, 0, 1755820800.0),
+    ], [-8 * 3600, 0, 8 * 3600])
+    func chineseLeapMonthDayAndTime(fixture: (Double, Calendar.SearchDirection, Int, Int, Int, Double), offset: Int) throws {
+        let (startTimestamp, direction, day, hour, minute, expectedTimestamp) = fixture
+        var calendar = Calendar(identifier: .chinese)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: offset))
+        let start = Date(timeIntervalSince1970: startTimestamp - Double(offset))
+        let expected = Date(timeIntervalSince1970: expectedTimestamp - Double(offset))
+        var components = DateComponents(month: 6, day: day, hour: hour, minute: minute)
+        components.isLeapMonth = true
+
+        for matchingPolicy in [Calendar.MatchingPolicy.strict, .nextTime, .nextTimePreservingSmallerComponents, .previousTimePreservingSmallerComponents] {
+            for policy in [Calendar.RepeatedTimePolicy.first, .last] {
+                var callbackDate: Date?
+                calendar.enumerateDates(startingAfter: start, matching: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: policy, direction: direction) { date, exact, stop in
+                    #expect(exact)
+                    callbackDate = date
+                    stop = true
+                }
+                #expect(callbackDate == expected)
+                var dates = calendar.dates(byMatching: components, startingAt: start, matchingPolicy: matchingPolicy, repeatedTimePolicy: policy, direction: direction).makeIterator()
+                #expect(dates.next() == expected)
+            }
+        }
+    }
+
     @Test func dateFromComponentsNearDSTTransition() {
         let comps = DateComponents(year: 2021, month: 11, day: 7, hour: 1, minute: 45)
         var cal = Calendar(identifier: .gregorian)

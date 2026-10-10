@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+internal import Synchronization
+
 // Chinese lunisolar calendar engine. Years 1901-2100 come from a baked table generated from ICU (parity by construction); outside that range, month structure is computed with ICU's chnsecal rules over _CalendarAstronomy at UTC+8.
 
 // MARK: - Month-structure rules over the astronomy engine
@@ -1095,6 +1097,11 @@ extension _CalendarChinese {
         return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: _CalendarAstronomy.gregorianRataDie(relatedISOYear, 1, 19) + Int((v >> 17) & 0x3F), monthLengthBits: UInt16(v & 0x1FFF), monthCount: leap == 0 ? 12 : 13, leapMonthNumber: leap)
     }
 
+    // Two slots retain neighboring years and matched larger capacities in the
+    // measured search and conversion workloads. Only fallback years use them.
+    private static let yearCacheCapacity = 2
+    private static let yearCache = Mutex<[_ChineseYear?]>(Array(repeating: nil, count: yearCacheCapacity))
+
     /// Month structure for the Chinese year whose New Year falls in Gregorian `relatedISOYear`.
     ///
     /// In the baked range (1901...2100) this is a direct table decode. Outside it the structure is computed from astronomy and memoized: locate this year's New Year and the next year's, walk the new moons between them to get each month's first day, record 29- vs 30-day lengths as bits, and mark the leap month (the month carrying no major solar term). The seam years at the table edges reuse the table's own New Year so the computed and baked spans tile exactly.
@@ -1103,7 +1110,14 @@ extension _CalendarChinese {
         if idx >= 0 && idx < table.count {
             return decodeTableYear(relatedISOYear: relatedISOYear)
         }
-        // Out-of-range: compute the month structure from astronomy. No caching; see the note on the rule functions above.
+        // Consecutive years occupy different slots, including years before the common era.
+        let remainder = relatedISOYear % yearCacheCapacity
+        let slot = remainder < 0 ? remainder + yearCacheCapacity : remainder
+        if let cached = yearCache.withLock({ $0[slot] }), cached.relatedISOYear == relatedISOYear {
+            return cached
+        }
+        // Astronomy is deliberately outside the lock. Concurrent misses can compute
+        // the same immutable value independently; only lookup and publication serialize.
         // Tile exactly with the baked table at the seams.
         let ny: Int
         if relatedISOYear == firstTableYear + table.count {
@@ -1136,7 +1150,9 @@ extension _CalendarChinese {
             let label = chineseMonthLabel(startingAt: s, gregorianYear: _CalendarAstronomy.gregorianYear(ofRataDie: s))
             if label.isLeap { leapMonthNumber = UInt8(label.month) }
         }
-        return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
+        let result = _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
+        yearCache.withLock { $0[slot] = result }
+        return result
     }
 
     static func year(containingRataDie rataDie: Int) -> _ChineseYear {
