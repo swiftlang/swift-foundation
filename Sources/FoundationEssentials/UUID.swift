@@ -21,6 +21,8 @@ import Darwin
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 internal import Synchronization
@@ -264,6 +266,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.8, iOS 6.0, tvOS 9.0, watchOS 2.0, *)
 extension UUID : CustomReflectable {
     public var customMirror: Mirror {
@@ -292,6 +295,7 @@ extension UUID : Codable {
         try container.encode(self.uuidString)
     }
 }
+#endif
 
 // MARK: - Nil and Max UUIDs
 
