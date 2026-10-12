@@ -180,7 +180,7 @@ private struct RigidBytesTests {
     }
 
 #if FOUNDATION_EXIT_TESTS
-    @Test func initRepeating() async {
+    @Test func initRepeating_preconditions() async {
         await #expect(processExitsWith: .failure) {
             _ = RigidBytes(repeating: 2, count: -1)
         }
