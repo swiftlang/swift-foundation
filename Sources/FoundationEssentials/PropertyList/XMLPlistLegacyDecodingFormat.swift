@@ -19,7 +19,7 @@ internal struct XMLPlistLegacyDecodingFormat : PlistDecodingFormat {
         switch value {
         case let .dict(startOffset, count):
             let iterator = decoder.document.makeDictionaryIterator(from: startOffset)
-            let container = try _PlistKeyedDecodingContainer<Key, XMLPlistLegacyDecodingFormat>(referencing: decoder, codingPathNode: codingPathNode, iterator: iterator, count: count)
+            let container = try _PlistKeyedDecodingContainer<Key, XMLPlistLegacyDecodingFormat>(referencing: decoder, codingPathNode: codingPathNode, iterator: iterator, count: count, duplicateKeys: .keepLast)
             return KeyedDecodingContainer(container)
         case .null:
             throw DecodingError.valueNotFound([String: Any].self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Cannot get keyed decoding container -- found null value instead"))

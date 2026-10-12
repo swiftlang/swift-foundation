@@ -223,9 +223,9 @@ struct BPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEventSo
         let keyView: BPlistKeyView
         switch key.type {
         case .asciiString:
-            keyView = BPlistKeyView.asciiString(try key.asciiStringSpan)
+            keyView = BPlistKeyView.asciiString(try key.asciiStringSpan, objectIndex: key.objectIndex.val)
         case .utf16String:
-            keyView = BPlistKeyView.utf16String(Span<UInt8>(viewing: try key.encodedString.span))
+            keyView = BPlistKeyView.utf16String(Span<UInt8>(viewing: try key.encodedString.span), objectIndex: key.objectIndex.val)
         default:
             throw BPlistError.corruptedValue("dictionary")
         }
@@ -253,12 +253,12 @@ struct BPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEventSo
             case .asciiString:
                 let span = try key.asciiStringSpan
                 accepted = filter.matchesKey(span, encoding: .ascii)
-                keyView = BPlistKeyView.asciiString(span)
+                keyView = BPlistKeyView.asciiString(span, objectIndex: key.objectIndex.val)
             case .utf16String:
                 let span = try key.encodedString.span
                 let byteSpan = Span<UInt8>(viewing: span)
                 accepted = filter.matchesKey(byteSpan, encoding: .utf16BE)
-                keyView = BPlistKeyView.utf16String(byteSpan)
+                keyView = BPlistKeyView.utf16String(byteSpan, objectIndex: key.objectIndex.val)
             default:
                 // Unreachable: `isStringType` above filtered non-strings.
                 throw BPlistError.corruptedValue("dictionary")

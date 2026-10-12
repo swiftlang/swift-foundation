@@ -123,11 +123,37 @@ enum BPlistScalar: ~Copyable, ~Escapable {
     case asciiString(bytes: Span<UInt8>, objectOffset: Int)
     /// UTF-16BE string bytes (bplist's 0x6X marker). See `asciiString` for `objectOffset`.
     case utf16String(bytes: Span<UInt8>, objectOffset: Int)
+    
+    /// Whether the type should be de-duped for the given "mutable leaves" option.
+    func shouldDeduplicateInstancesForMutableLeaves(_ mutableLeaves: Bool) -> Bool {
+        switch self {
+        // Booleans are already shared instances and need don't de-duping
+        case .bool: false
+        // These types are always immutable and can always be deduped
+        case .int: true
+        case .uint: true
+        case .real: true
+        case .date: true
+        case .uid: true
+        // Do not de-dupe mutable datas or strings
+        case .data: mutableLeaves == false
+        case .asciiString: mutableLeaves == false
+        case .utf16String: mutableLeaves == false
+        }
+    }
 }
 
 enum BPlistKeyView: ~Copyable, ~Escapable {
-    case asciiString(Span<UInt8>)
-    case utf16String(Span<UInt8>)
+    // The object index is stored with the key so a sink can dedup repeated keys the way it dedups values; a dict that reuses a key refers to one object, and materializing it per occurrence is the dominant cost on key-heavy plists.
+    case asciiString(Span<UInt8>, objectIndex: Int)
+    case utf16String(Span<UInt8>, objectIndex: Int)
+    
+    var objectIndex: Int {
+        switch self {
+        case .asciiString(_, let index): index
+        case .utf16String(_, let index): index
+        }
+    }
 }
 
 /// Which unkeyed container a bplist frame represents. Arrays (0xA_) and sets (0xC_) share the same on-disk ref-list shape and the same walk, so the source carries this to tell a sink which to materialize at finalize.

@@ -428,11 +428,11 @@ enum DecimalDigitsScan<Value: FixedWidthInteger> {
 }
 
 extension FixedWidthInteger {
-    static func scanDecimalDigits(of bytes: borrowing Span<UInt8>, from start: Int, isNegative: Bool = false) -> DecimalDigitsScan<Self> {
+    static func scanDecimalDigits(of bytes: borrowing Span<UInt8>, isNegative: Bool = false) -> DecimalDigitsScan<Self> {
         var result: Self = 0
-        var index = start
-        while index < bytes.count {
-            let byte = bytes[index]
+        var index = 0
+        for idx in bytes.indices {
+            let byte = bytes[idx]
             guard _asciiNumbers.contains(byte) else {
                 return .nonDigit(byte, offset: index)
             }
@@ -820,5 +820,13 @@ internal final class _MissingKeyDecoder: Decoder, SingleValueDecodingContainer {
             codingPath: codingPath,
             debugDescription: "Cannot get value of type \(type): no value was present"
         ))
+    }
+}
+
+// This is a workaround for the lack of a "set value only if absent" function for Dictionary.
+extension Optional {
+    internal mutating func _setIfNil(to value: Wrapped) {
+        guard _fastPath(self == nil) else { return }
+        self = value
     }
 }
