@@ -203,6 +203,18 @@ extension JSONDecoderImpl {
         }
     }
 
+    /// Converts an integer literal to `T`. A decimal integer rounds to the nearest `T` (ties to even), like any other decimal number would; legacy fed these through `strtod`/`strtof`. JSON5 hex literals must convert exactly, as they always have.
+    private static func floatingPoint<T: BinaryFloatingPoint, I: FixedWidthInteger>(from integer: I, as type: T.Type, exactly: Bool) throws -> T {
+        if exactly {
+            guard let v = T(exactly: integer) else {
+                throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(integer)")
+            }
+            return v
+        }
+        // Appropriate for `Float`/`Double` since every `Int64`/`UInt64` is finite in both, but if we end up adding native support for narrower types like `Float16`, there may be overflow.
+        return T(integer)
+    }
+
     func unwrapFloatingPoint<T: BinaryFloatingPoint & Sendable>(
         from scope: JSONPrimitiveScope,
         as type: T.Type,
@@ -215,8 +227,6 @@ extension JSONDecoderImpl {
             case .number:
                 let decoded = try primitive.decodeNumberValue(json5Mode: options.json5)
                 switch decoded.value {
-                case .double(let d):
-                    return T(d)
                 case .positiveInfinity:
                     return T.infinity
                 case .negativeInfinity:
@@ -224,19 +234,12 @@ extension JSONDecoderImpl {
                 case .notANumber:
                     return T.nan
                 case .int64(let i):
-                    guard let v = T(exactly: i) else {
-                        throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(i)")
-                    }
-                    return v
+                    return try Self.floatingPoint(from: i, as: T.self, exactly: decoded.isHexadecimal)
                 case .uint64(let u):
-                    guard let v = T(exactly: u) else {
-                        throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(u)")
-                    }
-                    return v
-                case .decimalString:
-                    let numberBytes = try primitive.numberBytes.bytes
-                    // More significant digits than a Double holds losslessly. Parse with the same correctly-rounded routine used for shorter literals; a `Decimal` detour narrows the value only approximately.
-                    return T(try JSONPrimitive.parseDouble(numberBytes, source: numberBytes))
+                    return try Self.floatingPoint(from: u, as: T.self, exactly: decoded.isHexadecimal)
+                case .decimalLiteral:
+                    // Parse straight from the digits into `T` so a `Float` is rounded once (not via a `Double`) and overflow/underflow are judged in `T`. A `Decimal` detour would narrow the value only approximately.
+                    return try primitive.decodeFloatingPoint(as: T.self)
                 }
             case .string:
                 if case .convertFromString(let posInfString, let negInfString, let nanString) = options.nonConformingFloatDecodingStrategy {
@@ -296,17 +299,7 @@ extension JSONDecoderImpl {
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: "-Infinity")
             case .notANumber:
                 throw JSONError.numberIsNotRepresentableInSwift(parsed: "NaN")
-            case .double(let d):
-                // Below 2^53 a Double represents every integer exactly, so the correctly-rounded value is authoritative (and this rejects a genuinely fractional literal like 2.5). At larger magnitudes the Double is rounded. We do not want to lose this precision, so fall through to a .decimalString in that case.
-                if d.magnitude < doubleExactIntegerLimit {
-                    guard let v = T(exactly: d) else {
-                        throw JSONError.numberIsNotRepresentableInSwift(parsed: "\(d)")
-                    }
-                    return v
-                }
-                fallthrough
-            case .decimalString:
-                // Values with more mantissa digits than a Double holds losslessly arrive here: wide integers (Int128/UInt128 range beyond Int64/UInt64) and long-mantissa fractional literals alike.
+            case .decimalLiteral:
                 let numberBytes = try primitive.numberBytes.bytes
                 // Plain integer digit runs that fit `T` accumulate directly, covering the full Int128/UInt128 range that a 38-significant-digit `Decimal` can't round-trip. A fractional literal stops this scan at the `.` and falls through.
                 let isNegative = numberBytes.count > 0 && numberBytes[0] == ._minus
@@ -315,7 +308,7 @@ extension JSONDecoderImpl {
                     return v
                 }
                 // For magnitudes a Double represents exactly, coerce through the correctly-rounded Double (as the floating-point path does) so a fractional literal whose value is integral yields that integer and a genuinely fractional value is rejected. Some clients may rely on this rounding for compatibility. Larger magnitudes exceed a Double's exact-integer range and narrow the exact value instead.
-                let rounded = try JSONPrimitive.parseDouble(numberBytes, source: numberBytes)
+                let rounded = try primitive.decodeFloatingPoint(as: Double.self)
                 if rounded.magnitude < doubleExactIntegerLimit {
                     guard let v = T(exactly: rounded) else {
                         let src = numberBytes.withUnsafeBufferPointer { String(decoding: $0, as: UTF8.self) }
@@ -437,7 +430,7 @@ extension JSONDecoderImpl {
             case .positiveInfinity, .negativeInfinity, .notANumber:
                 // Decimal doesn't represent Infinity/NaN; match the legacy behavior of returning `Decimal.quietNaN`.
                 return Decimal.quietNaN
-            case .double, .decimalString:
+            case .decimalLiteral:
                 // Parse from the source bytes rather than converting the `Double`.
                 let numberBytes = try primitive.numberBytes.bytes
                 switch Decimal._decimal(from: numberBytes, matchEntireString: true) {
