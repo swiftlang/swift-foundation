@@ -88,6 +88,14 @@ let testOnlySwiftSettings: [SwiftSetting] = [
     .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
 ]
 
+let silDebugSettings: [SwiftSetting] = [
+    .unsafeFlags([
+        "-Xllvm", "-sil-print-functions=initWithCapacity",
+        "-Xllvm", "-sil-print-around=MovedAsyncVarDebugInfoPropagator",
+        "-Xllvm", "-sil-print-debuginfo",
+    ], .when(platforms: [.linux, .macOS]))
+]
+
 let package = Package(
     name: "swift-foundation",
     platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
@@ -170,7 +178,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
-            ] + availabilityMacros + featureSettings + testOnlySwiftSettings
+            ] + availabilityMacros + featureSettings + testOnlySwiftSettings + silDebugSettings
         ),
 
         // FoundationInternationalization
