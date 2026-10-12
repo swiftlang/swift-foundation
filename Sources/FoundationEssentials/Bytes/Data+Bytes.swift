@@ -14,12 +14,12 @@ extension Data {
     init(consuming bytes: consuming RigidBytes) {
         let (buffer, count) = unsafe bytes.deconstruct()
         guard let address = buffer.baseAddress else {
-            _representation = .empty
+            self = Data()
             return
         }
         guard count > 0 else {
             unsafe RigidBytes._deallocate(address)
-            _representation = .empty
+            self = Data()
             return
         }
         let storage = unsafe __DataStorage(offset: 0, bytes: address, capacity: buffer.count, needToZero: true, length: count, deallocator: nil)
