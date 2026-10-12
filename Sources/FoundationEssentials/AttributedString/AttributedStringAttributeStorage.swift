@@ -23,14 +23,30 @@ extension AttributedString {
         let runBoundaries: AttributeRunBoundaries?
         let inheritedByAddedText: Bool
         let invalidationConditions: Set<AttributeInvalidationCondition>?
-        
-        var description: String { String(describing: _rawValue) }
-        
+
+        #if hasFeature(Embedded)
+        private let equality: @Sendable (RawValue, RawValue) -> Bool
+        #endif
+
+        var description: String {
+            #if hasFeature(Embedded)
+            "<attribute value description unavailable>"
+            #else
+            String(describing: _rawValue)
+            #endif
+        }
+
         init<K: AttributedStringKey>(_ value: K.Value, for key: K.Type) where K.Value : Sendable {
             _rawValue = value
             runBoundaries = K.runBoundaries
             inheritedByAddedText = K.inheritedByAddedText
             invalidationConditions = K.invalidationConditions
+            #if hasFeature(Embedded)
+            // In embedded Swift, we can't dynamically call into the unspecialized, generic == later, so we form the call in a closure here which will be specialized
+            equality = {
+                ($0 as? K.Value) == ($1 as? K.Value)
+            }
+            #endif
         }
         
         #if FOUNDATION_FRAMEWORK
@@ -89,6 +105,9 @@ extension AttributedString {
         #endif
         
         static func ==(left: Self, right: Self) -> Bool {
+            #if hasFeature(Embedded)
+            left.equality(left._rawValue, right._rawValue)
+            #else
             func openEquatableLHS<LeftValue: Hashable & Sendable>(_ leftValue: LeftValue) -> Bool {
                 func openEquatableRHS<RightValue: Hashable & Sendable>(_ rightValue: RightValue) -> Bool {
                     // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
@@ -100,6 +119,7 @@ extension AttributedString {
                 return openEquatableRHS(right._rawValue)
             }
             return openEquatableLHS(left._rawValue)
+            #endif
         }
         
         func hash(into hasher: inout Hasher) {

@@ -34,6 +34,10 @@ internal import Synchronization
 ///
 ///
 /// This allows callers to use a syntax like `myAttributedString.foregroundColor = .red`.
+#if hasFeature(Embedded)
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+public protocol AttributeScope : SendableMetatype {}
+#else
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigurationProviding, SendableMetatype {
     /// The configuration for decoding the attribute scope.
@@ -41,6 +45,7 @@ public protocol AttributeScope : DecodingConfigurationProviding, EncodingConfigu
     /// The configuration for encoding the attribute scope.
     static var encodingConfiguration: AttributeScopeCodableConfiguration { get }
 }
+#endif
 
 /// Collections of attributes that system frameworks define.
 ///
