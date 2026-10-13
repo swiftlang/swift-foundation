@@ -735,6 +735,35 @@ func calendarBenchmarks() {
 
     var chineseFallbackCalendar = Calendar(identifier: .chinese)
     chineseFallbackCalendar.timeZone = .gmt
+    // Each order performs the same 512 conversions, with no Chinese conversions during setup.
+    // The second pair also collides in a four-slot direct map.
+    let chineseFallbackNewYear1776 = Date(timeIntervalSinceReferenceDate: -7_096_075_200)
+    let chineseFallbackPairs: [(String, Date, Int, Int)] = [
+        ("1776And1814", Date(timeIntervalSinceReferenceDate: -5_899_435_200), 75, 11),
+        ("1776And2148", Date(timeIntervalSinceReferenceDate: 4_643_179_200), 80, 45),
+    ]
+    for (pairName, secondDate, secondEra, secondYear) in chineseFallbackPairs {
+        let firstInput = (chineseFallbackNewYear1776, 74, 33)
+        let secondInput = (secondDate, secondEra, secondYear)
+        let grouped = Array(repeating: firstInput, count: 256) + Array(repeating: secondInput, count: 256)
+        let alternating = (0..<512).map { $0.isMultiple(of: 2) ? firstInput : secondInput }
+        for (orderName, inputs) in [("Grouped", grouped), ("Alternating", alternating)] {
+            Benchmark("ChineseCalendar-fallback\(pairName)\(orderName)", configuration: .init(metrics: [.wallClock, .cpuTotal], warmupIterations: 0, scalingFactor: .one, maxIterations: 3)) { benchmark in
+                var values = [DateComponents]()
+                values.reserveCapacity(inputs.count)
+                for (date, _, _) in inputs {
+                    values.append(chineseFallbackCalendar.dateComponents([.era, .year, .month, .day, .isLeapMonth], from: date))
+                }
+                benchmark.stopMeasurement()
+                for ((_, era, year), value) in zip(inputs, values) {
+                    if value.era != era || value.year != year || value.month != 1
+                        || value.day != 1 || value.isLeapMonth != false {
+                        benchmark.error("Unexpected fallback Chinese New Year components")
+                    }
+                }
+            }
+        }
+    }
     let chineseFallbackDates = (0..<64).map {
         Date(timeIntervalSinceReferenceDate: -6_341_716_800 + Double($0 * 86400)) // 1800-01-15 noon UTC onward
     }
