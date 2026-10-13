@@ -948,9 +948,7 @@ The public APIs added in this proposal do not freeze `Decimal`'s layout or make 
 
 ### Representation access
 
-A numeric decomposition API could expose an unsigned integer significand such as `significandInteger: UInt128`, together with a corresponding initializer taking a sign, exponent, and integer significand. Such an API could provide ergonomic access to the value's components without promising a fixed memory layout. It would need to specify the relationship to the existing `significand` and `exponent` properties, NaN handling, representability of the supplied components, and the treatment of a negative sign with a zero significand.
-
-Names such as `exponentBitPattern` and `significandBitPattern` would imply representation commitments that deserve separate consideration. `Decimal` is not an IEEE interchange format, and its integer coefficient does not correspond directly to a standard significand field.
+We could expose an unsigned integer significand such as `significandInteger: UInt128`, together with a corresponding initializer taking a sign, exponent, and unsigned integer significand. Such a pair of APIs would allow users to work efficiently with fixed-width representations of the value's _components_ without promising a fixed memory layout for the value itself. We would need to specify their relationship to the existing `exponent` and `significand` properties (and `init(sign:exponent:significand:)`), as well as behavior when decomposing NaN and initializing from a negative sign with a zero significand. (Properties such as `exponentBitPattern` and `significandBitPattern` would imply representation commitments that deserve separate consideration.)
 
 In the absence of dedicated APIs, users can combine existing facilities with those in this proposal to serialize a fixed-width decomposition such as `(x.isNaN, x.sign == .minus, Int8(x.exponent), UInt128(exactly: x.significand) ?? 0)`.
 
@@ -960,13 +958,11 @@ In the absence of dedicated APIs, users can combine existing facilities with tho
 
 A broader reporting surface could distinguish invalid operations, division by zero, overflow, underflow, and inexactness, if callers have a need for those distinctions.
 
-Correctly rounded integer powers and other mathematical functions would require their own semantic and implementation work.
+Correctly or faithfully rounded integer powers and other mathematical functions would require their own design and implementation work.
 
 ### Other operations
 
-Normalization, quantization, compactness, and canonical representation could be explored as distinct concepts. A proposal would need to distinguish changing a representation without changing its numeric value from rounding to a requested quantum, and to distinguish value-level guarantees from properties of private storage. A requested quantum is not always representable within this type's coefficient and exponent bounds; a public quantization API would need a defined failure policy and a decision about whether it preserves an exponent or merely constrains a numeric value.
-
-A `decade` property could be considered as a decimal counterpart to `BinaryFloatingPoint.binade`. Its precise meaning would need to account for `Decimal`'s integer significand, non-uniform decimal precision at coefficient-capacity boundaries, and behavior for zero and NaN. Similarly, other IEEE operations and counterparts to binary floating-point members could be added where they have useful contracts for this type.
+There are other IEEE operations and counterparts to binary floating-point members which could be added where they have useful contracts for this type. For example, a `decade` property could be considered as a decimal counterpart to `BinaryFloatingPoint.binade` (or alternatively, its absolute value, known in the IEEE standard as `quantum`). An IEEE `quantize` operation (versus legacy `NSDecimal*` normalization) could be explored. A proposal would need to distinguish changing a representation without changing its numeric value from rounding to a requested quantum, and to distinguish value-level guarantees from properties of private storage.
 
 ## Alternatives considered
 
@@ -986,7 +982,7 @@ A throwing API or a result containing every legacy calculation error could expos
 
 ### Expose raw representation as part of this proposal
 
-The implementation explored `significandInteger` and a corresponding initializer before deferring them. An integer component is useful, but the semantic contract is larger than the spelling of a property: it includes nonunique decimal representations and construction of special or unrepresentable values. Separating that design keeps the numeric operations independently reviewable.
+The implementation explored `significandInteger` and a corresponding initializer before deferring them. An integer component is useful, but the semantic contract is larger than the spelling of a property (see above). Separating that design keeps the numeric operations independently reviewable.
 
 ## Acknowledgments
 
