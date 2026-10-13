@@ -1552,6 +1552,10 @@ public struct URL: Equatable, Sendable, Hashable {
     }
 }
 
+extension UInt8 {
+    internal static var _pipe: UInt8 { UInt8(ascii: "|") }
+}
+
 extension URL {
 #if FOUNDATION_FRAMEWORK
     /// Initialize a URL with a String literal. This initializer **requires** the

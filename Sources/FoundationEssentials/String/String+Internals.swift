@@ -281,6 +281,7 @@ extension UnsafeBufferPointer {
     #endif
     internal func _decomposed<T: UnicodeCodec>(_ type: String._NormalizationType, as codec: T.Type, into buffer: UnsafeMutableBufferPointer<UInt8>, nullTerminated: Bool = false) throws -> Int where Element == T.CodeUnit {
         #if FOUNDATION_FRAMEWORK
+        // TODO: Implement Unicode decomposition in swift-foundation
         let scalarSet = BuiltInUnicodeScalarSet(type: type.setType)
         #endif
         var bufferIdx = 0

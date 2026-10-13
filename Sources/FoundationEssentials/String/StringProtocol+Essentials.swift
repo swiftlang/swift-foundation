@@ -220,7 +220,7 @@ extension String {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
-#if !NO_CSHIMS
+#if !NO_UNI_CHAR_DATA
     // Word capitalization reads the CFUniChar case bitmaps in _FoundationCShims. Embedded doesn't build _FoundationCShims.
     /// A copy of the string with each word changed to its corresponding
     /// capitalized spelling.
@@ -280,8 +280,6 @@ extension StringProtocol {
         }
     }
 
-// Embedded Swift does not have Unicode case folding.
-#if !hasFeature(Embedded)
     /// Returns an array containing substrings from the string that have been
     /// divided by the given separator.
     ///
@@ -355,10 +353,8 @@ extension StringProtocol {
         let r = _paragraphBounds(around: range)
         return r.start ..< r.end
     }
-#endif
 }
 
-#if !hasFeature(Embedded)
 extension StringProtocol {
     @inline(never)
     internal func _lineBounds(
@@ -438,35 +434,4 @@ extension StringProtocol {
         }
     }
 }
-#endif
 
-// Borrowed from stdlib
-internal func _allASCII(_ input: UnsafeBufferPointer<UInt8>) -> Bool {
-    if input.isEmpty { return true }
-    let ptr = input.baseAddress.unsafelyUnwrapped
-    var i = 0
-
-    let count = input.count
-    let stride = MemoryLayout<UInt>.stride
-    let address = Int(bitPattern: ptr)
-
-    let wordASCIIMask = UInt(truncatingIfNeeded: 0x8080_8080_8080_8080 as UInt64)
-    let byteASCIIMask = UInt8(truncatingIfNeeded: wordASCIIMask)
-
-    while (address &+ i) % stride != 0 && i < count {
-        guard ptr[i] & byteASCIIMask == 0 else { return false }
-        i &+= 1
-    }
-
-    while (i &+ stride) <= count {
-        let word: UInt = UnsafePointer(bitPattern: address &+ i).unsafelyUnwrapped.pointee
-        guard word & wordASCIIMask == 0 else { return false }
-        i &+= stride
-    }
-
-    while i < count {
-        guard ptr[i] & byteASCIIMask == 0 else { return false }
-        i &+= 1
-    }
-    return true
-}

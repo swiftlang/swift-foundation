@@ -306,25 +306,16 @@ internal struct RFC3986Parser {
     }
 
     static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String? {
-        #if hasFeature(Embedded)
-        // Embedded Swift does not have ICU support.
-        return nil
-        #else
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
         return _uidnaHook()?.encode(host)
-        #endif
     }
 
     static func IDNADecodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
-        #if hasFeature(Embedded)
-        return String(host)
-        #else
         guard let uidnaHook = _uidnaHook() else { return String(host) }
         return uidnaHook.decode(host)
-        #endif
     }
 
     private static func percentEncodePath(_ path: some StringProtocol, skipAlreadyEncoded: Bool = false) -> String {
@@ -953,6 +944,10 @@ internal struct RFC3986Parser {
 }
 
 // MARK: - Encoding Extensions
+
+extension UInt8 {
+    internal static var _percent: UInt8 { UInt8(ascii: "%") }
+}
 
 @inline(__always)
 internal func hexToAscii(_ hex: UInt8) -> UInt8 {

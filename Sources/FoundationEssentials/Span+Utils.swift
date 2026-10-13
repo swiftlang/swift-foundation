@@ -206,3 +206,41 @@ extension String {
         }
     }
 }
+
+extension UInt8 {
+    internal static var _slash: UInt8 { UInt8(ascii: "/") }
+    internal static var _backslash: UInt8 { UInt8(ascii: "\\") }
+    internal static var _colon: UInt8 { UInt8(ascii: ":") }
+}
+
+internal var _asciiNumbers: ClosedRange<UInt8> { UInt8(ascii: "0") ... UInt8(ascii: "9") }
+internal var _hexCharsUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "F") }
+internal var _hexCharsLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "f") }
+internal var _allLettersUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "Z") }
+internal var _allLettersLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "z") }
+
+extension UInt8 {
+    internal var hexDigitValue: UInt8? {
+        switch self {
+        case _asciiNumbers:
+            return self - _asciiNumbers.lowerBound
+        case _hexCharsUpper:
+            // uppercase letters
+            return self - _hexCharsUpper.lowerBound &+ 10
+        case _hexCharsLower:
+            // lowercase letters
+            return self - _hexCharsLower.lowerBound &+ 10
+        default:
+            return nil
+        }
+    }
+
+    internal var isValidHexDigit: Bool {
+        switch self {
+        case _asciiNumbers, _hexCharsUpper, _hexCharsLower:
+            return true
+        default:
+            return false
+        }
+    }
+}

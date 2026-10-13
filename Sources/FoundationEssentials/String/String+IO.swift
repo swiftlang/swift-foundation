@@ -25,7 +25,6 @@ fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
 #if !FOUNDATION_FRAMEWORK
 #if hasFeature(Embedded)
 // Embedded Swift doesn't support dynamic replacement.
-@_spi(SwiftCorelibsFoundation)
 public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
     return nil
 }

@@ -1224,21 +1224,39 @@ extension URLComponents: CustomStringConvertible, CustomDebugStringConvertible {
         if let u = url {
             return u.description
         } else {
-            var result = ""
-            if let s = self.scheme { result += "scheme: \(s) " }
-            if let u = self.user { result += "user: \(u) " }
-            if let pw = self.password { result += "password: \(pw) " }
-            if let h = self.host { result += "host: \(h) " }
-            if let p = self.port { result += "port: \(p) " }
-            result += "path: \(self.path) "
-            if let qi = self.queryItems { result += "queryItems: [\(qi.map { $0.debugDescription }.joined(separator: ", "))] " }
-            if let f = self.fragment { result += "fragment: \(f) " }
-            return result
+            let c = _labeledComponents(
+                string: { $0 },
+                port: { String($0) },
+                queryItems: { "[\($0.map { $0.debugDescription }.joined(separator: ", "))]" }
+            )
+            return c.reduce(into: "") {
+                $0 += "\($1.label ?? ""): \($1.value) "
+            }
         }
     }
 
     public var debugDescription: String {
         return self.description
+    }
+
+    /// The components that are set, labeled, in the order `description` and `customMirror` list them.
+    private func _labeledComponents<Value>(
+        string: (String) -> Value,
+        port: (Int) -> Value,
+        queryItems: ([URLQueryItem]) -> Value
+    ) -> [(label: String?, value: Value)] {
+        var c: [(label: String?, value: Value)] = []
+
+        if let s = self.scheme { c.append((label: "scheme", value: string(s))) }
+        if let u = self.user { c.append((label: "user", value: string(u))) }
+        if let pw = self.password { c.append((label: "password", value: string(pw))) }
+        if let h = self.host { c.append((label: "host", value: string(h))) }
+        if let p = self.port { c.append((label: "port", value: port(p))) }
+
+        c.append((label: "path", value: string(self.path)))
+        if let qi = self.queryItems { c.append((label: "queryItems", value: queryItems(qi))) }
+        if let f = self.fragment { c.append((label: "fragment", value: string(f))) }
+        return c
     }
 }
 
@@ -1246,17 +1264,7 @@ extension URLComponents: CustomStringConvertible, CustomDebugStringConvertible {
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URLComponents: CustomReflectable {
     public var customMirror: Mirror {
-        var c: [(label: String?, value: Any)] = []
-
-        if let s = self.scheme { c.append((label: "scheme", value: s)) }
-        if let u = self.user { c.append((label: "user", value: u)) }
-        if let pw = self.password { c.append((label: "password", value: pw)) }
-        if let h = self.host { c.append((label: "host", value: h)) }
-        if let p = self.port { c.append((label: "port", value: p)) }
-
-        c.append((label: "path", value: self.path))
-        if let qi = self.queryItems { c.append((label: "queryItems", value: qi)) }
-        if let f = self.fragment { c.append((label: "fragment", value: f)) }
+        let c: [(label: String?, value: Any)] = _labeledComponents(string: { $0 }, port: { $0 }, queryItems: { $0 })
         let m = Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
         return m
     }

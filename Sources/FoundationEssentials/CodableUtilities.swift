@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 //===----------------------------------------------------------------------===//
 // Coding Path Node
 //===----------------------------------------------------------------------===//
@@ -122,7 +121,6 @@ internal enum _CodingKey : CodingKey {
 
     internal static let `super` = _CodingKey.string("super")
 }
-#endif
 
 
 //===----------------------------------------------------------------------===//
@@ -136,7 +134,6 @@ extension UInt8 {
     internal static var _newline: UInt8 { UInt8(ascii: "\n") }
     internal static var _tab: UInt8 { UInt8(ascii: "\t") }
 
-    internal static var _colon: UInt8 { UInt8(ascii: ":") }
     internal static let _semicolon = UInt8(ascii: ";")
     internal static var _comma: UInt8 { UInt8(ascii: ",") }
 
@@ -150,9 +147,7 @@ extension UInt8 {
     internal static let _closeangle = UInt8(ascii: ">")
     
     internal static var _quote: UInt8 { UInt8(ascii: "\"") }
-    internal static var _backslash: UInt8 { UInt8(ascii: "\\") }
     internal static var _forwardslash: UInt8 { UInt8(ascii: "/") }
-    internal static var _slash: UInt8 { UInt8(ascii: "/") }
 
     internal static var _equal: UInt8 { UInt8(ascii: "=") }
     internal static var _minus: UInt8 { UInt8(ascii: "-") }
@@ -160,10 +155,7 @@ extension UInt8 {
     internal static var _question: UInt8 { UInt8(ascii: "?") }
     internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
     internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
-    internal static var _pipe: UInt8 { UInt8(ascii: "|") }
-    internal static var _percent: UInt8 { UInt8(ascii: "%") }
     internal static var _period: UInt8 { UInt8(ascii: ".") }
-    internal static var _dot: UInt8 { UInt8(ascii: ".") }
     internal static var _e: UInt8 { UInt8(ascii: "e") }
     internal static var _E: UInt8 { UInt8(ascii: "E") }
 
@@ -185,38 +177,6 @@ extension UInt8 {
     }
 }
 
-
-internal var _asciiNumbers: ClosedRange<UInt8> { UInt8(ascii: "0") ... UInt8(ascii: "9") }
-internal var _hexCharsUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "F") }
-internal var _hexCharsLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "f") }
-internal var _allLettersUpper: ClosedRange<UInt8> { UInt8(ascii: "A") ... UInt8(ascii: "Z") }
-internal var _allLettersLower: ClosedRange<UInt8> { UInt8(ascii: "a") ... UInt8(ascii: "z") }
-
-extension UInt8 {
-    internal var hexDigitValue: UInt8? {
-        switch self {
-        case _asciiNumbers:
-            return self - _asciiNumbers.lowerBound
-        case _hexCharsUpper:
-            // uppercase letters
-            return self - _hexCharsUpper.lowerBound &+ 10
-        case _hexCharsLower:
-            // lowercase letters
-            return self - _hexCharsLower.lowerBound &+ 10
-        default:
-            return nil
-        }
-    }
-
-    internal var isValidHexDigit: Bool {
-        switch self {
-        case _asciiNumbers, _hexCharsUpper, _hexCharsLower:
-            return true
-        default:
-            return false
-        }
-    }
-}
 
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 
@@ -458,7 +418,6 @@ extension FixedWidthInteger {
 // Error handling conveniences
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 internal
 extension DecodingError {
     static func _dataCorrupted(_ debugDescription: String, for node: _CodingPathNode, _ additionalKey: (some CodingKey)?) -> Self {
@@ -469,7 +428,6 @@ extension DecodingError {
         Self.dataCorrupted(.init(codingPath: node.path, debugDescription: debugDescription))
     }
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // Shared Plist Null Representation
@@ -730,7 +688,6 @@ extension BufferView where Element == UInt8 {
     }
 }
 
-#if !hasFeature(Embedded)
 // Non-RawRepresentable Codable enum cases with the same number and labels of associated values all share equivalent CodingKeys, but the compiler-synthesized implementation generates a new type for each case.
 // Each of these types has their own set of `metadata instantiation cache for protocol conformance descriptor` symbols for each of 5 protocol conformances which consumes DATA space.
 // Instead of using the synthesized CodingKey types, you can make a `private typealias <CaseName>CodingKeys = <one of these types>` inside the Codable enum to reduce the amount of redundant DATA.
@@ -742,7 +699,6 @@ package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
     case _0
     case _1
 }
-#endif
 
 extension RawSpan {
     func bytesEqual(to other: RawSpan) -> Bool {
@@ -767,7 +723,6 @@ extension RawSpan {
     }
 }
 
-#if !hasFeature(Embedded)
 //===----------------------------------------------------------------------===//
 // Missing-Key Decoder
 //===----------------------------------------------------------------------===//
@@ -831,4 +786,3 @@ internal final class _MissingKeyDecoder: Decoder, SingleValueDecodingContainer {
         ))
     }
 }
-#endif

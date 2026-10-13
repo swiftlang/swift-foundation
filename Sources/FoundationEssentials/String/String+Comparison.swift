@@ -41,6 +41,7 @@ package extension UTF8.CodeUnit {
 
 // MARK: - _StringCompareOptionsIterable Methods
 // Internal protocols to share the implementation for iterating BidirectionalCollections of String family and process their elements according to String.CompareOptions.
+#if !NO_UNI_CHAR_DATA
 internal protocol _StringCompareOptionsConvertible : Comparable & Equatable {
     associatedtype IterableType: _StringCompareOptionsIterable
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> IterableType
@@ -54,6 +55,17 @@ internal protocol _StringCompareOptionsIterable : BidirectionalCollection where 
     func _consumeExtendCharacters(from i: inout Index)
     func consumeNumbers(from i: inout Index, initialValue: Int) -> Int
 }
+#else
+internal protocol _StringCompareOptionsConvertible : Comparable & Equatable {
+    var intValue: Int? { get }
+}
+
+internal protocol _StringCompareOptionsIterable : BidirectionalCollection where Element: _StringCompareOptionsConvertible, Element == SubSequence.Element {
+    init()
+    var first: Element? { get }
+    func consumeNumbers(from i: inout Index, initialValue: Int) -> Int
+}
+#endif
 
 extension _StringCompareOptionsIterable {
     func consumeNumbers(from i: inout Index, initialValue: Int) -> Int {
@@ -81,6 +93,7 @@ extension _StringCompareOptionsIterable {
         return value
     }
 
+#if !NO_UNI_CHAR_DATA
     func _consumeExtendCharacters(from i: inout Index) {
         while i < endIndex, self[i].isExtendCharacter {
             formIndex(after: &i)
@@ -230,6 +243,7 @@ extension _StringCompareOptionsIterable {
         let result = ComparisonResult(stringIndex: idx1, idx2: idx2, endIndex1: endIndex, endIndex2: other.endIndex)
         return result == .orderedSame ? compareResult : result
     }
+#endif
 
     func _range<S: BidirectionalCollection>(of strToFind: S, toHalfWidth: Bool, diacriticsInsensitive: Bool, caseFold: Bool, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Index == Index, S.Element == Element {
 
@@ -237,6 +251,7 @@ extension _StringCompareOptionsIterable {
             return _range(of: strToFind, anchored: anchored, backwards: backwards)
         }
 
+#if !NO_UNI_CHAR_DATA
         // These options may cause the string to change their count
         let lengthVariants = caseFold || diacriticsInsensitive
 
@@ -398,6 +413,13 @@ extension _StringCompareOptionsIterable {
         }
 
         return result
+#else
+        // Without Unicode character data, toHalfWidth, diacriticsInsensitive and caseFold are not supported.
+        guard !toHalfWidth && !diacriticsInsensitive && !caseFold else {
+            fatalError("Unicode character data is not avaiable")
+        }
+        return _range(of: strToFind, anchored: anchored, backwards: backwards)
+#endif
     }
 }
 
@@ -436,6 +458,7 @@ extension Unicode.UTF8.CodeUnit : _StringCompareOptionsConvertible {
 
 extension Character : _StringCompareOptionsConvertible {
 
+#if !NO_UNI_CHAR_DATA
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String {
         if isASCII {
             // we only need to handle case folding, in which case is just lower case
@@ -467,11 +490,13 @@ extension Character : _StringCompareOptionsConvertible {
 
         return String(new)
     }
+#endif
 
     var intValue: Int? {
         return wholeNumberValue
     }
 
+#if !NO_UNI_CHAR_DATA
     var isExtendCharacter: Bool {
         guard !self.isASCII else {
             return false
@@ -479,10 +504,12 @@ extension Character : _StringCompareOptionsConvertible {
 
         return unicodeScalars.allSatisfy { $0._isGraphemeExtend }
     }
+#endif
 
 }
 
 extension UnicodeScalar : _StringCompareOptionsConvertible {
+#if !NO_UNI_CHAR_DATA
     func _transform(toHalfWidth: Bool, stripDiacritics: Bool, caseFolding: Bool) -> String.UnicodeScalarView {
 
         var new = self
@@ -504,6 +531,7 @@ extension UnicodeScalar : _StringCompareOptionsConvertible {
             return String(new).unicodeScalars
         }
     }
+#endif
 
     var intValue: Int? {
         guard let v = properties.numericValue else {
@@ -512,11 +540,14 @@ extension UnicodeScalar : _StringCompareOptionsConvertible {
         return Int(v)
     }
 
+#if !NO_UNI_CHAR_DATA
     var isExtendCharacter: Bool {
         return _isGraphemeExtend
     }
+#endif
 }
 
+#if !NO_UNI_CHAR_DATA
 // MARK: - _StringCompareOptionsIterableBuffer
 internal struct _StringCompareOptionsIterableBuffer<StorageType: _StringCompareOptionsIterable> {
     var _buf: StorageType
@@ -556,9 +587,11 @@ internal struct _StringCompareOptionsIterableBuffer<StorageType: _StringCompareO
         self = .init()
     }
 }
+#endif
 
 // MARK: Comparison Implementations
 extension Substring {
+#if !NO_UNI_CHAR_DATA
     func _unlocalizedCompare(other: Substring, options: String.CompareOptions) -> ComparisonResult {
         if options.isEmpty {
             return ComparisonResult(self, other)
@@ -584,6 +617,7 @@ extension Substring {
 
         return result
     }
+#endif
 
 #if FOUNDATION_FRAMEWORK
     func _rangeOfCharacter(from set: CharacterSet, options: String.CompareOptions) -> Range<Index>? {
@@ -593,11 +627,13 @@ extension Substring {
     }
 #endif
 
+#if !NO_UNI_CHAR_DATA
     func _rangeOfCharacter(from set: BuiltInUnicodeScalarSet, options: String.CompareOptions) -> Range<Index>? {
         guard !isEmpty else { return nil }
 
         return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
+#endif
 
     func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
         #if !NO_REGEX
@@ -732,4 +768,35 @@ extension ComparisonResult {
             self = .orderedDescending
         }
     }
+}
+
+// Borrowed from stdlib
+internal func _allASCII(_ input: UnsafeBufferPointer<UInt8>) -> Bool {
+    if input.isEmpty { return true }
+    let ptr = input.baseAddress.unsafelyUnwrapped
+    var i = 0
+
+    let count = input.count
+    let stride = MemoryLayout<UInt>.stride
+    let address = Int(bitPattern: ptr)
+
+    let wordASCIIMask = UInt(truncatingIfNeeded: 0x8080_8080_8080_8080 as UInt64)
+    let byteASCIIMask = UInt8(truncatingIfNeeded: wordASCIIMask)
+
+    while (address &+ i) % stride != 0 && i < count {
+        guard ptr[i] & byteASCIIMask == 0 else { return false }
+        i &+= 1
+    }
+
+    while (i &+ stride) <= count {
+        let word: UInt = UnsafePointer(bitPattern: address &+ i).unsafelyUnwrapped.pointee
+        guard word & wordASCIIMask == 0 else { return false }
+        i &+= stride
+    }
+
+    while i < count {
+        guard ptr[i] & byteASCIIMask == 0 else { return false }
+        i &+= 1
+    }
+    return true
 }

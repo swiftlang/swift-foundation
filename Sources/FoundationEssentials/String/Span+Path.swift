@@ -14,6 +14,10 @@
 import Darwin
 #endif
 
+extension UInt8 {
+    internal static var _dot: UInt8 { UInt8(ascii: ".") }
+}
+
 @inline(__always)
 private func isSeparator(_ byte: UInt8) -> Bool {
     #if os(Windows)
