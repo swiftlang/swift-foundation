@@ -160,7 +160,7 @@ extension String {
         case canonical
         case hfsPlus
         
-        #if !hasFeature(Embedded)
+        #if !NO_UNI_CHAR_DATA
         fileprivate var setType: BuiltInUnicodeScalarSet.SetType {
             switch self {
             case .canonical: .canonicalDecomposable

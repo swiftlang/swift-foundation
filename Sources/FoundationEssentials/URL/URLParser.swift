@@ -945,10 +945,6 @@ internal struct RFC3986Parser {
 
 // MARK: - Encoding Extensions
 
-extension UInt8 {
-    internal static var _percent: UInt8 { UInt8(ascii: "%") }
-}
-
 @inline(__always)
 internal func hexToAscii(_ hex: UInt8) -> UInt8 {
     switch hex {

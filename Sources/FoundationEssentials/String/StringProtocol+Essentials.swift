@@ -22,7 +22,6 @@ internal import _FoundationCShims
 #if !FOUNDATION_FRAMEWORK
 #if hasFeature(Embedded)
 // Embedded Swift doesn't support dynamic replacement.
-@_spi(SwiftCorelibsFoundation)
 public func _cfStringEncodingConvert(string: String, using encoding: UInt, allowLossyConversion: Bool) -> Data? {
     return nil
 }

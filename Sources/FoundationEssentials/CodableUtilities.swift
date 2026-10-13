@@ -122,62 +122,6 @@ internal enum _CodingKey : CodingKey {
     internal static let `super` = _CodingKey.string("super")
 }
 
-
-//===----------------------------------------------------------------------===//
-// Character reading conveniences
-//===----------------------------------------------------------------------===//
-
-extension UInt8 {
-    
-    internal static var _space: UInt8 { UInt8(ascii: " ") }
-    internal static var _return: UInt8 { UInt8(ascii: "\r") }
-    internal static var _newline: UInt8 { UInt8(ascii: "\n") }
-    internal static var _tab: UInt8 { UInt8(ascii: "\t") }
-
-    internal static let _semicolon = UInt8(ascii: ";")
-    internal static var _comma: UInt8 { UInt8(ascii: ",") }
-
-    internal static var _openbrace: UInt8 { UInt8(ascii: "{") }
-    internal static var _closebrace: UInt8 { UInt8(ascii: "}") }
-
-    internal static var _openbracket: UInt8 { UInt8(ascii: "[") }
-    internal static var _closebracket: UInt8 { UInt8(ascii: "]") }
-
-    internal static let _openangle = UInt8(ascii: "<")
-    internal static let _closeangle = UInt8(ascii: ">")
-    
-    internal static var _quote: UInt8 { UInt8(ascii: "\"") }
-    internal static var _forwardslash: UInt8 { UInt8(ascii: "/") }
-
-    internal static var _equal: UInt8 { UInt8(ascii: "=") }
-    internal static var _minus: UInt8 { UInt8(ascii: "-") }
-    internal static var _plus: UInt8 { UInt8(ascii: "+") }
-    internal static var _question: UInt8 { UInt8(ascii: "?") }
-    internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
-    internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
-    internal static var _period: UInt8 { UInt8(ascii: ".") }
-    internal static var _e: UInt8 { UInt8(ascii: "e") }
-    internal static var _E: UInt8 { UInt8(ascii: "E") }
-
-    /// One past the last ASCII control-character code point.
-    internal static var _asciiFirstPrintable: UInt8 { 0x20 }
-
-    internal var digitValue: Int? {
-        guard _asciiNumbers.contains(self) else { return nil }
-        return Int(self &- UInt8(ascii: "0"))
-    }
-
-    internal var isLetter: Bool? {
-        return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
-    }
-
-    /// Equivalent to `isspace()` in the C locale: space, `\t`, `\n`, `\v`, `\f`, `\r`.
-    internal var isASCIIWhitespace: Bool {
-        return self == ._space || (UInt8(ascii: "\t") ... UInt8(ascii: "\r")) ~= self
-    }
-}
-
-
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 
 //===----------------------------------------------------------------------===//

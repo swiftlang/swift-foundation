@@ -17,7 +17,7 @@ internal import CoreFoundation_Private.CFNotificationCenter
 internal import os
 #endif
 
-#if !hasFeature(Embedded)
+#if !NO_CSHIMS
 internal import _FoundationCShims
 #endif
 internal import Synchronization

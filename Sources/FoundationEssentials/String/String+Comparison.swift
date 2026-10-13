@@ -11,9 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 package extension UTF8.CodeUnit {
-    static let newline: Self = 0x0A
-    static let carriageReturn: Self = 0x0D
-
     var _numericValue: Int? {
         if self >= 48 && self <= 57 {
             return Int(self - 48)
