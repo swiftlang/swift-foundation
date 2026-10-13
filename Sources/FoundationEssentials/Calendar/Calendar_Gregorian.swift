@@ -2261,17 +2261,18 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         let dcQuarter: Int? = components.contains(.quarter) ? {
             if let dayOfYear = dayOfYear {
                 let isLeapYear = gregorianYearIsLeap(year)
+                // `dayOfYear` is 1-based: Q1 ends on day 90 (91 in a leap year), the 31st of March.
                 return if !isLeapYear {
-                    if dayOfYear < 90 { 1 }
-                    else if dayOfYear < 181 { 2 }
-                    else if dayOfYear < 273 { 3 }
-                    else if dayOfYear < 366 { 4 }
+                    if dayOfYear <= 90 { 1 }
+                    else if dayOfYear <= 181 { 2 }
+                    else if dayOfYear <= 273 { 3 }
+                    else if dayOfYear <= 365 { 4 }
                     else { preconditionFailure("Invalid day of year") }
                 } else {
-                    if dayOfYear < 91 { 1 }
-                    else if dayOfYear < 182 { 2 }
-                    else if dayOfYear < 274 { 3 }
-                    else if dayOfYear < 367 { 4 }
+                    if dayOfYear <= 91 { 1 }
+                    else if dayOfYear <= 182 { 2 }
+                    else if dayOfYear <= 274 { 3 }
+                    else if dayOfYear <= 366 { 4 }
                     else { preconditionFailure("Invalid day of year") }
                 }
             } else {

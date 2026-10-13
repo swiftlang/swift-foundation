@@ -217,6 +217,21 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
+    // The last day of each quarter was reported as the next quarter.
+    @Test(arguments: [2027, 2028])
+    func testQuarterOfEveryDay(year: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        var day = try #require(calendar.date(from: DateComponents(year: year, month: 1, day: 1, hour: 12)))
+        while calendar.component(.year, from: day) == year {
+            let components = calendar.dateComponents([.month, .quarter], from: day)
+            let month = try #require(components.month)
+            #expect(components.quarter == (month - 1) / 3 + 1, "\(day)")
+            day += 86400
+        }
+    }
+
     @Test func testDateFromComponentsWeekOfMonth() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
