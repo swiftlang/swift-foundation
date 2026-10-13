@@ -40,8 +40,14 @@ internal import _ForSwiftFoundation
 internal func foundation_swift_calendar_feature_enabled() -> Bool {
     _foundation_swift_calendar_feature_enabled()
 }
+
+internal func foundation_swift_additional_calendars_feature_enabled() -> Bool {
+    // TODO: Return the runtime feature flag value, _foundation_swift_additional_calendars_feature_enabled(), once Apple adds the underscored binding.
+    return false
+}
 #else
 internal func foundation_swift_calendar_feature_enabled() -> Bool { return true }
+internal func foundation_swift_additional_calendars_feature_enabled() -> Bool { return true }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
@@ -58,6 +64,24 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
         case .buddhist, .japanese, .republicOfChina:
             return _CalendarGregorian.self
         default:
+            // `_CalendarFixedMonth` reads the rules of its calendars from the identifier, and `_CalendarChinese` reads the differences of Dangi and Vietnamese.
+            if foundation_swift_additional_calendars_feature_enabled() {
+                switch identifier {
+                case .coptic, .ethiopicAmeteMihret, .persian, .indian:
+                    return _CalendarFixedMonth.self
+                case .dangi:
+                    return _CalendarChinese.self
+#if FOUNDATION_FRAMEWORK
+                // Only the framework routes these two. The package ICU does not have them, so its text would not match the fields of these classes.
+                case .ethiopicAmeteAlem:
+                    return _CalendarFixedMonth.self
+                case .vietnamese:
+                    return _CalendarChinese.self
+#endif
+                default:
+                    break
+                }
+            }
             return _calendarICUClass()
         }
     }
