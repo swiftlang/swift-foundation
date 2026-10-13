@@ -253,18 +253,18 @@ extension Locale {
         var found = false
         // Only the first `-XX` counts, and not if a letter or digit follows it.
         // It can be anywhere, e.g. "en_US-UK". This is to match CoreFoundation's behavior.
-        var hypenIndex: Int? = nil
+        var hyphenIndex: Int? = nil
         if buffer.count >= 3 {
             for i in 0...(buffer.count - 3) where buffer[i] == _hyphen && buffer[i + 1] == from.byte0 && buffer[i + 2] == from.byte1 {
                 if i + 3 == buffer.count || !isAlphabetOrDigit(buffer[i + 3]) {
-                    hypenIndex = i
+                    hyphenIndex = i
                 }
                 break
             }
         }
-        if let hypenIndex {
+        if let hyphenIndex {
             found = true
-            overwrite(&buffer, at: replacingLanguage ? 0 : hypenIndex + 1, with: to)
+            overwrite(&buffer, at: replacingLanguage ? 0 : hyphenIndex + 1, with: to)
         }
 
         guard let regionTagStartIndex else {
