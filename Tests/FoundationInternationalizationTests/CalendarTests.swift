@@ -1667,6 +1667,19 @@ private struct CalendarTests {
 
 #endif
 
+    @Test(arguments: ["Europe/Paris", "Africa/Ceuta", "Africa/Cairo", "America/Santiago", "Asia/Beirut", "America/Los_Angeles"])
+    func nextDateBackwardMatchingMonthAcrossDaylightSavingTime(timeZoneIdentifier: String) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: timeZoneIdentifier))
+        // A month with an extra hour from a daylight saving time change must not make the search skip the month before it.
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 12, day: 12, hour: 12)))
+        for month in 1...12 {
+            let expected = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
+            for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
+                #expect(calendar.nextDate(after: start, matching: DateComponents(month: month), matchingPolicy: policy, direction: .backward) == expected, "month \(month), \(policy)")
+            }
+        }
+    }
 }
 
 // MARK: - Bridging Tests

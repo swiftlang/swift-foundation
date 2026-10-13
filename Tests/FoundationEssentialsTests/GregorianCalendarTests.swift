@@ -1587,6 +1587,45 @@ private struct GregorianCalendarTests {
         
         #expect(calendar1.timeZone == tz)
     }
+
+    static let backwardSearchComponentSets: [Set<Calendar.Component>] = [
+        [.year, .month, .day, .weekday],
+        [.year, .month, .day, .weekdayOrdinal],
+        [.year, .month, .day, .weekOfMonth],
+        [.month, .weekdayOrdinal, .weekday],
+        [.month, .weekOfMonth, .weekday],
+        [.month, .day, .weekday],
+        [.weekday, .weekOfYear],
+        [.year, .weekOfYear, .weekday],
+        [.year, .month, .day, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .dayOfYear, .hour],
+    ]
+
+    @Test(arguments: backwardSearchComponentSets)
+    func testNextDateBackwardFindsMatchingDay(components: Set<Calendar.Component>) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // Searching backward from three days later, every day's own components must lead back to that same day.
+        var day = try #require(calendar.date(from: DateComponents(year: 2027, month: 1, day: 1, hour: 9)))
+        let end = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 31, hour: 9)))
+        while day <= end {
+            let match = calendar.dateComponents(components, from: day)
+            let found = calendar.nextDate(after: day + 86400 * 3, matching: match, matchingPolicy: .nextTimePreservingSmallerComponents, direction: .backward)
+            #expect(found.map { calendar.isDate($0, inSameDayAs: day) } == true, "\(match) from \(day) found \(String(describing: found))")
+            day += 86400
+        }
+    }
+
+    @Test(arguments: 1...12)
+    func testNextDateBackwardMatchingMonthFindsItsStart(month: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // A month alone is found at its start, as a forward search finds it, December too although the search starts inside it.
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 12)))
+        let expected = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
+        for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
+            #expect(calendar.nextDate(after: start, matching: DateComponents(month: month), matchingPolicy: policy, direction: .backward) == expected)
+        }
+    }
 }
 
 /// The difference across an era change in the calendars that label eras from a table. The start moves into the era of the end first, so the smaller components can be negative.
