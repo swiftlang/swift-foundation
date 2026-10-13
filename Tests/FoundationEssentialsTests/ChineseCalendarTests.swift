@@ -30,6 +30,78 @@ private struct ChineseCalendarTests {
         Date(timeIntervalSinceReferenceDate: Double(rataDie - 730_486) * 86400.0 + 43_200.0)
     }
 
+    private static func cachedYear(_ key: Int, newYear: Int? = nil) -> _ChineseYear {
+        _ChineseYear(relatedISOYear: key, newYearRataDie: newYear ?? key,
+                     monthLengthBits: 0x555, monthCount: 12, leapMonthNumber: 0)
+    }
+
+    @Test(arguments: [(1776, 1814), (-24, -62)])
+    func cacheRetainsAlternatingYears(first: Int, second: Int) {
+        var cache = ChineseYearCache()
+        var misses = 0
+        for key in Array(repeating: [first, second], count: 256).joined() {
+            if let year = cache.year(relatedISOYear: key) {
+                #expect(year.relatedISOYear == key)
+                #expect(year.newYearRataDie == key)
+                #expect(year.monthLengthBits == 0x555)
+            } else {
+                misses += 1
+                cache.insert(Self.cachedYear(key))
+            }
+        }
+        #expect(misses == 2)
+    }
+
+    @Test(arguments: [1, -1])
+    func cacheRetainsNeighboringYearWalk(direction: Int) {
+        var cache = ChineseYearCache()
+        var misses = 0
+        for step in 0..<64 {
+            let year = 1776 + direction * step
+            for key in [year, year - direction] {
+                if let cached = cache.year(relatedISOYear: key) {
+                    #expect(cached.relatedISOYear == key)
+                    #expect(cached.newYearRataDie == key)
+                } else {
+                    misses += 1
+                    cache.insert(Self.cachedYear(key))
+                }
+            }
+        }
+        #expect(misses == 65)
+    }
+
+    @Test func cacheEvictsLeastRecentlyUsedYear() {
+        var cache = ChineseYearCache()
+        cache.insert(Self.cachedYear(1776))
+        cache.insert(Self.cachedYear(1814))
+        cache.insert(Self.cachedYear(2148))
+        #expect(cache.year(relatedISOYear: 1776)?.newYearRataDie == 1776)
+        cache.insert(Self.cachedYear(2200))
+        #expect(cache.year(relatedISOYear: 1814) == nil)
+        #expect(cache.year(relatedISOYear: 1776)?.newYearRataDie == 1776)
+        #expect(cache.year(relatedISOYear: 2148)?.newYearRataDie == 2148)
+        #expect(cache.year(relatedISOYear: 2200)?.newYearRataDie == 2200)
+    }
+
+    // The initial order is 2148, 1814, 1776, exercising publication in all positions.
+    @Test(arguments: [2148, 1814, 1776])
+    func cachePublicationDoesNotDuplicateKeys(key: Int) {
+        var cache = ChineseYearCache()
+        let keys = [1776, 1814, 2148]
+        for year in keys {
+            cache.insert(Self.cachedYear(year))
+        }
+        cache.insert(Self.cachedYear(key, newYear: 100))
+        cache.insert(Self.cachedYear(key, newYear: 200))
+        for year in keys {
+            let cached = cache.year(relatedISOYear: year)
+            #expect(cached?.relatedISOYear == year)
+            #expect(cached?.newYearRataDie == (year == key ? 200 : year))
+            #expect(cached?.monthLengthBits == 0x555)
+        }
+    }
+
     @Test func knownDates() {
         let c = Self.chineseCalendar()
         // (gregorian y-m-d, era, year, month, isLeap, day)

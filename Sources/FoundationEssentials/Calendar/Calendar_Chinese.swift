@@ -116,6 +116,46 @@ fileprivate func chineseMonthLabel(startingAt start: Int, gregorianYear: Int) ->
 
 // MARK: - Year structure
 
+/// A fully associative three-entry LRU for years outside the baked table.
+internal struct ChineseYearCache: Sendable {
+    private var mostRecent: _ChineseYear?
+    private var middle: _ChineseYear?
+    private var leastRecent: _ChineseYear?
+
+    mutating func year(relatedISOYear: Int) -> _ChineseYear? {
+        if mostRecent?.relatedISOYear == relatedISOYear {
+            return mostRecent
+        }
+        if middle?.relatedISOYear == relatedISOYear {
+            let hit = middle
+            middle = mostRecent
+            mostRecent = hit
+            return hit
+        }
+        if leastRecent?.relatedISOYear == relatedISOYear {
+            let hit = leastRecent
+            leastRecent = middle
+            middle = mostRecent
+            mostRecent = hit
+            return hit
+        }
+        return nil
+    }
+
+    mutating func insert(_ year: _ChineseYear) {
+        if mostRecent?.relatedISOYear == year.relatedISOYear {
+            mostRecent = year
+            return
+        }
+        // Re-publishing the middle entry preserves the distinct least recent entry.
+        if middle?.relatedISOYear != year.relatedISOYear {
+            leastRecent = middle
+        }
+        middle = mostRecent
+        mostRecent = year
+    }
+}
+
 internal struct _ChineseYear: Sendable {
     let relatedISOYear: Int
     let newYearRataDie: Int
@@ -1097,10 +1137,8 @@ extension _CalendarChinese {
         return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: _CalendarAstronomy.gregorianRataDie(relatedISOYear, 1, 19) + Int((v >> 17) & 0x3F), monthLengthBits: UInt16(v & 0x1FFF), monthCount: leap == 0 ? 12 : 13, leapMonthNumber: leap)
     }
 
-    // Two slots retain neighboring years and matched larger capacities in the
-    // measured search and conversion workloads. Only fallback years use them.
-    private static let yearCacheCapacity = 2
-    private static let yearCache = Mutex<[_ChineseYear?]>(Array(repeating: nil, count: yearCacheCapacity))
+    // Retain three fallback years to cover neighboring-year conversion reuse.
+    private static let yearCache = Mutex(ChineseYearCache())
 
     /// Month structure for the Chinese year whose New Year falls in Gregorian `relatedISOYear`.
     ///
@@ -1110,10 +1148,7 @@ extension _CalendarChinese {
         if idx >= 0 && idx < table.count {
             return decodeTableYear(relatedISOYear: relatedISOYear)
         }
-        // Consecutive years occupy different slots, including years before the common era.
-        let remainder = relatedISOYear % yearCacheCapacity
-        let slot = remainder < 0 ? remainder + yearCacheCapacity : remainder
-        if let cached = yearCache.withLock({ $0[slot] }), cached.relatedISOYear == relatedISOYear {
+        if let cached = yearCache.withLock({ $0.year(relatedISOYear: relatedISOYear) }) {
             return cached
         }
         // Astronomy is deliberately outside the lock. Concurrent misses can compute
@@ -1151,7 +1186,7 @@ extension _CalendarChinese {
             if label.isLeap { leapMonthNumber = UInt8(label.month) }
         }
         let result = _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
-        yearCache.withLock { $0[slot] = result }
+        yearCache.withLock { $0.insert(result) }
         return result
     }
 
