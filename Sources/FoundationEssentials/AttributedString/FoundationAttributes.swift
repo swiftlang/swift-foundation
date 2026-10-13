@@ -19,8 +19,11 @@ extension AttributeScopes {
     
     /// Attribute scopes that Foundation defines.
     public struct FoundationAttributes : AttributeScope {
+        #if !hasFeature(Embedded)
+        // TODO: Should be enabled when URL is supported in Embedded Swift
         /// A property for accessing the link attribute.
         public let link: LinkAttribute
+        #endif
         /// A property for accessing a language identifier attribute.
         public let languageIdentifier: LanguageIdentifierAttribute
         /// A property for accessing a person name component attribute.
@@ -31,8 +34,11 @@ extension AttributeScopes {
         public let dateField: DateFieldAttribute
         /// A property for accessing an alternative presentation attribute.
         public let alternateDescription: AlternateDescriptionAttribute
+        #if !hasFeature(Embedded)
+        // TODO: Should be enabled when URL is supported in Embedded Swift
         /// A property for accessing an image URL attribute.
         public let imageURL: ImageURLAttribute
+        #endif
         /// A property for accessing a replacement index attribute.
         public let replacementIndex : ReplacementIndexAttribute
         public let measurement: MeasurementAttribute
@@ -80,10 +86,11 @@ extension AttributeDynamicLookup {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes {
+    #if !hasFeature(Embedded)
     /// A type for using a link as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum LinkAttribute : CodableAttributedStringKey {
+    public enum LinkAttribute : AttributedStringKey {
         /// The type of the link attribute's value.
         public typealias Value = URL
         
@@ -94,11 +101,12 @@ extension AttributeScopes.FoundationAttributes {
             set { }
         }
     }
-    
+    #endif
+
     /// A type for using a language identifier as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum LanguageIdentifierAttribute : CodableAttributedStringKey {
+    public enum LanguageIdentifierAttribute : AttributedStringKey {
         public typealias Value = String
         public static let name = "NSLanguage"
     }
@@ -106,11 +114,11 @@ extension AttributeScopes.FoundationAttributes {
     /// A type for using a person name component as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum PersonNameComponentAttribute : CodableAttributedStringKey {
+    public enum PersonNameComponentAttribute : AttributedStringKey {
         public typealias Value = Component
         public static let name = "NSPersonNameComponentKey"
 
-        public enum Component: String, Codable, Sendable {
+        public enum Component: String, Sendable {
             case givenName, familyName, middleName, namePrefix, nameSuffix, nickname, delimiter
         }
     }
@@ -122,8 +130,8 @@ extension AttributeScopes.FoundationAttributes {
         public let numberPart: NumberPartAttribute
         
         @frozen
-        public enum NumberPartAttribute : CodableAttributedStringKey {
-            public enum NumberPart : Int, Codable, Sendable {
+        public enum NumberPartAttribute : AttributedStringKey {
+            public enum NumberPart : Int, Sendable {
                 case integer
                 case fraction
             }
@@ -133,8 +141,8 @@ extension AttributeScopes.FoundationAttributes {
         }
         
         @frozen
-        public enum SymbolAttribute : CodableAttributedStringKey {
-            public enum Symbol : Int, Codable, Sendable {
+        public enum SymbolAttribute : AttributedStringKey {
+            public enum Symbol : Int, Sendable {
                 case groupingSeparator
                 case sign
                 case decimalSeparator
@@ -153,8 +161,8 @@ extension AttributeScopes.FoundationAttributes {
     /// month, day, hour, or minute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum DateFieldAttribute : CodableAttributedStringKey {
-        public enum Field : Hashable, Codable, Sendable {
+    public enum DateFieldAttribute : AttributedStringKey {
+        public enum Field : Hashable, Sendable {
             case era
             case year
             /// For non-Gregorian calendars, this corresponds to the extended Gregorian year in which the calendar’s year begins.
@@ -260,21 +268,6 @@ extension AttributeScopes.FoundationAttributes {
                 }
                 self = field
             }
-
-            // Codable
-            public init(from decoder: Decoder) throws {
-                let container = try decoder.singleValueContainer()
-                let rawValue = try container.decode(String.self)
-                guard let field = Field(rawValue: rawValue) else {
-                    throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid Field pattern <\(rawValue)>."))
-                }
-                self = field
-            }
-
-            public func encode(to encoder: Encoder) throws {
-                var container = encoder.singleValueContainer()
-                try container.encode(rawValue)
-            }
         }
 
         public static let name = "Foundation.DateFormatField"
@@ -284,21 +277,23 @@ extension AttributeScopes.FoundationAttributes {
     /// A type for using an alternative description as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum AlternateDescriptionAttribute : CodableAttributedStringKey {
+    public enum AlternateDescriptionAttribute : AttributedStringKey {
         public typealias Value = String
         public static let name = "NSAlternateDescription"
     }
-    
+
+    #if !hasFeature(Embedded)
     /// A type for using an image URL as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum ImageURLAttribute : CodableAttributedStringKey {
+    public enum ImageURLAttribute : AttributedStringKey {
         /// The type of the image URL attribute.
         public typealias Value = URL
         /// The name of the image URL attribute.
         public static let name = "NSImageURL"
     }
-    
+    #endif
+
     /// A type for using a replacement index as an attribute.
     ///
     /// When you use the `AttributedString.FormattingOptions.applyReplacementIndexAttribute`
@@ -307,16 +302,16 @@ extension AttributeScopes.FoundationAttributes {
     /// replacements even if localizers change the word order in format strings.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum ReplacementIndexAttribute : CodableAttributedStringKey {
+    public enum ReplacementIndexAttribute : AttributedStringKey {
         public typealias Value = Int
         public static let name = "NSReplacementIndex"
     }
     
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public struct MeasurementAttribute : CodableAttributedStringKey {
+    public struct MeasurementAttribute : AttributedStringKey {
         public typealias Value = Component
         public static let name = "Foundation.MeasurementAttribute"
-        public enum Component: Int, Codable, Sendable {
+        public enum Component: Int, Sendable {
             case value
             case unit
         }
@@ -324,22 +319,17 @@ extension AttributeScopes.FoundationAttributes {
     
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
-    public enum ByteCountAttribute : CodableAttributedStringKey {
+    public enum ByteCountAttribute : AttributedStringKey {
         public typealias Value = Component
         public static let name = "Foundation.ByteCountAttribute"
-        public enum Component: Codable, Hashable, Sendable {
+        public enum Component: Hashable, Sendable {
             case value
             case spelledOutValue
             case unit(Unit)
             case actualByteCount
-            
-            private typealias ValueCodingKeys = EmptyCodingKeys
-            private typealias SpelledOutValueCodingKeys = EmptyCodingKeys
-            private typealias UnitCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias ActualByteCountCodingKeys = EmptyCodingKeys
         }
         
-        public enum Unit: Codable, Sendable {
+        public enum Unit: Sendable {
             case byte
             case kb
             case mb
@@ -349,25 +339,15 @@ extension AttributeScopes.FoundationAttributes {
             case eb
             case zb
             case yb
-            
-            private typealias ByteCodingKeys = EmptyCodingKeys
-            private typealias KbCodingKeys = EmptyCodingKeys
-            private typealias MbCodingKeys = EmptyCodingKeys
-            private typealias GbCodingKeys = EmptyCodingKeys
-            private typealias TbCodingKeys = EmptyCodingKeys
-            private typealias PbCodingKeys = EmptyCodingKeys
-            private typealias EbCodingKeys = EmptyCodingKeys
-            private typealias ZbCodingKeys = EmptyCodingKeys
-            private typealias YbCodingKeys = EmptyCodingKeys
         }
     }
 
     @frozen
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public enum DurationFieldAttribute : CodableAttributedStringKey {
+    public enum DurationFieldAttribute : AttributedStringKey {
         public typealias Value = Field
         public static let name = "Foundation.DurationFieldAttribute"
-        public enum Field: Int, Codable, Sendable {
+        public enum Field: Int, Sendable {
             case weeks
             case days
             case hours
@@ -382,7 +362,7 @@ extension AttributeScopes.FoundationAttributes {
     /// The attribute key for the base writing direction of a paragraph.
     @available(FoundationPreview 6.2, *)
     @frozen
-    public enum WritingDirectionAttribute: CodableAttributedStringKey {
+    public enum WritingDirectionAttribute: AttributedStringKey {
         public typealias Value = AttributedString.WritingDirection
         public static let name: String = "Foundation.WritingDirectionAttribute"
 
@@ -391,13 +371,108 @@ extension AttributeScopes.FoundationAttributes {
     }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.LinkAttribute: CodableAttributedStringKey {}
 
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.LanguageIdentifierAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.PersonNameComponentAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.PersonNameComponentAttribute.Component: Codable {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.NumberPart: Codable {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol: Codable {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.DateFieldAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let field = Self(rawValue: rawValue) else {
+            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid Field pattern <\(rawValue)>."))
+        }
+        self = field
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.AlternateDescriptionAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.ImageURLAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.ReplacementIndexAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.MeasurementAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.MeasurementAttribute.Component: Codable {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.ByteCountAttribute: CodableAttributedStringKey {}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Component: Codable {
+    private typealias ValueCodingKeys = EmptyCodingKeys
+    private typealias SpelledOutValueCodingKeys = EmptyCodingKeys
+    private typealias UnitCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias ActualByteCountCodingKeys = EmptyCodingKeys
+}
+
+@available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Unit: Codable {
+    private typealias ByteCodingKeys = EmptyCodingKeys
+    private typealias KbCodingKeys = EmptyCodingKeys
+    private typealias MbCodingKeys = EmptyCodingKeys
+    private typealias GbCodingKeys = EmptyCodingKeys
+    private typealias TbCodingKeys = EmptyCodingKeys
+    private typealias PbCodingKeys = EmptyCodingKeys
+    private typealias EbCodingKeys = EmptyCodingKeys
+    private typealias ZbCodingKeys = EmptyCodingKeys
+    private typealias YbCodingKeys = EmptyCodingKeys
+}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension AttributeScopes.FoundationAttributes.DurationFieldAttribute: CodableAttributedStringKey {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field: Codable {}
+
+@available(FoundationPreview 6.2, *)
+extension AttributeScopes.FoundationAttributes.WritingDirectionAttribute: CodableAttributedStringKey {}
+#endif
+
+#if !hasFeature(Embedded)
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.LinkAttribute : Sendable {}
+#endif
 
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
@@ -448,12 +523,14 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute : Sendable {}
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.AlternateDescriptionAttribute : Sendable {}
 
+#if !hasFeature(Embedded)
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.ImageURLAttribute : Sendable {}
+#endif
 
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
@@ -537,7 +614,7 @@ extension AttributedString {
     /// ``rightToLeft`` is interpreted as bottom-to-top.
     @available(FoundationPreview 6.2, *)
     @frozen
-    public enum WritingDirection: Codable, Hashable, CaseIterable, Sendable {
+    public enum WritingDirection: Hashable, CaseIterable, Sendable {
         /// A left-to-right writing direction in horizontal script.
         ///
         /// - Note: In vertical scripts, this equivalent to a top-to-bottom
@@ -549,8 +626,13 @@ extension AttributedString {
         /// - Note: In vertical scripts, this equivalent to a bottom-to-top
         /// writing direction.
         case rightToLeft
-        
-        private typealias LeftToRightCodingKeys = EmptyCodingKeys
-        private typealias RightToLeftCodingKeys = EmptyCodingKeys
     }
 }
+
+#if !hasFeature(Embedded)
+@available(FoundationPreview 6.2, *)
+extension AttributedString.WritingDirection: Codable {
+    private typealias LeftToRightCodingKeys = EmptyCodingKeys
+    private typealias RightToLeftCodingKeys = EmptyCodingKeys
+}
+#endif
