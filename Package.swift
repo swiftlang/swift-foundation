@@ -147,6 +147,7 @@ let package = Package(
             "URL/CMakeLists.txt",
             "NotificationCenter/CMakeLists.txt",
             "ProgressManager/CMakeLists.txt",
+            "CharacterSet/CMakeLists.txt",
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))

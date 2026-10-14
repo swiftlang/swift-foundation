@@ -440,36 +440,6 @@ internal struct BuiltInUnicodeScalarSet {
     static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
 }
 
-#if !FOUNDATION_FRAMEWORK
-struct _CharacterSet {
-    
-    static let __kCFBitmapSize = 8192
-    
-    enum Operation {
-        case add
-        case remove
-    }
-    
-    internal static func modifyBitmap(_ operation: Operation, char: UInt16, mutableSpan: inout MutableSpan<UInt8>) {
-        let LOG_BPB = 3
-        let BITSPERBYTE = 8
-        let byteIndex = Int(char >> LOG_BPB)
-        let bitPosition = char & UInt16(BITSPERBYTE - 1)
-        
-        guard byteIndex < mutableSpan.count else { return }
-        
-        let bitMask: UInt8 = 1 << bitPosition
-        
-        switch operation {
-        case .add:
-            mutableSpan[byteIndex] |= bitMask
-        case .remove:
-            mutableSpan[byteIndex] &= ~bitMask
-        }
-    }
-}
-#endif
-
 extension _CharacterSet {
     private static let allOnesCached = Data(capacity: __kCFBitmapSize) { outputSpan in
         outputSpan.append(repeating: 0xFF, count: __kCFBitmapSize, as: UInt8.self)
