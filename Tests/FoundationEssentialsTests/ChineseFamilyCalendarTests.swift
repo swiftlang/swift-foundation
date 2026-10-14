@@ -99,7 +99,7 @@ private struct ChineseFamilyCalendarTests {
         #expect(calendar.date(from: DateComponents(hour: 12, weekday: components.weekday, weekOfYear: components.weekOfYear, yearForWeekOfYear: expected)) == Self.date((2026, 10, 7)))
     }
 
-    // The days of each year of `.yearForWeekOfYear` tile the time line, so the end of one is the start of the next.
+    // The days of each year of `.yearForWeekOfYear` follow each other with no gap and no overlap, so the end of one is the start of the next.
     @Test(arguments: identifiers)
     func weekYearsTile(_ identifier: Calendar.Identifier) throws {
         let calendar = Self.calendar(identifier)
@@ -295,8 +295,8 @@ private struct ChineseFamilyCalendarTests {
         #expect(Self.calendar(.chinese).date(from: components) == Date(timeIntervalSinceReferenceDate: expected))
     }
 
-    // The forms by day of the year and by week of the year ignore the month. Cycle 78, year 40, GMT.
-    @Test(arguments: identifiers, [-11, 0, 1, 12, 13, 14, 25])
+    // The forms by day of the year and by week of the year ignore the month, even a month far outside 1...12. Cycle 78, year 40, GMT.
+    @Test(arguments: identifiers, [-11, 0, 1, 12, 13, 14, 25, 1_000_001, 100_000_000])
     func monthDoesNotMoveTheYearInYearForms(_ identifier: Calendar.Identifier, _ month: Int) {
         let calendar = Self.calendar(identifier)
         var firstDay = DateComponents(era: 78, year: 40, month: month)
@@ -320,6 +320,144 @@ private struct ChineseFamilyCalendarTests {
         let date = Date(timeIntervalSinceReferenceDate: 700_000_000.25)
         #expect(Self.calendar(identifier).ordinality(of: expected.smaller, in: expected.larger, for: date) == expected.ordinality, "\(expected.smaller) in \(expected.larger)")
     }
+
+    // A missing year means year 1. Cycle 78, GMT.
+    @Test(arguments: identifiers, [
+        (DateComponents(era: 78), -533_779_200.0), (DateComponents(era: 78, month: 3, day: 5), -528_336_000.0), (DateComponents(era: 78, day: 5), -533_433_600.0),
+        (DateComponents(era: 78, hour: 7), -533_754_000.0), (DateComponents(era: 78, weekday: 2), -533_779_200.0),
+    ])
+    func dateFromWithoutYear(_ identifier: Calendar.Identifier, _ row: (components: DateComponents, expected: Double)) {
+        #expect(Self.calendar(identifier).date(from: row.components) == Date(timeIntervalSinceReferenceDate: row.expected))
+    }
+
+    // A nanosecond has no range inside a nanosecond.
+    @Test(arguments: identifiers)
+    func nanosecondHasNoRangeInNanosecond(_ identifier: Calendar.Identifier) {
+        #expect(Self.calendar(identifier).range(of: .nanosecond, in: .nanosecond, for: Date(timeIntervalSinceReferenceDate: 0)) == nil)
+    }
+
+    // Ordinality in the era and in `.yearForWeekOfYear`. The date is -2,471,334,945 seconds from the reference date, in GMT. The values come from the system calendar.
+    @Test(arguments: identifiers, [
+        (Calendar.Component.day, Calendar.Component.weekOfYear, 7), (.year, .era, 59), (.month, .era, 725), (.day, .era, 21_398),
+        (.weekdayOrdinal, .year, 33), (.weekOfYear, .yearForWeekOfYear, 33), (.day, .yearForWeekOfYear, 231),
+    ])
+    func ordinalityInEraAndWeekYear(_ identifier: Calendar.Identifier, _ row: (smaller: Calendar.Component, larger: Calendar.Component, expected: Int)) {
+        let date = Date(timeIntervalSinceReferenceDate: -2_471_334_945)
+        #expect(Self.calendar(identifier).ordinality(of: row.smaller, in: row.larger, for: date) == row.expected, "\(row.smaller) in \(row.larger)")
+    }
+
+    // Ranges in the era and in the year. The date and the source of the values are as above.
+    @Test(arguments: identifiers, [
+        (Calendar.Component.year, Calendar.Component.era, 1..<61), (.month, .era, 1..<13), (.day, .era, 1..<31), (.weekOfMonth, .year, 1..<67), (.weekdayOrdinal, .year, 1..<66),
+    ])
+    func rangeInEraAndYear(_ identifier: Calendar.Identifier, _ row: (smaller: Calendar.Component, larger: Calendar.Component, expected: Range<Int>)) {
+        let date = Date(timeIntervalSinceReferenceDate: -2_471_334_945)
+        #expect(Self.calendar(identifier).range(of: row.smaller, in: row.larger, for: date) == row.expected, "\(row.smaller) in \(row.larger)")
+    }
+
+    // A time unit counts from the start of any larger unit. The date is 2024-05-20 13:25:07 in GMT. The values come from the system calendar.
+    @Test(arguments: identifiers, [
+        (Calendar.Component.hour, Calendar.Component.month, 302), (.hour, .year, 2_414), (.hour, .weekOfYear, 38), (.hour, .weekOfMonth, 38), (.hour, .weekday, 14), (.hour, .era, 353_246),
+        (.hour, .quarter, 302), (.minute, .month, 18_086), (.minute, .weekday, 806), (.second, .year, 8_688_308), (.nanosecond, .weekday, Int(exactly: Int64(48_307_000_000_001))),
+    ] as [(Calendar.Component, Calendar.Component, Int?)])
+    func timeUnitInLargerUnit(_ identifier: Calendar.Identifier, _ row: (smaller: Calendar.Component, larger: Calendar.Component, expected: Int?)) {
+        let date = Date(timeIntervalSinceReferenceDate: 737_904_307)
+        #expect(Self.calendar(identifier).ordinality(of: row.smaller, in: row.larger, for: date) == row.expected, "\(row.smaller) in \(row.larger)")
+    }
+
+    // The tables of Dangi and Vietnamese. Dangi month 2 of 1950 starts on 1950-03-19, a day after the Chinese month 2. The Vietnamese leap month 6 of 1979 starts on 1979-07-24 and month 7 on 1979-08-23.
+    @Test(arguments: [
+        (Calendar.Identifier.dangi, -1_602_849_600.0, 1, 30, false), (.dangi, -1_602_763_200.0, 2, 1, false),
+        (.vietnamese, -676_641_600.0, 6, 1, true), (.vietnamese, -674_049_600.0, 7, 1, false),
+    ])
+    func tableMonthStarts(_ identifier: Calendar.Identifier, _ time: Double, _ month: Int, _ day: Int, _ isLeapMonth: Bool) {
+        let components = Self.calendar(identifier).dateComponents([.month, .day, .isLeapMonth], from: Date(timeIntervalSinceReferenceDate: time))
+        #expect([components.month, components.day] == [month, day])
+        #expect(components.isLeapMonth == isLeapMonth)
+    }
+
+    // Adding a negative number of months. The starts are noon in GMT.
+    @Test(arguments: [
+        (Calendar.Identifier.chinese, 706_708_800.0, -1, 704_203_200.0), (.chinese, 706_708_800.0, -3, 699_105_600.0), (.chinese, 732_196_800.0, -14, 696_513_600.0),
+        (.dangi, 706_708_800.0, -1, 704_116_800.0), (.vietnamese, 813_067_200.0, -1, 810_561_600.0),
+    ])
+    func addNegativeMonths(_ identifier: Calendar.Identifier, _ start: Double, _ months: Int, _ expected: Double) {
+        let result = Self.calendar(identifier).date(byAdding: DateComponents(month: months), to: Date(timeIntervalSinceReferenceDate: start), wrappingComponents: false)
+        #expect(result == Date(timeIntervalSinceReferenceDate: expected))
+    }
+
+    // Ordinality of a day and of time units, and the range of the day in the quarter. The date is 781,538,730.25 seconds from the reference date, in GMT.
+    @Test(arguments: identifiers, [
+        (Calendar.Component.hour, Calendar.Component.day, 15), (.minute, .day, 846), (.second, .day, 50_731), (.day, .year, 252), (.weekday, .year, 36), (.second, .minute, 31),
+    ])
+    func ordinalityOfDaysAndTimeUnits(_ identifier: Calendar.Identifier, _ row: (smaller: Calendar.Component, larger: Calendar.Component, expected: Int)) {
+        let date = Date(timeIntervalSinceReferenceDate: 781_538_730.25)
+        #expect(Self.calendar(identifier).ordinality(of: row.smaller, in: row.larger, for: date) == row.expected, "\(row.smaller) in \(row.larger)")
+    }
+
+    @Test(arguments: identifiers)
+    func dayRangeInQuarter(_ identifier: Calendar.Identifier) {
+        #expect(Self.calendar(identifier).range(of: .day, in: .quarter, for: Date(timeIntervalSinceReferenceDate: 781_538_730.25)) == 1..<90)
+    }
+
+    // An add that mixes a month or a day with time units. The start is 2026-10-07 12:00 in GMT.
+    @Test(arguments: [
+        (DateComponents(day: 2, hour: 5, minute: 7, second: 9), 813_258_429.0), (DateComponents(month: 1, hour: 3), 815_583_600.0),
+    ])
+    func addMonthsAndDaysWithTimeUnits(_ components: DateComponents, _ expected: Double) {
+        let result = Self.calendar(.chinese).date(byAdding: components, to: Date(timeIntervalSinceReferenceDate: 813_067_200), wrappingComponents: false)
+        #expect(result == Date(timeIntervalSinceReferenceDate: expected))
+    }
+
+    // A roll of a field that starts on the first weekday. The start is Sunday 2026-10-04 12:00 in GMT, and the first weekday is Sunday.
+    @Test(arguments: identifiers, [
+        (Calendar.Component.weekday, 812_894_400.0), (.weekOfYear, 813_412_800.0), (.dayOfYear, 812_894_400.0), (.weekOfMonth, 810_820_800.0),
+    ])
+    func rollFromTheFirstWeekday(_ identifier: Calendar.Identifier, _ row: (field: Calendar.Component, expected: Double)) {
+        var amount = DateComponents()
+        amount.setValue(1, for: row.field)
+        let result = Self.calendar(identifier).date(byAdding: amount, to: Date(timeIntervalSinceReferenceDate: 812_808_000), wrappingComponents: true)
+        #expect(result == Date(timeIntervalSinceReferenceDate: row.expected), "\(row.field)")
+    }
+
+    // The `.yearForWeekOfYear` that holds 2026-10-07 runs from Sunday 2026-02-15 to Sunday 2027-01-31. The New Years are 2026-02-17 and 2027-02-06.
+    @Test func weekYearInterval() {
+        let interval = Self.calendar(.chinese).dateInterval(of: .yearForWeekOfYear, for: Date(timeIntervalSinceReferenceDate: 813_067_200))
+        #expect(interval?.start == Date(timeIntervalSinceReferenceDate: 792_806_400))
+        #expect(interval?.end == Date(timeIntervalSinceReferenceDate: 823_046_400))
+    }
+
+    // Adding one `.yearForWeekOfYear` keeps the week and the weekday. Number 4663 starts on 2026-02-15 and 4664 on 2027-01-31, so 2026-10-07 moves 350 days to 2027-09-22.
+    @Test func addOneWeekYear() {
+        let result = Self.calendar(.chinese).date(byAdding: DateComponents(yearForWeekOfYear: 1), to: Date(timeIntervalSinceReferenceDate: 813_067_200), wrappingComponents: false)
+        #expect(result == Date(timeIntervalSinceReferenceDate: 843_307_200))
+    }
+
+    // A week of the month with a day of the year and no weekday, and a weekday ordinal of 0. Cycle 78, year 43, month 3, noon in GMT.
+    @Test(arguments: identifiers, [
+        (DateComponents(era: 78, year: 43, month: 3, hour: 12, weekOfMonth: 2), 100, 801_576_000.0),
+        (DateComponents(era: 78, year: 43, month: 3, hour: 12, weekday: 3, weekdayOrdinal: 0), nil, 797_860_800.0),
+    ] as [(DateComponents, Int?, Double)])
+    func dateFromWeekOfMonthAndOrdinalZero(_ identifier: Calendar.Identifier, _ row: (components: DateComponents, dayOfYear: Int?, expected: Double)) {
+        var components = row.components
+        components.dayOfYear = row.dayOfYear
+        #expect(Self.calendar(identifier).date(from: components) == Date(timeIntervalSinceReferenceDate: row.expected))
+    }
+
+    // Rolls of the weekday ordinal from the 7th and from the 14th day of a month. Noon in GMT.
+    @Test(arguments: [(811_339_200.0, 1, 811_944_000.0), (811_944_000.0, -1, 811_339_200.0)])
+    func rollWeekdayOrdinal(_ start: Double, _ amount: Int, _ expected: Double) {
+        let result = Self.calendar(.chinese).date(byAdding: DateComponents(weekdayOrdinal: amount), to: Date(timeIntervalSinceReferenceDate: start), wrappingComponents: true)
+        #expect(result == Date(timeIntervalSinceReferenceDate: expected))
+    }
+
+#if !FOUNDATION_FRAMEWORK
+    // For Dangi, Calendar(identifier:) uses this class in the package build. The framework build leaves the routing off for now.
+    @Test func dangiUsesTheChineseClass() throws {
+        let type = try #require(_calendarClass(identifier: .dangi))
+        #expect(ObjectIdentifier(type) == ObjectIdentifier(_CalendarChinese.self))
+    }
+#endif
 
     // An hourly rule for the last day of the year needs the range of the day of the year. The rule must give 5 dates, and each date must be on the last day.
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)

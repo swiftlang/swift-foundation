@@ -72,7 +72,7 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
                 case .dangi:
                     return _CalendarChinese.self
 #if FOUNDATION_FRAMEWORK
-                // Only the framework routes these two. The package ICU does not have them, so its text would not match the fields of these classes.
+                // Only the framework routes these two. In the package, the formatter shows Gregorian text for Amete Alem and has no Vietnamese calendar, so its text would not match the fields of these classes.
                 case .ethiopicAmeteAlem:
                     return _CalendarFixedMonth.self
                 case .vietnamese:

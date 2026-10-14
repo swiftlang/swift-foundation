@@ -40,6 +40,14 @@ private struct FixedMonthCalendarTimeZoneTests {
         #expect(calendar.ordinality(of: .day, in: .era, for: lateEvening) == rataDie - firstDay)
     }
 
+    // The day in the quarter counts elapsed 24 hour blocks from its start, so a change of the Los Angeles offset inside the quarter moves it by one day. The values come from the system calendar.
+    @Test(arguments: [(Calendar.Identifier.coptic, -1_427_474_467.0, 27), (.ethiopicAmeteMihret, -1_427_474_467.0, 27), (.indian, -1_185_207_389.0, 82), (.persian, -1_185_207_389.0, 83)])
+    func dayInQuarterCountsElapsedDays(_ identifier: Calendar.Identifier, _ time: Double, _ expected: Int) throws {
+        let losAngeles = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let calendar = Calendar(inner: _CalendarFixedMonth(identifier: identifier, timeZone: losAngeles, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+        #expect(calendar.ordinality(of: .day, in: .quarter, for: Date(timeIntervalSinceReferenceDate: time)) == expected)
+    }
+
     // Clocks skipped local midnight on the first day of these years, so a month starts inside a day. The ranges must still come out and must not crash.
     @Test(arguments: [
         (Calendar.Identifier.indian, "Asia/Tehran", 1977, 3, 22, 12, 63),
@@ -156,7 +164,7 @@ private struct FixedMonthCalendarTimeZoneTests {
         #expect(changed.hashValue == untouched.hashValue)
     }
 
-    // The formatted text and the fields of a date name the same day. The package ICU does not have Amete Alem and Vietnamese, so `Calendar` must not use the Swift classes for them there.
+    // The formatted text and the fields of a date name the same day. In the package, the formatter shows Gregorian text for Amete Alem and has no Vietnamese, so `Calendar` keeps the old path for them.
     @Test(arguments: [Calendar.Identifier.coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem, .persian, .indian, .dangi, .vietnamese])
     func textAndFieldsAgree(_ identifier: Calendar.Identifier) {
         var calendar = Calendar(identifier: identifier)

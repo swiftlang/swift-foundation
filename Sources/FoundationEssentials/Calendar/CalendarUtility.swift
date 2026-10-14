@@ -204,7 +204,7 @@ internal enum _CalendarUtility {
         return ordinal >= 0 ? day + (ordinal - 1) * 7 : day + ((monthLength - day) / 7 + ordinal + 1) * 7
     }
 
-    /// The day of the month that a week of the month and a weekday name, counted from 1 and possibly outside the month. A first week with too few days does not count.
+    /// The day of the month for a weekday in a week of the month. It is counted from 1 and can be outside the month. A first week with fewer days than the minimum does not count.
     static func dayOfMonth(weekOfMonth week: Int, weekdayOffset: Int, monthStartOffset: Int, minimumDaysInFirstWeek: Int) -> Int {
         let firstWeekShift = 7 - monthStartOffset < minimumDaysInFirstWeek ? 7 : 0
         return weekdayOffset - monthStartOffset + 1 + firstWeekShift + (week - 1) * 7
@@ -310,15 +310,6 @@ internal enum _CalendarUtility {
         (rataDie % 7 + 7) % 7 + 1
     }
 
-    /// The week number inside the calendar year, with no move into the neighboring year of `.yearForWeekOfYear`.
-    static func weekOfYearNumber(dayOfYear: Int, weekday: Int, firstWeekday: Int, minimumDaysInFirstWeek: Int) -> Int {
-        // The 7000 keeps the sum positive and does not change the remainder after the division by 7.
-        let relativeWeekdayForYearStart = (weekday - dayOfYear + 7001 - firstWeekday) % 7
-        var weekOfYear = (dayOfYear - 1 + relativeWeekdayForYearStart) / 7
-        if (7 - relativeWeekdayForYearStart) >= minimumDaysInFirstWeek { weekOfYear += 1 }
-        return weekOfYear
-    }
-
     /// The components of a difference, from the largest to the smallest.
     static func orderedDifferenceComponents(_ components: Calendar.ComponentSet) -> [Calendar.Component] {
         var out: [Calendar.Component] = []
@@ -338,6 +329,62 @@ internal enum _CalendarUtility {
         if components.contains(.second) { out.append(.second) }
         if components.contains(.nanosecond) { out.append(.nanosecond) }
         return out
+    }
+
+    /// The ranges of the smaller unit in each month of the larger unit, added up. Stops after 15 months.
+    static func rangeOverMonths<Implementation: _CalendarProtocol>(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date, in calendar: Implementation) -> Range<Int>? {
+        guard let interval = calendar.dateInterval(of: larger, for: date) else { return nil }
+        let end = interval.end - 1
+        var current = interval.start + 1
+        var result: Range<Int>?
+        for _ in 0..<15 {
+            guard let month = calendar.dateInterval(of: .month, for: current),
+                  let first = calendar.ordinality(of: smaller, in: .month, for: month.start + 0.1),
+                  let last = calendar.ordinality(of: smaller, in: .month, for: month.end - 0.1) else { return result }
+            if let previous = result {
+                let low = min(previous.lowerBound, first)
+                result = low..<low + previous.count + last
+            } else {
+                result = first..<last + 1
+            }
+            current = month.end + 1
+            if current >= end { break }
+        }
+        return result
+    }
+
+    private static let timeUnits: [Calendar.Component] = [.hour, .minute, .second, .nanosecond]
+
+    /// The ordinality of an hour, a minute, a second or a nanosecond inside a larger unit. It counts from the start of the larger unit, whole seconds first and then the fraction.
+    /// `secondsInDay` is the local time of the day. `dayOrdinality` gives the ordinality of the day inside a larger unit that is longer than a day.
+    static func timeOrdinality(of smaller: Calendar.Component, in larger: Calendar.Component, secondsInDay: Double, date: Date, dayOrdinality: (Calendar.Component) -> Int?) -> Int? {
+        guard let smallerIndex = timeUnits.firstIndex(of: smaller), smallerIndex > (timeUnits.firstIndex(of: larger) ?? -1) else { return nil }
+        let wholeSecondsInDay = Int(secondsInDay)
+        let seconds: Int
+        switch larger {
+        case .hour: seconds = wholeSecondsInDay % Calendar._secondsInHour
+        case .minute: seconds = wholeSecondsInDay % 60
+        case .second: seconds = 0
+        case .weekday, .day, .dayOfYear: seconds = wholeSecondsInDay
+        case .era, .year, .yearForWeekOfYear, .quarter, .month, .weekOfYear, .weekOfMonth:
+            guard let days = dayOrdinality(larger) else { return nil }
+            let (daySeconds, multiplyOverflow) = (days - 1).multipliedReportingOverflow(by: Calendar._secondsInDay)
+            let (sum, addOverflow) = daySeconds.addingReportingOverflow(wholeSecondsInDay)
+            guard !multiplyOverflow, !addOverflow else { return nil }
+            seconds = sum
+        default:
+            return nil
+        }
+        switch smaller {
+        case .hour: return seconds / Calendar._secondsInHour + 1
+        case .minute: return seconds / 60 + 1
+        case .second: return seconds + 1
+        default:
+            let fraction = date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down)
+            let nanoseconds = (Double(seconds) + fraction) * 1e9
+            guard nanoseconds < Double(Int.max) else { return nil }
+            return Int(nanoseconds) + 1
+        }
     }
 
     /// Week-of-period number using the ICU algorithm, shared across calendars.

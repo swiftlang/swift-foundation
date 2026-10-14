@@ -246,19 +246,19 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
         case .year:
             switch smaller {
             case .quarter, .weekOfYear: return rangeAtEnds(of: smaller, in: larger, counting: larger, for: date)
-            case .weekOfMonth, .weekdayOrdinal: return rangeOverMonths(of: smaller, in: larger, for: date)
+            case .weekOfMonth, .weekdayOrdinal: return _CalendarUtility.rangeOverMonths(of: smaller, in: larger, for: date, in: self)
             default: return nil
             }
         case .yearForWeekOfYear:
             switch smaller {
             case .quarter, .month, .weekOfYear: return rangeAtEnds(of: smaller, in: larger, counting: larger, for: date)
-            case .day, .weekdayOrdinal: return rangeOverMonths(of: smaller, in: larger, for: date)
+            case .day, .weekdayOrdinal: return _CalendarUtility.rangeOverMonths(of: smaller, in: larger, for: date, in: self)
             default: return nil
             }
         case .quarter:
             switch smaller {
             case .weekOfYear: return rangeAtEnds(of: smaller, in: larger, counting: .year, for: date)
-            case .weekOfMonth, .weekdayOrdinal: return rangeOverMonths(of: smaller, in: larger, for: date)
+            case .weekOfMonth, .weekdayOrdinal: return _CalendarUtility.rangeOverMonths(of: smaller, in: larger, for: date, in: self)
             default: return nil
             }
         case .month:
@@ -280,37 +280,19 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
         return first..<last + 1
     }
 
-    // The ranges of the smaller unit in each month of the larger unit, added up. Stops after 15 months.
-    private func rangeOverMonths(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
-        guard let interval = dateInterval(of: larger, for: date) else { return nil }
-        let end = interval.end - 1
-        var current = interval.start + 1
-        var result: Range<Int>?
-        for _ in 0..<15 {
-            guard let month = dateInterval(of: .month, for: current),
-                  let first = ordinality(of: smaller, in: .month, for: month.start + 0.1),
-                  let last = ordinality(of: smaller, in: .month, for: month.end - 0.1) else { return result }
-            if let previous = result {
-                let low = min(previous.lowerBound, first)
-                result = low..<low + previous.count + last
-            } else {
-                result = first..<last + 1
-            }
-            current = month.end + 1
-            if current >= end { break }
-        }
-        return result
-    }
-
     // MARK: Ordinality
 
     func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
         let fields = dayFields(for: date, in: timeZone)
         switch (smaller, larger) {
         case (.hour, _), (.minute, _), (.second, _), (.nanosecond, _):
-            return timeOrdinality(of: smaller, in: larger, fields: fields, date: date)
-        case (.day, .era), (.day, .year), (.dayOfYear, .year), (.day, .yearForWeekOfYear), (.day, .quarter), (.day, .month):
+            return _CalendarUtility.timeOrdinality(of: smaller, in: larger, secondsInDay: fields.secondsInDay, date: date) { ordinality(of: .day, in: $0, for: date) }
+        case (.day, .era), (.day, .year), (.dayOfYear, .year), (.day, .yearForWeekOfYear), (.day, .month):
             return startRataDie(of: larger, fields: fields, date: date).map { fields.rataDie - $0 + 1 }
+        case (.day, .quarter):
+            // The quarter counts elapsed 24 hour blocks from its start, so a change of the offset inside it moves the count.
+            guard let interval = dateInterval(of: .quarter, for: date) else { return nil }
+            return Int((date.timeIntervalSince(interval.start) / Double(Calendar._secondsInDay)).rounded(.down)) + 1
         case (.month, .year):
             return fields.month
         case (.quarter, .year):
@@ -328,7 +310,7 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
             let first = rules.fields(rataDie: start)
             return (fields.year - first.year) * rules.monthsInYear + fields.month - first.month + (fields.day < first.day ? 0 : 1)
         case (.weekOfYear, .year):
-            return _CalendarUtility.weekOfYearNumber(dayOfYear: fields.dayOfYear, weekday: _CalendarUtility.weekday(ofRataDie: fields.rataDie), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
+            return _CalendarUtility.weekNumber(desiredDay: fields.dayOfYear, dayOfPeriod: fields.dayOfYear, weekday: _CalendarUtility.weekday(ofRataDie: fields.rataDie), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
         case (.weekOfYear, .yearForWeekOfYear):
             return weekYearAndWeek(rataDie: fields.rataDie, year: fields.year).week
         case (.weekOfMonth, .month):
@@ -344,8 +326,9 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
             guard let start = startRataDie(of: .quarter, fields: fields, date: date) else { return nil }
             let daysBeforeWeek = (7 - relativeWeekday(ofRataDie: start)) % 7
             let firstWeekStart = start + daysBeforeWeek
-            let firstWeek = _CalendarUtility.weekOfYearNumber(dayOfYear: firstWeekStart - rules.startOfYear(fields.year) + 1, weekday: _CalendarUtility.weekday(ofRataDie: firstWeekStart), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek) - (minimumDaysInFirstWeek <= daysBeforeWeek ? 1 : 0)
-            return _CalendarUtility.weekOfYearNumber(dayOfYear: fields.dayOfYear, weekday: _CalendarUtility.weekday(ofRataDie: fields.rataDie), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek) - firstWeek + 1
+            let firstDayOfYear = firstWeekStart - rules.startOfYear(fields.year) + 1
+            let firstWeek = _CalendarUtility.weekNumber(desiredDay: firstDayOfYear, dayOfPeriod: firstDayOfYear, weekday: _CalendarUtility.weekday(ofRataDie: firstWeekStart), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek) - (minimumDaysInFirstWeek <= daysBeforeWeek ? 1 : 0)
+            return _CalendarUtility.weekNumber(desiredDay: fields.dayOfYear, dayOfPeriod: fields.dayOfYear, weekday: _CalendarUtility.weekday(ofRataDie: fields.rataDie), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek) - firstWeek + 1
         case (.day, .weekOfYear), (.day, .weekOfMonth), (.weekday, .weekOfYear), (.weekday, .weekOfMonth):
             // Position of the day inside its week, counting from firstWeekday.
             return relativeWeekday(ofRataDie: fields.rataDie) + 1
@@ -381,39 +364,6 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
         case .quarter: return rules.startOfYear(fields.year) + rules.daysBeforeMonth(year: fields.year, month: rules.firstMonth(ofQuarter: rules.quarter(ofMonth: fields.month)))
         case .month: return fields.rataDie - fields.day + 1
         default: return nil
-        }
-    }
-
-    private static let timeUnits: [Calendar.Component] = [.hour, .minute, .second, .nanosecond]
-
-    // A time unit counts from the start of the larger unit, whole seconds first and then the fraction.
-    private func timeOrdinality(of smaller: Calendar.Component, in larger: Calendar.Component, fields: DayFields, date: Date) -> Int? {
-        guard let smallerIndex = Self.timeUnits.firstIndex(of: smaller), smallerIndex > (Self.timeUnits.firstIndex(of: larger) ?? -1) else { return nil }
-        let secondsInDay = Int(fields.secondsInDay)
-        let seconds: Int
-        switch larger {
-        case .hour: seconds = secondsInDay % Calendar._secondsInHour
-        case .minute: seconds = secondsInDay % 60
-        case .second: seconds = 0
-        case .weekday, .day, .dayOfYear: seconds = secondsInDay
-        case .era, .year, .yearForWeekOfYear, .quarter, .month, .weekOfYear, .weekOfMonth:
-            guard let days = ordinality(of: .day, in: larger, for: date) else { return nil }
-            let (daySeconds, multiplyOverflow) = (days - 1).multipliedReportingOverflow(by: Calendar._secondsInDay)
-            let (sum, addOverflow) = daySeconds.addingReportingOverflow(secondsInDay)
-            guard !multiplyOverflow, !addOverflow else { return nil }
-            seconds = sum
-        default:
-            return nil
-        }
-        switch smaller {
-        case .hour: return seconds / Calendar._secondsInHour + 1
-        case .minute: return seconds / 60 + 1
-        case .second: return seconds + 1
-        default:
-            let fraction = date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down)
-            let nanoseconds = (Double(seconds) + fraction) * 1e9
-            guard nanoseconds < Double(Int.max) else { return nil }
-            return Int(nanoseconds) + 1
         }
     }
 
@@ -958,7 +908,7 @@ internal enum FixedMonthArithmetic: Sendable {
 
     // MARK: Years and months
 
-    // The rata die before the first day of year 0 of the Coptic and Ethiopic calendars.
+    // The rata die of the first day of year 0 of the Coptic and Ethiopic calendars.
     private var epochRataDie: Int {
         switch self {
         case .coptic: return 103_240

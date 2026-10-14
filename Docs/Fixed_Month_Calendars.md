@@ -16,7 +16,7 @@ This is the opposite of the Chinese calendar. Read `Chinese_Calendar_Math.md` an
 
 A new calendar of this kind adds one case to the enum and one branch to each `switch`. It does not need a new class. The compiler checks that every `switch` handles every case. The identifier also needs a `case` in `_calendarClass` in `Calendar_Cache.swift`, which sends it to the class.
 
-The routing is behind `foundation_swift_additional_calendars_feature_enabled()`. This flag is separate from the flag of the other Swift calendars. In the package build it is on. In the framework build it is off for now, so all five calendars use ICU there. Amete Alem has a `case` in the framework build only. The package ICU does not have that calendar, so its formatted text would not match the fields of the Swift calendar.
+The routing is behind `foundation_swift_additional_calendars_feature_enabled()`. This flag is separate from the flag of the other Swift calendars. In the package build it is on. In the framework build it is off for now, so all five calendars use ICU there. Amete Alem has a `case` in the framework build only. In the package, the formatter shows Gregorian text for that calendar, so its formatted text would not match the fields of the Swift calendar.
 
 ## The rules
 

@@ -100,7 +100,7 @@ private struct FixedMonthCalendarTests {
         }
     }
 
-    // In the Persian years 1300 to 3100, the leap years differ from the 33 year rule only in pairs of years (Y, Y + 1). These are the years Y.
+    // In the Persian years 1300 to 3100, the leap years differ from the 33 year rule only in pairs of years (Y, Y + 1). These are the years Y. The list is from the system calendar (ICU 78).
     private static let persianShiftedLeapYears = [
         1502, 1601, 1634, 1667, 1700, 1733, 1766, 1799, 1832, 1865, 1898, 1931, 1964, 1997, 2030, 2059,
         2063, 2096, 2129, 2158, 2162, 2191, 2195, 2224, 2228, 2257, 2261, 2290, 2294, 2323, 2327, 2356,
@@ -156,6 +156,33 @@ private struct FixedMonthCalendarTests {
         let components = try #require(result.map { calendar.dateComponents([.era, .year, .month, .day, .hour], from: $0) })
         #expect([components.era, components.year, components.month, components.day, components.hour] == [add.expected.0, add.expected.1, add.expected.2, add.expected.3, add.expected.4], "\(add)")
     }
+
+    // An add that mixes a month or a day with time units. The start is 2026-10-07 12:00 in GMT. The values come from the system calendar.
+    @Test(arguments: [
+        (Calendar.Identifier.coptic, DateComponents(day: 1, minute: 30), 813_155_400.0), (.coptic, DateComponents(day: 1, second: 30), 813_153_630.0), (.persian, DateComponents(month: 1, hour: 3), 815_670_000.0),
+    ])
+    func addDaysAndMonthsWithTimeUnits(_ identifier: Calendar.Identifier, _ components: DateComponents, _ expected: Double) {
+        let result = Self.calendar(identifier).date(byAdding: components, to: Date(timeIntervalSinceReferenceDate: 813_067_200), wrappingComponents: false)
+        #expect(result == Date(timeIntervalSinceReferenceDate: expected))
+    }
+
+    // Rolls of the weekday ordinal from the 6th, the 7th and the 14th day of a month. Noon in GMT.
+    @Test(arguments: [
+        (Calendar.Identifier.coptic, 813_844_800.0, 1, 814_449_600.0), (.coptic, 813_931_200.0, 1, 814_536_000.0), (.coptic, 814_536_000.0, -1, 813_931_200.0), (.persian, 812_376_000.0, -1, 814_190_400.0),
+    ])
+    func rollWeekdayOrdinal(_ identifier: Calendar.Identifier, _ start: Double, _ amount: Int, _ expected: Double) {
+        let result = Self.calendar(identifier).date(byAdding: DateComponents(weekdayOrdinal: amount), to: Date(timeIntervalSinceReferenceDate: start), wrappingComponents: true)
+        #expect(result == Date(timeIntervalSinceReferenceDate: expected))
+    }
+
+#if !FOUNDATION_FRAMEWORK
+    // In the package build, Calendar(identifier:) uses this class for these identifiers. The framework build leaves the routing off for now.
+    @Test(arguments: [Calendar.Identifier.coptic, .ethiopicAmeteMihret, .persian, .indian])
+    func identifierUsesTheClass(_ identifier: Calendar.Identifier) throws {
+        let type = try #require(_calendarClass(identifier: identifier))
+        #expect(ObjectIdentifier(type) == ObjectIdentifier(_CalendarFixedMonth.self))
+    }
+#endif
 
     // MARK: Intervals, ranges and ordinality
 
@@ -604,7 +631,7 @@ private struct FixedMonthCalendarTests {
         #expect(failures.isEmpty, "\(failures.count) failures, first: \(failures.prefix(3))")
     }
 
-    // The days of each year of `.yearForWeekOfYear` tile the time line, so the end of one is the start of the next.
+    // The days of each year of `.yearForWeekOfYear` follow each other with no gap and no overlap, so the end of one is the start of the next.
     @Test(arguments: identifiers)
     func weekYearsTile(_ identifier: Calendar.Identifier) throws {
         let calendar = Self.calendar(identifier)
