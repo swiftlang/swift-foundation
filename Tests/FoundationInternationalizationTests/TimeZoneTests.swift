@@ -482,7 +482,7 @@ private struct TimeZone_ICUResourceTests {
     }
 
 
-    @Test(.disabled("This test takes a long time to run because it tests all known timezones. Also this test is only useful when ICUResourceTimeZone feature flag is disabled"))
+    @Test(.disabled("This test takes a long time to run because it tests all known timezones."))
     func allKnownTimeZones() throws {
         func buildTestDates(_ seeds: [Date]) -> [Date] {
 
