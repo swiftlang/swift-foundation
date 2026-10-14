@@ -45,6 +45,9 @@ internal struct JSONWriter: ~Copyable {
             return string.utf8.count + 2
         case .number(let number):
             return number.utf8.count
+        case .base64EncodedData(let data):
+            // Base64 content (4 characters per 3 bytes, rounded up) + 2 quotes
+            return (data.count + 2) / 3 * 4 + 2
         case .bool(let bool):
             return bool ? 4 : 5
         case .null:
@@ -91,6 +94,10 @@ internal struct JSONWriter: ~Copyable {
             writer(contentsOf: numberStr.utf8)
         case .array(let array):
             try serializeArray(array, depth: depth + 1)
+        case .base64EncodedData(let data):
+            writer(ascii: ._quote)
+            serializeBase64Contents(data)
+            writer(ascii: ._quote)
         case .nonPrettyDirectArray(let arrayRepresentation):
             writer(contentsOf: arrayRepresentation)
         case let .directArray(bytes, lengths):
@@ -156,69 +163,93 @@ internal struct JSONWriter: ~Copyable {
         let unquotedStringStart = self.bytes.count
         var mutStr = str
         mutStr.withUTF8 {
-
-            @inline(__always)
-            func appendAccumulatedBytes(from mark: UnsafePointer<UInt8>, to cursor: UnsafePointer<UInt8>, followedByContentsOf sequence: [UInt8]) {
-                if cursor > mark {
-                    writer(pointer: mark, count: cursor-mark)
-                }
-                writer(contentsOf: sequence)
-            }
-
-            @inline(__always)
-            func valueToASCII(_ value: UInt8) -> UInt8 {
-                switch value {
-                case 0 ... 9:
-                    return value &+ UInt8(ascii: "0")
-                case 10 ... 15:
-                    return value &- 10 &+ UInt8(ascii: "a")
-                default:
-                    preconditionFailure()
-                }
-            }
-
-            var cursor = $0.baseAddress!
-            let end = $0.baseAddress! + $0.count
-            var mark = cursor
-            while cursor < end {
-                switch cursor.pointee {
-                case ._quote:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, ._quote])
-                case ._backslash:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, ._backslash])
-                case ._slash where !withoutEscapingSlashes:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, ._forwardslash])
-                case 0x8:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "b")])
-                case 0xc:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "f")])
-                case ._newline:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "n")])
-                case ._return:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "r")])
-                case ._tab:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "t")])
-                case 0x0...0xf:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "u"), UInt8(ascii: "0"), UInt8(ascii: "0"), UInt8(ascii: "0")])
-                    writer(ascii: valueToASCII(cursor.pointee))
-                case 0x10...0x1f:
-                    appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "u"), UInt8(ascii: "0"), UInt8(ascii: "0")])
-                    writer(ascii: valueToASCII(cursor.pointee / 16))
-                    writer(ascii: valueToASCII(cursor.pointee % 16))
-                default:
-                    // Accumulate this byte and any following bytes that are known not to need escaping
-                    cursor = Self.skipBytesNotNeedingEscape(from: cursor + 1, to: end, escapingSlashes: !withoutEscapingSlashes)
-                    continue
-                }
-
-                cursor += 1
-                mark = cursor // Start accumulating bytes starting after this escaped byte.
-            }
-
-            appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [])
+            serializeStringContents(utf8: $0)
         }
         let unquotedStringLength = unquotedStringStart.distance(to: self.bytes.count)
         return unquotedStringLength
+    }
+
+    @inline(__always)
+    mutating func serializeStringContents(utf8: UnsafeBufferPointer<UInt8>) {
+        @inline(__always)
+        func appendAccumulatedBytes(from mark: UnsafePointer<UInt8>, to cursor: UnsafePointer<UInt8>, followedByContentsOf sequence: [UInt8]) {
+            if cursor > mark {
+                writer(pointer: mark, count: cursor-mark)
+            }
+            writer(contentsOf: sequence)
+        }
+
+        @inline(__always)
+        func valueToASCII(_ value: UInt8) -> UInt8 {
+            switch value {
+            case 0 ... 9:
+                return value &+ UInt8(ascii: "0")
+            case 10 ... 15:
+                return value &- 10 &+ UInt8(ascii: "a")
+            default:
+                preconditionFailure()
+            }
+        }
+
+        var cursor = utf8.baseAddress!
+        let end = utf8.baseAddress! + utf8.count
+        var mark = cursor
+        while cursor < end {
+            switch cursor.pointee {
+            case ._quote:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, ._quote])
+            case ._backslash:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, ._backslash])
+            case ._slash where !withoutEscapingSlashes:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, ._forwardslash])
+            case 0x8:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "b")])
+            case 0xc:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "f")])
+            case ._newline:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "n")])
+            case ._return:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "r")])
+            case ._tab:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "t")])
+            case 0x0...0xf:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "u"), UInt8(ascii: "0"), UInt8(ascii: "0"), UInt8(ascii: "0")])
+                writer(ascii: valueToASCII(cursor.pointee))
+            case 0x10...0x1f:
+                appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [._backslash, UInt8(ascii: "u"), UInt8(ascii: "0"), UInt8(ascii: "0")])
+                writer(ascii: valueToASCII(cursor.pointee / 16))
+                writer(ascii: valueToASCII(cursor.pointee % 16))
+            default:
+                // Accumulate this byte and any following bytes that are known not to need escaping
+                cursor = Self.skipBytesNotNeedingEscape(from: cursor + 1, to: end, escapingSlashes: !withoutEscapingSlashes)
+                continue
+            }
+
+            cursor += 1
+            mark = cursor // Start accumulating bytes starting after this escaped byte.
+        }
+
+        appendAccumulatedBytes(from: mark, to: cursor, followedByContentsOf: [])
+    }
+
+    // Base64-encodes `data` into a temporary buffer, then escapes it like any other string contents
+    mutating func serializeBase64Contents(_ data: Data) {
+        guard !data.isEmpty else { return }
+        // Encoded in chunks so that large Data is never duplicated in full. A multiple of 3 so that only the final chunk can need padding.
+        let inputChunkSize = 48 * 1024
+        data.withUnsafeBytes { rawInput in
+            let input = rawInput.assumingMemoryBound(to: UInt8.self)
+            withUnsafeTemporaryAllocation(of: UInt8.self, capacity: Base64.encodeComputeCapacity(bytes: Swift.min(input.count, inputChunkSize), options: [])) { output in
+                var chunkStart = 0
+                while chunkStart < input.count {
+                    let chunkEnd = Swift.min(chunkStart + inputChunkSize, input.count)
+                    var length = 0
+                    Base64._encode(input: UnsafeBufferPointer(rebasing: input[chunkStart ..< chunkEnd]), buffer: output, length: &length, options: [])
+                    serializeStringContents(utf8: UnsafeBufferPointer(rebasing: output[..<length]))
+                    chunkStart = chunkEnd
+                }
+            }
+        }
     }
 
     // Skips 8 bytes at a time until reaching a word that contains a byte needing escaping, then returns a pointer to that byte (or to where fewer than 8 bytes remain)
