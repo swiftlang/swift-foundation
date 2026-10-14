@@ -50,6 +50,7 @@ extension String {
 #endif // FOUNDATION_FRAMEWORK
 }
 
+#if !NO_UNI_CHAR_DATA
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
     func _capitalized() -> String {
@@ -81,3 +82,4 @@ extension String {
         return new
     }
 }
+#endif

@@ -28,6 +28,7 @@ add_library(FoundationEssentials
     Progress+Stub.swift
     SortComparator.swift
     Span+Utils.swift
+    UInt8+ASCII.swift
     UUID_Wrappers.swift
     UUID.swift
     WASILibc+Extensions.swift

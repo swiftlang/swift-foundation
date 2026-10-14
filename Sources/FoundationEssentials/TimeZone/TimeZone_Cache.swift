@@ -26,7 +26,7 @@ import ucrt
 import WinSDK
 #endif
 
-#if !hasFeature(Embedded)
+#if !NO_CSHIMS
 internal import _FoundationCShims
 #endif
 internal import Synchronization

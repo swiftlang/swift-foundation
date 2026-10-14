@@ -408,8 +408,6 @@ extension Platform {
     }
 }
 
-// The C-locale string helpers need a locale_t and the *_l libc entry points, neither of which the embedded libc shim provides. Embedded does not reference these.
-#if !hasFeature(Embedded)
 extension Platform {
     #if canImport(Darwin) || canImport(_FoundationDarwinExtras)
     private static var cLocale: locale_t? { /* LC_C_LOCALE */ nil }
@@ -508,6 +506,10 @@ extension Platform {
     static let memset = _FoundationDarwinExtras.memset
     static let memcpy = _FoundationDarwinExtras.memcpy
     static let memcmp = _FoundationDarwinExtras.memcmp
+#elseif canImport(_FoundationPlatformExtras)
+    static let calloc = _FoundationPlatformExtras.calloc
+    static let malloc = _FoundationPlatformExtras.malloc
+    static let memcmp = _FoundationPlatformExtras.memcmp
 #elseif !NO_CSHIMS
     // Fall back to the imported C headers
     static let calloc = _FoundationCShims.calloc
@@ -518,9 +520,3 @@ extension Platform {
     static let memcmp = _FoundationCShims.memcmp
 #endif
 }
-#elseif canImport(_FoundationPlatformExtras)
-extension Platform {
-    static let calloc = _FoundationPlatformExtras.calloc
-    static let malloc = _FoundationPlatformExtras.malloc
-}
-#endif
