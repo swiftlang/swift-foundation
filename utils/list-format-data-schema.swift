@@ -62,6 +62,9 @@ internal struct ListFormatDataSchema: Codable {
     /// the derivation comment there.
     let aliases: [String: String]
 
+    /// Redirects for ICU's script fallback where truncation gives other patterns, e.g. en_Latn_GB → en_GB.
+    let scriptRedirects: [String: String]
+
     /// One row of resolved patterns, indexed into the global `patterns` pool.
     internal struct Row: Codable, Hashable {
         let start: Int

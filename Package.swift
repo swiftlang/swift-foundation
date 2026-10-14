@@ -206,6 +206,7 @@ let package = Package(
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt",
                 "Formatting/ListFormatData.json",
+                "Formatting/DateFormatData.json",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
