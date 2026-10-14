@@ -173,11 +173,11 @@ internal func readDataFromFile(path inPath: borrowing some FileSystemRepresentab
 internal func readDataFromFile(path inPath: borrowing some FileSystemRepresentable & ~Copyable, reportProgress: Bool, maxLength: Int? = nil, options: Data.ReadingOptions = [], attributesToRead: [String], attributes: inout [String: Data]) throws -> Data {
     let result = try readBytesFromFile(path: inPath, reportProgress: reportProgress, maxLength: maxLength, options: options, attributesToRead: attributesToRead, attributes: &attributes)
     
-    if result.length == 0 {
+    guard let bytes = result.bytes, let deallocator = result.deallocator else {
         return Data()
-    } else {
-        return Data(bytesNoCopy: result.bytes!, count: result.length, deallocator: result.deallocator!)
     }
+    // A zero-length result may still own a buffer, which `Data(bytesNoCopy:)` frees.
+    return Data(bytesNoCopy: bytes, count: result.length, deallocator: deallocator)
 }
 
 struct ReadBytesResult {
@@ -367,46 +367,40 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
     
     if fileSize == 0 {
         #if os(Linux) || os(Android)
-        // Some files report a size of 0 but still have contents. read(2) may return before EOF, so fill each chunk and stop only when a chunk comes back short, which means read(2) returned 0.
+        // Some files report a size of 0 but still have contents. read(2) may return fewer bytes than requested before EOF, so read until it returns 0.
         let chunkSize = 1024 * 4
         guard var ptr = malloc(chunkSize) else {
             throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
+        var capacity = chunkSize
         var totalRead = 0
         do {
             while true {
-                let (capacity, overflowed) = totalRead.addingReportingOverflow(chunkSize)
-                guard !overflowed else {
-                    throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
-                }
                 let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: capacity)
                 var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: totalRead)
                 try readBytesFromFileDescriptor(fd, path: inPath, buffer: &outputSpan, readUntilLength: true, reportProgress: false)
 
                 // `finalize` reports every initialized byte in the buffer, including bytes from earlier iterations.
-                let initialized = outputSpan.finalize(for: buffer)
-                let bytesRead = initialized - totalRead
-                totalRead = initialized
-                if bytesRead != chunkSize {
+                totalRead = outputSpan.finalize(for: buffer)
+                if totalRead < capacity {
+                    // With `readUntilLength`, the buffer is left unfilled only when read(2) returned 0.
                     break
                 }
-                let (nextCapacity, nextOverflowed) = totalRead.addingReportingOverflow(chunkSize)
-                guard !nextOverflowed, let grown = realloc(ptr, nextCapacity) else {
+                let (nextCapacity, overflowed) = capacity.addingReportingOverflow(chunkSize)
+                guard !overflowed else {
+                    throw CocoaError.errorWithFilePath(inPath, errno: EFBIG, reading: true)
+                }
+                guard let grown = realloc(ptr, nextCapacity) else {
                     throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
                 }
                 ptr = grown
+                capacity = nextCapacity
             }
         } catch {
             free(ptr)
             throw error
         }
-        if totalRead == 0 {
-            // Callers drop a zero-length result and do not free its bytes.
-            free(ptr)
-            result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
-        } else {
-            result = ReadBytesResult(bytes: ptr, length: totalRead, deallocator: .free)
-        }
+        result = ReadBytesResult(bytes: ptr, length: totalRead, deallocator: .free)
         #else
         result = ReadBytesResult(bytes: nil, length: 0, deallocator: nil)
         #endif
