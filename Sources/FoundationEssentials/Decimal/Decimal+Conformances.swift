@@ -112,37 +112,57 @@ extension Decimal /* : FloatingPoint */ {
     /// The radix used by decimal numbers.
     public static var radix: Int { 10 }
 
-    /// Creates and initializes a decimal with the provided unsigned integer value.
+    /// Creates a new decimal floating-point value from the given unsigned integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    @inlinable
     public init(_ value: UInt8) {
         self.init(UInt64(value))
     }
 
-    /// Creates and initializes a decimal with the provided integer value.
+    /// Creates a new decimal floating-point value from the given signed integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    @inlinable
     public init(_ value: Int8) {
         self.init(Int64(value))
     }
 
-    /// Creates and initializes a decimal with the provided unsigned integer value.
+    /// Creates a new decimal floating-point value from the given unsigned integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    @inlinable
     public init(_ value: UInt16) {
         self.init(UInt64(value))
     }
 
-    /// Creates and initializes a decimal with the provided integer value.
+    /// Creates a new decimal floating-point value from the given signed integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    @inlinable
     public init(_ value: Int16) {
         self.init(Int64(value))
     }
 
-    /// Creates and initializes a decimal with the provided unsigned integer value.
+    /// Creates a new decimal floating-point value from the given unsigned integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    @inlinable
     public init(_ value: UInt32) {
         self.init(UInt64(value))
     }
 
-    /// Creates and initializes a decimal with the provided integer value.
+    /// Creates a new decimal floating-point value from the given signed integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    @inlinable
     public init(_ value: Int32) {
         self.init(Int64(value))
     }
 
-    /// Creates and initializes a decimal with the provided unsigned integer value.
+    /// Creates a new decimal floating-point value from the given unsigned integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
     public init(_ value: UInt64) {
         self = Decimal()
         if value == 0 { return }
@@ -152,7 +172,9 @@ extension Decimal /* : FloatingPoint */ {
         compact()
     }
 
-    /// Creates and initializes a decimal with the provided integer value.
+    /// Creates a new decimal floating-point value from the given signed integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
     public init(_ value: Int64) {
         self = .init(value.magnitude)
         if value < 0 {
@@ -160,12 +182,16 @@ extension Decimal /* : FloatingPoint */ {
         }
     }
 
-    /// Creates and initializes a decimal with the provided unsigned integer value.
+    /// Creates a new decimal floating-point value from the given unsigned integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
     public init(_ value: UInt) {
         self.init(UInt64(value))
     }
 
-    /// Creates and initializes a decimal with the provided integer value.
+    /// Creates a new decimal floating-point value from the given signed integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
     public init(_ value: Int) {
         self.init(Int64(value))
     }
@@ -265,7 +291,7 @@ extension Decimal /* : FloatingPoint */ {
 
         self = significand
         do {
-            self = try significand._multiplyByPowerOfTen(power: exponent, roundingMode: .plain)
+            self = try significand._multiplied(byPowerOfTen: exponent, rounding: .toNearestOrAwayFromZero)
         } catch _CalculationError.underflow {
             self = 0
             return
@@ -386,9 +412,6 @@ extension Decimal /* : FloatingPoint */ {
 
     /// A Boolean value indicating whether this decimal is a signaling NaN.
     public var isSignalingNaN: Bool { false }
-
-    @available(*, unavailable, message: "Decimal does not yet fully adopt FloatingPoint.")
-    public mutating func formTruncatingRemainder(dividingBy other: Decimal) { fatalError("Decimal does not yet fully adopt FloatingPoint") }
 
     /// The least representable value that is greater than this decimal.
     public var nextUp: Decimal {
@@ -701,7 +724,7 @@ extension Decimal : SignedNumeric {
     ///   - rhs: Another value to add.
     public static func +=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._add(rhs: rhs, roundingMode: .plain)
+            let result = try lhs._adding(rhs, rounding: .toNearestOrAwayFromZero)
             lhs = result
         } catch {
             lhs = .nan
@@ -719,7 +742,7 @@ extension Decimal : SignedNumeric {
     ///   - rhs: The value to subtract.
     public static func -=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._subtract(rhs: rhs, roundingMode: .plain)
+            let result = try lhs._subtracting(rhs, rounding: .toNearestOrAwayFromZero)
             lhs = result
         } catch {
             lhs = .nan
@@ -737,7 +760,7 @@ extension Decimal : SignedNumeric {
     ///   - rhs: Another value to multiply.
     public static func *=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._multiply(by: rhs, roundingMode: .plain)
+            let result = try lhs._multiplied(by: rhs, rounding: .toNearestOrAwayFromZero)
             lhs = result
         } catch _CalculationError.underflow {
             lhs = .zero
@@ -757,7 +780,7 @@ extension Decimal : SignedNumeric {
     ///   - rhs: The value to divide `lhs` by.
     public static func /=(lhs: inout Decimal, rhs: Decimal) {
         do {
-            let result = try lhs._divide(by: rhs, roundingMode: .plain)
+            let result = try lhs._divided(by: rhs, rounding: .toNearestOrAwayFromZero)
             lhs = result
         } catch _CalculationError.underflow {
             lhs = .zero
@@ -847,5 +870,1269 @@ extension Decimal : Strideable {
     /// Returns a new value advanced by the given distance.
     public func advanced(by n: Decimal) -> Decimal {
         return self + n
+    }
+}
+
+// MARK: - APIs inspired by FloatingPoint
+
+@available(FoundationPreview 6.5, *)
+extension Decimal {
+    /// Creates a new decimal floating-point value from the given unsigned integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    public init(_ value: UInt128) {
+        self = Decimal()
+        if value == 0 { return }
+        _significand = value
+        _exponent = 0
+        _isCompact = 0
+        compact()
+    }
+
+    /// Creates a new decimal floating-point value from the given signed integer value.
+    ///
+    /// - Parameter value: The integer to convert to a decimal floating-point value.
+    public init(_ value: Int128) {
+        self = .init(value.magnitude)
+        if value < 0 {
+            self._isNegative = 1
+        }
+    }
+}
+
+@available(FoundationPreview 6.5, *)
+extension Decimal {
+    /// Adds the product of the two given values to this value in place,
+    /// computed without intermediate rounding.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    @inlinable
+    public mutating func addProduct(_ lhs: Decimal, _ rhs: Decimal) {
+        self = self.addingProduct(lhs, rhs)
+    }
+
+    /// Returns the result of adding the product of the two given values to this value,
+    /// computed without intermediate rounding.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    /// - Returns: The product of `lhs` and `rhs`, added to this value.
+    public func addingProduct(_ lhs: Decimal, _ rhs: Decimal) -> Decimal {
+        do {
+            return try self._addingProductReportingInexact(
+                lhs,
+                rhs,
+                rounding: .toNearestOrEven
+            ).value
+        } catch _CalculationError.underflow {
+            return .zero
+        } catch {
+            return .nan
+        }
+    }
+
+    /// Replaces this value with the remainder of itself divided by the given value.
+    ///
+    /// For two finite values `x` and `y`,
+    /// the remainder of dividing `x` by `y` satisfies `x == y * q + r`,
+    /// where `q` is the integer nearest to `x / y`.
+    /// If `x / y` is exactly halfway between two integers, `q` is chosen to be even.
+    /// Note that `q` is *not* `x / y` computed in floating-point arithmetic,
+    /// and that `q` may not be representable in any available integer type.
+    ///
+    /// If this value and `other` are both finite numbers,
+    /// the remainder is in the closed range `-abs(other / 2)...abs(other / 2)`.
+    /// This method is always exact.
+    ///
+    /// - Parameter other: The value to use when dividing this value.
+    @inlinable
+    public mutating func formRemainder(dividingBy other: Decimal) {
+        self = self.remainder(dividingBy: other)
+    }
+
+    /// Replaces this value with its square root, rounded to a representable value.
+    @inlinable
+    public mutating func formSquareRoot() {
+        self = self.squareRoot()
+    }
+
+    /// Replaces this value with the remainder of itself divided by the given value
+    /// using truncating division.
+    ///
+    /// Performing truncating division with floating-point values results in a truncated integer quotient and a remainder.
+    /// For values `x` and `y` and their truncated integer quotient `q`,
+    /// the remainder `r` satisfies `x == y * q + r`.
+    ///
+    /// If this value and `other` are both finite numbers,
+    /// the truncating remainder has the same sign as this value if nonzero and is strictly smaller in magnitude than `other`.
+    /// This method is always exact.
+    ///
+    /// - Parameter other: The value to use when dividing this value.
+    @inlinable
+    public mutating func formTruncatingRemainder(dividingBy other: Decimal) {
+        self = self.truncatingRemainder(dividingBy: other)
+    }
+
+#if false
+    /// Returns the value with greater magnitude.
+    ///
+    /// This method returns the value with greater magnitude of the two given values,
+    /// preserving order and eliminating NaN when possible.
+    /// For two values `x` and `y`, the result of `maximumMagnitudeNumber(x, y)` is:
+    /// `x` if `x.magnitude > y.magnitude`, `y` if `x.magnitude < y.magnitude`,
+    /// or whichever of `x` or `y` is a number if the other is NaN.
+    /// If both `x` and `y` are NaN, the result is NaN.
+    /// If `x` and `y` are of equal magnitude, the result is the same as that of `maximumNumber(x, y)`.
+    ///
+    /// - Parameters:
+    ///   - x: A decimal floating-point value to compare.
+    ///   - y: Another decimal floating-point value to compare.
+    /// - Returns: Whichever of `x` or `y` has greater magnitude, or whichever is a number if the other is NaN.
+    @inlinable
+    public static func maximumMagnitudeNumber(
+        _ x: Decimal,
+        _ y: Decimal
+    ) -> Decimal {
+        if x.isNaN && y.isNaN { return x }
+        if x.isNaN { return y }
+        if y.isNaN { return x }
+        let abs = (x: abs(x), y: abs(y))
+        if abs.x > abs.y { return x }
+        if abs.y > abs.x { return y }
+        // Tiebreaker: return the greater value.
+        return x > y ? x : y
+    }
+
+    /// Returns the greater of the two given values.
+    ///
+    /// This method returns the maximum of two values,
+    /// preserving order and eliminating NaN when possible.
+    /// For two values `x` and `y`, the result of `maximumNumber(x, y)` is:
+    /// `x` if `x > y`, `y` if `x < y`, or whichever of `x` or `y` is a number if the other is NaN.
+    /// If both `x` and `y` are NaN, the result is NaN.
+    ///
+    /// - Parameters:
+    ///   - x: A decimal floating-point value to compare.
+    ///   - y: Another decimal floating-point value to compare.
+    /// - Returns: The greater of `x` and `y`, or whichever is a number if the other is NaN.
+    @inlinable
+    public static func maximumNumber(_ x: Decimal, _ y: Decimal) -> Decimal {
+        if x.isNaN && y.isNaN { return x }
+        if x.isNaN { return y }
+        if y.isNaN { return x }
+        return x > y ? x : y
+    }
+
+    /// Returns the value with the lesser magnitude.
+    ///
+    /// This method returns the value with lesser magnitude of the two given values,
+    /// preserving order and eliminating NaN when possible.
+    /// For two values `x` and `y`, the result of `minimumMagnitudeNumber(x, y)` is:
+    /// `x` if `x.magnitude < y.magnitude`, `y` if `y.magnitude < x.magnitude`,
+    /// or whichever of `x` or `y` is a number if the other is NaN.
+    /// If both `x` and `y` are NaN, the result is NaN.
+    /// If `x` and `y` are of equal magnitude, the result is the same as that of `minimumNumber(x, y)`.
+    ///
+    /// - Parameters:
+    ///   - x: A decimal floating-point value to compare.
+    ///   - y: Another decimal floating-point value to compare.
+    /// - Returns: Whichever of `x` or `y` has lesser magnitude, or whichever is a number if the other is NaN.
+    @inlinable
+    public static func minimumMagnitudeNumber(
+        _ x: Decimal,
+        _ y: Decimal
+    ) -> Decimal {
+        if x.isNaN && y.isNaN { return x }
+        if x.isNaN { return y }
+        if y.isNaN { return x }
+        let abs = (x: abs(x), y: abs(y))
+        if abs.x < abs.y { return x }
+        if abs.y < abs.x { return y }
+        // Tiebreaker: return the lesser value.
+        return x < y ? x : y
+    }
+
+    /// Returns the lesser of the two given values.
+    ///
+    /// This method returns the minimum of two values,
+    /// preserving order and eliminating NaN when possible.
+    /// For two values `x` and `y`, the result of `minimumNumber(x, y)` is:
+    /// `x` if `x < y`, `y` if `y < x`, or whichever of `x` or `y` is a number if the other is NaN.
+    /// If both `x` and `y` are NaN, the result is NaN.
+    ///
+    /// - Parameters:
+    ///   - x: A decimal floating-point value to compare.
+    ///   - y: Another decimal floating-point value to compare.
+    /// - Returns: The lesser of `x` and `y`, or whichever is a number if the other is NaN.
+    @inlinable
+    public static func minimumNumber(_ x: Decimal, _ y: Decimal) -> Decimal {
+        if x.isNaN && y.isNaN { return x }
+        if x.isNaN { return y }
+        if y.isNaN { return x }
+        return x < y ? x : y
+    }
+#endif
+
+    /// Returns the remainder of this value divided by the given value.
+    ///
+    /// For two finite values `x` and `y`,
+    /// the remainder of dividing `x` by `y` satisfies `x == y * q + r`,
+    /// where `q` is the integer nearest to `x / y`.
+    /// If `x / y` is exactly halfway between two integers, `q` is chosen to be even.
+    /// Note that `q` is *not* `x / y` computed in floating-point arithmetic,
+    /// and that `q` may not be representable in any available integer type.
+    ///
+    /// If this value and `other` are both finite numbers,
+    /// the remainder is in the closed range `-abs(other / 2)...abs(other / 2)`.
+    /// This method is always exact.
+    ///
+    /// - Parameter other: The value to use when dividing this value.
+    /// - Returns: The remainder of this value divided by `other`.
+    public func remainder(dividingBy other: Decimal) -> Decimal {
+        do {
+            return try self._remainder(truncating: false, dividingBy: other)
+        } catch {
+            return .nan
+        }
+    }
+
+    /// Rounds the value to an integral value using the specified rounding rule.
+    ///
+    /// For more information about the available rounding rules,
+    /// see the `FloatingPointRoundingRule` type.
+    ///
+    /// - Parameter rule: The rounding rule to use.
+    @inlinable
+    public mutating func round(
+        _ rule: FloatingPointRoundingRule = .toNearestOrAwayFromZero
+    ) {
+        self = self.rounded(rule)
+    }
+
+    /// Returns this value rounded to an integral value using the specified rounding rule.
+    ///
+    /// For more information about the available rounding rules,
+    /// see the `FloatingPointRoundingRule` type.
+    ///
+    /// - Parameter rule: The rounding rule to use.
+    /// - Returns: The integral value found by rounding using `rule`.
+    public func rounded(
+        _ rule: FloatingPointRoundingRule = .toNearestOrAwayFromZero
+    ) -> Decimal {
+        do {
+            return try self._rounded(rule, minExponent: 0)
+        } catch _CalculationError.underflow {
+            return .zero
+        } catch {
+            return .nan
+        }
+    }
+
+    /// Returns the square root of the value, rounded to a representable value.
+    ///
+    /// - Returns: The square root of the value.
+    public func squareRoot() -> Decimal {
+        do {
+            return try self._squareRootReportingInexact(rounding: .toNearestOrEven).value
+        } catch _CalculationError.underflow {
+            return .zero
+        } catch {
+            return .nan
+        }
+    }
+
+    /// Returns the remainder of this value divided by the given value using truncating division.
+    ///
+    /// Performing truncating division with floating-point values results in a truncated integer quotient and a remainder.
+    /// For values `x` and `y` and their truncated integer quotient `q`,
+    /// the remainder `r` satisfies `x == y * q + r`.
+    ///
+    /// If this value and `other` are both finite numbers,
+    /// the truncating remainder has the same sign as this value if nonzero and is strictly smaller in magnitude than `other`.
+    /// This method is always exact.
+    ///
+    /// - Parameter other: The value to use when dividing this value.
+    /// - Returns: The remainder of this value divided by `other` using truncating division.
+    public func truncatingRemainder(dividingBy other: Decimal) -> Decimal {
+        do {
+            return try self._remainder(truncating: true, dividingBy: other)
+        } catch {
+            return .nan
+        }
+    }
+}
+
+@inline(always)
+private func _boundedMinExponent(scale: Int) -> Int32 {
+    precondition(scale >= -165, "Scale must not be less than -165")
+    return -Int32(min(scale, -Int(Decimal._minExponent)))
+}
+
+@available(FoundationPreview 6.5, *)
+extension Decimal {
+    /// Adds the given value to this value in place.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func add(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.adding(other, rounding: rule, scale: scale)
+    }
+
+    /// Adds the given value to this value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
+    @inlinable
+    public mutating func addReportingInexact(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let addition = self.addingReportingInexact(
+            other,
+            rounding: rule,
+            scale: scale
+        )
+        self = addition.value
+        return addition.inexact
+    }
+
+    /// Returns the sum of this value and the given value.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The sum of this value and `other`, rounded as specified.
+    public func adding(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._adding(
+                other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns the sum of this value and the given value, along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to add to this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the sum of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
+    public func addingReportingInexact(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || other.isNaN {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._addingReportingInexact(
+                other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Subtracts the given value from this value in place.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func subtract(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.subtracting(
+            other,
+            rounding: rule,
+            scale: scale
+        )
+    }
+
+    /// Subtracts the given value from this value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
+    @inlinable
+    public mutating func subtractReportingInexact(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let subtraction = self.subtractingReportingInexact(
+            other,
+            rounding: rule,
+            scale: scale
+        )
+        self = subtraction.value
+        return subtraction.inexact
+    }
+
+    /// Returns the difference obtained by subtracting the given value from this value.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The difference of this value and `other`, rounded as specified.
+    public func subtracting(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._subtracting(
+                other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns the difference obtained by subtracting the given value from this value,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to subtract from this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the difference of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
+    public func subtractingReportingInexact(
+        _ other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || other.isNaN {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._subtractingReportingInexact(
+                other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Multiplies this value by the given value in place.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func multiply(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.multiplied(
+            by: other,
+            rounding: rule,
+            scale: scale
+        )
+    }
+
+    /// Multiplies this value by the given value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
+    @inlinable
+    public mutating func multiplyReportingInexact(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let multiplication = self.multipliedReportingInexact(
+            by: other,
+            rounding: rule,
+            scale: scale
+        )
+        self = multiplication.value
+        return multiplication.inexact
+    }
+
+    /// Returns the product of this value and the given value.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The product of this value and `other`, rounded as specified.
+    public func multiplied(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._multiplied(
+                by: other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns the product of this value and the given value,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value to multiply by this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the product of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
+    public func multipliedReportingInexact(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || other.isNaN {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._multipliedReportingInexact(
+                by: other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Multiplies this value by the given power of ten in place.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func multiply(
+        byPowerOfTen power: Int,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.multiplied(
+            byPowerOfTen: power,
+            rounding: rule,
+            scale: scale
+        )
+    }
+
+    /// Multiplies this value by the given power of ten in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
+    @inlinable
+    public mutating func multiplyReportingInexact(
+        byPowerOfTen power: Int,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let multiplication = self.multipliedReportingInexact(
+            byPowerOfTen: power,
+            rounding: rule,
+            scale: scale
+        )
+        self = multiplication.value
+        return multiplication.inexact
+    }
+
+    /// Returns this value multiplied by the given power of ten.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The result of this value multiplied by ten raised to `power`, rounded as specified.
+    public func multiplied(
+        byPowerOfTen power: Int,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._multiplied(
+                byPowerOfTen: power,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns this value multiplied by the given power of ten,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - power: The power of ten by which to multiply this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the result of this value multiplied by ten raised to `power`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
+    public func multipliedReportingInexact(
+        byPowerOfTen power: Int,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._multipliedReportingInexact(
+                byPowerOfTen: power,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Divides this value by the given value in place.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func divide(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.divided(by: other, rounding: rule, scale: scale)
+    }
+
+    /// Divides this value by the given value in place, reporting whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN or if `other` is zero, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
+    @inlinable
+    public mutating func divideReportingInexact(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let division = self.dividedReportingInexact(
+            by: other,
+            rounding: rule,
+            scale: scale
+        )
+        self = division.value
+        return division.inexact
+    }
+
+    /// Returns the quotient obtained by dividing this value by the given value.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The quotient of this value and `other`, rounded as specified.
+    public func divided(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._divided(
+                by: other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch /* divideByZero */ {
+            // Work around a compiler bug that both requires a catch-all
+            // and warns it'll never be executed.
+            precondition(error == .divideByZero)
+            return .nan
+        }
+    }
+
+    /// Returns the quotient obtained by dividing this value by the given value,
+    /// along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If either operand is NaN or if `other` is zero, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - other: The value by which to divide this value.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the quotient of this value and `other`, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
+    public func dividedReportingInexact(
+        by other: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || other.isNaN {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._dividedReportingInexact(
+                by: other,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch /* .divideByZero */ {
+            // Work around a compiler bug that both requires a catch-all
+            // and warns it'll never be executed.
+            precondition(error == .divideByZero)
+            return (.nan, false)
+        }
+    }
+
+    /// Adds the product of the two given values to this value in place,
+    /// computed without intermediate rounding.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func addProduct(
+        _ lhs: Decimal,
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.addingProduct(
+            lhs,
+            rhs,
+            rounding: rule,
+            scale: scale
+        )
+    }
+
+    /// Adds the product of the two given values to this value in place,
+    /// computed without intermediate rounding, reporting whether the result is inexact.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If any operand is NaN, the result is NaN and this method returns `false`.
+    /// If the result overflows to NaN or underflows to zero, this method returns `true`.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result or if the result overflowed or underflowed; otherwise, `false`.
+    @inlinable
+    public mutating func addProductReportingInexact(
+        _ lhs: Decimal,
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let addition = self.addingProductReportingInexact(
+            lhs,
+            rhs,
+            rounding: rule,
+            scale: scale
+        )
+        self = addition.value
+        return addition.inexact
+    }
+
+    /// Returns the result of adding the product of the two given values to this value,
+    /// computed without intermediate rounding.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The product of `lhs` and `rhs`, added to this value, rounded as specified.
+    public func addingProduct(
+        _ lhs: Decimal,
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._addingProductReportingInexact(
+                lhs,
+                rhs,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            ).value
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns the result of adding the product of the two given values to this value,
+    /// computed without intermediate rounding, along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// This method is the fused multiply-add operation.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If any operand is NaN, the result is NaN and `inexact` is `false`.
+    /// If the result overflows to NaN or underflows to zero, `inexact` is `true`.
+    ///
+    /// - Parameters:
+    ///   - lhs: One of the values to multiply before adding to this value.
+    ///   - rhs: The other value to multiply.
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the product of `lhs` and `rhs`, added to this value, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result or the result overflowed or underflowed.
+    public func addingProductReportingInexact(
+        _ lhs: Decimal,
+        _ rhs: Decimal,
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || lhs.isNaN || rhs.isNaN {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._addingProductReportingInexact(
+                lhs,
+                rhs,
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Replaces this value with its square root.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func formSquareRoot(
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.squareRoot(rounding: rule, scale: scale)
+    }
+
+    /// Replaces this value with its square root, reporting whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN or negative, the result is NaN and this method returns `false`.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: `true` if rounding changed the exact result; otherwise, `false`.
+    @inlinable
+    public mutating func formSquareRootReportingInexact(
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Bool {
+        let root = self.squareRootReportingInexact(
+            rounding: rule,
+            scale: scale
+        )
+        self = root.value
+        return root.inexact
+    }
+
+    /// Rounds this value in place using the specified rounding rule and scale.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    @inlinable
+    public mutating func round(
+        _ rule: FloatingPointRoundingRule,
+        scale: Int
+    ) {
+        self = self.rounded(rule, scale: scale)
+    }
+
+    /// Returns this value rounded using the specified rounding rule and scale.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The value found by rounding using `rule` and `scale`.
+    public func rounded(
+        _ rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._roundedReportingInexact(
+                rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            ).value
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns the square root of this value.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: The square root of this value, rounded as specified.
+    public func squareRoot(
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> Decimal {
+        do throws(_CalculationError) {
+            return try self._squareRootReportingInexact(
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            ).value
+        } catch .overflow {
+            return .nan
+        } catch .underflow {
+            return .zero
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
+    }
+
+    /// Returns the square root of this value, along with a Boolean value indicating whether the result is inexact.
+    ///
+    /// The result is rounded no more than once using `rule` to at most *n* decimal places,
+    /// where *n* is `min(scale, 128)`.
+    /// For example, a scale of `2` rounds to two decimal places;
+    /// a scale of `0` rounds to an integral value.
+    ///
+    /// If this value is NaN or less than zero, the result is NaN and `inexact` is `false`.
+    ///
+    /// - Parameters:
+    ///   - rule: The rounding rule to use.
+    ///   - scale: The maximum number of digits after the decimal separator;
+    ///     if negative, the limit extends to digits before the decimal separator, but it must not be less than `-165`.
+    /// - Returns: A tuple containing the square root of this value, rounded as specified,
+    ///   and a Boolean value indicating whether rounding changed the exact result.
+    public func squareRootReportingInexact(
+        rounding rule: FloatingPointRoundingRule,
+        scale: Int
+    ) -> (value: Decimal, inexact: Bool) {
+        if self.isNaN || self < .zero {
+            return (.nan, false)
+        }
+        do throws(_CalculationError) {
+            return try self._squareRootReportingInexact(
+                rounding: rule,
+                minExponent: _boundedMinExponent(scale: scale)
+            )
+        } catch .overflow {
+            return (.nan, true)
+        } catch .underflow {
+            return (.zero, true)
+        } catch {
+            fatalError("Unexpected calculation error")
+        }
     }
 }
