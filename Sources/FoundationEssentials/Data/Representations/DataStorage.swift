@@ -70,10 +70,6 @@ internal final class __DataStorage : @unchecked Sendable {
         return realloc(ptr, newSize)
 #endif
     }
-
-    static func deallocate(_ ptr: UnsafeMutableRawPointer) {
-        free(ptr)
-    }
     
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
     static func move(_ dest_: UnsafeMutableRawPointer, _ source_: UnsafeRawPointer?, _ num_: Int) {
@@ -400,7 +396,7 @@ internal final class __DataStorage : @unchecked Sendable {
             if let dealloc = _deallocator {
                 dealloc(bytes, length)
             } else {
-                __DataStorage.deallocate(bytes)
+                free(bytes)
             }
         }
         _deallocator = nil
