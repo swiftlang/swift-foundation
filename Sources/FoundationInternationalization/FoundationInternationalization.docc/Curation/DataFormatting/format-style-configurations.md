@@ -14,3 +14,6 @@ Behaviors for traits like numeric precision, rounding, and scale, used for forma
 
 - ``DescriptiveNumberFormatConfiguration``
 
+### Capitalization
+
+- ``FormatStyleCapitalizationContext``

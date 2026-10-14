@@ -1,0 +1,2 @@
+# ``FoundationEssentials/Decimal/FormatStyle/Configuration``
+
