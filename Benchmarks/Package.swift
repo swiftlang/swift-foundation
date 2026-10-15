@@ -6,9 +6,11 @@ enum UsePackage {
     /// Use a known package hash downloaded from GitHub. Set with env var `USE_PACKAGE`
     case useGitHubPackage
 
-    /// Use a local package, rooted at `String`. For example ".." to back up one directory from the Benchmark package. This is useful when testing local changes.
-    /// Set with env var `SWIFTCI_USE_LOCAL_DEPS=<path to root>`, for example `SWIFTCI_USE_LOCAL_DEPS=..`
+    /// Use a local package, rooted at `String`. `SWIFTCI_USE_LOCAL_DEPS` is also visible to `../Package.swift`, which resolves other package dependencies from local sibling checkouts as well.
     case useLocalPackage(String)
+
+    /// Use a local swift-foundation checkout, rooted at `String`, but fetch other package dependencies from remote.
+    case useLocalPackageRemoteDeps(String)
 
     /// Use Foundation.framework (Darwin) or the toolchain (Linux)
     case useToolchain
@@ -17,7 +19,7 @@ enum UsePackage {
         switch self {
             case .useGitHubPackage:
                 return "Using GitHub package"
-            case .useLocalPackage(let root):
+            case .useLocalPackage(let root), .useLocalPackageRemoteDeps(let root):
                 #if os(macOS)
                     return "Using local package checkout at \(root)/swift-foundation"
                 #else
@@ -36,6 +38,7 @@ enum UsePackage {
 let usePackage: UsePackage
 
 if let useLocalPackageEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalPackageEnv.isEmpty {
+    // CI mode: local swift-foundation with all other package dependencies also resolved locally
     if useLocalPackageEnv == "1" {
         usePackage = .useLocalPackage("../..")
     } else {
@@ -43,8 +46,11 @@ if let useLocalPackageEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useL
     }
 } else if let usePackageEnv = Context.environment["USE_PACKAGE"], !usePackageEnv.isEmpty {
     usePackage = .useGitHubPackage
-} else {
+} else if Context.environment["USE_TOOLCHAIN"] != nil {
     usePackage = .useToolchain
+} else {
+    // Default: local swift-foundation with other package dependencies fetched from remote
+    usePackage = .useLocalPackageRemoteDeps("../..")
 }
 
 print("swift-foundation benchmarks: \(usePackage.description)")
@@ -61,7 +67,7 @@ var i18nTargetDependencies : [Target.Dependency] = []
 var swiftSettings : [SwiftSetting] = [.unsafeFlags(["-Rmodule-loading"]), .enableUpcomingFeature("MemberImportVisibility")]
 
 switch usePackage {
-    case .useLocalPackage(let root):
+    case .useLocalPackage(let root), .useLocalPackageRemoteDeps(let root):
         #if os(macOS)
             packageDependency.append(.package(name: "foundation-local", path: "\(root)/swift-foundation"))
             targetDependency.append(.product(name: "FoundationEssentials", package: "foundation-local"))
