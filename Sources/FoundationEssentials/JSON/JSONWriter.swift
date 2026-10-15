@@ -237,17 +237,17 @@ internal struct JSONWriter: ~Copyable {
         guard !data.isEmpty else { return }
         // Encoded in chunks so that large Data is never duplicated in full. A multiple of 3 so that only the final chunk can need padding.
         let inputChunkSize = 48 * 1024
-        data.withUnsafeBytes { rawInput in
-            let input = rawInput.assumingMemoryBound(to: UInt8.self)
-            withUnsafeTemporaryAllocation(of: UInt8.self, capacity: Base64.encodeComputeCapacity(bytes: Swift.min(input.count, inputChunkSize), options: [])) { output in
-                var chunkStart = 0
-                while chunkStart < input.count {
-                    let chunkEnd = Swift.min(chunkStart + inputChunkSize, input.count)
-                    var length = 0
-                    Base64._encode(input: UnsafeBufferPointer(rebasing: input[chunkStart ..< chunkEnd]), buffer: output, length: &length, options: [])
-                    serializeStringContents(utf8: UnsafeBufferPointer(rebasing: output[..<length]))
-                    chunkStart = chunkEnd
+        let input = data.bytes
+        withTemporaryAllocation(byteCount: Base64.encodeComputeCapacity(bytes: Swift.min(input.byteCount, inputChunkSize), options: []), alignment: 1) { output in
+            var chunkStart = 0
+            while chunkStart < input.byteCount {
+                let chunkEnd = Swift.min(chunkStart + inputChunkSize, input.byteCount)
+                output.removeAll()
+                Base64._encode(input: input.extracting(chunkStart ..< chunkEnd), buffer: &output, options: [])
+                output.bytes.withUnsafeBytes {
+                    serializeStringContents(utf8: $0.assumingMemoryBound(to: UInt8.self))
                 }
+                chunkStart = chunkEnd
             }
         }
     }
