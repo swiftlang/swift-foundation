@@ -35,6 +35,7 @@ add_library(FoundationEssentials
     WinSDK+Extensions.swift)
 
 add_subdirectory(AttributedString)
+add_subdirectory(Bytes)
 add_subdirectory(Calendar)
 add_subdirectory(CharacterSet)
 add_subdirectory(Codable)
