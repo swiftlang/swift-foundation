@@ -231,7 +231,7 @@ extension _URLInfo {
             }
             return base
         }
-        #if !NO_FILESYSTEM
+        #if !NO_FILESYSTEM && !hasFeature(Embedded)
         if let cwd = URL.currentDirectoryOrNil() {
             flags.insert(.isFileURL)
             return cwd
@@ -486,7 +486,7 @@ extension _URLInfo {
                         original._append(copying: stringSpan.extracting(hostRange))
                     } else {
                         let shouldPercentDecode = (
-                            !flags.contains(.hasSpecialScheme) || flags.contains(.isIPLiteral) || _uidnaHook() == nil
+                            !flags.contains(.hasSpecialScheme) || flags.contains(.isIPLiteral) || !RFC3986Parser.supportsIDNA
                         )
                         if shouldPercentDecode {
                             decodeAndAppend(hostRange)

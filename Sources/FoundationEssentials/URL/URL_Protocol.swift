@@ -82,7 +82,7 @@ internal protocol _URLProtocol: AnyObject, Sendable {
     func deletingPathExtension() -> URL?
     var standardized: URL? { get }
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !hasFeature(Embedded)
     var standardizedFileURL: URL? { get }
     func resolvingSymlinksInPath() -> URL?
 #endif

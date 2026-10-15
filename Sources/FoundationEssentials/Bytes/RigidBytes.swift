@@ -12,6 +12,10 @@
 
 // MARK: - RigidBytes
 
+#if hasFeature(Embedded)
+@frozen
+@usableFromInline
+#endif
 @safe
 struct RigidBytes: ~Copyable {
     internal var _pointer: Optional<UnsafeMutableRawPointer>
