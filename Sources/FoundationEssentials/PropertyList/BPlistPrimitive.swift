@@ -1059,9 +1059,12 @@ extension RawSpan {
         case 0...8:
             return self.extracting(unchecked: Range(uncheckedBounds: (byteOffset, byteOffset &+ byteSize)))
         default:
-            // Compatibility with existing archives, which could include > 8 byte values, for which we only read the last 8 bytes.
-            let significantByteIdx = byteOffset.advanced(by: byteSize &- 8)
-            return self.extracting(unchecked: Range(uncheckedBounds: (significantByteIdx, significantByteIdx &+ 8)))
+            // The only nominal case of a >8 byte integer span are 16 byte unsigned integers with the high 8 bytes all zero. However, historically, integer sizes of many different lengths have been accepted, but only their low 8 bytes have ever been significant. Furthermore, the legacy binary plist implementation inadvertently truncated the declared width to 8 bits. Since every width comes from a marker's low nibble as `1 << n`, so any width >=256 became a width of 0, and so the resulting integers were all 0 value. This check replicates that behavior for compatibility's sake.
+            guard byteSize < 256 else {
+                return self.extracting(unchecked: Range(uncheckedBounds: (byteOffset, byteOffset)))
+            }
+            let significantByteIdx = byteOffset &+ (byteSize &- MemoryLayout<UInt64>.size)
+            return self.extracting(unchecked: Range(uncheckedBounds: (significantByteIdx, significantByteIdx &+ MemoryLayout<UInt64>.size)))
         }
     }
 

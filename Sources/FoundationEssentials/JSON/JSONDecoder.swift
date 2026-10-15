@@ -1959,14 +1959,6 @@ extension EncodingError {
     }
 }
 
-// This is a workaround for the lack of a "set value only if absent" function for Dictionary.
- extension Optional {
-     fileprivate mutating func _setIfNil(to value: Wrapped) {
-         guard _fastPath(self == nil) else { return }
-         self = value
-     }
- }
-
 internal extension JSONDecoder.KeyDecodingStrategy {
     var isDefault: Bool {
         switch self {
