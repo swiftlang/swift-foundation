@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 internal struct JSONWriter: ~Copyable {
 
     // Structures with container nesting deeper than this limit are not valid.
@@ -478,3 +480,5 @@ internal struct JSONWriter: ~Copyable {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // MARK: - XMLPlistLegacyDecodingFormat
 
 internal struct XMLPlistLegacyDecodingFormat : PlistDecodingFormat {
@@ -89,3 +91,5 @@ internal struct XMLPlistLegacyDecodingFormat : PlistDecodingFormat {
         try mapValue.integerValue(in: document, as: T.self, for: codingPathNode, additionalKey)
     }
 }
+
+#endif // !hasFeature(Embedded)

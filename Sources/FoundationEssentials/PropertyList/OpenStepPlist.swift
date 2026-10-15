@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 private struct _ParseInfo {
     let utf16 : String.UTF16View
     var curr : String.UTF16View.Index
@@ -564,3 +566,5 @@ internal struct OpenStepPlistError: Swift.Error, Equatable {
         ])
     }
 }
+
+#endif // !hasFeature(Embedded)

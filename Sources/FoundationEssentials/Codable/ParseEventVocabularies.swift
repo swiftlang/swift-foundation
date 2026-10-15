@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // Event alphabets (`ParseEventVocabulary` conformers) shared by each format's `ParseEventSource` and `ParseEventSink`. The primitive-decoder path in FoundationPreview and the framework tree-sink path both drive `IterativeParsingDriver` with the same vocabulary types.
@@ -143,3 +145,5 @@ enum BPlistVocabulary: ParseEventVocabulary {
     typealias UnkeyedContainerKind = BPlistUnkeyedContainerKind
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // Chinese lunisolar calendar engine. Years 1901-2100 come from a baked table generated from ICU (parity by construction); outside that range, month structure is computed with ICU's chnsecal rules over _CalendarAstronomy at UTC+8.
 
 // MARK: - Month-structure rules over the astronomy engine
@@ -1154,3 +1156,5 @@ extension _CalendarChinese {
         return y
     }
 }
+
+#endif // !hasFeature(Embedded)

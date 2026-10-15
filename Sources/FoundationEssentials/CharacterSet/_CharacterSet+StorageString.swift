@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // for the String-backed. Storage is Unicode scalar
 
 extension _CharacterSet {
@@ -59,3 +61,5 @@ extension _CharacterSet {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

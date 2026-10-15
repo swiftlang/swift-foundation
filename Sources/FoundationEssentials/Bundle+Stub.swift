@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !FOUNDATION_FRAMEWORK
 
 package struct Bundle: Hashable, Equatable, Sendable {
@@ -31,3 +33,5 @@ package struct Bundle: Hashable, Equatable, Sendable {
 }
 
 #endif
+
+#endif // !hasFeature(Embedded)

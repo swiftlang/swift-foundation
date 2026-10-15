@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _FoundationCShims
 internal import _ForSwiftFoundation
@@ -453,3 +455,5 @@ open class PropertyListDecoder {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension PropertyListDecoder : @unchecked Sendable {}
+
+#endif // !hasFeature(Embedded)

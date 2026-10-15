@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 struct BPlistLegacyDecodingFormat : PlistDecodingFormat {
     typealias Document = BPlistLegacyDecodingDocument
     
@@ -81,3 +83,5 @@ struct BPlistLegacyDecodingFormat : PlistDecodingFormat {
         try mapValue.integerValue(in: map, as: T.self, for: codingPathNode, additionalKey)
     }
 }
+
+#endif // !hasFeature(Embedded)

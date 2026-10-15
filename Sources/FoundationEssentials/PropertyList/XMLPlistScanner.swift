@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 internal import Synchronization
 
 private let plistBytes : StaticString = "plist"
@@ -1375,3 +1377,5 @@ extension BufferView<UInt8> {
         uncheckedSlice(from: region.startOffset, count: region.count)
     }
 }
+
+#endif // !hasFeature(Embedded)

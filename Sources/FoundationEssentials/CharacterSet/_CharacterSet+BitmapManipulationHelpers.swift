@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // MARK: Bitmap Manipulation Helpers
 
 extension _CharacterSet {
@@ -130,3 +132,5 @@ extension _CharacterSet {
         return bitmap.bytes.load(fromByteOffset: 0, as: UInt128.self).littleEndian
     }
 }
+
+#endif // !hasFeature(Embedded)

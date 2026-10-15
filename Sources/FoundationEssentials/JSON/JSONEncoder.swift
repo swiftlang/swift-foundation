@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
@@ -1594,3 +1596,5 @@ fileprivate extension JSONEncoder.KeyEncodingStrategy {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

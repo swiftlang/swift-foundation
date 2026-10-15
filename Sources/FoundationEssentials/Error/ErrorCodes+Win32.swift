@@ -1,4 +1,7 @@
 //===----------------------------------------------------------------------===//
+
+#if !hasFeature(Embedded)
+
  //
  // This source file is part of the Swift.org open source project
  //
@@ -31,3 +34,5 @@ extension Win32Error: Hashable {
     }
 }
 #endif
+
+#endif // !hasFeature(Embedded)

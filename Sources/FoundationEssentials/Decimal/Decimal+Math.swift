@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 internal let _uint128_pow10: [39 of UInt128] = [
                                                       1,    //  0
                                                      10,    //  1
@@ -1337,3 +1339,5 @@ extension Decimal {
         return (result, inexact)
     }
 }
+
+#endif // !hasFeature(Embedded)

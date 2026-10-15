@@ -9,6 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Bionic)
@@ -95,3 +97,5 @@ struct _ThreadLocal {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

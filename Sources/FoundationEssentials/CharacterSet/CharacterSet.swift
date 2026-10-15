@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 @_exported import Foundation // Clang module
 import CoreFoundation
@@ -1589,3 +1591,5 @@ extension CFCharacterSet {
     }
 }
 #endif
+
+#endif // !hasFeature(Embedded)

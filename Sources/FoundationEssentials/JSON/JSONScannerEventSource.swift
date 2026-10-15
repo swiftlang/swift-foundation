@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - JSONScannerMode
@@ -708,3 +710,5 @@ struct JSONScannerEventSource<Mode: JSONScannerMode>: ParseEventSource<NullFilte
     }
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

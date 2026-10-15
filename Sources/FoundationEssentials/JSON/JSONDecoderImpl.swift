@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - JSONDecoderImpl
@@ -1068,3 +1070,5 @@ extension JSONDecoderImpl {
 }
 
 #endif  // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

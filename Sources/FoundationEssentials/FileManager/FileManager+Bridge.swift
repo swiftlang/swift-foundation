@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 
 internal import Foundation_Private.NSFileManager
@@ -192,3 +194,5 @@ final class _NSFileManagerBridge : NSObject {
 }
 
 #endif
+
+#endif // !hasFeature(Embedded)

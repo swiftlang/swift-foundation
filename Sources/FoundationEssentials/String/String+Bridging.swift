@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 
 @_exported import Foundation // Clang module
@@ -346,3 +348,5 @@ extension BidirectionalCollection where Element == Unicode.Scalar, Index == Stri
 }
 
 #endif
+
+#endif // !hasFeature(Embedded)

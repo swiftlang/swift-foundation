@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 
 // Initial API constrained to Output == Bool
@@ -147,3 +149,5 @@ extension UnkeyedDecodingContainer {
 }
 
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !hasFeature(Embedded)
