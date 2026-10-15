@@ -427,3 +427,19 @@ package final class _TimeZoneRules: Sendable {
         return zoneOffsets.initialOffsets.dstSavings
     }
 }
+
+extension _TimeZoneRules {
+    /// Creates rules from plain arrays, with no final (recurring) DST rule.
+    /// - Parameters:
+    ///   - transitions: Transition times in seconds since 1970, ascending.
+    ///   - typeOffsets: Flattened (rawOffset, dstSavings) pairs in seconds. The first pair applies before the first transition.
+    ///   - typeMap: For each transition, the index of the pair in `typeOffsets` that applies after it. Required if `transitions` is not empty.
+    ///   - finalZone: The recurring DST rule that applies from `finalStartDate` on, if any.
+    ///   - finalStartDate: When `finalZone` takes over from the listed transitions.
+    package convenience init(identifier: String, transitions: [Int64], typeOffsets: [Int32], typeMap: [UInt8]?, finalZone: _TimeZoneSingleDSTRule? = nil, finalStartDate: Date? = nil) {
+        precondition(typeOffsets.count >= 2 && typeOffsets.count % 2 == 0)
+        precondition(transitions.isEmpty || typeMap?.count == transitions.count)
+        let offsets = _TimeZoneOffsets(offsets: typeOffsets.span, offsetMap: transitions.isEmpty ? nil : typeMap?.span, identifier: identifier)
+        self.init(identifier: identifier, allTransitionTimes: transitions, zoneOffsets: offsets, finalZone: finalZone, finalStartDate: finalStartDate)
+    }
+}
