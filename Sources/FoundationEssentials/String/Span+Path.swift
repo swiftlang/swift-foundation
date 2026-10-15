@@ -218,37 +218,41 @@ extension Span<UInt8> {
         return lastDot
     }
 
-    @inline(__always)
-    func starts(with prefix: StaticString) -> Bool {
-        let prefixLength = prefix.utf8CodeUnitCount
-        guard prefixLength > 0 else { return true }
-        guard self.count >= prefixLength else { return false }
-        // Precondition: self.count > 0
-        return withUnsafeBufferPointer { buffer in
-            memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
+    /// Returns whether this path refers to a directory, i.e. whether it ends
+    /// with `"/"`, or with a `"."` or `".."` component.
+    var hasDirectoryPath: Bool {
+        guard count > 0 else {
+            return false
         }
+        let last = self[count - 1]
+        if last == ._slash {
+            return true // Ends with "/"
+        }
+
+        guard last == ._dot else {
+            return false
+        }
+        // Find the start of the trailing "." or ".." component
+        var componentStart = count - 1
+        if componentStart > 0 && self[componentStart - 1] == ._dot {
+            componentStart -= 1
+        }
+        // Is "." or "..", or ends with "/." or "/.."
+        return componentStart == 0 || self[componentStart - 1] == ._slash
     }
 
     /// Returns a `String` by compressing consecutive forward slashes.
     func slashCompressedString() -> String {
-        String(unsafeUninitializedCapacity: count) { buffer in
-            _compressSlashes(into: buffer)
+        String(_capacity: count) { output in
+            var prev = UInt8(0)
+            for i in indices {
+                let v = self[i]
+                if v != ._slash || prev != ._slash {
+                    output.append(v)
+                }
+                prev = v
+            }
         }
-    }
-
-    /// - Precondition: `buffer.count >= self.count`
-    private func _compressSlashes(into buffer: UnsafeMutableBufferPointer<UInt8>) -> Int {
-        precondition(buffer.count >= count)
-        var writeIndex = 0, prev = UInt8(0), i = 0
-        while i < count {
-            let v = self[i]
-            buffer[writeIndex] = v
-            // Branchless skip of duplicate slashes
-            writeIndex &+= (v == ._slash && prev == ._slash) ? 0 : 1
-            prev = v
-            i &+= 1
-        }
-        return writeIndex
     }
 }
 

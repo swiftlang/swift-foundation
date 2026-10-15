@@ -320,6 +320,25 @@ internal enum URLEncoder {
         }
     }
 
+    @_lifetime(output: copy output)
+    static func percentDecodeValidUnchecked(
+        input: borrowing Span<UInt8>,
+        output: inout OutputSpan<UInt8>
+    ) {
+        precondition(output.freeCapacity >= input.count, "Insufficient space to percent-decode input")
+        input.withUnsafeBufferPointer { inputBuffer in
+            output.withUnsafeMutableBufferPointer { outputBuffer, initializedCount in
+                guard let written = percentDecodeUnchecked(
+                    input: inputBuffer,
+                    output: .init(rebasing: outputBuffer[initializedCount...])
+                ) else {
+                    preconditionFailure("Malformed percent-encoding in known-valid URL input")
+                }
+                initializedCount += written
+            }
+        }
+    }
+
     // MARK: String encoding and decoding
 
     /// Percent-encodes any UTF8 bytes in `string` that are not allowed

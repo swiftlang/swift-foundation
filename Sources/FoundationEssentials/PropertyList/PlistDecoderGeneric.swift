@@ -10,47 +10,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-protocol PlistDecodingMap: AnyObject {
+protocol PlistDecodingDocument: AnyObject {
     associatedtype Value
     associatedtype ContainedValueReference
-    
-    associatedtype DictionaryIterator: PlistDictionaryIterator<ContainedValueReference>
+
+    associatedtype DictionaryIterator: PlistDictionaryIterator<ContainedValueReference> & ~Copyable & ~Escapable
     associatedtype ArrayIterator: PlistArrayIterator<ContainedValueReference>
 
-    static var nullValue: Value { get }
-    
     func copyInBuffer()
     var topObject: Value { get throws }
-    
+
     @inline(__always)
     func value(from reference: ContainedValueReference) throws -> Value
 }
 
-protocol PlistDictionaryIterator<ValueReference> {
+protocol PlistDictionaryIterator<ValueReference>: ~Copyable, ~Escapable {
     associatedtype ValueReference
     mutating func next() throws -> (key: ValueReference, value: ValueReference)?
 }
 
 protocol PlistArrayIterator<ValueReference> {
     associatedtype ValueReference
-    mutating func next() -> ValueReference?
+    mutating func next() throws -> ValueReference?
 }
 
 protocol PlistDecodingFormat {
-    associatedtype Map : PlistDecodingMap
-    
-    static func container<Key: CodingKey>(keyedBy type: Key.Type, for value: Map.Value, referencing: _PlistDecoder<Self>, codingPathNode: _CodingPathNode) throws -> KeyedDecodingContainer<Key>
-    static func unkeyedContainer(for value: Map.Value, referencing: _PlistDecoder<Self>, codingPathNode: _CodingPathNode) throws -> UnkeyedDecodingContainer
-    
+    associatedtype Document : PlistDecodingDocument
+
+    static func container<Key: CodingKey>(keyedBy type: Key.Type, for value: Document.Value, referencing: _PlistDecoder<Self>, codingPathNode: _CodingPathNode) throws -> KeyedDecodingContainer<Key>
+    static func unkeyedContainer(for value: Document.Value, referencing: _PlistDecoder<Self>, codingPathNode: _CodingPathNode) throws -> UnkeyedDecodingContainer
+
     @inline(__always)
-    static func valueIsNull(_ mapValue: Map.Value) -> Bool
+    static func valueIsNull(_ mapValue: Document.Value, in document: Document) -> Bool
     
-    static func unwrapBool(from mapValue: Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Bool
-    static func unwrapDate(from mapValue: Map.Value, in: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Date
-    static func unwrapData(from mapValue: Map.Value, in: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Data
-    static func unwrapString(from mapValue: Map.Value, in: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> String
-    static func unwrapFloatingPoint<T: BinaryFloatingPoint>(from mapValue: Map.Value, in: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T
-    static func unwrapFixedWidthInteger<T: FixedWidthInteger>(from mapValue: Map.Value, in: Map, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T
+    static func unwrapBool(from mapValue: Document.Value, in: Document, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Bool
+    static func unwrapDate(from mapValue: Document.Value, in: Document, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Date
+    static func unwrapData(from mapValue: Document.Value, in: Document, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> Data
+    static func unwrapString(from mapValue: Document.Value, in: Document, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> String
+    static func unwrapFloatingPoint<T: BinaryFloatingPoint>(from mapValue: Document.Value, in: Document, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T
+    static func unwrapFixedWidthInteger<T: FixedWidthInteger>(from mapValue: Document.Value, in: Document, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)?) throws -> T
 }
 
 internal protocol _PlistDecoderEntryPointProtocol {
@@ -62,10 +60,10 @@ internal class _PlistDecoder<Format: PlistDecodingFormat> : Decoder, _PlistDecod
     // MARK: Properties
 
     /// The decoder's storage.
-    internal var storage: _PlistDecodingStorage<Format.Map.Value>
+    internal var storage: _PlistDecodingStorage<Format.Document.Value>
 
-    /// The decoder's xml plist map info.
-    internal var map : Format.Map
+    /// The decoder's xml plist document.
+    internal var document : Format.Document
 
     /// Options set on the top-level decoder.
     fileprivate let options: PropertyListDecoder._Options
@@ -80,24 +78,24 @@ internal class _PlistDecoder<Format: PlistDecodingFormat> : Decoder, _PlistDecod
     var userInfo: [CodingUserInfoKey : Any] {
         return self.options.userInfo
     }
-    
+
     // MARK: - Initialization
 
     /// Initializes `self` with the given top-level container and options.
-    internal init(referencing map: Format.Map, options: PropertyListDecoder._Options, codingPathNode: _CodingPathNode) throws {
-        self.storage = _PlistDecodingStorage<Format.Map.Value>()
-        self.map = map
-        self.storage.push(container: try map.topObject) // This is something the old implementation did and apps started relying on. Weird.
+    internal init(referencing document: Format.Document, options: PropertyListDecoder._Options, codingPathNode: _CodingPathNode) throws {
+        self.storage = _PlistDecodingStorage<Format.Document.Value>()
+        self.document = document
+        self.storage.push(container: try document.topObject) // Required for behavioral compatibility: apps may rely on the top object being pre-pushed into storage.
         self.codingPathNode = codingPathNode
         self.options = options
     }
-    
-    // This _XMLPlistDecoder may have multiple references if an init(from: Decoder) implementation allows the Decoder (this object) to escape, or if a container escapes.
-    // The XMLPlistMap might have multiple references if a superDecoder, which creates a different _XMLPlistDecoder instance but references the same XMLPlistMap, is allowed to escape.
+
+    // This `_PlistDecoder<Format>` may have multiple references if an init(from: Decoder) implementation allows the Decoder (this object) to escape, or if a container escapes.
+    // The Format.Document might have multiple references if a superDecoder, which creates a different `_PlistDecoder<Format>` instance but references the same document, is allowed to escape.
     // In either case, we need to copy-in the input buffer since it's about to go out of scope.
     func takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: Bool) {
-        if !selfIsUniquelyReferenced || !isKnownUniquelyReferenced(&map) {
-            map.copyInBuffer()
+        if !selfIsUniquelyReferenced || !isKnownUniquelyReferenced(&document) {
+            document.copyInBuffer()
         }
     }
     
@@ -118,8 +116,8 @@ extension _PlistDecoder {
     // MARK: Special case handling
 
     @inline(__always)
-    func checkNotNull<T>(_ value: Format.Map.Value, expectedType: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws {
-        if Format.valueIsNull(value) {
+    func checkNotNull<T>(_ value: Format.Document.Value, expectedType: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws {
+        if Format.valueIsNull(value, in: self.document) {
             throw DecodingError.valueNotFound(expectedType, DecodingError.Context(
                 codingPath: codingPathNode.path(byAppending: additionalKey),
                 debugDescription: "Cannot get value of \(expectedType) -- found null value instead"
@@ -128,7 +126,7 @@ extension _PlistDecoder {
     }
 
     @inline(__always)
-    func with<T>(value: Format.Map.Value, path: _CodingPathNode?, perform closure: () throws -> T) rethrows -> T {
+    func with<T>(value: Format.Document.Value, path: _CodingPathNode?, perform closure: () throws -> T) rethrows -> T {
         let oldPath = self.codingPathNode
         if let path {
             self.codingPathNode = path
@@ -145,7 +143,7 @@ extension _PlistDecoder {
         return try closure()
     }
 
-    fileprivate func unwrapGeneric<T: Decodable>(_ mapValue: Format.Map.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
+    fileprivate func unwrapGeneric<T: Decodable>(_ mapValue: Format.Document.Value, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
         if type == Date.self {
             return try self.unwrapDate(from: mapValue, for: codingPathNode, additionalKey) as! T
         }
@@ -157,41 +155,41 @@ extension _PlistDecoder {
         }
     }
     
-    fileprivate func unwrapGeneric<T: DecodableWithConfiguration>(_ mapValue: Format.Map.Value, as type: T.Type, configuration: T.DecodingConfiguration, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
+    fileprivate func unwrapGeneric<T: DecodableWithConfiguration>(_ mapValue: Format.Document.Value, as type: T.Type, configuration: T.DecodingConfiguration, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
         try self.with(value: mapValue, path: codingPathNode.appending(additionalKey)) {
             try type.init(from: self, configuration: configuration)
         }
     }
     
-    fileprivate func unwrapBool(from mapValue: Format.Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Bool {
+    fileprivate func unwrapBool(from mapValue: Format.Document.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Bool {
         try checkNotNull(mapValue, expectedType: Bool.self, for: codingPathNode, additionalKey)
-        return try Format.unwrapBool(from: mapValue, for: codingPathNode, additionalKey)
+        return try Format.unwrapBool(from: mapValue, in: document, for: codingPathNode, additionalKey)
     }
-    
-    private func unwrapDate(from mapValue: Format.Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Date {
+
+    private func unwrapDate(from mapValue: Format.Document.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Date {
         try checkNotNull(mapValue, expectedType: Date.self, for: codingPathNode, additionalKey)
-        return try Format.unwrapDate(from: mapValue, in: map, for: codingPathNode, additionalKey)
+        return try Format.unwrapDate(from: mapValue, in: document, for: codingPathNode, additionalKey)
     }
 
-    private func unwrapData(from mapValue: Format.Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Data {
+    private func unwrapData(from mapValue: Format.Document.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Data {
         try checkNotNull(mapValue, expectedType: Data.self, for: codingPathNode, additionalKey)
-        return try Format.unwrapData(from: mapValue, in: map, for: codingPathNode, additionalKey)
+        return try Format.unwrapData(from: mapValue, in: document, for: codingPathNode, additionalKey)
     }
 
-    fileprivate func unwrapString(from mapValue: Format.Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> String {
+    fileprivate func unwrapString(from mapValue: Format.Document.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> String {
         try checkNotNull(mapValue, expectedType: String.self, for: codingPathNode, additionalKey)
-        return try Format.unwrapString(from: mapValue, in: map, for: codingPathNode, additionalKey)
+        return try Format.unwrapString(from: mapValue, in: document, for: codingPathNode, additionalKey)
     }
 
-    fileprivate func unwrapFloatingPoint<T: BinaryFloatingPoint>(from mapValue: Format.Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
+    fileprivate func unwrapFloatingPoint<T: BinaryFloatingPoint>(from mapValue: Format.Document.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
         try checkNotNull(mapValue, expectedType: T.self, for: codingPathNode, additionalKey)
-        return try Format.unwrapFloatingPoint(from: mapValue, in: map, for: codingPathNode, additionalKey)
+        return try Format.unwrapFloatingPoint(from: mapValue, in: document, for: codingPathNode, additionalKey)
     }
 
-    fileprivate func unwrapFixedWidthInteger<T: FixedWidthInteger>(from mapValue: Format.Map.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T
+    fileprivate func unwrapFixedWidthInteger<T: FixedWidthInteger>(from mapValue: Format.Document.Value, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T
     {
         try checkNotNull(mapValue, expectedType: T.self, for: codingPathNode, additionalKey)
-        return try Format.unwrapFixedWidthInteger(from: mapValue, in: map, for: codingPathNode, additionalKey)
+        return try Format.unwrapFixedWidthInteger(from: mapValue, in: document, for: codingPathNode, additionalKey)
     }
 }
 
@@ -199,7 +197,7 @@ extension _PlistDecoder : SingleValueDecodingContainer {
     // MARK: SingleValueDecodingContainer Methods
     
     public func decodeNil() -> Bool {
-        return Format.valueIsNull(storage.topContainer)
+        return Format.valueIsNull(storage.topContainer, in: self.document)
     }
     
     public func decode(_ type: Bool.Type) throws -> Bool {
@@ -279,7 +277,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
     private let decoder: _PlistDecoder<Format>
 
     /// A reference to the container we're reading from.
-    private let container: [String:Format.Map.ContainedValueReference]
+    private let container: [String:Format.Document.ContainedValueReference]
 
     /// A reference to the key this container was created with, and the parent container. Used for lazily generating the full codingPath.
     fileprivate let codingPathNode: _CodingPathNode
@@ -291,13 +289,13 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     // MARK: - Initialization
 
-    static func stringify(iterator: Format.Map.DictionaryIterator, count: Int, using decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode) throws -> [String:Format.Map.ContainedValueReference] {
-        var result = [String:Format.Map.ContainedValueReference]()
+    static func stringify(iterator: consuming Format.Document.DictionaryIterator, count: Int, using decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode) throws -> [String:Format.Document.ContainedValueReference] {
+        var result = [String:Format.Document.ContainedValueReference]()
         result.reserveCapacity(count / 2)
 
         var iter = iterator
         while let (keyRef, valueRef) = try iter.next() {
-            let keyValue = try decoder.map.value(from: keyRef)
+            let keyValue = try decoder.document.value(from: keyRef)
             let key = try decoder.unwrapString(from: keyValue, for: codingPathNode)
             result[key] = valueRef
         }
@@ -305,7 +303,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
     }
 
     /// Initializes `self` by referencing the given decoder and container.
-    internal init(referencing decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode, iterator: Format.Map.DictionaryIterator, count: Int) throws {
+    internal init(referencing decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode, iterator: consuming Format.Document.DictionaryIterator, count: Int) throws {
         self.decoder = decoder
         self.container = try Self.stringify(iterator: iterator, count: count, using: decoder, codingPathNode: codingPathNode)
         self.codingPathNode = codingPathNode
@@ -323,15 +321,15 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
     }
 
     @inline(__always)
-    func getValueIfPresent<T>(for key: Key, type: T) throws -> Format.Map.Value? {
+    func getValueIfPresent<T>(for key: Key, type: T) throws -> Format.Document.Value? {
         guard let ref = self.container[key.stringValue] else {
             return nil
         }
-        return try decoder.map.value(from: ref)
+        return try decoder.document.value(from: ref)
     }
 
     @inline(__always)
-    func getValue<T>(for key: Key, type: T) throws -> Format.Map.Value {
+    func getValue<T>(for key: Key, type: T) throws -> Format.Document.Value {
         guard let value = try getValueIfPresent(for: key, type: type) else {
             throw errorForMissingValue(key: key, type: type)
         }
@@ -353,7 +351,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     func decodeNil(forKey key: Key) throws -> Bool {
         let value = try getValue(for: key, type: Optional<Any>.self)
-        return Format.valueIsNull(value)
+        return Format.valueIsNull(value, in: self.decoder.document)
     }
 
     func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
@@ -363,7 +361,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool? {
         guard let value = try getValueIfPresent(for: key, type: Bool.self),
-              !Format.valueIsNull(value)
+              !Format.valueIsNull(value, in: self.decoder.document)
         else {
             return nil
         }
@@ -473,7 +471,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     func decodeIfPresent(_ type: String.Type, forKey key: Key) throws -> String? {
         guard let value = try getValueIfPresent(for: key, type: String.self),
-              !Format.valueIsNull(value)
+              !Format.valueIsNull(value, in: self.decoder.document)
         else {
             return nil
         }
@@ -487,7 +485,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     func decodeIfPresent<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? {
         guard let value = try getValueIfPresent(for: key, type: type),
-              !Format.valueIsNull(value)
+              !Format.valueIsNull(value, in: self.decoder.document)
         else {
             return nil
         }
@@ -509,13 +507,12 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
     }
 
     private func _superDecoder(forKey key: __owned CodingKey) throws -> Decoder {
-        let value: Format.Map.Value
-        if let ref = self.container[key.stringValue] {
-            value = try decoder.map.value(from: ref)
-        } else {
-            value = Format.Map.nullValue
+        let childPathNode = self.codingPathNode.appending(key)
+        guard let ref = self.container[key.stringValue] else {
+            return _MissingKeyDecoder(codingPath: childPathNode.path, userInfo: self.decoder.options.userInfo)
         }
-        let decoder = try _PlistDecoder<Format>(referencing: self.decoder.map, options: self.decoder.options, codingPathNode: self.codingPathNode.appending(key))
+        let value = try decoder.document.value(from: ref)
+        let decoder = try _PlistDecoder<Format>(referencing: self.decoder.document, options: self.decoder.options, codingPathNode: childPathNode)
         decoder.storage.push(container: value)
         return decoder
     }
@@ -540,7 +537,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     @inline(__always) private func decodeFixedWidthIntegerIfPresent<T: FixedWidthInteger>(key: Self.Key) throws -> T? {
         guard let value = try getValueIfPresent(for: key, type: T.self),
-              !Format.valueIsNull(value)
+              !Format.valueIsNull(value, in: self.decoder.document)
         else {
             return nil
         }
@@ -549,7 +546,7 @@ internal struct _PlistKeyedDecodingContainer<Key : CodingKey, Format: PlistDecod
 
     @inline(__always) private func decodeFloatingPointIfPresent<T: BinaryFloatingPoint>(key: Self.Key) throws -> T? {
         guard let value = try getValueIfPresent(for: key, type: T.self),
-              !Format.valueIsNull(value)
+              !Format.valueIsNull(value, in: self.decoder.document)
         else {
             return nil
         }
@@ -564,10 +561,10 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     private let decoder: _PlistDecoder<Format>
 
     /// An iterator from which we can extract the values contained by the underlying array.
-    private var arrayIterator: Format.Map.ArrayIterator
+    private var arrayIterator: Format.Document.ArrayIterator
 
     /// An object preemptively pulled from the iterator.
-    private var peekedValue: Format.Map.Value?
+    private var peekedValue: Format.Document.Value?
 
     /// The number of objects in the underlying array.
     let count: Int?
@@ -592,7 +589,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     // MARK: - Initialization
 
     /// Initializes `self` by referencing the given decoder and container.
-    internal init(referencing decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode, iterator: Format.Map.ArrayIterator, count: Int) {
+    internal init(referencing decoder: _PlistDecoder<Format>, codingPathNode: _CodingPathNode, iterator: Format.Document.ArrayIterator, count: Int) {
         self.decoder = decoder
         self.codingPathNode = codingPathNode
         self.count = count
@@ -612,20 +609,20 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
     }
 
     @inline(__always)
-    private mutating func peekNextValueIfPresent<T>(ofType type: T.Type) throws -> Format.Map.Value? {
+    private mutating func peekNextValueIfPresent<T>(ofType type: T.Type) throws -> Format.Document.Value? {
         if let value = peekedValue {
             return value
         }
-        guard let nextRef = arrayIterator.next() else {
+        guard let nextRef = try arrayIterator.next() else {
             return nil
         }
-        let nextValue = try decoder.map.value(from: nextRef)
+        let nextValue = try decoder.document.value(from: nextRef)
         peekedValue = nextValue
         return nextValue
     }
 
     @inline(__always)
-    private mutating func peekNextValue<T>(ofType type: T.Type) throws -> Format.Map.Value {
+    private mutating func peekNextValue<T>(ofType type: T.Type) throws -> Format.Document.Value {
         guard let nextValue = try peekNextValueIfPresent(ofType: type) else {
             throw errorForEndOfContainer(type: type)
         }
@@ -654,7 +651,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
 
     mutating func decodeNil() throws -> Bool {
         let value = try self.peekNextValue(ofType: Never.self)
-        if Format.valueIsNull(value) {
+        if Format.valueIsNull(value, in: self.decoder.document) {
             advanceToNextValue()
             return true
         } else {
@@ -675,7 +672,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         guard let value = try self.peekNextValueIfPresent(ofType: Bool.self) else {
             return nil
         }
-        let result = Format.valueIsNull(value) ? nil: try self.decoder.unwrapBool(from: value, for: codingPathNode, currentIndexKey)
+        let result = Format.valueIsNull(value, in: self.decoder.document) ? nil: try self.decoder.unwrapBool(from: value, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }
@@ -691,7 +688,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         guard let value = try self.peekNextValueIfPresent(ofType: String.self) else {
             return nil
         }
-        let result = Format.valueIsNull(value) ? nil: try self.decoder.unwrapString(from: value, for: codingPathNode, currentIndexKey)
+        let result = Format.valueIsNull(value, in: self.decoder.document) ? nil: try self.decoder.unwrapString(from: value, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }
@@ -804,7 +801,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         guard let value = try self.peekNextValueIfPresent(ofType: T.self) else {
             return nil
         }
-        let result: T? = Format.valueIsNull(value) ? nil : try self.decoder.unwrapGeneric(value, as: type, for: codingPathNode, currentIndexKey)
+        let result: T? = Format.valueIsNull(value, in: self.decoder.document) ? nil : try self.decoder.unwrapGeneric(value, as: type, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }
@@ -831,7 +828,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
 
     mutating func superDecoder() throws -> Decoder {
         let value = try self.peekNextValue(ofType: UnkeyedDecodingContainer.self)
-        let decoder = try _PlistDecoder<Format>(referencing: self.decoder.map, options: self.decoder.options, codingPathNode: self.codingPathNode.appending(index: self.currentIndex))
+        let decoder = try _PlistDecoder<Format>(referencing: self.decoder.document, options: self.decoder.options, codingPathNode: self.codingPathNode.appending(index: self.currentIndex))
         decoder.storage.push(container: value)
         advanceToNextValue()
         return decoder
@@ -855,7 +852,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         guard let value = try self.peekNextValueIfPresent(ofType: T.self) else {
             return nil
         }
-        let result: T? = Format.valueIsNull(value) ? nil : try self.decoder.unwrapFixedWidthInteger(from: value, for: codingPathNode, currentIndexKey)
+        let result: T? = Format.valueIsNull(value, in: self.decoder.document) ? nil : try self.decoder.unwrapFixedWidthInteger(from: value, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }
@@ -864,7 +861,7 @@ struct _PlistUnkeyedDecodingContainer<Format : PlistDecodingFormat> : UnkeyedDec
         guard let value = try self.peekNextValueIfPresent(ofType: T.self) else {
             return nil
         }
-        let result: T? = Format.valueIsNull(value) ? nil : try self.decoder.unwrapFloatingPoint(from: value, for: codingPathNode, currentIndexKey)
+        let result: T? = Format.valueIsNull(value, in: self.decoder.document) ? nil : try self.decoder.unwrapFloatingPoint(from: value, for: codingPathNode, currentIndexKey)
         advanceToNextValue()
         return result
     }

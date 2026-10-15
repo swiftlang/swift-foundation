@@ -738,6 +738,19 @@ private struct NumberFormatStyleTests {
         #expect((-922337203685477 as Decimal).formatted(baseStyle.rounded(rule: .awayFromZero, increment: 100)) == "-$100E15")
     }
 #endif // _pointerBitWidth(_64)
+
+    @Test(arguments: [
+        "USD scale/100",
+        "USD .00000000",
+        "x24",
+        "345",
+    ])
+    func invalidCurrencyCode(currencyCode: String) throws {
+        let locale = Locale(identifier: "en_US")
+
+        let output = FloatingPointFormatStyle.Currency(code: currencyCode, locale: locale).format(1)
+        #expect(output == "¤1.00")
+    }
 }
 
 extension NumberFormatStyleConfiguration.Collection {

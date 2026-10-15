@@ -1016,10 +1016,7 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
         }
         
         mutating func appendDate(_ date: Date) {
-            var c = Calendar(identifier: .iso8601)
-            c.timeZone = .gmt
-
-            let dc = c.dateComponents([.era, .year, .month, .day, .hour, .minute, .second], from: date)
+            let dc = Calendar.sufficientlyProlepticISO8601Calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second], from: date)
             let str = Date.ISO8601FormatStyle().format(dc, appendingTimeZoneOffset: 0)
             append(str)
         }

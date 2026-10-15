@@ -130,24 +130,22 @@ extension String : _ObjectiveCBridgeable {
         }
 #endif
         
-        var ascii = false
         var len = 0
-        var mutable = false
-        var constant = false
-        
-        if __CFStringIsCF(unsafeBitCast(source, to: CFString.self), &mutable, &len, &ascii, &constant) {
+        var flags: __CFStringIsCFFlags = []
+        let contents = __CFStringIsCFWithContents(unsafeBitCast(source, to: CFString.self), &len, &flags)
+        if flags.contains(.CF) {
             if len == 0 {
                 return ""
             }
 
-            if constant {
-                if ascii {
+            if flags.contains(.constant) {
+                if flags.contains(.UTF16) {
+                    return String(_immortalCocoaString: source, count: len, encoding: Unicode.UTF16.self)
+                } else {
                     // We would like to use _SwiftCreateImmortalString_ForFoundation here, but we can't because we need to maintain the invariant
                     // (constantString as String as NSString) === constantString
                     // and using _SwiftCreateImmortalString_ForFoundation would make an indirect tagged string instead on the way back
                     return String(_immortalCocoaString: source, count: len, encoding: Unicode.ASCII.self)
-                } else {
-                    return String(_immortalCocoaString: source, count: len, encoding: Unicode.UTF16.self)
                 }
             }
             
@@ -155,34 +153,53 @@ extension String : _ObjectiveCBridgeable {
              If `source` is a mutable string, we should eagerly bridge.
              Lazy bridging will still wastefully copy it to immutable first.
              */
-            if mutable {
-                let eagerBridge = { (source: NSString, encoding: CFStringBuiltInEncodings, capacity: Int) -> String? in
-                    let result = String(unsafeUninitializedCapacity: capacity) { buffer in
+            if flags.contains(.mutable) {
+                if flags.contains(.ASCII) {
+                    guard let contents else {
+                        fatalError("An ASCII CFString should always be able to produce a contents pointer")
+                    }
+                    if let result = String(
+                        validating: UnsafeBufferPointer(
+                            start: contents.assumingMemoryBound(to: Unicode.ASCII.CodeUnit.self),
+                            count: len
+                        ),
+                        as: Unicode.ASCII.self
+                    ) {
+                        return result
+                    }
+                } else if flags.contains(.UTF16) {
+                    guard let contents else {
+                        fatalError("A UTF-16 CFString should always be able to produce a contents pointer")
+                    }
+                    if let result = String(
+                        validating: UnsafeBufferPointer(
+                            start: contents.assumingMemoryBound(to: UTF16.CodeUnit.self),
+                            count: len
+                        ),
+                        as: UTF16.self
+                    ) {
+                        return result
+                    }
+                } else {
+                    // This branch is dead in binaries linked-on-or-after 10.9
+                    // Since the eight bit encoding after that point is always ASCII
+                    let utf8Len = source.lengthOfBytes(using: String.Encoding.utf8.rawValue)
+                    let transcoded = String(unsafeUninitializedCapacity: utf8Len) { buffer in
                         var usedLen = 0
                         let convertedCount = _CFNonObjCStringGetBytes(
                             unsafeBitCast(source, to: CFString.self),
                             CFRangeMake(0, len),
-                            encoding.rawValue,
+                            CFStringBuiltInEncodings.UTF8.rawValue,
                             0,
                             false,
                             buffer.baseAddress.unsafelyUnwrapped,
-                            capacity,
+                            utf8Len,
                             &usedLen
                         )
-                        if convertedCount != len {
-                            return 0
-                        }
-                        return usedLen
+                        return convertedCount == len ? usedLen : 0
                     }
-                    return result.isEmpty ? nil : result
-                }
-                if ascii {
-                    if let result = eagerBridge(source, CFStringBuiltInEncodings.ASCII, len) {
-                        return result
-                    }
-                } else {
-                    if let result = eagerBridge(source, CFStringBuiltInEncodings.UTF8, source.lengthOfBytes(using: String.Encoding.utf8.rawValue)) {
-                        return result
+                    if !transcoded.isEmpty {
+                        return transcoded
                     }
                 }
             }

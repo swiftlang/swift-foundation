@@ -10,25 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Bionic)
-import Bionic
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#elseif os(Windows)
-import CRT
-import WinSDK
-#elseif os(WASI)
-import WASILibc
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
-internal import _FoundationDarwinExtras
-#elseif canImport(stdlib_h)
-import stdlib_h
-#endif
-
 #if !FOUNDATION_FRAMEWORK
 extension Data {
     
@@ -81,6 +62,19 @@ extension Data.Base64EncodingOptions {
     public static let omitPaddingCharacter = Self(rawValue: 1 << 7)
 }
 
+extension Data.Base64DecodingOptions {
+    /// Modify the decoding algorithm so that it expects the base64url alphabet instead of the default base64 alphabet
+    @available(FoundationPreview 6.5, *)
+    public static let base64URLAlphabet = Self(rawValue: 1 << 2)
+
+    /// Modify the decoding algorithm so that it does not expect a padding character at the end of the base64 encoded result.
+    /// If the base64 encoded data has a padding character, `nil` will be returned.
+    ///
+    /// - Warning: This option is ignored if `ignoreUnknownCharacters` is used at the same time.
+    @available(FoundationPreview 6.5, *)
+    public static let omitPaddingCharacter = Self(rawValue: 1 << 3)
+}
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 
@@ -118,7 +112,7 @@ extension Data {
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded string.
     public func base64EncodedString(options: Base64EncodingOptions = []) -> String {
-        Base64.encodeToString(bytes: self, options: options)
+        Base64.encodeToString(bytes: self.bytes, options: options)
     }
 
     /// Returns Base-64 encoded data.
@@ -126,7 +120,7 @@ extension Data {
     /// - parameter options: The options to use for the encoding. Default value is `[]`.
     /// - returns: The Base-64 encoded data.
     public func base64EncodedData(options: Base64EncodingOptions = []) -> Data {
-        Base64.encodeToData(bytes: self, options: options)
+        Base64.encodeToData(bytes: self.bytes, options: options)
     }
 }
 
@@ -138,6 +132,40 @@ extension Data {
 // See NOTICE.txt for Licenses
 
 enum Base64 {}
+
+/// A base64 encoding lookup table.
+///
+/// The table holds exactly 256 bytes and is only indexable by `UInt8`. Every possible index is therefore in bounds, which is why the subscript can forward to the span's unchecked subscript: a buffer overflow is impossible by construction and no bounds check is emitted in the hot encoding loops.
+private struct Base64EncodingTable: ~Escapable {
+    private let table: Span<UInt8>
+
+    @_lifetime(copy table)
+    init(_ table: Span<UInt8>) {
+        assert(table.count == 256)
+        self.table = table
+    }
+
+    subscript(index: UInt8) -> UInt8 {
+        unsafe self.table[unchecked: Int(index)]
+    }
+}
+
+/// A base64 decoding lookup table.
+///
+/// The table holds exactly 256 elements and is only indexable by `UInt8`. Every possible index is therefore in bounds, which is why the subscript can forward to the span's unchecked subscript: a buffer overflow is impossible by construction and no bounds check is emitted in the hot decoding loops.
+private struct Base64DecodingTable: ~Escapable {
+    private let table: Span<UInt32>
+
+    @_lifetime(copy table)
+    init(_ table: Span<UInt32>) {
+        assert(table.count == 256)
+        self.table = table
+    }
+
+    subscript(index: UInt8) -> UInt32 {
+        unsafe self.table[unchecked: Int(index)]
+    }
+}
 
 // MARK: - Encoding -
 
@@ -260,122 +288,71 @@ extension Base64 {
         UInt8(ascii: "6"), UInt8(ascii: "7"), UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "-"), UInt8(ascii: "_"),
     ]
 
-    static func encodeToBytes<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions)
-        -> [UInt8] where Buffer.Element == UInt8
-    {
-        let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
+    static func encodeToString(bytes: RawSpan, options: Data.Base64EncodingOptions = []) -> String {
+        let newCapacity = self.encodeComputeCapacity(bytes: bytes.byteCount, options: options)
 
-        if let result = bytes.withContiguousStorageIfAvailable({ input -> [UInt8] in
-            [UInt8](unsafeUninitializedCapacity: newCapacity) { buffer, length in
-                Self._encode(input: input, buffer: buffer, length: &length, options: options)
-            }
-        }) {
-            return result
-        }
-
-        return self.encodeToBytes(bytes: Array(bytes), options: options)
-    }
-
-    static func encodeToString<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions = [])
-        -> String where Buffer.Element == UInt8
-    {
-        let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
-
-        if #available(OSX 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
-            if let result = bytes.withContiguousStorageIfAvailable({ input -> String in
-                String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
-                    var length = newCapacity
-                    Self._encode(input: input, buffer: buffer, length: &length, options: options)
-                    return length
-                }
-            }) {
-                return result
-            }
-
-            return self.encodeToString(bytes: Array(bytes), options: options)
-        } else {
-            let bytes: [UInt8] = self.encodeToBytes(bytes: bytes, options: options)
-            return String(decoding: bytes, as: Unicode.UTF8.self)
+        return String(unsafeUninitializedCapacity: newCapacity) { buffer -> Int in
+            let ptr = UnsafeMutableRawBufferPointer(buffer)
+            var outputSpan = OutputRawSpan(buffer: ptr, initializedCount: 0)
+            Self._encode(input: bytes, buffer: &outputSpan, options: options)
+            return outputSpan.finalize(for: ptr)
         }
     }
 
-    static func encodeToData<Buffer: Collection>(bytes: Buffer, options: Data.Base64EncodingOptions = [])
-        -> Data where Buffer.Element == UInt8
-    {
-        let newCapacity = self.encodeComputeCapacity(bytes: bytes.count, options: options)
+    static func encodeToData(bytes: RawSpan, options: Data.Base64EncodingOptions = []) -> Data {
+        let newCapacity = self.encodeComputeCapacity(bytes: bytes.byteCount, options: options)
 
-        if let result = bytes.withContiguousStorageIfAvailable({ input -> Data in
-            var data = Data(count: newCapacity) // initialized with zeroed buffer
-            _ = data.withUnsafeMutableBytes { rawBuffer in
-                rawBuffer.withMemoryRebound(to: UInt8.self) { buffer in
-                    var length = newCapacity
-                    Self._encode(input: input, buffer: buffer, length: &length, options: options)
-                    return length
-                }
-            }
-            return data
-        }) {
-            return result
+        return Data(capacity: newCapacity) { (span: inout OutputRawSpan) in
+            Self._encode(input: bytes, buffer: &span, options: options)
         }
-
-        return self.encodeToData(bytes: Array(bytes), options: options)
     }
 
-    static func _encode(input: UnsafeBufferPointer<UInt8>, buffer: UnsafeMutableBufferPointer<UInt8>, length: inout Int, options: Data.Base64EncodingOptions) {
+    static func _encode(input: RawSpan, buffer: inout OutputRawSpan, options: Data.Base64EncodingOptions) {
         if options.contains(.lineLength64Characters) || options.contains(.lineLength76Characters) {
-            return self._encodeWithLineBreaks(input: input, buffer: buffer, length: &length, options: options)
+            return self._encodeWithLineBreaks(input: input, buffer: &buffer, options: options)
         }
 
         let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
 
-        Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { (e0, e1) throws(Never) -> Void in
-            let to = input.count / 3 * 3
-            var outIndex = 0
+        Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
+            let to = input.byteCount / 3 * 3
 
-            self.loopEncode(e0, e1, input: input, from: 0, to: to, output: buffer, outIndex: &outIndex)
+            self.loopEncode(e0, e1, input: input.extracting(0..<to), output: &buffer)
 
-            if to < input.count {
+            if to < input.byteCount {
                 let index = to
 
-                let i1 = input[index]
-                let i2 = index &+ 1 < input.count ? input[index &+ 1] : nil
-                let i3 = index &+ 2 < input.count ? input[index &+ 2] : nil
+                let i1 = input[unchecked: index] // fine, since index = to and to < input.count
+                let i2 = index &+ 1 < input.byteCount ? input[unchecked: index &+ 1] : nil // range check in the same line
+                let i3 = index &+ 2 < input.byteCount ? input[unchecked: index &+ 2] : nil // range check in the same line
 
-                buffer[outIndex] = e0[Int(i1)]
+                buffer.append(e0[i1])
 
                 if let i2 = i2 {
-                    buffer[outIndex &+ 1] = e1[Int(((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F))]
+                    buffer.append(e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)])
                     if let i3 = i3 {
-                        buffer[outIndex &+ 2] = e1[Int(((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03))]
-                        buffer[outIndex &+ 3] = e1[Int(i3)]
-                        outIndex += 4
+                        buffer.append(e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)])
+                        buffer.append(e1[i3])
                     } else {
-                        buffer[outIndex &+ 2] = e1[Int((i2 & 0x0F) &<< 2)]
-                        outIndex += 3
+                        buffer.append(e1[(i2 & 0x0F) &<< 2])
                         if !omitPaddingCharacter {
-                            buffer[outIndex] = Self.encodePaddingCharacter
-                            outIndex &+= 1
+                            buffer.append(Self.encodePaddingCharacter)
                         }
                     }
                 } else {
-                    buffer[outIndex &+ 1] = e1[Int((i1 & 0x03) << 4)]
-                    outIndex &+= 2
+                    buffer.append(e1[(i1 & 0x03) << 4])
                     if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        buffer[outIndex &+ 1] = Self.encodePaddingCharacter
-                        outIndex &+= 2
+                        buffer.append(Self.encodePaddingCharacter)
+                        buffer.append(Self.encodePaddingCharacter)
                     }
                 }
             }
-
-            length = outIndex
         }
     }
 
     static func _encodeWithLineBreaks(
-        input: UnsafeBufferPointer<UInt8>,
-        buffer: UnsafeMutableBufferPointer<UInt8>,
-        length: inout Int,
+        input: borrowing RawSpan,
+        buffer: inout OutputRawSpan,
         options: Data.Base64EncodingOptions
     ) {
         let omitPaddingCharacter = options.contains(.omitPaddingCharacter)
@@ -388,7 +365,7 @@ extension Base64 {
             57
         }
 
-        let lines = input.count / lineLength
+        let lines = input.byteCount / lineLength
 
         let separatorByte1: UInt8
         let separatorByte2: UInt8?
@@ -405,93 +382,95 @@ extension Base64 {
             separatorByte2 = nil
         }
 
-        Self.withUnsafeEncodingTablesAsBufferPointers(options: options) { e0, e1 in
-            var outIndex = 0
+        Self.withEncodingTables(options: options) { (e0, e1) throws(Never) -> Void in
+            // Note: It's safe to use overflowing math here, as input and output are valid pointers
+            //       with a length that is smaller than Int here. For this reason index and outIndex
+            //       can never wrap.
 
             // first full line
-            if input.count >= lineLength {
-                self.loopEncode(e0, e1, input: input, from: 0, to: lineLength, output: buffer, outIndex: &outIndex)
+            if input.byteCount >= lineLength {
+                self.loopEncode(e0, e1, input: input.extracting(0..<lineLength), output: &buffer)
             }
 
             // following full lines
-            for lineInputIndex in stride(from: lineLength, to: lines * lineLength, by: lineLength) {
-                buffer[outIndex] = separatorByte1
-                outIndex += 1
+            var lineInputIndex = lineLength
+            while lineInputIndex < lines * lineLength {
+                buffer.append(separatorByte1)
                 if let separatorByte2 {
-                    buffer[outIndex] = separatorByte2
-                    outIndex += 1
+                    buffer.append(separatorByte2)
                 }
 
-                self.loopEncode(e0, e1, input: input, from: lineInputIndex, to: lineInputIndex + lineLength, output: buffer, outIndex: &outIndex)
+                self.loopEncode(e0, e1, input: input.extracting(lineInputIndex..<lineInputIndex + lineLength), output: &buffer)
+                lineInputIndex &+= lineLength
             }
 
             // last line beginning
-            if lines > 0 && lines * lineLength < input.count {
-                buffer[outIndex] = separatorByte1
-                outIndex += 1
+            if lines > 0 && lines * lineLength < input.byteCount {
+                buffer.append(separatorByte1)
                 if let separatorByte2 {
-                    buffer[outIndex] = separatorByte2
-                    outIndex += 1
+                    buffer.append(separatorByte2)
                 }
             }
-            let to = input.count / 3 * 3
-            self.loopEncode(e0, e1, input: input, from: lines * lineLength, to: to, output: buffer, outIndex: &outIndex)
+            let to = input.byteCount / 3 * 3
+            self.loopEncode(e0, e1, input: input.extracting((lines * lineLength)..<to), output: &buffer)
 
-            if to < input.count {
+            // last 2-4 bytes
+            if to < input.byteCount {
                 let index = to
 
                 let i1 = input[index]
-                let i2 = index + 1 < input.count ? input[index + 1] : nil
-                let i3 = index + 2 < input.count ? input[index + 2] : nil
+                let i2 = index + 1 < input.byteCount ? input[index + 1] : nil
+                let i3 = index + 2 < input.byteCount ? input[index + 2] : nil
 
-                buffer[outIndex] = e0[Int(i1)]
+                buffer.append(e0[i1])
 
                 if let i2 = i2, let i3 = i3 {
-                    buffer[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-                    buffer[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
-                    buffer[outIndex + 3] = e1[Int(i3)]
-                    outIndex += 4
+                    buffer.append(e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)])
+                    buffer.append(e1[((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03)])
+                    buffer.append(e1[i3])
                 } else if let i2 = i2 {
-                    buffer[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-                    buffer[outIndex + 2] = e1[Int((i2 & 0x0F) << 2)]
-                    outIndex += 3
+                    buffer.append(e1[((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F)])
+                    buffer.append(e1[(i2 & 0x0F) << 2])
                     if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        outIndex += 1
+                        buffer.append(Self.encodePaddingCharacter)
                     }
                 } else {
-                    buffer[outIndex + 1] = e1[Int((i1 & 0x03) << 4)]
-                    outIndex += 2
+                    buffer.append(e1[(i1 & 0x03) << 4])
                     if !omitPaddingCharacter {
-                        buffer[outIndex] = Self.encodePaddingCharacter
-                        buffer[outIndex + 1] = Self.encodePaddingCharacter
-                        outIndex += 2
+                        buffer.append(Self.encodePaddingCharacter)
+                        buffer.append(Self.encodePaddingCharacter)
                     }
                 }
             }
-
-            length = outIndex
         }
     }
 
     private static func loopEncode(
-        _ e0: UnsafeBufferPointer<UInt8>,
-        _ e1: UnsafeBufferPointer<UInt8>,
-        input: UnsafeBufferPointer<UInt8>,
-        from: Int,
-        to: Int,
-        output: UnsafeMutableBufferPointer<UInt8>,
-        outIndex: inout Int
+        _ e0: Base64EncodingTable,
+        _ e1: Base64EncodingTable,
+        input: borrowing RawSpan,
+        output: inout OutputRawSpan
     ) {
-        for index in stride(from: from, to: to, by: 3) {
-            let i1 = input[index]
-            let i2 = input[index + 1]
-            let i3 = input[index + 2]
-            output[outIndex] = e0[Int(i1)]
-            output[outIndex + 1] = e1[Int(((i1 & 0x03) << 4) | ((i2 >> 4) & 0x0F))]
-            output[outIndex + 2] = e1[Int(((i2 & 0x0F) << 2) | ((i3 >> 6) & 0x03))]
-            output[outIndex + 3] = e1[Int(i3)]
-            outIndex += 4
+        assert(input.byteCount.isMultiple(of: 3))
+        assert(output.freeCapacity >= 4 * (input.byteCount / 3))
+        // Note: It's safe to use overflowing math here, as input and output are valid pointers
+        //       with a length that is smaller than Int here. For this reason index and outIndex
+        //       can never wrap.
+        output.withUnsafeMutableBytes { outPtr, initializedCount in
+            var index = 0
+            var outIndex = initializedCount
+            while index < input.byteCount {
+                let i1 = input[unchecked: index]
+                let i2 = input[unchecked: index &+ 1]
+                let i3 = input[unchecked: index &+ 2]
+                outPtr[outIndex] = e0[i1]
+                outPtr[outIndex &+ 1] = e1[((i1 & 0x03) &<< 4) | ((i2 &>> 4) & 0x0F)]
+                outPtr[outIndex &+ 2] = e1[((i2 & 0x0F) &<< 2) | ((i3 &>> 6) & 0x03)]
+                outPtr[outIndex &+ 3] = e1[i3]
+                index &+= 3
+                outIndex &+= 4
+            }
+            initializedCount = outIndex
         }
     }
 
@@ -527,18 +506,17 @@ extension Base64 {
         return capacityWithoutBreaks + lineBreakCapacity
     }
 
-    static func withUnsafeEncodingTablesAsBufferPointers<R>(options: Data.Base64EncodingOptions, _ body: (UnsafeBufferPointer<UInt8>, UnsafeBufferPointer<UInt8>) -> R) -> R {
-        let encoding0 = options.contains(.base64URLAlphabet) ? Self.encoding0url : Self.encoding0
-        let encoding1 = options.contains(.base64URLAlphabet) ? Self.encoding1url : Self.encoding1
-
-        assert(encoding0.count == 256)
-        assert(encoding1.count == 256)
-
-        return encoding0.withUnsafeBufferPointer { e0 in
-            encoding1.withUnsafeBufferPointer { e1 in
-                body(e0, e1)
-            }
+    private static func withEncodingTables<R, E: Swift.Error>(
+        options: Data.Base64EncodingOptions,
+        _ body: (Base64EncodingTable, Base64EncodingTable) throws(E) -> R
+    ) throws(E) -> R {
+        let (encoding0, encoding1) = if options.contains(.base64URLAlphabet) {
+            (Self.encoding0url, Self.encoding1url)
+        } else {
+            (Self.encoding0, Self.encoding1)
         }
+
+        return try body(Base64EncodingTable(encoding0.span), Base64EncodingTable(encoding1.span))
     }
 }
 
@@ -614,24 +592,18 @@ extension Base64 {
 
         let outputLength = ((inBuffer.count + 3) / 4) * 3
 
-        let pointer = __DataStorage.allocate(outputLength, false)
-        let other = pointer?.bindMemory(to: UInt8.self, capacity: outputLength)
-        let target = UnsafeMutableBufferPointer(start: other, count: outputLength)
-        var length = outputLength
-        do {
-            if options.contains(.ignoreUnknownCharacters) {
-                try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &length, options: options)
-            } else {
-                // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
-                // branch prediction?
-                try self._decode(from: inBuffer, into: target, length: &length, options: options)
+        return try Data(capacity: outputLength) { (span) throws(DecodingError) in
+            try span.withUnsafeMutableBytes { (buffer, initializedCount) throws(DecodingError) in
+                let target = buffer.bindMemory(to: UInt8.self)
+                
+                if options.contains(.ignoreUnknownCharacters) {
+                    try Self._decodeIgnoringErrors(from: inBuffer, into: target, length: &initializedCount, options: options)
+                } else {
+                    // for whatever reason I can see this being 10% faster for larger payloads. Maybe better
+                    // branch prediction?
+                    try self._decode(from: inBuffer, into: target, length: &initializedCount, options: options)
+                }
             }
-            
-            return Data(bytesNoCopy: pointer!, count: length, deallocator: .free)
-        } catch {
-            // Do not leak the malloc on error
-            free(pointer)
-            throw error
         }
     }
 
@@ -641,33 +613,48 @@ extension Base64 {
         length: inout Int,
         options: Data.Base64DecodingOptions
     ) throws(DecodingError) {
-        guard let lastNonPaddedIndex = inBuffer.lastIndex(where: { $0 != UInt8(ascii: "=") }) else {
-            if inBuffer.count >= 4 {
-                outBuffer[0] = 0
-                length = 1
-                return
-            } else {
+        let bytesToParseLength: Int
+        let fullchunks: Int
+        if options.contains(.omitPaddingCharacter) {
+            // No padding character is expected. If we find one anywhere, the input is invalid.
+            if inBuffer.contains(Self.encodePaddingCharacter) {
+                throw DecodingError.invalidCharacter(Self.encodePaddingCharacter)
+            }
+            let remaining = inBuffer.count % 4
+            if remaining == 1 {
                 throw DecodingError.invalidLength
             }
-        }
-        let base64NonPaddedLength = lastNonPaddedIndex + 1
-        let bytesToParseLength = if base64NonPaddedLength % 4 == 0 {
-            (base64NonPaddedLength / 4) * 4
+            bytesToParseLength = inBuffer.count
+            fullchunks = remaining == 0 ? inBuffer.count / 4 - 1 : inBuffer.count / 4
         } else {
-            (base64NonPaddedLength / 4) * 4 + 4
-        }
-        if bytesToParseLength > inBuffer.count {
-            throw DecodingError.invalidLength
+            guard let lastNonPaddedIndex = inBuffer.lastIndex(where: { $0 != Self.encodePaddingCharacter }) else {
+                if inBuffer.count >= 4 {
+                    outBuffer[0] = 0
+                    length = 1
+                    return
+                } else {
+                    throw DecodingError.invalidLength
+                }
+            }
+            let base64NonPaddedLength = lastNonPaddedIndex + 1
+            bytesToParseLength = if base64NonPaddedLength % 4 == 0 {
+                (base64NonPaddedLength / 4) * 4
+            } else {
+                (base64NonPaddedLength / 4) * 4 + 4
+            }
+            if bytesToParseLength > inBuffer.count {
+                throw DecodingError.invalidLength
+            }
+            fullchunks = bytesToParseLength / 4 - 1
         }
 
         let outputLength = ((bytesToParseLength + 3) / 4) * 3
-        let fullchunks = bytesToParseLength / 4 - 1
 
         guard outBuffer.count >= outputLength else {
             preconditionFailure("Expected the out buffer to be at least as long as outputLength")
         }
 
-        try Self.withUnsafeDecodingTablesAsBufferPointers(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
+        try Self.withDecodingTables(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
             if fullchunks > 0 {
                 for chunk in 0 ..< fullchunks {
@@ -676,7 +663,7 @@ extension Base64 {
                     let a1 = inBuffer[inIndex + 1]
                     let a2 = inBuffer[inIndex + 2]
                     let a3 = inBuffer[inIndex + 3]
-                    var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
+                    var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
 
                     if x >= Self.badCharacter {
                         // TODO: Inspect characters here better
@@ -707,7 +694,7 @@ extension Base64 {
                 a3 = inBuffer[inIndex + 3]
             }
 
-            var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2 ?? 65)] | d3[Int(a3 ?? 65)]
+            var x: UInt32 = d0[a0] | d1[a1] | d2[a2 ?? 65] | d3[a3 ?? 65]
             if x >= Self.badCharacter {
                 // TODO: Inspect characters here better
                 throw DecodingError.invalidCharacter(inBuffer[inIndex])
@@ -745,7 +732,7 @@ extension Base64 {
             preconditionFailure("Expected the out buffer to be at least as long as outputLength")
         }
 
-        try Self.withUnsafeDecodingTablesAsBufferPointers(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
+        try Self.withDecodingTables(options: options) { (d0, d1, d2, d3) throws(DecodingError) in
             var outIndex = 0
             var inIndex = 0
 
@@ -754,7 +741,7 @@ extension Base64 {
                 let a1 = inBuffer[inIndex &+ 1]
                 let a2 = inBuffer[inIndex &+ 2]
                 let a3 = inBuffer[inIndex &+ 3]
-                var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
+                var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
 
                 if x >= Self.badCharacter {
                     if a3 == Self.encodePaddingCharacter || a2 == Self.encodePaddingCharacter || a1 == Self.encodePaddingCharacter || a0 == Self.encodePaddingCharacter {
@@ -816,7 +803,7 @@ extension Base64 {
                         throw DecodingError.invalidLength
                     }
 
-                    x = d0[Int(b0)] | d1[Int(b1)] | d2[Int(b2)] | d3[Int(b3)]
+                    x = d0[b0] | d1[b1] | d2[b2] | d3[b3]
 
                 } else {
                     inIndex &+= 4
@@ -867,7 +854,7 @@ extension Base64 {
                 a3 = inBuffer[inIndex + 3]
             }
 
-            var x: UInt32 = d0[Int(a0)] | d1[Int(a1)] | d2[Int(a2)] | d3[Int(a3)]
+            var x: UInt32 = d0[a0] | d1[a1] | d2[a2] | d3[a3]
             if x >= Self.badCharacter {
                 var b0: UInt8? = nil
                 var b1: UInt8? = nil
@@ -916,7 +903,7 @@ extension Base64 {
                     throw DecodingError.invalidLength
                 }
 
-                x = d0[Int(b0)] | d1[Int(b1)] | d2[Int(b2)] | d3[Int(b3)]
+                x = d0[b0] | d1[b1] | d2[b2] | d3[b3]
                 assert(x < Self.badCharacter)
             }
 
@@ -955,31 +942,27 @@ extension Base64 {
         }
     }
 
-    static func withUnsafeDecodingTablesAsBufferPointers<R, E: Swift.Error>(options: Data.Base64DecodingOptions, _ body: (UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>, UnsafeBufferPointer<UInt32>) throws(E) -> R) throws(E) -> R {
-        let decoding0 = Self.decoding0
-        let decoding1 = Self.decoding1
-        let decoding2 = Self.decoding2
-        let decoding3 = Self.decoding3
-
-        assert(decoding0.count == 256)
-        assert(decoding1.count == 256)
-        assert(decoding2.count == 256)
-        assert(decoding3.count == 256)
-
-        // Workaround that `withUnsafeBufferPointer` started to support typed throws in Swift 6.1
-        let result = decoding0.withUnsafeBufferPointer { d0 -> Result<R, E> in
-            decoding1.withUnsafeBufferPointer { d1 -> Result<R, E> in
-                decoding2.withUnsafeBufferPointer { d2 -> Result<R, E> in
-                    decoding3.withUnsafeBufferPointer { d3 -> Result<R, E> in
-                        Result { () throws(E) -> R in
-                            try body(d0, d1, d2, d3)
-                        }
-                    }
-                }
-            }
+    private static func withDecodingTables<R, E: Swift.Error>(
+        options: Data.Base64DecodingOptions,
+        _ body: (
+            Base64DecodingTable,
+            Base64DecodingTable,
+            Base64DecodingTable,
+            Base64DecodingTable
+        ) throws(E) -> R
+    ) throws(E) -> R {
+        let (decoding0, decoding1, decoding2, decoding3) = if options.contains(.base64URLAlphabet) {
+            (Self.decoding0url, Self.decoding1url, Self.decoding2url, Self.decoding3url)
+        } else {
+            (Self.decoding0, Self.decoding1, Self.decoding2, Self.decoding3)
         }
 
-        return try result.get()
+        return try body(
+            Base64DecodingTable(decoding0.span),
+            Base64DecodingTable(decoding1.span),
+            Base64DecodingTable(decoding2.span),
+            Base64DecodingTable(decoding3.span)
+        )
     }
 
     static func isValidBase64Byte(_ byte: UInt8, options: Data.Base64DecodingOptions) -> Bool {
@@ -990,10 +973,10 @@ extension Base64 {
             true
 
         case UInt8(ascii: "-"), UInt8(ascii: "_"):
-            false // options.contains(.base64UrlAlphabet)
+            options.contains(.base64URLAlphabet)
 
         case UInt8(ascii: "/"), UInt8(ascii: "+"):
-            true // !options.contains(.base64UrlAlphabet)
+            !options.contains(.base64URLAlphabet)
 
         default:
             false
@@ -1157,6 +1140,190 @@ extension Base64 {
         0x000D_0000, 0x000E_0000, 0x000F_0000, 0x0010_0000, 0x0011_0000, 0x0012_0000,
         0x0013_0000, 0x0014_0000, 0x0015_0000, 0x0016_0000, 0x0017_0000, 0x0018_0000,
         0x0019_0000, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x001A_0000, 0x001B_0000, 0x001C_0000, 0x001D_0000, 0x001E_0000,
+        0x001F_0000, 0x0020_0000, 0x0021_0000, 0x0022_0000, 0x0023_0000, 0x0024_0000,
+        0x0025_0000, 0x0026_0000, 0x0027_0000, 0x0028_0000, 0x0029_0000, 0x002A_0000,
+        0x002B_0000, 0x002C_0000, 0x002D_0000, 0x002E_0000, 0x002F_0000, 0x0030_0000,
+        0x0031_0000, 0x0032_0000, 0x0033_0000, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+    ]
+
+    static let decoding0url: [UInt32] = [
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_00F8, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x0000_00D0, 0x0000_00D4, 0x0000_00D8, 0x0000_00DC, 0x0000_00E0, 0x0000_00E4,
+        0x0000_00E8, 0x0000_00EC, 0x0000_00F0, 0x0000_00F4, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_0000,
+        0x0000_0004, 0x0000_0008, 0x0000_000C, 0x0000_0010, 0x0000_0014, 0x0000_0018,
+        0x0000_001C, 0x0000_0020, 0x0000_0024, 0x0000_0028, 0x0000_002C, 0x0000_0030,
+        0x0000_0034, 0x0000_0038, 0x0000_003C, 0x0000_0040, 0x0000_0044, 0x0000_0048,
+        0x0000_004C, 0x0000_0050, 0x0000_0054, 0x0000_0058, 0x0000_005C, 0x0000_0060,
+        0x0000_0064, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_00FC,
+        0x01FF_FFFF, 0x0000_0068, 0x0000_006C, 0x0000_0070, 0x0000_0074, 0x0000_0078,
+        0x0000_007C, 0x0000_0080, 0x0000_0084, 0x0000_0088, 0x0000_008C, 0x0000_0090,
+        0x0000_0094, 0x0000_0098, 0x0000_009C, 0x0000_00A0, 0x0000_00A4, 0x0000_00A8,
+        0x0000_00AC, 0x0000_00B0, 0x0000_00B4, 0x0000_00B8, 0x0000_00BC, 0x0000_00C0,
+        0x0000_00C4, 0x0000_00C8, 0x0000_00CC, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+    ]
+
+    static let decoding1url: [UInt32] = [
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_E003, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x0000_4003, 0x0000_5003, 0x0000_6003, 0x0000_7003, 0x0000_8003, 0x0000_9003,
+        0x0000_A003, 0x0000_B003, 0x0000_C003, 0x0000_D003, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_0000,
+        0x0000_1000, 0x0000_2000, 0x0000_3000, 0x0000_4000, 0x0000_5000, 0x0000_6000,
+        0x0000_7000, 0x0000_8000, 0x0000_9000, 0x0000_A000, 0x0000_B000, 0x0000_C000,
+        0x0000_D000, 0x0000_E000, 0x0000_F000, 0x0000_0001, 0x0000_1001, 0x0000_2001,
+        0x0000_3001, 0x0000_4001, 0x0000_5001, 0x0000_6001, 0x0000_7001, 0x0000_8001,
+        0x0000_9001, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_F003,
+        0x01FF_FFFF, 0x0000_A001, 0x0000_B001, 0x0000_C001, 0x0000_D001, 0x0000_E001,
+        0x0000_F001, 0x0000_0002, 0x0000_1002, 0x0000_2002, 0x0000_3002, 0x0000_4002,
+        0x0000_5002, 0x0000_6002, 0x0000_7002, 0x0000_8002, 0x0000_9002, 0x0000_A002,
+        0x0000_B002, 0x0000_C002, 0x0000_D002, 0x0000_E002, 0x0000_F002, 0x0000_0003,
+        0x0000_1003, 0x0000_2003, 0x0000_3003, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+    ]
+
+    static let decoding2url: [UInt32] = [
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0080_0F00, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x0000_0D00, 0x0040_0D00, 0x0080_0D00, 0x00C0_0D00, 0x0000_0E00, 0x0040_0E00,
+        0x0080_0E00, 0x00C0_0E00, 0x0000_0F00, 0x0040_0F00, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_0000,
+        0x0040_0000, 0x0080_0000, 0x00C0_0000, 0x0000_0100, 0x0040_0100, 0x0080_0100,
+        0x00C0_0100, 0x0000_0200, 0x0040_0200, 0x0080_0200, 0x00C0_0200, 0x0000_0300,
+        0x0040_0300, 0x0080_0300, 0x00C0_0300, 0x0000_0400, 0x0040_0400, 0x0080_0400,
+        0x00C0_0400, 0x0000_0500, 0x0040_0500, 0x0080_0500, 0x00C0_0500, 0x0000_0600,
+        0x0040_0600, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x00C0_0F00,
+        0x01FF_FFFF, 0x0080_0600, 0x00C0_0600, 0x0000_0700, 0x0040_0700, 0x0080_0700,
+        0x00C0_0700, 0x0000_0800, 0x0040_0800, 0x0080_0800, 0x00C0_0800, 0x0000_0900,
+        0x0040_0900, 0x0080_0900, 0x00C0_0900, 0x0000_0A00, 0x0040_0A00, 0x0080_0A00,
+        0x00C0_0A00, 0x0000_0B00, 0x0040_0B00, 0x0080_0B00, 0x00C0_0B00, 0x0000_0C00,
+        0x0040_0C00, 0x0080_0C00, 0x00C0_0C00, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+    ]
+
+    static let decoding3url: [UInt32] = [
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x003E_0000, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x0034_0000, 0x0035_0000, 0x0036_0000, 0x0037_0000, 0x0038_0000, 0x0039_0000,
+        0x003A_0000, 0x003B_0000, 0x003C_0000, 0x003D_0000, 0x01FF_FFFF, 0x01FF_FFFF,
+        0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x0000_0000,
+        0x0001_0000, 0x0002_0000, 0x0003_0000, 0x0004_0000, 0x0005_0000, 0x0006_0000,
+        0x0007_0000, 0x0008_0000, 0x0009_0000, 0x000A_0000, 0x000B_0000, 0x000C_0000,
+        0x000D_0000, 0x000E_0000, 0x000F_0000, 0x0010_0000, 0x0011_0000, 0x0012_0000,
+        0x0013_0000, 0x0014_0000, 0x0015_0000, 0x0016_0000, 0x0017_0000, 0x0018_0000,
+        0x0019_0000, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x003F_0000,
         0x01FF_FFFF, 0x001A_0000, 0x001B_0000, 0x001C_0000, 0x001D_0000, 0x001E_0000,
         0x001F_0000, 0x0020_0000, 0x0021_0000, 0x0022_0000, 0x0023_0000, 0x0024_0000,
         0x0025_0000, 0x0026_0000, 0x0027_0000, 0x0028_0000, 0x0029_0000, 0x002A_0000,

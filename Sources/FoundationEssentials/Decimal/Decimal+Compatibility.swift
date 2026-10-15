@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift project authors
+// Copyright (c) 2024-2026 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -76,11 +76,11 @@ private func __NSDecimalAdd(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let addition = try lhs.pointee._add(
+        let addition = try lhs.pointee._addReportingInexact(
             rhs: rhs.pointee, roundingMode: roundingMode
         )
         result.pointee = addition.result
-        if addition.lossOfPrecision {
+        if addition.inexact {
             return .lossOfPrecision
         } else {
             return .noError
@@ -93,8 +93,9 @@ private func __NSDecimalAdd(
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalAdd")
-internal func _NSDecimalAdd(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalAdd(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalAdd(result, lhs, rhs, roundingMode)
 }
 #else
@@ -111,10 +112,13 @@ private func __NSDecimalSubtract(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let subtraction = try lhs.pointee._subtract(
+        let subtraction = try lhs.pointee._subtractReportingInexact(
             rhs: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = subtraction
+        result.pointee = subtraction.result
+        if subtraction.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
@@ -124,8 +128,9 @@ private func __NSDecimalSubtract(
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalSubtract")
-internal func _NSDecimalSubtract(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalSubtract(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalSubtract(result, lhs, rhs, roundingMode)
 }
 #else
@@ -142,21 +147,27 @@ private func __NSDecimalMultiply(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._multiply(
+        let product = try lhs.pointee._multiplyReportingInexact(
             by: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = product
+        result.pointee = product.result
+        if product.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalMultiply")
-internal func _NSDecimalMultiply(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalMultiply(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalMultiply(result, lhs, rhs, roundingMode)
 }
 #else
@@ -173,21 +184,27 @@ private func __NSDecimalDivide(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try lhs.pointee._divide(
+        let quotient = try lhs.pointee._divideReportingInexact(
             by: rhs.pointee, roundingMode: roundingMode
         )
-        result.pointee = product
+        result.pointee = quotient.result
+        if quotient.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalDivide")
-internal func _NSDecimalDivide(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalDivide(_ result: UnsafeMutablePointer<Decimal>, _ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalDivide(result, lhs, rhs, roundingMode)
 }
 #else
@@ -217,8 +234,9 @@ private func __NSDecimalPower(
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalPower")
-internal func _NSDecimalPower(_ result: UnsafeMutablePointer<Decimal>, _ decimal: UnsafePointer<Decimal>, _ exponent: Int, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalPower(_ result: UnsafeMutablePointer<Decimal>, _ decimal: UnsafePointer<Decimal>, _ exponent: Int, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalPower(result, decimal, exponent, roundingMode)
 }
 #else
@@ -235,19 +253,27 @@ private func __NSDecimalMultiplyByPowerOf10(
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
     do {
-        let product = try decimal.pointee._multiplyByPowerOfTen(power: Int(power), roundingMode: roundingMode)
-        result.pointee = product
+        let product = try decimal.pointee._multiplyByPowerOfTenReportingInexact(
+            power: Int(power), roundingMode: roundingMode
+        )
+        result.pointee = product.result
+        if product.inexact {
+            return .lossOfPrecision
+        }
         return .noError
     } catch {
         let converted = _convertError(error)
         result.pointee = .nan
+        // NaN even in case of underflow:
+        // see documentation for `- [NSDecimalNumberBehaviors exceptionDuringOperation:error:leftOperand:rightOperand:]`
         return converted
     }
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalMultiplyByPowerOf10")
-internal func _NSDecimalMultiplyByPowerOf10(_ result: UnsafeMutablePointer<Decimal>, _ decimal: UnsafePointer<Decimal>, _ power: CShort, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalMultiplyByPowerOf10(_ result: UnsafeMutablePointer<Decimal>, _ decimal: UnsafePointer<Decimal>, _ power: CShort, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalMultiplyByPowerOf10(result, decimal, power, roundingMode)
 }
 #else
@@ -265,8 +291,9 @@ private func __NSDecimalCompare(
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalCompare")
-internal func _NSDecimalCompare(_ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>) -> ComparisonResult {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalCompare(_ lhs: UnsafePointer<Decimal>, _ rhs: UnsafePointer<Decimal>) -> ComparisonResult {
     __NSDecimalCompare(lhs, rhs)
 }
 #else
@@ -289,14 +316,15 @@ private func __NSDecimalRound(
         )
         result.pointee = rounded
     } catch {
-        // Noop since this method does not
-        // return a calculation error
+        // If rounding away from zero, a sufficiently negative `scale` can cause overflow.
+        result.pointee = .nan
     }
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalRound")
-internal func _NSDecimalRound(_ result: UnsafeMutablePointer<Decimal>, _ decimal: UnsafePointer<Decimal>, _ scale: Int, _ roundingMode: Decimal.RoundingMode) {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalRound(_ result: UnsafeMutablePointer<Decimal>, _ decimal: UnsafePointer<Decimal>, _ scale: Int, _ roundingMode: Decimal.RoundingMode) {
     __NSDecimalRound(result, decimal, scale, roundingMode)
 }
 #else
@@ -311,27 +339,23 @@ private func __NSDecimalNormalize(
     _ rhs: UnsafeMutablePointer<Decimal>,
     _ roundingMode: Decimal.RoundingMode
 ) -> Decimal.CalculationError {
-    do {
-        var a = lhs.pointee
-        var b = rhs.pointee
-        let lossPrecision = try Decimal._normalize(
-            a: &a, b: &b, roundingMode: roundingMode
-        )
-        lhs.pointee = a
-        rhs.pointee = b
-        if lossPrecision {
-            return .lossOfPrecision
-        }
-        return .noError
-    } catch {
-        let converted = _convertError(error)
-        return converted
+    var a = lhs.pointee
+    var b = rhs.pointee
+    let lossOfPrecision = Decimal._normalize(
+        a: &a, b: &b, roundingMode: roundingMode
+    )
+    lhs.pointee = a
+    rhs.pointee = b
+    if lossOfPrecision {
+        return .lossOfPrecision
     }
+    return .noError
 }
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalNormalize")
-internal func _NSDecimalNormalize(_ lhs: UnsafeMutablePointer<Decimal>, _ rhs: UnsafeMutablePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalNormalize(_ lhs: UnsafeMutablePointer<Decimal>, _ rhs: UnsafeMutablePointer<Decimal>, _ roundingMode: Decimal.RoundingMode) -> Decimal.CalculationError {
     __NSDecimalNormalize(lhs, rhs, roundingMode)
 }
 #else
@@ -342,8 +366,9 @@ public func _NSDecimalNormalize(_ lhs: UnsafeMutablePointer<Decimal>, _ rhs: Uns
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@_cdecl("_NSDecimalCompact")
-internal func _NSDecimalCompact(_ number: UnsafeMutablePointer<Decimal>) {
+@c @implementation
+@available(macOS 10.0, iOS 2.0, watchOS 2.0, tvOS 9.0, visionOS 1.0, *)
+public func NSDecimalCompact(_ number: UnsafeMutablePointer<Decimal>) {
     var value = number.pointee
     value.compact()
     number.pointee = value
@@ -398,14 +423,16 @@ internal func __NSStringToDecimal(
     processedLength: UnsafeMutablePointer<Int>,
     result: UnsafeMutablePointer<Decimal>
 ) {
-    let parsed = Decimal._decimal(
-        from: string.utf8,
-        decimalSeparator: ".".utf8,
+    if let (parsedResult, _, processedCodeUnits) = try? Decimal.__decimal(
+        from: string.utf8Span.span,
+        prevalidatedUTF8: true,
+        decimalSeparator: ".".utf8Span,
         matchEntireString: false
-    ).asOptional
-    processedLength.pointee = parsed.processedLength
-    if let parsedResult = parsed.result {
+    ) {
+        processedLength.pointee = processedCodeUnits
         result.pointee = parsedResult
+    } else {
+        processedLength.pointee = 0
     }
 }
 

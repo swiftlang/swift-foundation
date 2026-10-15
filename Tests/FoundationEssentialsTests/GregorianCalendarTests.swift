@@ -180,25 +180,25 @@ private struct GregorianCalendarTests {
         test(.init(year: 2935, month: 6, day: -3), expected: Date(timeIntervalSince1970: 30465158400.0))
         test(.init(year: 2935, month: 6, day: 3), expected: Date(timeIntervalSince1970: 30465676800.0))
 
-        test(.init(year: 1582, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: -12232857600.0))
-        test(.init(year: 1582, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: -12232857600.0))
+        test(.init(year: 1582, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: -12234844800.0))
+        test(.init(year: 1582, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: -12231216000.0))
         test(.init(year: 1705, month: 2, weekOfMonth: 1), expected: Date(timeIntervalSince1970: -8359891200.0))
-        test(.init(year: 1705, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: -8349523200.0))
-        test(.init(year: 1828, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: -4465411200.0))
-        test(.init(year: 1828, month: 7, weekOfMonth: 5), expected: Date(timeIntervalSince1970: -4465411200.0))
-        test(.init(year: 1828, month: 11, weekOfMonth: 0), expected: Date(timeIntervalSince1970: -4454784000.0))
-        test(.init(year: 2197, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: 7173878400.0))
-        test(.init(year: 2197, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 7173878400.0))
+        test(.init(year: 1705, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: -8352028800.0))
+        test(.init(year: 1828, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: -4464979200.0))
+        test(.init(year: 1828, month: 7, weekOfMonth: 5), expected: Date(timeIntervalSince1970: -4463164800.0))
+        test(.init(year: 1828, month: 11, weekOfMonth: 0), expected: Date(timeIntervalSince1970: -4455302400.0))
+        test(.init(year: 2197, month: 5, weekOfMonth: -2), expected: Date(timeIntervalSince1970: 7171977600.0))
+        test(.init(year: 2197, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 7173792000.0))
         test(.init(year: 2320, month: 2, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 11047536000.0))
-        test(.init(year: 2320, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 11057990400.0))
-        test(.init(year: 2443, month: -5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 14910566400.0))
-        test(.init(year: 2443, month: -1, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14921193600.0))
-        test(.init(year: 2443, month: 7, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14942102400.0))
-        test(.init(year: 2443, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: 14942102400.0))
-        test(.init(year: 2812, month: -3, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 26560396800.0))
-        test(.init(year: 2812, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 26581392000.0))
-        test(.init(year: 2812, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 26581392000.0))
-        test(.init(year: 2935, month: 6, weekOfMonth: 0), expected: Date(timeIntervalSince1970: 30465504000.0))
+        test(.init(year: 2320, month: 6, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 11055398400.0))
+        test(.init(year: 2443, month: -5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 14912208000.0))
+        test(.init(year: 2443, month: -1, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14920070400.0))
+        test(.init(year: 2443, month: 7, weekOfMonth: -1), expected: Date(timeIntervalSince1970: 14940633600.0))
+        test(.init(year: 2443, month: 7, weekOfMonth: 2), expected: Date(timeIntervalSince1970: 14942448000.0))
+        test(.init(year: 2812, month: -3, weekOfMonth: -3), expected: Date(timeIntervalSince1970: 26558236800.0))
+        test(.init(year: 2812, month: 5, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 26581219200.0))
+        test(.init(year: 2812, month: 5, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 26583033600.0))
+        test(.init(year: 2935, month: 6, weekOfMonth: 0), expected: Date(timeIntervalSince1970: 30464640000.0))
 
         test(.init(weekOfYear: 20, yearForWeekOfYear: 1582), expected: Date(timeIntervalSince1970: -12231820800.0))
         test(.init(weekOfYear: -25, yearForWeekOfYear: 1705), expected: Date(timeIntervalSince1970: -8378035200.0))
@@ -215,6 +215,23 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: -52, yearForWeekOfYear: 2812), expected: Date(timeIntervalSince1970: 26538883200.0))
         test(.init(weekOfYear: 1, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30452544000.0))
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
+    }
+
+    @Test func testDateFromComponentsWeekOfMonth() {
+        let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
+        func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
+            let date = cal.date(from: dateComponents)
+            #expect(date == expected, "date components: \(dateComponents)", sourceLocation: sourceLocation)
+        }
+
+        test(.init(year: 2024, month: 1, weekOfMonth: 1), expected: Date(timeIntervalSince1970: 1703980800.0)) // 2023-12-31
+        test(.init(year: 2024, month: 1, weekOfMonth: 2), expected: Date(timeIntervalSince1970: 1704585600.0)) // 2024-01-07
+        test(.init(year: 2024, month: 1, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705190400.0)) // 2024-01-14
+        test(.init(year: 2024, month: 1, weekOfMonth: 4), expected: Date(timeIntervalSince1970: 1705795200.0)) // 2024-01-21
+        test(.init(year: 2024, month: 1, weekOfMonth: 5), expected: Date(timeIntervalSince1970: 1706400000.0)) // 2024-01-28
+
+        test(.init(year: 2024, month: 1, day: 20, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705708800.0)) // 2024-01-20
+        test(.init(year: 2024, month: 1, weekday: 4, weekOfMonth: 3), expected: Date(timeIntervalSince1970: 1705449600.0)) // 2024-01-17
     }
 
     // MARK: - DateComponents from date
@@ -1569,6 +1586,54 @@ private struct GregorianCalendarTests {
         #expect(calendar1 != calendar2)
         
         #expect(calendar1.timeZone == tz)
+    }
+}
+
+/// The difference across an era change in the calendars that label eras from a table. The start moves into the era of the end first, so the smaller components can be negative.
+@Suite("Gregorian Family Era Difference", .tags(.calendar))
+private struct GregorianFamilyEraDifferenceTests {
+
+    struct EraSpan: Sendable, CustomTestStringConvertible {
+        let identifier: Calendar.Identifier
+        let start, end: Date
+        let expected: DateComponents
+        let testDescription: String
+
+        init(_ identifier: Calendar.Identifier, from start: (Int, Int, Int, Int, Int, Int), to end: (Int, Int, Int, Int, Int, Int), expected: (era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int)) {
+            self.identifier = identifier
+            self.start = Self.date(start)
+            self.end = Self.date(end)
+            self.expected = DateComponents(era: expected.era, year: expected.year, month: expected.month, day: expected.day, hour: expected.hour, minute: expected.minute, second: expected.second)
+            self.testDescription = "\(identifier) from \(start.0) to \(end.0)"
+        }
+
+        private static func date(_ value: (year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int)) -> Date {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .gmt
+            guard let date = calendar.date(from: DateComponents(year: value.year, month: value.month, day: value.day, hour: value.hour, minute: value.minute, second: value.second)) else {
+                preconditionFailure("invalid Gregorian date \(value)")
+            }
+            return date
+        }
+    }
+
+    /// Japanese spans cross Meiji, Showa, Heisei and Reiwa. ROC spans cross from Before Minguo to Minguo. The last span stays in one era.
+    static let spans: [EraSpan] = [
+        EraSpan(.japanese, from: (1900, 1, 1, 1, 23, 34), to: (2010, 9, 8, 7, 59, 54), expected: (3, -10, -3, -22, -17, -23, -40)),
+        EraSpan(.japanese, from: (2010, 9, 8, 7, 59, 54), to: (1900, 1, 1, 1, 23, 34), expected: (-3, 10, 3, 23, 17, 23, 40)),
+        EraSpan(.japanese, from: (1950, 6, 15, 12, 0, 0), to: (2020, 2, 29, 8, 30, 15), expected: (2, -23, -3, -15, -3, -29, -45)),
+        EraSpan(.japanese, from: (1989, 1, 8, 0, 0, 0), to: (1950, 6, 15, 12, 0, 0), expected: (-1, 24, 5, 7, 12, 0, 0)),
+        EraSpan(.republicOfChina, from: (1900, 1, 1, 1, 23, 34), to: (2010, 9, 8, 7, 59, 54), expected: (1, 87, 8, 7, 6, 36, 20)),
+        EraSpan(.republicOfChina, from: (2010, 9, 8, 7, 59, 54), to: (1900, 1, 1, 1, 23, 34), expected: (-1, 86, 3, 23, 17, 23, 40)),
+        EraSpan(.republicOfChina, from: (1911, 12, 31, 23, 0, 0), to: (1912, 1, 1, 1, 0, 0), expected: (1, 0, -11, -30, -22, 0, 0)),
+        EraSpan(.japanese, from: (2020, 3, 1, 0, 0, 0), to: (2025, 8, 20, 12, 0, 0), expected: (0, 5, 5, 19, 12, 0, 0)),
+    ]
+
+    @Test(arguments: spans)
+    func differenceAcrossEras(_ span: EraSpan) {
+        let calendar = Calendar(inner: _CalendarGregorian(identifier: span.identifier, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil))
+        let difference = calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second], from: span.start, to: span.end)
+        #expect(difference == span.expected)
     }
 }
 

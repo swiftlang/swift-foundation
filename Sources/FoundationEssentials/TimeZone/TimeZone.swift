@@ -10,13 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
 /// Information about standard time conventions associated with a specific geopolitical region.
 ///
@@ -234,7 +230,7 @@ public struct TimeZone : Hashable, Equatable, Sendable {
         _tz.localizedName(for: style, locale: locale)
     }
 
-    @_alwaysEmitIntoClient @_disfavoredOverload
+    @export(implementation) @_disfavoredOverload
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     public static var gmt: TimeZone { TimeZone(secondsFromGMT: 0)! }
 
@@ -293,6 +289,7 @@ extension TimeZone {
 #endif
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var customMirror : Mirror {
@@ -314,7 +311,9 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
         return _tz.debugDescription
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension TimeZone : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -351,6 +350,7 @@ extension TimeZone : Codable {
         }
     }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK
@@ -405,7 +405,7 @@ extension TimeZone {
 
 extension TimeZone {
     internal static func dataFromTZFile(_ name: String) -> Data {
-#if NO_TZFILE || os(Windows) || os(WASI)
+#if NO_TZFILE || os(Windows) || os(WASI) || os(Emscripten)
         return Data()
 #else
         let path = TZDIR + "/" + name

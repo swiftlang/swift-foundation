@@ -242,14 +242,14 @@ extension AttributedStringProtocol { // Equatable, Hashable
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
-    /// Returns the position of the character immediately after another charcter indicated by an index.
+    /// Returns the position of the character immediately after another character indicated by an index.
     ///
     /// - Parameter i: The index of a character in the attributed string.
     /// - Returns: The position of the character immediately after the character at index `i`.
     public func index(afterCharacter i: AttributedString.Index) -> AttributedString.Index {
         self.characters.index(after: i)
     }
-    /// Returns the position of the character immediately before another charcter indicated by an index.
+    /// Returns the position of the character immediately before another character indicated by an index.
     ///
     /// - Parameter i: The index of a character in the attributed string.
     /// - Returns: The position of the character immediately before the character at index `i`.
@@ -355,6 +355,8 @@ extension AttributedStringProtocol {
     }
 }
 
+// TODO: Should be enabled when Substring._range(of:options:) is enabled in Embedded Swift
+#if !hasFeature(Embedded)
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
     internal func _range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = []) -> Range<AttributedString.Index>? {
@@ -405,4 +407,5 @@ extension AttributedStringProtocol {
 #endif // FOUNDATION_FRAMEWORK
     }
 }
+#endif
 

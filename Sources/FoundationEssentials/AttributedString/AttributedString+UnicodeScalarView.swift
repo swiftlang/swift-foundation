@@ -134,7 +134,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
     /// - Complexity: O(1) if the collection conforms to
     ///   `RandomAccessCollection`; otherwise, O(*n*), where *n* is the length
     ///   of the collection.
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var count: Int {
     #if FOUNDATION_FRAMEWORK
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
@@ -171,7 +171,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return j
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(
         _ i: AttributedString.Index,
         offsetBy distance: Int,
@@ -204,7 +204,7 @@ extension AttributedString.UnicodeScalarView: BidirectionalCollection {
         return Index(j, version: _guts.version)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func distance(
         from start: AttributedString.Index,
         to end: AttributedString.Index

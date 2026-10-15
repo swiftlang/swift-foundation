@@ -18,11 +18,11 @@ extension Locale {
 
     /// A type that represents a language, as used in a locale.
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Language : Hashable, Codable, Sendable {
+    public struct Language : Hashable, Sendable {
 
         /// A type that identifies a language by its various components.
         @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-        public struct Components : Hashable, Codable, Sendable {
+        public struct Components : Hashable, Sendable {
             /// The language code that identifies this language.
             public var languageCode: Locale.LanguageCode?
             /// The written script used by this language.
@@ -111,3 +111,11 @@ extension Locale {
         }
     }
 }
+
+// Codable is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Language : Codable {}
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+extension Locale.Language.Components : Codable {}
+#endif

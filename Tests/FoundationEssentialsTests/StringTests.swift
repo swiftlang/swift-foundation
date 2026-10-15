@@ -799,6 +799,25 @@ private struct StringTests {
         #expect("a/b/c//".removingDotSegments == "a/b/c//")
     }
 
+    @Test func testSlashCompressedString() {
+        func compressed(_ path: String) -> String {
+            var path = path
+            return path.withUTF8 { $0.span.slashCompressedString() }
+        }
+        #expect(compressed("") == "")
+        #expect(compressed("a") == "a")
+        #expect(compressed("/") == "/")
+        #expect(compressed("//") == "/")
+        #expect(compressed("///") == "/")
+        #expect(compressed("//a") == "/a")
+        #expect(compressed("a//") == "a/")
+        #expect(compressed("a/b/c") == "a/b/c")
+        #expect(compressed("a//b///c") == "a/b/c")
+        #expect(compressed("//a//b//") == "/a/b/")
+        #expect(compressed("/./..//./..//") == "/./.././../")
+        #expect(compressed("/😎//❤️///") == "/😎/❤️/")
+    }
+
     @Test func testPathExtension() {
         let stringNoExtension = "0123456789"
         let stringWithExtension = "\(stringNoExtension).foo"

@@ -920,6 +920,7 @@ public struct Locale : Hashable, Equatable, Sendable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
     public var customMirror : Mirror {
@@ -937,7 +938,9 @@ extension Locale : CustomDebugStringConvertible, CustomStringConvertible, Custom
         description
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Locale : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -1014,3 +1017,4 @@ extension Locale : Codable {
         try _encode(to: encoder, currentIsSentinel: true)
     }
 }
+#endif

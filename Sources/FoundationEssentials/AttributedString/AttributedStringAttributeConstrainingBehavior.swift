@@ -179,9 +179,9 @@ extension AttributedString.Guts {
     ///
     /// Note: this should be called _before_ the mutation takes place.
     ///
-    /// - Parameter range: The UTF-8 range in which the mutation will take place.
+    /// - Parameter utf8Range: The UTF-8 range in which the mutation will take place.
     /// - Returns: The UTF-8 range that was modified during this invalidation.
-    ///     (If no modification took place, then the result is `range`.)
+    ///     (If no modification took place, then the result is `utf8Range`.)
     func enforceAttributeConstraintsBeforeMutation(to utf8Range: Range<Int>) -> Range<Int> {
         var utf8Start = utf8Range.lowerBound
         var utf8End = utf8Range.upperBound
@@ -245,7 +245,7 @@ extension AttributedString.Guts {
     
     /// Adjusts any attributes constrained to specified run boundaries based on a mutation that has taken place. Note: this should be called _after_ the mutation takes place
     /// - Parameters:
-    ///   - range: The UTF-8 range in which the mutation has taken place (this range should be based on the resulting string)
+    ///   - utf8Range: The UTF-8 range in which the mutation has taken place (this range should be based on the resulting string)
     ///   - type: The type of mutation that was applied. Either attributes-only (eg. `attrStr.foregroundColor = .blue`) or a combination of attributes and characters (eg. `attrStr.characters[idx] = "A"` or `attrStr.replaceSubrange(range, with: otherStr)`).
     ///   - constraintsInvolved: A list of run boundary constraints for attributes involved in the mutation. This is used as a performance shortcut when very few attributes are mutated, and `nil` can be used when the information is not quickly accessible from the caller.
     func enforceAttributeConstraintsAfterMutation(

@@ -23,13 +23,12 @@ add_library(FoundationEssentials
     DateInterval.swift
     FoundationEssentials.swift
     IndexPath.swift
-    Logging.swift
     Mutex+ExtendedLifetime.swift
-    OutputBuffer.swift
     Platform.swift
     Progress+Stub.swift
     SortComparator.swift
     Span+Utils.swift
+    UInt8+ASCII.swift
     UUID_Wrappers.swift
     UUID.swift
     WASILibc+Extensions.swift
@@ -38,6 +37,8 @@ add_library(FoundationEssentials
 add_subdirectory(AttributedString)
 add_subdirectory(Bytes)
 add_subdirectory(Calendar)
+add_subdirectory(CharacterSet)
+add_subdirectory(Codable)
 add_subdirectory(Data)
 add_subdirectory(Decimal)
 add_subdirectory(Error)

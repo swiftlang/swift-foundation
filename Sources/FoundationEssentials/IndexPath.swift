@@ -313,6 +313,18 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                         }
                     case (0, 2):
                         self = newValue
+                    case (1, 1):
+                        // Insert newValue between first and second, leaving the pair otherwise intact.
+                        switch newValue {
+                        case .empty:
+                            break
+                        case .single(let other):
+                            self = .array([first, other, second])
+                        case .pair(let otherFirst, let otherSecond):
+                            self = .array([first, otherFirst, otherSecond, second])
+                        case .array(let other):
+                            self = .array([first] + other + [second])
+                        }
                     case (1, 2):
                         switch newValue {
                         case .empty:

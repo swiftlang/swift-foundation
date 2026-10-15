@@ -28,6 +28,7 @@ target_sources(FoundationEssentials PRIVATE
     String+Internals.swift
     String+Path.swift
     StringBlocks.swift
+    StringEncodingMappingData.swift
     StringProtocol+Essentials.swift
     StringProtocol+Stub.swift
     UnicodeScalar.swift)

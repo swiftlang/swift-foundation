@@ -114,6 +114,7 @@ public extension CocoaError {
 #endif
     }
 
+#if !hasFeature(Embedded)
     /// The underlying error behind this error, if any.
     var underlying: Error? {
 #if FOUNDATION_FRAMEWORK
@@ -152,6 +153,7 @@ public extension CocoaError {
         
         return result
     }
+#endif
 
     /// The URL associated with this error, if any.
     var url: URL? {
@@ -163,6 +165,7 @@ public extension CocoaError {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CocoaError {
 #if FOUNDATION_FRAMEWORK
@@ -183,6 +186,7 @@ extension CocoaError {
     }
 #endif
 }
+#endif
 
 /// A specialized error that provides localized messages describing the error and why it occurred.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -276,4 +280,5 @@ internal let NSURLErrorKey = "NSURL"
 internal let NSSourceFilePathErrorKey = "NSSourceFilePathErrorKey"
 internal let NSDestinationFilePathErrorKey = "NSDestinationFilePath"
 package let NSDebugDescriptionErrorKey = "NSDebugDescription"
+internal let _NSUnknownErrnoKey = "NSUnknownErrno"
 #endif

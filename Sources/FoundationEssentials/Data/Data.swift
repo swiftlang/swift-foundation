@@ -10,48 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Windows)
-@usableFromInline let calloc = ucrt.calloc
-@usableFromInline let malloc = ucrt.malloc
-@usableFromInline let free = ucrt.free
-@usableFromInline let memset = ucrt.memset
-@usableFromInline let memcpy = ucrt.memcpy
-@usableFromInline let memcmp = ucrt.memcmp
-#elseif canImport(Bionic)
-@preconcurrency import Bionic
-@usableFromInline let calloc = Bionic.calloc
-@usableFromInline let malloc = Bionic.malloc
-@usableFromInline let free = Bionic.free
-@usableFromInline let memset = Bionic.memset
-@usableFromInline let memcpy = Bionic.memcpy
-@usableFromInline let memcmp = Bionic.memcmp
-#elseif canImport(Glibc)
-@usableFromInline let calloc = Glibc.calloc
-@usableFromInline let malloc = Glibc.malloc
-@usableFromInline let free = Glibc.free
-@usableFromInline let memset = Glibc.memset
-@usableFromInline let memcpy = Glibc.memcpy
-@usableFromInline let memcmp = Glibc.memcmp
-#elseif canImport(Musl)
-@usableFromInline let calloc = Musl.calloc
-@usableFromInline let malloc = Musl.malloc
-@usableFromInline let free = Musl.free
-@usableFromInline let memset = Musl.memset
-@usableFromInline let memcpy = Musl.memcpy
-@usableFromInline let memcmp = Musl.memcmp
-#elseif canImport(WASILibc)
-@usableFromInline let calloc = WASILibc.calloc
-@usableFromInline let malloc = WASILibc.malloc
-@usableFromInline let free = WASILibc.free
-@usableFromInline let memset = WASILibc.memset
-@usableFromInline let memcpy = WASILibc.memcpy
-@usableFromInline let memcmp = WASILibc.memcmp
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
-@usableFromInline let memset = _FoundationDarwinExtras.memset
-@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
-@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
-#endif
-
 #if !NO_CSHIMS
 internal import _FoundationCShims
 #endif
@@ -62,7 +20,7 @@ import Darwin
 
 internal func __DataInvokeDeallocatorVirtualMemory(_ mem: UnsafeMutableRawPointer, _ length: Int) {
     guard vm_deallocate(
-        _platform_mach_task_self(),
+        mach_task_self_,
         vm_address_t(UInt(bitPattern: mem)),
         vm_size_t(length)) == ERR_SUCCESS else {
         fatalError("*** __DataInvokeDeallocatorVirtualMemory(\(mem), \(length)) failed")
@@ -79,16 +37,43 @@ internal func malloc_good_size(_ size: Int) -> Int {
 
 #if canImport(Glibc)
 @preconcurrency import Glibc
+@usableFromInline let memcmp = Glibc.memcmp
+@usableFromInline let memset = Glibc.memset
+@usableFromInline let memcpy = Glibc.memcpy
 #elseif canImport(Musl)
 @preconcurrency import Musl
+@usableFromInline let memcmp = Musl.memcmp
+@usableFromInline let memset = Musl.memset
+@usableFromInline let memcpy = Musl.memcpy
 #elseif canImport(ucrt)
 import ucrt
+@usableFromInline let memcmp = ucrt.memcmp
+@usableFromInline let memset = ucrt.memset
+@usableFromInline let memcpy = ucrt.memcpy
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
-#elseif HAS_FOUNDATION_DARWIN_EXTRAS
+@usableFromInline let memcmp = WASILibc.memcmp
+@usableFromInline let memset = WASILibc.memset
+@usableFromInline let memcpy = WASILibc.memcpy
+#elseif canImport(EmscriptenLibc)
+@preconcurrency import EmscriptenLibc
+@usableFromInline let memcmp = EmscriptenLibc.memcmp
+@usableFromInline let memset = EmscriptenLibc.memset
+@usableFromInline let memcpy = EmscriptenLibc.memcpy
+#elseif canImport(_FoundationDarwinExtras)
 internal import _FoundationDarwinExtras.POSIX.sys.mman
+@usableFromInline let memcmp = _FoundationDarwinExtras.memcmp
+@usableFromInline let memset = _FoundationDarwinExtras.memset
+@usableFromInline let memcpy = _FoundationDarwinExtras.memcpy
+#elseif canImport(Bionic)
+@preconcurrency import Bionic
+@usableFromInline let memcmp = Bionic.memcmp
+@usableFromInline let memset = Bionic.memset
+@usableFromInline let memcpy = Bionic.memcpy
 #elseif canImport(string_h)
 import string_h
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 #if os(Windows)
@@ -110,7 +95,7 @@ internal func __DataInvokeDeallocatorFree(_ mem: UnsafeMutableRawPointer, _ leng
 }
 
 
-@_alwaysEmitIntoClient
+@export(implementation)
 internal func _withStackOrHeapBuffer(capacity: Int, _ body: (UnsafeMutableBufferPointer<UInt8>) -> Void) {
     guard capacity > 0 else {
         body(UnsafeMutableBufferPointer(start: nil, count: 0))
@@ -242,6 +227,19 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = _Representation(capacity: capacity)
     }
 
+    /// Creates a new data with the specified capacity, holding a copy of the bytes of the given span.
+    ///
+    /// - Parameters:
+    ///   - capacity: The storage capacity of the new data, or nil to allocate just enough capacity to store the bytes of the span.
+    ///   - span: The span whose bytes to copy into the new data. The span must not contain more than `capacity` bytes.
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    public init(capacity: Int? = nil, copying span: RawSpan) {
+        self.init(capacity: capacity ?? span.byteCount) {
+            $0._append(copying: span)
+        }
+    }
+
     /// Creates a new data buffer with the specified count of zeroed bytes.
     ///
     /// - parameter count: The number of bytes the data initially contains.
@@ -256,68 +254,19 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation = .empty
     }
 
-    /// Creates a data instance with the specified capacity, and then calls the given
-    /// closure with an output span covering the instance's uninitialized memory.
-    ///
-    /// Inside the closure, initialize elements by appending to the `OutputRawSpan`.
-    /// The `OutputRawSpan` keeps track of the initialized memory, ensuring
-    /// safety. Its `count` at the end of the closure will become the `count` of
-    /// the newly-initialized instance of `Data`.
-    ///
-    /// - Note: While the resulting `Data` may have a capacity larger than the
-    ///   requested amount, the `OutputRawSpan` passed to the closure will cover
-    ///   exactly the number of bytes requested.
+    /// Creates a new data with the specified capacity, directly initializing its storage using an output raw span.
     ///
     /// - Parameters:
-    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
-    ///   - initializer: A closure to initialize the allocated memory.
-    ///     - Parameters:
-    ///       - span: An `OutputRawSpan` covering uninitialized memory with
-    ///         space for the specified number of bytes.
+    ///   - capacity: The storage capacity of the new data.
+    ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The function is allowed to add fewer than `capacity` bytes. The data is initialized with however many bytes the callback adds to the output raw span before it returns (or before it throws an error).
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
-    @_spi(_) // TODO: Remove pending API surface amendment
     public init<E: Error>(
-        rawCapacity capacity: Int,
+        capacity: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
         precondition(capacity >= 0, "capacity must not be negative")
         _representation = try _Representation(capacity: capacity, initializer)
-    }
-
-    /// Creates a data instance with the specified capacity, and then calls the given
-    /// closure with an output span covering the instance's uninitialized memory.
-    ///
-    /// Inside the closure, initialize elements by appending to the `OutputSpan`.
-    /// The `OutputSpan` keeps track of the initialized memory, ensuring
-    /// safety. Its `count` at the end of the closure will become the `count` of
-    /// the newly-initialized instance of `Data`.
-    ///
-    /// - Note: While the resulting `Data` may have a capacity larger than the
-    ///   requested amount, the `OutputSpan` passed to the closure will cover
-    ///   exactly the number of bytes requested.
-    ///
-    /// - Parameters:
-    ///   - capacity: The number of bytes to allocate space for in the new `Data`.
-    ///   - initializer: A closure to initialize the allocated memory.
-    ///     - Parameters:
-    ///       - span: An `OutputSpan` covering uninitialized memory with
-    ///         space for the specified number of elements.
-    // TODO: Make public pending API surface amendment
-    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    internal init<E: Error>(
-        capacity: Int,
-        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
-    ) throws(E) {
-        self = try Data(rawCapacity: capacity) { output throws(E) in
-            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
-                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
-                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
-                    try initializer(&span)
-                    count = span.finalize(for: buffer)
-                }
-            }
-        }
     }
 
     /// Creates a data buffer with memory content without copying the bytes.
@@ -348,7 +297,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ data: Data) {
         #if DATA_LEGACY_ABI
         switch data._representation {
@@ -377,7 +326,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public init(_ elements: some Sequence<UInt8> & ContiguousBytes) {
         if let data = _specialize(elements, for: Data.self) {
             self.init(data)
@@ -390,7 +339,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @abi(init(fastCheckElements elements: some Sequence<UInt8>))
     public init(_ elements: some Sequence<UInt8>) {
         if let data = _specialize(elements, for: Data.self) {
@@ -511,7 +460,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func withUnsafeBytes<E, ResultType: ~Copyable>(_ body: (UnsafeRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
         try _representation.withUnsafeBytes(body)
     }
@@ -530,7 +479,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 #endif // DATA_LEGACY_ABI
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
@@ -539,7 +488,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var span: Span<UInt8> {
         @_lifetime(borrow self)
         borrowing get {
@@ -549,7 +498,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public var mutableBytes: MutableRawSpan {
         @_lifetime(&self)
         mutating get {
@@ -557,8 +506,20 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
+    /// Arbitrarily edit the storage underlying this data by invoking a user-supplied closure with a mutable `OutputRawSpan` view over it. This method calls its function argument exactly once, allowing it to arbitrarily modify the contents of the output span it is given. The argument is free to add, remove or reorder any items; however, it is not allowed to replace the span or change its capacity.
+    ///
+    /// When the function argument finishes (whether by returning or throwing an error) the data instance is updated to match the final contents of the output span.
+    ///
+    /// - Parameter body: A function that edits the contents of this data through an `OutputRawSpan` argument. This method invokes this function exactly once.
+    /// - Returns: This method returns the result of its function argument.
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
+    public mutating func edit<E: Error, R: ~Copyable>(_ body: (inout OutputRawSpan) throws(E) -> R) throws(E) -> R {
+        try _representation.edit(body)
+    }
+
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    @export(implementation)
     public var mutableSpan: MutableSpan<UInt8> {
         @_lifetime(&self)
         mutating get {
@@ -571,7 +532,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func withContiguousStorageIfAvailable<E, ResultType: ~Copyable>(
       _ body: (_ buffer: UnsafeBufferPointer<UInt8>) throws(E) -> ResultType
     ) throws(E) -> ResultType? {
@@ -581,7 +542,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     }
 
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func withUnsafeMutableBytes<E, ResultType: ~Copyable>(_ body: (UnsafeMutableRawBufferPointer) throws(E) -> ResultType) throws(E) -> ResultType {
         try _representation.withUnsafeMutableBytes(body)
     }
@@ -623,73 +584,37 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         }
     }
 
-    /// Grows this data to have enough capacity for the specified number of
-    /// bytes, then calls the closure with an output span covering the requested
-    /// amount of uninitialized memory.
+    /// Append a given number of bytes to the end of this data by populating an output raw span.
     ///
-    /// Inside the closure, initialize elements by appending to `span`. It
-    /// ensures safety by keeping track of the initialized memory.
-    /// At the end of the closure, `span`'s `count` elements will have
-    /// been appended to this `Data` instance.
+    /// If the capacity of the data isn't sufficient to perform the append, then this reallocates the data's storage to extend its capacity.
     ///
-    /// If the closure throws an error, the items appended until that point
-    /// will remain in the `Data` instance.
+    /// If the callback fails to fully populate its output raw span or if it throws an error, then the data keeps all items that were successfully initialized before the callback terminated the operation.
     ///
     /// - Parameters:
-    ///   - uninitializedCount: The number of new elements the `Data` should have
-    ///     space for.
-    ///   - initializer: A closure to initialize memory.
-    ///     - Parameters:
-    ///       - span: An `OutputRawSpan` covering uninitialized memory with
-    ///         space for the specified number of additional bytes.
-    // TODO: Make public pending SE-0527 naming discussion
+    ///    - newBytesCount: The number of bytes to append to the data.
+    ///    A callback that gets called exactly once to directly populate newly reserved storage within the data.
+    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
-    internal mutating func append<E: Error>(
-        addingRawCapacity uninitializedCount: Int,
+    @export(implementation)
+    public mutating func append<E: Error>(
+        addingCount newBytesCount: Int,
         initializingWith initializer: (_ span: inout OutputRawSpan) throws(E) -> Void
     ) throws(E) {
-        precondition(uninitializedCount >= 0, "uninitializedCount must not be negative")
-        try _representation.append(addingCapacity: uninitializedCount, initializer)
+        precondition(newBytesCount >= 0, "newBytesCount must not be negative")
+        try _representation.append(addingCount: newBytesCount, initializer)
     }
 
-    /// Grows this data to have enough capacity for the specified number of
-    /// bytes, then calls the closure with an output span covering the requested
-    /// amount of uninitialized memory.
+    /// Copies the bytes of a raw span to the end of this data.
     ///
-    /// Inside the closure, initialize elements by appending to `span`. It
-    /// ensures safety by keeping track of the initialized memory.
-    /// At the end of the closure, `span`'s `count` elements will have
-    /// been appended to this `Data` instance.
-    ///
-    /// If the closure throws an error, the items appended until that point
-    /// will remain in the `Data` instance.
+    /// If the capacity of the data isn't sufficient to perform the append, then this reallocates the data's storage to extend its capacity.
     ///
     /// - Parameters:
-    ///   - uninitializedCount: The number of new elements the array should have
-    ///     space for.
-    ///   - initializer: A closure to initialize memory.
-    ///     - Parameters:
-    ///       - span: An `OutputSpan` covering uninitialized memory with
-    ///         space for the specified number of additional elements.
-    // TODO: Make public pending SE-0527 naming discussion
+    ///    - newBytes: A raw span whose contents to copy into the data.
+    @export(implementation)
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
-    @_alwaysEmitIntoClient
-    internal mutating func append<E: Error>(
-        addingCapacity uninitializedCount: Int,
-        initializingWith initializer: (_ span: inout OutputSpan<UInt8>) throws(E) -> Void
-    ) throws(E) {
-        try self.append(addingRawCapacity: uninitializedCount) { output throws(E) in
-            try output.withUnsafeMutableBytes { (bytes, count) throws(E) in
-                try bytes.withMemoryRebound(to: UInt8.self) { buffer throws(E) in
-                    var span = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
-                    defer {
-                        count = span.finalize(for: buffer)
-                        span = OutputSpan()
-                    }
-                    try initializer(&span)
-                }
-            }
+    public mutating func append(copying newBytes: RawSpan) {
+        self.append(addingCount: newBytes.byteCount) {
+            $0._append(copying: newBytes)
         }
     }
 
@@ -701,7 +626,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _append(buffer)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func append(_ byte: UInt8) {
         Swift.withUnsafeBytes(of: byte) { buffer in
             _representation.append(contentsOf: buffer)
@@ -723,7 +648,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func append(contentsOf elements: some Sequence<UInt8> & ContiguousBytes) {
         // Since the sequence is already contiguous, access the underlying raw memory directly.
         elements.withUnsafeBytes {
@@ -734,7 +659,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
 
     /// Appends the bytes in the specified sequence to the end of the data.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @abi(mutating func append(fastContentsof elements: some Sequence<UInt8>))
     public mutating func append(contentsOf elements: some Sequence<UInt8>) {
         // The sequence might be able to provide direct access to typed memory.
@@ -819,10 +744,65 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.resetBytes(in: range)
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func insert(_ newElement: UInt8, at i: Index) {
         Swift.withUnsafeBytes(of: newElement) { buffer in
             _representation.replaceSubrange(i ..< i, with: buffer.baseAddress, count: buffer.count)
+        }
+    }
+
+    /// Inserts a given number of new bytes into this data at the specified index, using a callback to directly initialize data storage by populating an output raw span.
+    ///
+    /// Existing bytes in the data's storage are moved towards the back as needed to make room for the new bytes.
+    ///
+    /// If the capacity of the data isn't sufficient to perform the insertion, then this reallocates the data's storage to extend its capacity.
+    ///
+    ///     var prefix: RawSpan = /* a raw span containing the bytes 11, 99 */
+    ///     var buffer = Data(capacity: 20, copying: prefix)
+    ///     var i: UInt8 = 0
+    ///     buffer.insert(addingCount: 3, at: 1) { target in
+    ///       while !target.isFull {
+    ///         target.append(i)
+    ///         i += 1
+    ///       }
+    ///     }
+    ///     // `buffer` now contains the bytes 11, 0, 1, 2, and 99
+    ///
+    /// If the callback fails to fully populate its output raw span or if it throws an error, then the data keeps all items that were successfully initialized before the callback terminated the insertion.
+    ///
+    /// Partial insertions create a gap in data storage that needs to be closed by moving already inserted bytes to their correct positions given
+    /// the adjusted count. This adds some overhead compared to adding exactly as many items as promised.
+    ///
+    /// - Parameters:
+    ///    - newBytesCount: The maximum number of bytes to insert into the data.
+    ///    - index: The position at which to insert the new items. `index` must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
+    ///    - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    public mutating func insert<E: Error>(
+        addingCount newBytesCount: Int,
+        at index: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) {
+        try self.replaceSubrange(index ..< index, addingCount: newBytesCount, initializingWith: initializer)
+    }
+
+    /// Copies the bytes of a raw span into this data at the specified index.
+    ///
+    /// The new bytes are inserted before the byte currently at the specified index. If you pass the data's `endIndex` as the `index` parameter, then the new bytes are appended to the end of the data.
+    ///
+    /// All existing bytes at or following the specified index are moved to make room for the new bytes.
+    ///
+    /// If the capacity of the data isn't sufficient to perform the insertion, then this reallocates the data's storage to extend its capacity.
+    ///
+    /// - Parameters:
+    ///    - newBytes: The new bytes to insert into the data.
+    ///    - index: The position at which to insert the new bytes. `index`  must be a valid index in the data, or equal to the data's `endIndex` (in which case the new bytes are appended to the end of the data).
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    public mutating func insert(copying newBytes: RawSpan, at index: Int) {
+        self.insert(addingCount: newBytes.byteCount, at: index) {
+            $0._append(copying: newBytes)
         }
     }
 
@@ -867,7 +847,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///   - subrange: The range in the data to replace.
     ///   - newElements: The replacement bytes.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8> & ContiguousBytes) {
         newElements.withUnsafeBytes { buffer in
             _representation.replaceSubrange(subrange, with: buffer.baseAddress, count: buffer.count)
@@ -883,7 +863,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     ///   - subrange: The range in the data to replace.
     ///   - newElements: The replacement bytes.
     @inline(__always)
-    @_alwaysEmitIntoClient
+    @export(implementation)
     @abi(mutating func repalceSubrangeFast(_ subrange: Range<Index>, with newElements: some Collection<UInt8>))
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<UInt8>) {
         let replaced: Void? = newElements.withContiguousStorageIfAvailable { buffer in
@@ -936,7 +916,74 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         _representation.replaceSubrange(subrange, with: bytes, count: cnt)
     }
 
-    @_alwaysEmitIntoClient
+    /// Replaces the specified range of bytes by a given count of new bytes, using a callback to directly initialize data storage by populating
+    /// an output raw span.
+    ///
+    /// The number of new bytes need not match the number of bytes being removed.
+    ///
+    /// This method has the same overall effect as calling
+    ///
+    ///     try data.removeSubrange(subrange)
+    ///     try data.insert(
+    ///       addingCount: newBytesCount,
+    ///       at: subrange.lowerBound,
+    ///       initializingWith: initializer)
+    ///
+    /// However, it performs faster (by a constant factor) by avoiding moving some bytes in the data twice.
+    ///
+    /// If the capacity of the data isn't sufficient to perform the replacement, then this reallocates the data's storage to extend its capacity.
+    ///
+    /// If the callback fails to fully populate its output raw span or if it throws an error, then the data keeps all bytes that were successfully initialized before the callback terminated the replacement.
+    ///
+    /// Partial replacements create a gap in data storage that needs to be closed by moving subsequent bytes to their correct positions given the adjusted count. This adds some overhead compared to adding exactly as many bytes as promised.
+    ///
+    /// - Parameters:
+    ///   - subrange: The subrange of the data to replace. The bounds of the range must be valid indices in the data.
+    ///   - newBytesCount: The maximum number of new bytes to insert in place of the old subrange.
+    ///   - initializer: A callback that gets called exactly once to directly populate newly reserved storage within the data. The callback is always called with an empty output span. The callback is allowed to initialize fewer than `newBytesCount` bytes. The data is extended by however many bytes the callback appends to the output raw span before it returns (or throws an error).
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    public mutating func replaceSubrange<E: Error>(
+        _ subrange: Range<Int>,
+        addingCount newBytesCount: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws(E) -> Void
+    ) throws(E) -> Void {
+        precondition(newBytesCount >= 0, "newBytesCount must not be negative")
+        try _representation.replaceSubrange(subrange, addingCount: newBytesCount, initializingWith: initializer)
+    }
+
+
+    /// Replaces the specified subrange of bytes by copying the bytes of the given raw span.
+    ///
+    /// The number of new bytes need not match the number of bytes being removed.
+    ///
+    /// This method has the same overall effect as calling
+    ///
+    ///     try data.removeSubrange(subrange)
+    ///     try data.insert(
+    ///       copying: newBytes,
+    ///       at: subrange.lowerBound)
+    ///
+    /// However, it performs faster (by a constant factor) by avoiding moving some bytes in the data twice.
+    ///
+    /// If the capacity of the data isn't sufficient to perform the replacement, then this reallocates the data's storage to extend its capacity.
+    ///
+    /// If you pass a zero-length range as the `subrange` parameter, this method inserts the bytes of `newBytes` at `subrange.lowerBound`. Calling the `insert(copying:at:)` method instead is preferred in this case.
+    ///
+    /// Likewise, if you pass a zero-length raw span as the `newBytes` parameter, this method removes the bytes in the given subrange without replacement. Calling the `removeSubrange(_:)` method instead is preferred in this case.
+    ///
+    /// - Parameters:
+    ///   - subrange: The subrange of the data to replace. The bounds of the range must be valid indices in the data.
+    ///   - newBytes: The new bytes to copy into the data.
+    @export(implementation)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
+    public mutating func replaceSubrange(_ subrange: Range<Int>, copying newBytes: RawSpan) {
+        self.replaceSubrange(subrange, addingCount: newBytes.byteCount) {
+            $0._append(copying: newBytes)
+        }
+    }
+
+    @export(implementation)
     @discardableResult
     public mutating func remove(at position: Index) -> UInt8 {
         precondition(!isEmpty, "Can't remove from an empty collection")
@@ -946,13 +993,13 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         return result
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func removeSubrange(_ bounds: Range<Index>) {
         // Avoids using EmptyCollection below like the default implementation since EmptyCollection does not implement withContiguousStorageIfAvailable and the as? ContiguousBytes check triggers an expensive dynamic cast
         replaceSubrange(bounds, with: UnsafeRawBufferPointer(start: nil, count: 0))
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func removeAll(keepingCapacity keepCapacity: Bool = false) {
         if !keepCapacity {
             self = Data()
@@ -1143,6 +1190,7 @@ extension Data {
 
                     // Compare the contents
                     assert(length1 == b2.count)
+                    // Use the inlined memcmp above
                     return memcmp(b1Address, b2Address, length1) == 0
                 }
             }
@@ -1152,7 +1200,7 @@ extension Data {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension Data : CustomStringConvertible, CustomDebugStringConvertible {
     /// A human-readable description for the data.
     public var description: String {
         return "\(self.count) bytes"
@@ -1162,7 +1210,11 @@ extension Data : CustomStringConvertible, CustomDebugStringConvertible, CustomRe
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Data: CustomReflectable {
     public var customMirror: Mirror {
         let nBytes = self.count
         var children: [(label: String?, value: Any)] = []
@@ -1214,3 +1266,4 @@ extension Data : Codable {
         }
     }
 }
+#endif

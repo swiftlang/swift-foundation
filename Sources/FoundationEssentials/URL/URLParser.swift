@@ -181,6 +181,11 @@ package protocol UIDNAHook {
 internal func _uidnaHook() -> UIDNAHook.Type? {
     UIDNAHookICU.self
 }
+#elseif hasFeature(Embedded)
+// Embedded Swift doesn't support dynamic replacement.
+package func _uidnaHook() -> UIDNAHook.Type? {
+    nil
+}
 #else
 dynamic package func _uidnaHook() -> UIDNAHook.Type? {
     nil

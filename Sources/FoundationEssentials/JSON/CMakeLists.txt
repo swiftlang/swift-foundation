@@ -19,6 +19,13 @@ target_sources(FoundationEssentials PRIVATE
     BufferViewIterator.swift
     JSON5Scanner.swift
     JSONDecoder.swift
+    JSONDecoderImpl.swift
     JSONEncoder.swift
+    JSONMap.swift
+    JSONMapBuildingSink.swift
+    JSONPrimitive.swift
+    JSONPrimitive+Scope.swift
+    JSONPrimitiveSource.swift
     JSONScanner.swift
+    JSONScannerEventSource.swift
     JSONWriter.swift)

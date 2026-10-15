@@ -9,7 +9,7 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.4.2"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.4.2", "6.5"]
 
 // Availability Macro Utilities
 
@@ -32,6 +32,10 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
         .enableExperimentalFeature("AvailabilityMacro=\($0.name) \(version):\($0.osAvailability.rawValue)")
     }
 }
+
+let availabilityCheckingSettings: [SwiftSetting] = [
+    .unsafeFlags(["-library-level", "api", "-Xfrontend", "-require-explicit-availability=ignore"], .when(platforms: [.macOS]))
+]
 
 let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
@@ -69,13 +73,13 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                exact: "1.1.6"),
+                exact: "1.7.3"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
-                branch: "release/6.4.x"),
+                branch: "main"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                branch: "release/6.4.x")
+                branch: "main")
         ]
 }
 
@@ -133,6 +137,7 @@ let package = Package(
             "Data/CMakeLists.txt",
             "TimeZone/CMakeLists.txt",
             "JSON/CMakeLists.txt",
+            "Codable/CMakeLists.txt",
             "AttributedString/CMakeLists.txt",
             "Calendar/CMakeLists.txt",
             "Predicate/CMakeLists.txt",
@@ -142,6 +147,7 @@ let package = Package(
             "URL/CMakeLists.txt",
             "NotificationCenter/CMakeLists.txt",
             "ProgressManager/CMakeLists.txt",
+            "CharacterSet/CMakeLists.txt",
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
@@ -153,8 +159,8 @@ let package = Package(
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport"),
-            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
-          ] + availabilityMacros + featureSettings,
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
+          ] + availabilityMacros + featureSettings + availabilityCheckingSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
           ]
@@ -175,10 +181,19 @@ let package = Package(
 
         // FoundationInternationalization
         .target(
+            name: "_FoundationInternationalizationData",
+            exclude: ["CMakeLists.txt"],
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableExperimentalFeature("Lifetimes"),
+            ] + availabilityMacros + featureSettings + availabilityCheckingSettings
+        ),
+        .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
+                .target(name: "_FoundationInternationalizationData"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [
@@ -190,12 +205,13 @@ let package = Package(
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt",
+                "Formatting/ListFormatData.json",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),
-            ] + availabilityMacros + featureSettings
+            ] + availabilityMacros + featureSettings + availabilityCheckingSettings
         ),
         
         .testTarget(
