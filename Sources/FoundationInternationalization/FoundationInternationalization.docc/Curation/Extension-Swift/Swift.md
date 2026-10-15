@@ -17,10 +17,6 @@ Other times, a type appears in this list only because FoundationInternationaliza
 - ``BinaryInteger``
 - ``BinaryFloatingPoint``
 
-### Formatting strings
-
-- ``String``
-- ``StringProtocol``
 
 ### Formatting sequences and ranges
 
@@ -30,6 +26,11 @@ Other times, a type appears in this list only because FoundationInternationaliza
 ### Formatting durations
 
 - ``Duration``
+
+### Working with strings
+
+- ``String``
+- ``StringProtocol``
 
 ### Working with codability
 
