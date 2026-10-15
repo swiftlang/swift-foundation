@@ -14,7 +14,8 @@
 
 // Reads the tables in DateFormatData.swift, which stay `internal` to this
 // module so they compile into read-only data. The slot orders here match
-// utils/update-date-format-data-impl.swift.
+// utils/update-date-format-data-impl.swift, and the sub-blocks match
+// `subBlockSizes` in utils/build-date-format-data-impl.swift.
 
 // MARK: - Strings
 
@@ -105,8 +106,9 @@ private func _search(_ target: String, count: Int, _ entry: (Int) -> UInt32) -> 
 
 // MARK: - Locales
 
+/// Each group's first sub-block in a row. Groups have one sub-block per context and width, in slot order.
 package enum DateFormatDataGroup : Int {
-    case numbers, months, weekdays, quarters, eras, dayPeriods, gmt, capitalization
+    case numbers = 0, months = 1, weekdays = 7, quarters = 15, eras = 21, dayPeriods = 24, gmt = 27, capitalization = 28
 }
 
 /// The contextTransforms usages for date fields, in table order.
@@ -128,14 +130,16 @@ package enum DateFormatNameWidth : Int {
 
 /// A locale's date-format data.
 package struct DateFormatLocale : Sendable {
-    let index: Int
+    /// The locale's row's first index in `rows`.
+    let row: Int
 
     /// Resolves a locale identifier, ignoring keywords, to the nearest locale in the tables.
     ///
     /// Where the identifier's language has no data, this uses the tables' built-in fallback locale if they have one,
     /// else root.
     package init(identifier: String) {
-        index = Self.index(for: Self.baseName(identifier)) ?? Self.fallbackIndex()
+        let index = Self.index(for: Self.baseName(identifier)) ?? Self.fallbackIndex()
+        row = Int(_DateFormatData.localeRows[index]) * _DateFormatData.rowWidth
     }
 
     /// The identifier without keywords, with `_` separators. An empty identifier is root.
@@ -177,18 +181,17 @@ package struct DateFormatLocale : Sendable {
         return index(for: "root")!
     }
 
-    package func string(_ group: DateFormatDataGroup, _ slot: Int) -> DateFormatDataString {
-        let groupCount = _DateFormatData.groupBases.count
-        let block = Int(_DateFormatData.localeBlocks[index * groupCount + group.rawValue])
-        let entry = _DateFormatData.groupBases[group.rawValue] + block * _DateFormatData.groupSlotCounts[group.rawValue] + slot
-        return DateFormatDataString(entry: _DateFormatData.entries[entry])
+    /// The string in `slot` of the locale's `subBlock`th sub-block for `group`.
+    package func string(_ group: DateFormatDataGroup, _ subBlock: Int, _ slot: Int) -> DateFormatDataString {
+        let start = Int(_DateFormatData.rows[row + group.rawValue + subBlock])
+        return DateFormatDataString(entry: _DateFormatData.names[start + slot])
     }
 
     // MARK: Names
 
     /// `month` is 1-based.
     package func month(_ month: Int, context: DateFormatNameContext, width: DateFormatNameWidth) -> DateFormatDataString {
-        string(.months, context.rawValue * 36 + width.rawValue * 12 + month - 1)
+        string(.months, context.rawValue * 3 + width.rawValue, month - 1)
     }
 
     /// `weekday` is 1-based, Sunday first.
@@ -200,33 +203,33 @@ package struct DateFormatLocale : Sendable {
         case .short: 2
         case .wide: 3
         }
-        return string(.weekdays, context.rawValue * 28 + widthSlot * 7 + weekday - 1)
+        return string(.weekdays, context.rawValue * 4 + widthSlot, weekday - 1)
     }
 
     /// `quarter` is 1-based.
     package func quarter(_ quarter: Int, context: DateFormatNameContext, width: DateFormatNameWidth) -> DateFormatDataString {
-        string(.quarters, context.rawValue * 12 + width.rawValue * 4 + quarter - 1)
+        string(.quarters, context.rawValue * 3 + width.rawValue, quarter - 1)
     }
 
     package func era(_ era: Int, width: DateFormatNameWidth) -> DateFormatDataString {
-        string(.eras, width.rawValue * 2 + era)
+        string(.eras, width.rawValue, era)
     }
 
     /// `period` is 0 for AM, 1 for PM, 2 for noon.
     package func dayPeriod(_ period: Int, width: DateFormatNameWidth) -> DateFormatDataString {
-        string(.dayPeriods, width.rawValue * 3 + period)
+        string(.dayPeriods, width.rawValue, period)
     }
 
     /// The localized GMT pattern, such as `GMT{0}`.
-    package var gmtFormat: DateFormatDataString { string(.gmt, 0) }
+    package var gmtFormat: DateFormatDataString { string(.gmt, 0, 0) }
 
     /// The positive and negative offset patterns, such as `+HH:mm;-HH:mm`.
-    package var hourFormat: DateFormatDataString { string(.gmt, 1) }
+    package var hourFormat: DateFormatDataString { string(.gmt, 0, 1) }
 
     /// Whether to titlecase a field with this usage at the start of a UI list item or menu item, or when it stands alone.
     package func capitalizes(_ usage: DateFormatCapitalizationUsage, forListItem: Bool) -> Bool {
         // Two flags, for list items then standalone use, as "0" or "1".
-        let flags = string(.capitalization, usage.rawValue)
+        let flags = string(.capitalization, 0, usage.rawValue)
         guard !flags.isEmpty else { return false }
         return UInt8(truncatingIfNeeded: flags.entry >> (forListItem ? 8 : 16)) == UInt8(ascii: "1")
     }
@@ -253,7 +256,7 @@ package struct DateFormatLocale : Sendable {
             case "finance": 3
             default: 0
             }
-            let system = regional.string(.numbers, slot)
+            let system = regional.string(.numbers, 0, slot)
             systemIndex = system.withUTF8 { _search($0, count: _DateFormatData.numberingSystemIDs.count, { _DateFormatData.numberingSystemIDs[$0] }) }
             minusSlot = system.withUTF8 { Self.minusSlot(forSystem: $0) }
         } else {
@@ -264,9 +267,9 @@ package struct DateFormatLocale : Sendable {
         }
         guard let systemIndex else {
             // Algorithmic numbering systems use Latin digits, where ICU formats them with RBNF rules (e.g. roman numerals). So do unknown ones.
-            return DateFormatNumbers(systemIndex: _search("latn", count: _DateFormatData.numberingSystemIDs.count, { _DateFormatData.numberingSystemIDs[$0] })!, minusSign: string(.numbers, 4), usesHanidays: false)
+            return DateFormatNumbers(zero: 0x30, minusSign: string(.numbers, 0, 4), usesHanidays: false)
         }
-        return DateFormatNumbers(systemIndex: systemIndex, minusSign: string(.numbers, minusSlot), usesHanidays: usesHanidays)
+        return DateFormatNumbers(zero: _DateFormatData.numberingSystemZeros[systemIndex], minusSign: string(.numbers, 0, minusSlot), usesHanidays: usesHanidays)
     }
 
     /// The numbers slot for a numbering system's minus sign: its own if it has one, else the Latin one.
@@ -282,19 +285,50 @@ package struct DateFormatLocale : Sendable {
 
 /// Digits and a minus sign for formatting numeric fields.
 package struct DateFormatNumbers : Sendable {
-    let systemIndex: Int
+    /// Zero's UTF-8, first byte lowest, or the system's index in `irregularDigits`.
+    let zero: UInt32
+    /// Each digit's UTF-8 length, or 0 for a system in `irregularDigits`.
+    let digitLength: Int
     package let minusSign: DateFormatDataString
     /// Whether the day field uses Chinese day numerals, as Apple's ICU does for `numbers=hanidays`.
     package let usesHanidays: Bool
 
+    /// `zero` is an entry in `numberingSystemZeros`.
+    init(zero: UInt32, minusSign: DateFormatDataString, usesHanidays: Bool) {
+        if zero & 0x8000_0000 != 0 {
+            self.zero = zero & 0x7FFF_FFFF
+            digitLength = 0
+        } else {
+            var utf8: UInt32 = 0
+            var length = 0
+            UTF8.encode(Unicode.Scalar(zero)!) {
+                utf8 |= UInt32($0) << (8 * length)
+                length += 1
+            }
+            self.zero = utf8
+            digitLength = length
+        }
+        self.minusSign = minusSign
+        self.usesHanidays = usesHanidays
+    }
+
     /// `digit` is 0 through 9.
-    package func digit(_ digit: Int) -> DateFormatDataString {
-        DateFormatDataString(entry: _DateFormatData.numberingSystemDigits[systemIndex * 10 + digit])
+    package func appendDigit(_ digit: Int, to bytes: inout [UInt8]) {
+        guard digitLength != 0 else {
+            DateFormatDataString(entry: _DateFormatData.irregularDigits[Int(zero) * 10 + digit]).append(to: &bytes)
+            return
+        }
+        // The digit adds to zero's last byte. Unrolled with wrapping arithmetic, since a loop with overflow checks is slower.
+        let utf8 = zero &+ UInt32(truncatingIfNeeded: digit) &<< (UInt32(truncatingIfNeeded: digitLength &- 1) &* 8)
+        bytes.append(UInt8(truncatingIfNeeded: utf8))
+        if digitLength > 1 { bytes.append(UInt8(truncatingIfNeeded: utf8 &>> 8)) }
+        if digitLength > 2 { bytes.append(UInt8(truncatingIfNeeded: utf8 &>> 16)) }
+        if digitLength > 3 { bytes.append(UInt8(truncatingIfNeeded: utf8 &>> 24)) }
     }
 
     /// Whether the digits are ASCII 0-9.
     package var hasASCIIDigits: Bool {
-        (0 ..< 10).allSatisfy { digit($0).entry == UInt32(0x30 + $0) << 8 | 1 }
+        digitLength == 1 && zero == 0x30
     }
 
     /// The Chinese day numeral for `day`, 1 through 31.

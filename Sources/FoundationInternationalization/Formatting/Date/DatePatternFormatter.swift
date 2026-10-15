@@ -30,7 +30,7 @@ final class DatePatternFormatter : Sendable {
     let calendar: Calendar
     let locale: DateFormatLocale
     let numbers: DateFormatNumbers
-    /// Whether the digits are ASCII 0-9, which `appendNumber` writes without the table.
+    /// Whether the digits are ASCII 0-9, which `appendNumber` writes directly.
     let asciiDigits: Bool
     let capitalizationContext: FormatStyleCapitalizationContext
     let caseLanguage: CaseLanguage
@@ -566,7 +566,7 @@ final class DatePatternFormatter : Sendable {
         if asciiDigits {
             bytes.append(UInt8(ascii: "0") + UInt8(digit))
         } else {
-            numbers.digit(digit).append(to: &bytes)
+            numbers.appendDigit(digit, to: &bytes)
         }
     }
 

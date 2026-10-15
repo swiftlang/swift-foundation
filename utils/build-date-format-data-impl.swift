@@ -20,14 +20,18 @@
 //   - FALLBACK     : locale used where a language has no data ("" = root)
 //
 // Strings use "layout E": each is a 4-byte entry, a length byte plus 3 bytes.
-// Text of 3 UTF-8 bytes or fewer is stored in those bytes. Longer text is
-// stored once in a shared pool, and the 3 bytes hold its offset.
+// Text of 3 UTF-8 bytes or fewer is stored in those bytes. Longer text is in a
+// shared pool, and the 3 bytes hold its offset. Text that appears inside longer
+// text, such as "Sept" in "September", shares its bytes.
 //
-// Every included locale is fully resolved: it has one block index per group,
-// and identical blocks are stored once. A lookup for an included locale is two
-// table reads. An identifier that isn't included walks redirects (aliases,
-// parent locales of excluded locales, and ICU's script fallback) and truncation
-// until it reaches one.
+// Every included locale is fully resolved. Its blocks split into sub-blocks,
+// one per context and width (such as abbreviated format months), and identical
+// sub-blocks are stored once. Each locale has a row of where its sub-blocks
+// start, and identical rows are stored once. Sub-blocks and pooled text are in
+// the order locales first use them, so one locale's data sits together. A
+// lookup for an included locale is two table reads. An identifier that isn't
+// included walks redirects (aliases, parent locales of excluded locales, and
+// ICU's script fallback) and truncation until it reaches one.
 
 import Foundation
 
@@ -53,13 +57,51 @@ func readOptions() -> Options {
 
 struct StringPool {
     private(set) var bytes: [UInt8] = []
-    private var offsets: [String: Int] = [:]
+    private var offsets: [[UInt8]: Int] = [:]
 
-    /// Returns the 4-byte entry for `string`, adding it to the pool if needed.
-    mutating func entry(_ string: String?) -> UInt32 {
+    /// Pools the strings longer than 3 bytes in the order they first appear. A string inside a longer one reuses its bytes.
+    init(_ strings: [String?]) {
+        var distinct: [[UInt8]] = []
+        var seen: Set<[UInt8]> = []
+        for case let string? in strings {
+            let utf8 = Array(string.utf8)
+            precondition(utf8.count <= 255, "string longer than 255 bytes: \(string)")
+            if utf8.count > 3 && seen.insert(utf8).inserted {
+                distinct.append(utf8)
+            }
+        }
+        // Longest first, find which stored string contains each string. Text is
+        // valid UTF-8, so only substrings on character boundaries can match.
+        var containers: [[UInt8]: (stored: [UInt8], offset: Int)] = [:]
+        for index in distinct.indices.sorted(by: { (distinct[$0].count, $1) > (distinct[$1].count, $0) }) {
+            let utf8 = distinct[index]
+            guard containers[utf8] == nil else { continue }
+            for start in utf8.indices where !UTF8.isContinuation(utf8[start]) {
+                for end in stride(from: start + 4, through: utf8.count, by: 1) where end == utf8.count || !UTF8.isContinuation(utf8[end]) {
+                    let substring = Array(utf8[start ..< end])
+                    if containers[substring] == nil {
+                        containers[substring] = (utf8, start)
+                    }
+                }
+            }
+        }
+        // Store each containing string where text it holds is first used.
+        var starts: [[UInt8]: Int] = [:]
+        for utf8 in distinct {
+            let (stored, offset) = containers[utf8]!
+            if starts[stored] == nil {
+                starts[stored] = bytes.count
+                bytes += stored
+            }
+            offsets[utf8] = starts[stored]! + offset
+        }
+        precondition(bytes.count <= 1 << 24, "string pool exceeds 16 MB")
+    }
+
+    /// Returns the 4-byte entry for `string`, which must have been passed to `init`.
+    func entry(_ string: String?) -> UInt32 {
         guard let string, !string.isEmpty else { return 0 }
         let utf8 = Array(string.utf8)
-        precondition(utf8.count <= 255, "string longer than 255 bytes: \(string)")
         if utf8.count <= 3 {
             var entry = UInt32(utf8.count)
             for (i, byte) in utf8.enumerated() {
@@ -67,16 +109,15 @@ struct StringPool {
             }
             return entry
         }
-        let offset = offsets[string] ?? {
-            let offset = bytes.count
-            bytes += utf8
-            offsets[string] = offset
-            return offset
-        }()
-        precondition(offset < 1 << 24, "string pool exceeds 16 MB")
-        return UInt32(utf8.count) | UInt32(offset) << 8
+        return UInt32(utf8.count) | UInt32(offsets[utf8]!) << 8
     }
 }
+
+// MARK: - Sub-blocks
+
+/// The slots in each group's sub-blocks, one sub-block per context and width, in slot order.
+/// DateFormatDataGroup in DateFormatLookup.swift numbers the sub-blocks in a row to match.
+let subBlockSizes = ["numbers": 7, "months": 12, "weekdays": 7, "quarters": 4, "eras": 2, "dayPeriods": 3, "gmt": 2, "capitalization": 10]
 
 // MARK: - Subsetting
 
@@ -162,31 +203,62 @@ struct BuildDateFormatData {
         }
         let scriptRedirects = redirects.count - redirectCount
 
-        // Keep only the blocks the included locales use, and renumber them.
-        var pool = StringPool()
-        var groupBases: [Int] = []
-        var entries: [UInt32] = []
-        var remap: [String: [Int: Int]] = [:]
-        for group in dateFormatGroups {
-            let used = Set(sortedLocales.map { blocks($0)[group]! }).sorted()
-            groupBases.append(entries.count)
-            for (newIndex, oldIndex) in used.enumerated() {
-                remap[group, default: [:]][oldIndex] = newIndex
-                entries += schema.groupBlocks[group]![oldIndex].map { pool.entry($0) }
-            }
-            precondition(used.count < 65536)
+        // Store each sub-block the included locales use once, and each distinct row of sub-block starts once.
+        let subBlocks = dateFormatGroups.flatMap { group in
+            let size = subBlockSizes[group]!
+            precondition(schema.groupSlots[group]!.count % size == 0, "\(group) doesn't split into sub-blocks of \(size)")
+            return stride(from: 0, to: schema.groupSlots[group]!.count, by: size).map { (group: group, slots: $0 ..< $0 + size) }
         }
-        let localeIDs = sortedLocales.map { pool.entry($0) }
-        let localeBlocks = sortedLocales.flatMap { locale in dateFormatGroups.map { remap[$0]![blocks(locale)[$0]!]! } }
+        var names: [String?] = []
+        var subBlockStarts: [[String?]: Int] = [:]
+        var rows: [[Int]] = []
+        var rowIndexes: [[Int]: Int] = [:]
+        var localeRows: [Int] = []
+        for locale in sortedLocales {
+            let row = subBlocks.map { subBlock in
+                let values = Array(schema.groupBlocks[subBlock.group]![blocks(locale)[subBlock.group]!][subBlock.slots])
+                if let start = subBlockStarts[values] {
+                    return start
+                }
+                let start = names.count
+                subBlockStarts[values] = start
+                names += values
+                return start
+            }
+            if rowIndexes[row] == nil {
+                rowIndexes[row] = rows.count
+                rows.append(row)
+            }
+            localeRows.append(rowIndexes[row]!)
+        }
+        precondition(names.count <= 1 << 16 && rows.count <= 1 << 16, "too many sub-blocks or rows for UInt16 indexes")
+
         let redirectSources = redirects.keys.sorted { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }
-        let redirectFrom = redirectSources.map { pool.entry($0) }
         // Targets are identifiers, since a target may itself be excluded and redirect again.
-        let redirectTargets = redirectSources.map { pool.entry(redirects[$0]!) }
+        let redirectTargetIDs = redirectSources.map { redirects[$0]! }
         let systems = schema.numberingSystems.keys.sorted { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }
-        let systemIDs = systems.map { pool.entry($0) }
-        let systemDigits = systems.flatMap { schema.numberingSystems[$0]!.map { pool.entry($0) } }
-        let hanidaysDays = schema.hanidaysDays.map { pool.entry($0) }
-        let minusSystems = schema.groupSlots["numbers"]!.dropFirst(4).map { pool.entry($0.replacingOccurrences(of: "minus.", with: "")) }
+        // Most systems' digits follow their zero in Unicode, so their UTF-8 differs from zero's only in the last byte.
+        // The others' digits are stored as text.
+        var irregularDigits: [String] = []
+        let systemZeros: [UInt32] = systems.map { system in
+            let digits = schema.numberingSystems[system]!
+            let utf8 = digits.map { Array($0.utf8) }
+            if digits.allSatisfy({ $0.unicodeScalars.count == 1 }) && utf8.indices.allSatisfy({ utf8[$0].dropLast() == utf8[0].dropLast() && utf8[$0].last! == utf8[0].last! + UInt8($0) }) {
+                return digits[0].unicodeScalars.first!.value
+            }
+            irregularDigits += digits
+            return 0x8000_0000 | UInt32(irregularDigits.count / 10 - 1)
+        }
+        let minusNames = schema.groupSlots["numbers"]!.dropFirst(4).map { $0.replacingOccurrences(of: "minus.", with: "") }
+        let pool = StringPool(names + sortedLocales + redirectSources + redirectTargetIDs + systems + irregularDigits + schema.hanidaysDays + minusNames)
+        let nameEntries = names.map(pool.entry)
+        let localeIDs = sortedLocales.map(pool.entry)
+        let redirectFrom = redirectSources.map(pool.entry)
+        let redirectTargets = redirectTargetIDs.map(pool.entry)
+        let systemIDs = systems.map(pool.entry)
+        let irregularDigitEntries = irregularDigits.map(pool.entry)
+        let hanidaysDays = schema.hanidaysDays.map(pool.entry)
+        let minusSystems = minusNames.map(pool.entry)
         // One bit per two-letter code, AA through ZZ, as ICU's gValidRegionMap.
         var validRegions = [UInt32](repeating: 0, count: (26 * 26 + 31) / 32)
         for region in schema.validRegions {
@@ -225,18 +297,18 @@ struct BuildDateFormatData {
         """
         out += "    // Locale used where a language has no data. Empty means root.\n"
         out += "    internal static let fallbackLocale: StaticString = \"\(options.fallback ?? "")\"\n\n"
-        out += "    // Each group's first entry in `entries`, in DateFormatDataGroup order.\n"
-        out += "    internal static let groupBases: InlineArray<\(groupBases.count), Int> = [\(groupBases.map(String.init).joined(separator: ", "))]\n\n"
-        out += "    // Slots per block, in DateFormatDataGroup order.\n"
-        out += "    internal static let groupSlotCounts: InlineArray<\(dateFormatGroups.count), Int> = [\(dateFormatGroups.map { String(schema.groupSlots[$0]!.count) }.joined(separator: ", "))]\n\n"
+        out += "    // Sub-blocks in a row.\n"
+        out += "    internal static let rowWidth = \(subBlocks.count)\n\n"
         out += table("minusSignSystems", "UInt32", minusSystems.map(hex), comment: "Numbers slots: default, native, traditional, finance, then minus signs for \(schema.groupSlots["numbers"]!.dropFirst(4).map { $0.replacingOccurrences(of: "minus.", with: "") }.joined(separator: ", ")).", perLine: 8)
-        out += table("entries", "UInt32", entries.map(hex), comment: "Every group's blocks, one entry per slot.", perLine: 8)
+        out += table("names", "UInt32", nameEntries.map(hex), comment: "Every sub-block, one entry per slot.", perLine: 8)
+        out += table("rows", "UInt16", rows.flatMap { $0.map(String.init) }, comment: "Where each row's sub-blocks start in `names`, in DateFormatDataGroup order.", perLine: subBlocks.count)
         out += table("localeIDs", "UInt32", localeIDs.map(hex), comment: "Included locales, sorted by UTF-8 bytes.", perLine: 8)
-        out += table("localeBlocks", "UInt16", localeBlocks.map(String.init), comment: "Each locale's block index for each group, \(dateFormatGroups.count) per locale.", perLine: dateFormatGroups.count * 2)
+        out += table("localeRows", "UInt16", localeRows.map(String.init), comment: "Each locale's row in `rows`.", perLine: 16)
         out += table("redirectFrom", "UInt32", redirectFrom.map(hex), comment: "Identifiers that redirect to another locale, sorted by UTF-8 bytes.", perLine: 8)
         out += table("redirectTo", "UInt32", redirectTargets.map(hex), comment: "Where each identifier in `redirectFrom` goes.", perLine: 8)
         out += table("numberingSystemIDs", "UInt32", systemIDs.map(hex), comment: "Numeric numbering systems, sorted by UTF-8 bytes.", perLine: 8)
-        out += table("numberingSystemDigits", "UInt32", systemDigits.map(hex), comment: "Each numbering system's digits 0 through 9.", perLine: 10)
+        out += table("numberingSystemZeros", "UInt32", systemZeros.map(hex), comment: "Each numbering system's zero, whose UTF-8 differs from its other digits' only in the last byte, or 0x80000000 plus the system's index in `irregularDigits`.", perLine: 8)
+        out += table("irregularDigits", "UInt32", irregularDigitEntries.map(hex), comment: "Digits 0 through 9 of the systems whose digits don't follow their zero.", perLine: 10)
         out += table("hanidaysDays", "UInt32", hanidaysDays.map(hex), comment: "Days 1 through 31 for numbers=hanidays.", perLine: 8)
         out += table("validRegions", "UInt32", validRegions.map(hex), comment: "Regions an rg keyword can name, one bit per code: (first letter - A) * 26 + (second letter - A).", perLine: 8)
 
@@ -244,8 +316,8 @@ struct BuildDateFormatData {
         out += "}\n\n#endif // FOUNDATION_DATE_FORMAT_SWIFT\n"
 
         try out.write(toFile: options.outputSwiftPath, atomically: true, encoding: .utf8)
-        print("  locales: \(sortedLocales.count), redirects: \(redirects.count) (\(scriptRedirects) for script fallback), entries: \(entries.count), pool: \(pool.bytes.count) B", to: &standardError)
-        let size = entries.count * 4 + localeIDs.count * 4 + localeBlocks.count * 2 + redirectFrom.count * 8 + systemIDs.count * 4 + systemDigits.count * 4 + hanidaysDays.count * 4 + validRegions.count * 4 + pool.bytes.count
+        print("  locales: \(sortedLocales.count), redirects: \(redirects.count) (\(scriptRedirects) for script fallback), names: \(names.count), rows: \(rows.count), pool: \(pool.bytes.count) B", to: &standardError)
+        let size = names.count * 4 + rows.count * subBlocks.count * 2 + localeIDs.count * 6 + redirectFrom.count * 8 + systemIDs.count * 4 + systemZeros.count * 4 + irregularDigitEntries.count * 4 + hanidaysDays.count * 4 + validRegions.count * 4 + pool.bytes.count
         print("  table bytes: \(size)", to: &standardError)
     }
 }
