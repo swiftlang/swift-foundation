@@ -243,7 +243,18 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 fixedTimeZones[identifier] = innerTZ
                 return innerTZ
             } else {
-                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
+#if FOUNDATION_FRAMEWORK
+                // Without ICU, fall back to the built-in time zone data
+                let innerTz: (any _TimeZoneProtocol)?
+                if let icuClass = _timeZoneICUClass() {
+                    innerTz = icuClass.init(identifier: identifier)
+                } else {
+                    innerTz = _TimeZoneRulesBased(identifier: identifier)
+                }
+#else
+                let innerTz = _timeZoneICUClass()?.init(identifier: identifier)
+#endif
+                if let innerTz {
                     fixedTimeZones[identifier] = innerTz
                     return innerTz
                 } else {
