@@ -439,6 +439,8 @@ open class JSONEncoder {
             var writer = JSONWriter(options: writingOptions)
             writer.reserveCapacity(forSerializing: topLevel)
             try writer.serializeJSON(topLevel)
+            // Release the value tree before copying the output, so they're never resident at the same time
+            _ = consume topLevel
             return writer.makeData()
         } catch let error as JSONError {
             #if FOUNDATION_FRAMEWORK
@@ -572,6 +574,7 @@ private class __JSONEncoder : Encoder {
 
 // MARK: - Encoding Storage and Containers
 
+// TODO: Switch to a ~Copyable type once we can freely use UniqueArray. The addition of the base64 case made copies on Darwin platforms slightly more expensive, which a ~Copyable type could avoid entirely.
 internal enum JSONEncoderValue: Equatable {
     case string(String)
     case number(String)
@@ -583,6 +586,8 @@ internal enum JSONEncoderValue: Equatable {
 
     case directArray(Data, lengths: [Int])
     case nonPrettyDirectArray(Data)
+
+    case base64EncodedData(Data)
 }
 
 enum JSONFuture {
@@ -1237,7 +1242,7 @@ private extension __JSONEncoder {
             return encoder.takeValue().unsafelyUnwrapped
 
         case .base64:
-            return self.wrap(data.base64EncodedString())
+            return .base64EncodedData(data)
 
         case .custom(let closure):
             var encoder = getEncoder(for: additionalKey)
