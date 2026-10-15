@@ -73,7 +73,7 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                exact: "1.1.6"),
+                exact: "1.7.3"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
