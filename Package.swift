@@ -128,6 +128,7 @@ let package = Package(
             .product(name: "OrderedCollections", package: "swift-collections"),
           ],
           exclude: [
+            "Bytes/CMakeLists.txt",
             "Formatting/CMakeLists.txt",
             "PropertyList/CMakeLists.txt",
             "Decimal/CMakeLists.txt",
