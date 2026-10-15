@@ -428,7 +428,7 @@ extension _URL {
             let idnaEncoded = (
                 flags.contains([.didEncodeHost, .hasSpecialScheme]) &&
                 !flags.contains(.isIPLiteral) &&
-                _uidnaHook() != nil
+                RFC3986Parser.supportsIDNA
             )
             if percentEncoded {
                 if !idnaEncoded {
@@ -1443,7 +1443,7 @@ extension _URL {
         }
     }
 
-    #if !NO_FILESYSTEM
+    #if !NO_FILESYSTEM && !hasFeature(Embedded)
     var standardizedFileURL: URL? {
         guard isFileURL else {
             return nil

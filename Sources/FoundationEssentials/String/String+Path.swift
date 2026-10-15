@@ -346,7 +346,7 @@ extension String {
 
 // MARK: - Filesystem String Extensions
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !hasFeature(Embedded)
     
     internal static func homeDirectoryPath() -> String {
         #if os(Windows)
@@ -752,7 +752,7 @@ extension String {
         return result._standardizingPath
     }
 
-#endif // !NO_FILESYSTEM
+#endif // !NO_FILESYSTEM && !hasFeature(Embedded)
 
 }
 

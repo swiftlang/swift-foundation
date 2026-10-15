@@ -45,6 +45,10 @@ let featureSettings: [SwiftSetting] = [
     .swiftLanguageMode(.v5)
 ]
 
+// Embedded builds do not use ICU, so they omit swift-foundation-icu and the targets which depend on it.
+// SwiftPM manifests cannot see the selected Swift SDK, so opt in with e.g. `SWIFT_FOUNDATION_EMBEDDED=1 swift build --swift-sdk <embedded sdk>`.
+let buildingForEmbedded = !(Context.environment["SWIFT_FOUNDATION_EMBEDDED"] ?? "").isEmpty
+
 var dependencies: [Package.Dependency] = []
 
 if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalDepsEnv.isEmpty {
@@ -60,12 +64,15 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 name: "swift-collections",
                 path: "\(root)/swift-collections"),
             .package(
-                name: "swift-foundation-icu",
-                path: "\(root)/swift-foundation-icu"),
-            .package(
                 name: "swift-syntax",
                 path: "\(root)/swift-syntax")
         ]
+    if !buildingForEmbedded {
+        dependencies.append(
+            .package(
+                name: "swift-foundation-icu",
+                path: "\(root)/swift-foundation-icu"))
+    }
 } else {
     // These dependencies should match `update-checkout`
     // See `update-checkout-config.json` for the `main` branch-scheme
@@ -75,12 +82,15 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 url: "https://github.com/apple/swift-collections",
                 exact: "1.7.3"),
             .package(
-                url: "https://github.com/apple/swift-foundation-icu",
-                branch: "main"),
-            .package(
                 url: "https://github.com/swiftlang/swift-syntax",
                 branch: "main")
         ]
+    if !buildingForEmbedded {
+        dependencies.append(
+            .package(
+                url: "https://github.com/apple/swift-foundation-icu",
+                branch: "main"))
+    }
 }
 
 let wasiLibcCSettings: [CSetting] = [
@@ -92,7 +102,7 @@ let testOnlySwiftSettings: [SwiftSetting] = [
     .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
 ]
 
-let package = Package(
+var package = Package(
     name: "swift-foundation",
     platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
     products: [
@@ -251,3 +261,13 @@ let package = Package(
         )
     ]
 )
+
+if buildingForEmbedded {
+    let icuDependentTargets: Set<String> = [
+        "_FoundationInternationalizationData",
+        "FoundationInternationalization",
+        "FoundationInternationalizationTests",
+    ]
+    package.products.removeAll { $0.name == "FoundationInternationalization" }
+    package.targets.removeAll { icuDependentTargets.contains($0.name) }
+}
