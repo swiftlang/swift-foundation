@@ -194,6 +194,23 @@ private final class DataIOTests {
         #expect(!maps.isEmpty)
     }
 
+    #if os(Linux) || os(Android)
+    @Test
+    #else
+    @Test(.disabled("This test is not applicable on this platform"))
+    #endif
+    func zeroSizeFileReadsEntireContents() throws {
+        // /proc/self/maps reports a size of 0, and read(2) can return fewer bytes than were asked for before reaching the end. The mappings are listed by ascending address and the main thread's stack sits at the top of the address space, so a read that stopped early does not reach it.
+        let path = "/proc/self/maps"
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let text = try String(contentsOfFile: path, encoding: .utf8)
+        let viaManager = try #require(FileManager.default.contents(atPath: path))
+        for maps in [String(decoding: data, as: UTF8.self), text, String(decoding: viaManager, as: UTF8.self)] {
+            #expect(maps.contains("[stack]"))
+            #expect(maps.hasSuffix("\n"))
+        }
+    }
+
     @Test
     func atomicWrite() async throws {
         let data = generateTestData()
