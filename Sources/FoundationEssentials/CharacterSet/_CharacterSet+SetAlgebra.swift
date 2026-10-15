@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 
 // MARK: Set Algebra
 extension _CharacterSet {
@@ -679,3 +680,5 @@ extension _CharacterSet {
         return true
     }
 }
+
+#endif // !hasFeature(Embedded)

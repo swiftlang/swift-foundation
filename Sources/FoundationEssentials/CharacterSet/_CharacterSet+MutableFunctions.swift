@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // MARK: Mutable functions - insert(closedRange), insert(range), insert(string), remove(closedRange), remove(range), remove(string), invert()
 extension _CharacterSet {
     // MARK: API Methods
@@ -473,3 +475,5 @@ extension ClosedRange where Bound == Unicode.Scalar {
         return Swift.min(lowerBound, other.lowerBound)...Swift.max(upperBound, other.upperBound)
     }
 }
+
+#endif // !hasFeature(Embedded)

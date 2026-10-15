@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 extension _CharacterSet {
     struct CompactBitmapBacked {
         internal var data: Data
@@ -356,3 +358,5 @@ extension _CharacterSet {
     }
 
 }
+
+#endif // !hasFeature(Embedded)

@@ -397,7 +397,7 @@ extension Platform {
             }
             return String(decodingCString: lpBuffer.baseAddress!, as: UTF16.self)
         }
-#elseif !NO_FILESYSTEM
+#elseif !NO_FILESYSTEM && !hasFeature(Embedded)
         if let processPath = CommandLine.arguments.first {
             return processPath
         }

@@ -122,7 +122,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
 
         /// Reads from environment variables `TZFILE`, `TZ` and finally the symlink pointed at by the C macro `TZDEFAULT` to figure out what the current (aka "system") time zone is.
         mutating func findCurrentTimeZone() -> TimeZone {
-#if !NO_TZFILE
+#if !NO_TZFILE && !hasFeature(Embedded)
             if let tzenv = ProcessInfo.processInfo.environment["TZFILE"], let result = fixed(tzenv) {
                 return TimeZone(inner: result)
             }
@@ -199,7 +199,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
 #endif
 
 #endif
-#endif //!NO_TZFILE
+#endif //!NO_TZFILE && !hasFeature(Embedded)
             // Last option as a default is the GMT value (again, using the cached version directly to avoid recursive lock)
             return TimeZone(inner: offsetFixed(0)!)
         }

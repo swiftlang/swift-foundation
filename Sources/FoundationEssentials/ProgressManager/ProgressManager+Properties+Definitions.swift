@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 @available(FoundationPreview 6.4, *)
 extension ProgressManager {
     
@@ -275,3 +277,5 @@ extension ProgressManager {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

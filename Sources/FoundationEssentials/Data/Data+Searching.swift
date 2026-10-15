@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
 #if FOUNDATION_FRAMEWORK
@@ -88,3 +90,5 @@ extension Data {
         (range.lowerBound - startIndex)..<(range.upperBound - startIndex)
     }
 }
+
+#endif // !hasFeature(Embedded)

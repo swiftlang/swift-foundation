@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !FOUNDATION_FRAMEWORK
 
 /// A structure representing a base-10 number.
@@ -713,3 +715,5 @@ extension Decimal {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

@@ -557,7 +557,7 @@ extension Range where Bound == AttributedString.Index {
 
 extension RangeSet where Bound == AttributedString.Index {
     internal var _bstringIndices: RangeSet<BigString.Index> {
-        RangeSet<BigString.Index>(self.ranges.map(\._bstringRange))
+        RangeSet<BigString.Index>(self.ranges.map { $0._bstringRange })
     }
 }
 

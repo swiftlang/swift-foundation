@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 internal import Synchronization
 
 @available(FoundationPreview 6.4, *)
@@ -432,3 +434,5 @@ extension ProgressManager {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

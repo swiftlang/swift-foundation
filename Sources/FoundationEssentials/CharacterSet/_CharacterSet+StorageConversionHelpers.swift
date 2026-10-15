@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // MARK: Storage Conversion Helpers
 // Converts the backing storage between representations: materializing any
 // storage to a raw BMP bitmap (+ annex planes), and compacting / expanding
@@ -231,3 +233,5 @@ extension _CharacterSet {
         return Self._asciiMask(fromBitmap: buffer.span)
     }
 }
+
+#endif // !hasFeature(Embedded)

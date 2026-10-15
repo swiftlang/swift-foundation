@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 extension _CharacterSet {
     struct BitmapBacked {
         var data: Data
@@ -90,3 +92,5 @@ extension _CharacterSet {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

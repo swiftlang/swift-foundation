@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 extension Calendar {
     /// A rule which specifies how often an event should repeat in the future
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
@@ -531,3 +533,5 @@ extension Calendar.RecurrenceRule.Month: Hashable { }
 extension Calendar.RecurrenceRule.Weekday: Hashable { }
 @available(FoundationPreview 6.0.2, *)
 extension Calendar.RecurrenceRule: Hashable { }
+
+#endif // !hasFeature(Embedded)

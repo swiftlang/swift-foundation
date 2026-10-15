@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // `ParseEventSource` walker over a pre-scanned `JSONPrimitive` tree.
@@ -197,3 +199,5 @@ struct JSONPrimitiveSource: ParseEventSource, ~Copyable, ~Escapable {
     }
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // IMPORTANT: Any changes to __PlistEncoderXML and its related types should be repeated for __PlistEncoderBPlist.
 // This code is duplicate for performance reasons, as use of `@_specialize` has not been able to completely replicate the benefits of manual duplication.
 
@@ -1122,3 +1124,5 @@ extension _XMLPlistEncodingFormat.Reference {
         return str
     }
 }
+
+#endif // !hasFeature(Embedded)

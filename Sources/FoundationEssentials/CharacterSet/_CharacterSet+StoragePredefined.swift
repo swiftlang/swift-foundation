@@ -9,6 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 extension BuiltInUnicodeScalarSet {
     init(cfpredefined: CFCharacterSetPredefinedSet) {
@@ -51,3 +53,5 @@ extension BuiltInUnicodeScalarSet {
     }
 }
 #endif
+
+#endif // !hasFeature(Embedded)

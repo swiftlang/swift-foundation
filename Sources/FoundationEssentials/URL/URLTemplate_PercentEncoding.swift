@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 extension String {
     /// Convert to NFC and percent-escape.
     func normalizedAddingPercentEncoding(
@@ -198,3 +200,5 @@ extension URL.Template.Expression.Operator.AllowedCharacters {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

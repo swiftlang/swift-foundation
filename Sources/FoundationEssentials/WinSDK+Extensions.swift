@@ -9,6 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if os(Windows)
 
 import WinSDK
@@ -340,3 +342,5 @@ internal func FillNullTerminatedWideStringBuffer(initialSize: DWORD, maxSize: DW
 }
 
 #endif
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // `JSONPrimitive` is the JSON analog of `XMLPlistPrimitive` / `BPlistPrimitive`: a `~Escapable` cursor into a single node of a structurally-parsed JSON payload that allows faster access to random elements within it.
@@ -693,3 +695,5 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
     }
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 
 // MARK: - Private extensions for parsing encoding names
 
@@ -153,3 +154,4 @@ extension String.Encoding {
     }
 }
 
+#endif // !hasFeature(Embedded)

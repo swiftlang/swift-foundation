@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 // For Logger
 internal import os
@@ -25,3 +27,5 @@ internal func logFileIOErrno(_ err: Int32, at place: String) {
 #endif
 #endif
 }
+
+#endif // !hasFeature(Embedded)

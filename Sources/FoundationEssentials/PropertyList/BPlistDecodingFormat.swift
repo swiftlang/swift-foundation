@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - Format
@@ -181,3 +183,5 @@ struct BPlistDecodingFormat: PlistDecodingFormat {
 }
 
 #endif  // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

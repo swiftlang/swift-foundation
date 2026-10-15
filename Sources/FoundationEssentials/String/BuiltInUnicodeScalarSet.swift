@@ -134,6 +134,7 @@ internal struct BuiltInUnicodeScalarSet {
     static let newlineScalars: InlineArray<7, UInt16> = [0x000A, 0x000B, 0x000C, 0x000D, 0x0085, 0x2028, 0x2029]
     static let whitespaceScalars: InlineArray<19, UInt16> = [0x0009, 0x0020, 0x00A0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x200B, 0x202F, 0x205F, 0x3000]
     
+#if !hasFeature(Embedded)
     // CFCharacterSetCreateBitmapRepresentation
     func bitmapRepresentation(isInverted: Bool) -> Data {
         let numNonBMPPlanes = isInverted ? 16 : _numberOfPlanes - 1
@@ -164,6 +165,8 @@ internal struct BuiltInUnicodeScalarSet {
         }
     }
     
+#endif // !hasFeature(Embedded)
+
     // CFCharacterSetHasMemberInPlane
     func hasMember(inPlane plane: UInt8, isInverted: Bool) -> Bool {
         if charset == .control {
@@ -301,6 +304,7 @@ internal struct BuiltInUnicodeScalarSet {
         }
     }
     
+#if !hasFeature(Embedded)
     // CFUniCharGetBitmapForPlane
     internal func bitmap(forPlane plane: Int, isInverted: Bool) -> Data {
         
@@ -335,6 +339,8 @@ internal struct BuiltInUnicodeScalarSet {
         }
     }
 
+#endif // !hasFeature(Embedded)
+
     internal func bitmapResult(forPlane plane: Int, isInverted: Bool) -> BitmapResult {
         if bitmapPtrForPlane(plane) != nil {
             return .bitmapFilled
@@ -349,6 +355,7 @@ internal struct BuiltInUnicodeScalarSet {
         }
     }
 
+#if !hasFeature(Embedded)
     internal func appendBitmap(forPlane plane: Int, isInverted: Bool, to output: inout OutputSpan<UInt8>) {
         let byteCount = min(output.freeCapacity, Self.byteCount)
         precondition(byteCount > 0)
@@ -407,6 +414,8 @@ internal struct BuiltInUnicodeScalarSet {
         }
     }
 
+#endif // !hasFeature(Embedded)
+
     // CFUniCharGetNumberOfPlanes
     internal var _numberOfPlanes: Int {
         switch charset {
@@ -440,6 +449,7 @@ internal struct BuiltInUnicodeScalarSet {
     static let canonicalDecomposables = Self.init(type: .canonicalDecomposable)
 }
 
+#if !hasFeature(Embedded)
 extension _CharacterSet {
     private static let allOnesCached = Data(capacity: __kCFBitmapSize) { outputSpan in
         outputSpan.append(repeating: 0xFF, count: __kCFBitmapSize, as: UInt8.self)
@@ -467,3 +477,4 @@ extension _CharacterSet {
         }
     }
 }
+#endif // !hasFeature(Embedded)

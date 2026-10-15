@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // NSDecimal compatibility API
 
 #if FOUNDATION_FRAMEWORK
@@ -571,3 +573,5 @@ private func _convertError(_ error: any Error) -> Decimal.CalculationError {
 }
 
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !hasFeature(Embedded)
