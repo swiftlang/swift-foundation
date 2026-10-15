@@ -14,7 +14,7 @@
 
 @safe
 struct RigidBytes: ~Copyable {
-    internal var _pointer: UnsafeMutableRawPointer?
+    internal var _pointer: Optional<UnsafeMutableRawPointer>
 
     internal var _capacity: Int
 
