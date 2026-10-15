@@ -12,20 +12,14 @@
 
 internal import Synchronization
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#endif
-
-#if ICU
-
 // This type works with Gregorian calendar only
 // It represents just one rule; does not handle historical changes
-internal final class _TimeZoneSingleDSTRule: Sendable {
+package final class _TimeZoneSingleDSTRule: Sendable {
 
     // MARK: - Constants
 
     // Which clock the time zone uses to decide when DST goes into effect
-    enum TimeMode: Int {
+    package enum TimeMode: Int {
         case wallTime = 0
         case standardTime = 1
         case utcTime = 2
@@ -38,7 +32,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
         case dayOfWeekOnOrBeforeDayOfMonth // Day of week <= day of month mode
     }
 
-    typealias DaylightSavingTimePolicy = TimeZone.DaylightSavingTimePolicy
+    package typealias DaylightSavingTimePolicy = TimeZone.DaylightSavingTimePolicy
 
     // MARK: - Properties
 
@@ -123,7 +117,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     let isSouthernHemisphere: Bool
 
     let startYear: Int
-    let useDaylight: Bool
+    package let useDaylight: Bool
 
     private static let MONTH_LENGTH_LEAP_YEAR = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
@@ -138,7 +132,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
     let calendar: _CalendarGregorian
 
-    init(offsetSeconds: Int32, dstSavingsSeconds: Int32, startMonth: Int8, startDay: Int8, startDayOfWeek: Int8, startTime: Int32, startTimeMode: TimeMode, endMonth: Int8, endDay: Int8, endDayOfWeek: Int8, endTime: Int32, endTimeMode: TimeMode, startYear: Int32 = 0) throws(SingleDSTRuleTimeZoneError) {
+    package init(offsetSeconds: Int32, dstSavingsSeconds: Int32, startMonth: Int8, startDay: Int8, startDayOfWeek: Int8, startTime: Int32, startTimeMode: TimeMode, endMonth: Int8, endDay: Int8, endDayOfWeek: Int8, endTime: Int32, endTimeMode: TimeMode, startYear: Int32 = 0) throws(SingleDSTRuleTimeZoneError) {
 
         // Determine if we use daylight time (equivalent to ICU logic)
         let useDaylight = (startDay != 0 && endDay != 0)
@@ -162,7 +156,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
 
-    func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) throws(TimeZone.Error) -> (rawOffset: Int, dstSavings: Int) {
+    package func rawAndDaylightSavingTimeOffset(for date: Date, local: Bool, duplicatedTimePolicy: DaylightSavingTimePolicy, nonExistingTimePolicy: DaylightSavingTimePolicy) throws(TimeZone.Error) -> (rawOffset: Int, dstSavings: Int) {
         try date.checkBounds()
 
         if local {
@@ -456,7 +450,7 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
     }
 
     // Convenience method for finding the next transition after a date
-    func dstTransition(after baseDate: Date, inclusive: Bool = false) -> Date? {
+    package func dstTransition(after baseDate: Date, inclusive: Bool = false) -> Date? {
         return dstTransition(relativeTo: baseDate, direction: .next, inclusive: inclusive)
     }
     
@@ -615,8 +609,8 @@ internal final class _TimeZoneSingleDSTRule: Sendable {
 
 // MARK: - _TimeZoneSingleDSTRule Error Types
 
-internal enum SingleDSTRuleTimeZoneError: Error {
-    enum Component {
+package enum SingleDSTRuleTimeZoneError: Error {
+    package enum Component {
         case month
         case time
         case dayOfWeek
@@ -625,5 +619,3 @@ internal enum SingleDSTRuleTimeZoneError: Error {
     }
     case illegalArgument(Component, Int)
 }
-
-#endif // ICU
