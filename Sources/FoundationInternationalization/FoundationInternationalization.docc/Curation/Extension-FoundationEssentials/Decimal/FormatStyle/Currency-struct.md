@@ -37,16 +37,6 @@
 - ``currencyCode``
 - ``locale``
 
-### Applying currency styles
-
-- ``currency(code:)-2m7zy``
-- ``currency(code:)-6v4yv``
-
-### Applying measurement styles
-
-- ``measurement(width:usage:numberFormatStyle:)``
-- ``measurement(width:usage:hidesScaleName:numberFormatStyle:)``
-
 ### Applying list styles
 
 - ``list(memberStyle:type:width:)``

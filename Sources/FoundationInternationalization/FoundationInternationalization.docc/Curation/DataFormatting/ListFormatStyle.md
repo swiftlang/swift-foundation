@@ -1,10 +1,12 @@
-# ``/FoundationInternationalization/ListFormatStyle``
+# ``FoundationInternationalization/ListFormatStyle``
 
 ## Topics
 
 ### Creating a list format style
 
 - ``init(memberStyle:)``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/list(memberStyle:type:width:)``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/list(type:width:)``
 
 ### Modifying a list format style
 

@@ -6,6 +6,8 @@
 ### Creating a date format style
 
 - ``init(date:time:locale:calendar:timeZone:capitalizationContext:)``
+- ``FoundationEssentials/FormatStyle/time(pattern:)``
+- ``FoundationEssentials/FormatStyle/dateTime``
 
 
 ### Specifying the date format
@@ -51,9 +53,6 @@
 - ``parse(_:)``
 - ``parseStrategy``
 - ``Date/ParseStrategy``
-- ``ParseInput``
-- ``ParseOutput``
-- ``Strategy``
 
 ### Selecting a parse strategy
 

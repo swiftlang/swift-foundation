@@ -7,7 +7,7 @@
 ### Creating a byte count style
 
 - ``init(style:allowedUnits:spellsOutZero:includesActualByteCount:locale:)``
-- ``byteCount(style:allowedUnits:spellsOutZero:includesActualByteCount:)``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/byteCount(style:allowedUnits:spellsOutZero:includesActualByteCount:)``
 - ``Units``
 
 ### Formatting byte count values

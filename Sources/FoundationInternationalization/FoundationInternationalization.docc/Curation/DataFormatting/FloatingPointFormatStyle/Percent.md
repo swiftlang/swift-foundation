@@ -50,12 +50,6 @@
 - ``RegexOutput``
 - ``consuming(_:startingAt:in:)``
 
-### Supporting types
-
-- ``FormatInput``
-- ``FormatOutput``
-- ``Strategy``
-
 ### Encoding and decoding
 
 - ``init(from:)``

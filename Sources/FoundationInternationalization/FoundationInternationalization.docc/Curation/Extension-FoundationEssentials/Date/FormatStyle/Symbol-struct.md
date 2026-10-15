@@ -29,6 +29,5 @@
 ### Comparing Date Style Format Symbols
 
 - ``!=(_:_:)``
-- ``==(_:_:)``
 
 

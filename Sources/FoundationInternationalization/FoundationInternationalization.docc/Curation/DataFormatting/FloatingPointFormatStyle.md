@@ -7,6 +7,9 @@
 
 - ``init(locale:)``
 - ``localizedDouble(locale:)``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/number-3uj64``  <!-- static var number: FloatingPointFormatStyle<Float> { get } -->
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/number-68g5v``  <!-- static var number: FloatingPointFormatStyle<Double> { get } -->
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/number-4o6vr``  <!-- static var number: FloatingPointFormatStyle<Float16> { get } -->
 
 ### Formatting floating-point values
 
@@ -35,6 +38,9 @@
     
 ### Applying percentage styles
 
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/percent-5bvv7`` <!-- static var percent: FloatingPointFormatStyle<Float>.Percent { get } -->
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/percent-23opr`` <!-- static var percent: FloatingPointFormatStyle<Double>.Percent { get } -->
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/percent-13e3d`` <!-- static var percent: FloatingPointFormatStyle<Float16>.Percent { get } -->
 - ``Percent``
 
 

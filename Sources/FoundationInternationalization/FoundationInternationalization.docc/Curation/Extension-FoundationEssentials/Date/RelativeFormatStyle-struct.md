@@ -9,10 +9,10 @@
 
 - ``init(presentation:unitsStyle:locale:calendar:capitalizationContext:)``
 - ``init(allowedFields:presentation:unitsStyle:locale:calendar:capitalizationContext:)``
+- ``FoundationEssentials/FormatStyle/relative(presentation:unitsStyle:)``
 
 ### Modifying a relative date format style
 
-- ``relative(presentation:unitsStyle:)``
 - ``presentation``
 - ``unitsStyle``
 - ``calendar``
@@ -28,7 +28,6 @@
 ### Comparing relative date format styles
 
 - ``!=(_:_:)``
-- ``==(_:_:)``
 
 ### Encoding and decoding
 

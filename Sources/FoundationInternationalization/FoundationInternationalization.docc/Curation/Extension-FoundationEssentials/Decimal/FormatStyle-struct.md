@@ -8,7 +8,7 @@
 
 - ``init(locale:)``
 - ``localizedDecimal(locale:)``
-- ``number-u656``
+- ``FoundationEssentials/FormatStyle/number-90oqn``  <!-- static var number: Decimal.FormatStyle { get } -->
 
 ### Formatting decimal values
 
@@ -31,17 +31,10 @@
 
 - ``locale``
 
-### Applying currency styles
+### Applying percentage styles
 
-- ``currency(code:)-6lqqp``
-- ``currency(code:)-3n8b6``
-- ``Currency``
-
-### Applying measurement styles
-
-- ``measurement(width:usage:numberFormatStyle:)``
-- ``measurement(width:usage:hidesScaleName:numberFormatStyle:)``
-- ``Measurement/FormatStyle``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/percent-7bdy8`` <!-- static var percent: Decimal.FormatStyle.Percent { get } -->
+- ``Percent``
 
 ### Applying list styles
 

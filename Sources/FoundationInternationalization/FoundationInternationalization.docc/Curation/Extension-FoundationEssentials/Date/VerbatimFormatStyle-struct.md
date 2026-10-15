@@ -9,6 +9,7 @@
 ### Creating a verbatim format style
 
 - ``init(format:locale:timeZone:calendar:)``
+- ``FoundationEssentials/FormatStyle/verbatim(_:locale:timeZone:calendar:)``
 
 ### Modifying a verbatim format style
 

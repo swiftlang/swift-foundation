@@ -15,7 +15,6 @@
 ### Comparing date styles
 
 - ``!=(_:_:)``
-- ``==(_:_:)``
 
 ### Encoding and decoding
 

@@ -1,5 +1,7 @@
 # ``FoundationInternationalization/FoundationEssentials/Decimal``
 
+Initializers, methods, and supporting types that extend FoundationEssentials's decimal type.
+
 
 ## Topics
 

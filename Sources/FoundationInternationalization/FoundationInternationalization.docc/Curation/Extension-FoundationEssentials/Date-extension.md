@@ -9,7 +9,6 @@ Methods and supporting types that extend FoundationEssentials's date type.
 
 - ``formatted()``
 - ``formatted(date:time:)``
-- ``formatted(_:)``
 - ``FormatStyle``
 - ``RelativeFormatStyle``
 - ``AnchoredRelativeFormatStyle``

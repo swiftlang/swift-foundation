@@ -37,7 +37,6 @@ Use `Date.IntervalFormatStyle` to create user-readable strings of date intervals
 ### Comparing date interval format styles
 
 - ``!=(_:_:)``
-- ``==(_:_:)``
 
 ### Encoding and decoding
 

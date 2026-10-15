@@ -7,6 +7,8 @@
 
 - ``init(allowedUnits:width:maximumUnitCount:zeroValueUnits:valueLength:fractionalPart:)``
 - ``init(allowedUnits:width:maximumUnitCount:zeroValueUnits:valueLengthLimits:fractionalPart:)``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/units(allowed:width:maximumUnitCount:zeroValueUnits:valueLength:fractionalPart:)``
+- ``FoundationInternationalization/FoundationEssentials/FormatStyle/units(allowed:width:maximumUnitCount:zeroValueUnits:valueLengthLimits:fractionalPart:)``
 
 
 ### Formatting a duration
