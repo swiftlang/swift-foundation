@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 extension Calendar {
     /// A rule which specifies how often an event should repeat in the future
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
@@ -95,7 +93,7 @@ extension Calendar {
         /// Default value is `.first`
         public var repeatedTimePolicy: Calendar.RepeatedTimePolicy
         /// How often a recurring event repeats
-        public enum Frequency: Int, Sendable, Codable, Equatable {
+        public enum Frequency: Int, Sendable, Equatable {
             case minutely = 1
             case hourly = 2
             case daily = 3
@@ -373,6 +371,11 @@ extension Calendar {
     }
 }
 
+// Codable is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Calendar.RecurrenceRule.Frequency: Codable {}
+
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.End: Codable {
     enum CodingKeys: String, CodingKey {
@@ -516,6 +519,7 @@ extension Calendar.RecurrenceRule: Codable {
         try container.encode(setPositions, forKey: .setPositions)
     }
 }
+#endif
 
 @available(FoundationPreview 6.0.2, *)
 extension Calendar.RecurrenceRule.End: CustomStringConvertible, Hashable {
@@ -533,5 +537,3 @@ extension Calendar.RecurrenceRule.Month: Hashable { }
 extension Calendar.RecurrenceRule.Weekday: Hashable { }
 @available(FoundationPreview 6.0.2, *)
 extension Calendar.RecurrenceRule: Hashable { }
-
-#endif // !hasFeature(Embedded)
