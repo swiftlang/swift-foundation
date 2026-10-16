@@ -56,25 +56,24 @@ package enum ListFormatWidth: Hashable {
 
 // MARK: - Locale lookup
 
-/// Resolve `(locale, type, width)` to a `ListFormatPatterns` row by walking the
-/// parent chain across the packed Swift data tables.
+/// Resolve `(locale, type, width)` to a `ListFormatPatterns` row. Each listed
+/// locale stores its resolved rows, so the lookup only has to find the first
+/// listed locale in the identifier's chain.
 package func _listFormatPatterns(locale: String, type: ListFormatType, width: ListFormatWidth) -> ListFormatPatterns {
-    // Reconcile the runtime identifier with the underscore-keyed CLDR data
-    // before walking the parent chain (see `_lookupLocale`).
-    let locale = _lookupLocale(from: locale)
-    // Walk the parent chain looking for the first ancestor that has data for
-    // this slot. If the walk exhausts without a match, retry from the
-    // configured fallback locale.
-    if let row = _walkSlot(locale: locale, type: type, width: width) {
-        return _row(at: row)
+    guard let slotRows = _localeSlotRows(_lookupLocale(from: locale)) ?? _localeSlotRows(_ListFormatData.fallbackLocale.description) ?? _localeSlotRows("root") else {
+        // Only if root itself is missing from the data set, which is invalid.
+        return ListFormatPatterns(start: "{0}, {1}", middle: "{0}, {1}", end: "{0}, {1}", pair: "{0}, {1}")
     }
-    let fallback = _ListFormatData.fallbackLocale.description
-    if fallback != locale, let row = _walkSlot(locale: fallback, type: type, width: width) {
-        return _row(at: row)
+    let typeIndex = switch type {
+    case .and: 0
+    case .or: 1
     }
-    // Genuinely no data — return an empty placeholder. In practice this only
-    // happens if root itself is missing from the data set, which is invalid.
-    return ListFormatPatterns(start: "{0}, {1}", middle: "{0}, {1}", end: "{0}, {1}", pair: "{0}, {1}")
+    let widthIndex = switch width {
+    case .wide: 0
+    case .short: 1
+    case .narrow: 2
+    }
+    return _row(at: _ListFormatData.slotRows[Int(slotRows) &* 6 &+ typeIndex &* 3 &+ widthIndex])
 }
 
 /// Normalize the incoming `Locale.identifier` to the underscore separators the
@@ -88,58 +87,28 @@ private func _lookupLocale(from locale: String) -> String {
     return String(decoding: bytes, as: UTF8.self)
 }
 
-/// Walk the parent chain for `locale`, returning the row index of the first
-/// ancestor with an entry in the given slot. Returns nil if the walk reaches
-/// root (or beyond) without finding anything — caller falls back to the
-/// configured fallback locale.
-private func _walkSlot(locale: String, type: ListFormatType, width: ListFormatWidth) -> UInt16? {
-    var current: String? = locale
-    while let l = current {
-        if let row = _searchSlot(locale: l, type: type, width: width) {
-            return row
+/// The `slotRows` index of the first listed locale in `locale`'s chain: an
+/// explicit redirect (a CLDR <parentLocales> override, a locale alias, or a
+/// script fallback) if one exists, else the truncation parent (strip the
+/// trailing subtag). Returns nil where the chain reaches no listed locale.
+private func _localeSlotRows(_ locale: String) -> UInt16? {
+    var current = locale
+    while true {
+        current.makeContiguousUTF8()
+        if let slotRows = _searchLocaleTable(current.utf8Span.span, count: _ListFormatData.locales.count, { _ListFormatData.locales[$0] }, key: { $0.locale }, value: { $0.slotRows }) {
+            return slotRows
         }
-        current = _listFormatParent(of: l)
+        if let redirect = _redirectLookup(current) {
+            current = redirect
+        } else if let underscore = current.utf8.lastIndex(of: UInt8(ascii: "_")) {
+            current = String(current[..<underscore])
+        } else {
+            return nil
+        }
     }
-    return nil
-}
-
-/// The next locale to consult in the fallback walk: an explicit redirect (a
-/// CLDR <parentLocales> override or a locale alias) if one exists, else the
-/// truncation parent (strip the trailing subtag), else root — with root
-/// terminating the walk.
-///
-/// Aliases ride the same path as parent-overrides: an aliased identifier (e.g.
-/// zh_HK) has no slot data of its own, so its own-locale lookup always misses
-/// and the redirect fires, sending the walk to the canonical target
-/// (zh_HK → zh_Hant_HK → zh_Hant). Chained aliases (sr_CS → sr_RS → sr_Cyrl_RS)
-/// resolve one hop per step.
-package func _listFormatParent(of locale: String) -> String? {
-    if locale == "root" { return nil }
-    if let redirect = _redirectLookup(locale) { return redirect }
-    if let underscore = locale.lastIndex(of: "_") {
-        return String(locale[..<underscore])
-    }
-    return "root"
 }
 
 // MARK: - Binary search over the Swift tables
-
-/// Look up `locale` in the slot table for `(type, width)`. Returns the row
-/// index if present. The switch only selects which table to search; the common
-/// search code lives in `_searchLocaleTable`.
-private func _searchSlot(locale: String, type: ListFormatType, width: ListFormatWidth) -> UInt16? {
-    var locale = locale
-    locale.makeContiguousUTF8()
-    let target = locale.utf8Span.span
-    switch (type, width) {
-    case (.and, .wide):   return _searchLocaleTable(target, count: _ListFormatData.slotAndWide.count, { _ListFormatData.slotAndWide[$0] },     key: { $0.locale }, value: { $0.row })
-    case (.and, .short):  return _searchLocaleTable(target, count: _ListFormatData.slotAndShort.count, { _ListFormatData.slotAndShort[$0] },   key: { $0.locale }, value: { $0.row })
-    case (.and, .narrow): return _searchLocaleTable(target, count: _ListFormatData.slotAndNarrow.count, { _ListFormatData.slotAndNarrow[$0] }, key: { $0.locale }, value: { $0.row })
-    case (.or, .wide):    return _searchLocaleTable(target, count: _ListFormatData.slotOrWide.count, { _ListFormatData.slotOrWide[$0] },       key: { $0.locale }, value: { $0.row })
-    case (.or, .short):   return _searchLocaleTable(target, count: _ListFormatData.slotOrShort.count, { _ListFormatData.slotOrShort[$0] },     key: { $0.locale }, value: { $0.row })
-    case (.or, .narrow):  return _searchLocaleTable(target, count: _ListFormatData.slotOrNarrow.count, { _ListFormatData.slotOrNarrow[$0] },   key: { $0.locale }, value: { $0.row })
-    }
-}
 
 /// Look up a locale's explicit redirect (a CLDR parent-override or a locale
 /// alias) in the redirect map. Returns the target locale, or nil if there's no
@@ -151,8 +120,8 @@ private func _redirectLookup(_ locale: String) -> String? {
     return _locale(at: targetIndex)
 }
 
-/// Binary search a sorted table of locale-keyed entries, shared by the slot and
-/// parent-map lookups. `key` extracts the entry's index into `_ListFormatData.locales`
+/// Binary search a sorted table of locale-keyed entries, shared by the locale and
+/// redirect lookups. `key` extracts the entry's index into `_ListFormatData.locales`
 /// (the value compared against `target`); `value` maps a matched entry to the
 /// return value. Comparison is byte-wise on the pooled UTF-8: locale identifiers
 /// are pure ASCII, so byte order matches Swift's String comparison without
