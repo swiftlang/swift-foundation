@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 extension Span<UInt8> {
-    func firstIndex(of byte: UInt8) -> Int? {
+    package func firstIndex(of byte: UInt8) -> Int? {
         guard !isEmpty else {
             return nil
         }
@@ -82,7 +82,7 @@ extension Span<UInt8> {
     }
 
     @inline(__always)
-    var first: UInt8? {
+    package var first: UInt8? {
         guard count > 0 else {
             return nil
         }
@@ -104,6 +104,34 @@ extension Span<UInt8> {
             }
         }
         return false
+    }
+
+    package func firstRange(of needle: Span<UInt8>) -> Range<Int>? {
+        let m = needle.count
+        guard m > 0 else {
+            return 0..<0
+        }
+        guard m <= count else {
+            return nil
+        }
+
+        let first = needle[0]
+        for i in 0...(count - m) {
+            guard self[i] == first else {
+                continue
+            }
+
+            var j = 1
+            while j < m, self[i &+ j] == needle[j] {
+                j &+= 1
+            }
+
+            if j == m {
+                return i ..< (i &+ m)
+            }
+        }
+        
+        return nil
     }
 }
 
@@ -154,7 +182,7 @@ extension OutputRawSpan {
 }
 
 extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
-    mutating func _append(copying span: Span<Element>) {
+    package mutating func _append(copying span: Span<Element>) {
         precondition(self.freeCapacity >= span.count, "Insufficient space to copy the provided span (have space for \(self.freeCapacity) but writing \(span.count))")
         guard !span.isEmpty else { return }
         self.withUnsafeMutableBufferPointer { buffer, initializedCount in
@@ -195,7 +223,22 @@ extension OutputSpan<UInt8> {
         }
         return self[count - 1]
     }
+
+    package mutating func removeSubrange(_ range: Range<Int>) {
+        guard !range.isEmpty else { return }
+
+        precondition(range.lowerBound >= 0, "Range lower bound must be non-negative")
+        precondition(range.upperBound <= count, "Range upper bound out of bounds")
+        do {
+            var bytes = mutableSpan
+            for i in range.upperBound..<bytes.count {
+                bytes[i - range.count] = bytes[i]
+            }
+        }
+        removeLast(range.count)
+    }
 }
+
 
 extension String {
     package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
