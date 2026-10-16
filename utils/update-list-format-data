@@ -57,6 +57,8 @@ swiftc -parse-as-library \
     "${utilsDir}/${commandName}-impl.swift" \
     -o "${tool}"
 
-"${tool}" > "${foundationRepoDir}/${targetFileRelativePath}"
+# Write to a temporary file first, so a failed run leaves the target as it was.
+"${tool}" > "${bindir}/output.json"
+mv "${bindir}/output.json" "${foundationRepoDir}/${targetFileRelativePath}"
 
 echo "Done." 1>&2
