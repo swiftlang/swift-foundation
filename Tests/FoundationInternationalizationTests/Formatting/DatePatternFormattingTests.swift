@@ -214,6 +214,24 @@ private struct DatePatternFormattingTests {
         #expect(style("d/M/y", locale: locale).format(Date(timeIntervalSince1970: 1_424_841_000)) == expected)
     }
 
+    // Checks each digit-based numbering system's digits against their Unicode values.
+    @Test(arguments: [
+        "adlm", "ahom", "arab", "arabext", "bali", "beng", "bhks", "brah", "cakm", "cham", "deva", "diak", "fullwide",
+        "gara", "gong", "gonm", "gujr", "gukh", "guru", "hanidec", "hmng", "hmnp", "java", "kali", "kawi", "khmr", "knda",
+        "krai", "lana", "lanatham", "laoo", "latn", "lepc", "limb", "mathbold", "mathdbl", "mathmono", "mathsanb",
+        "mathsans", "mlym", "modi", "mong", "mroo", "mtei", "mymr", "mymrepka", "mymrpao", "mymrshan", "mymrtlng", "nagm",
+        "newa", "nkoo", "olck", "onao", "orya", "osma", "outlined", "rohg", "saur", "segment", "shrd", "sind", "sinh",
+        "sora", "sund", "sunu", "takr", "talu", "tamldec", "telu", "thai", "tibt", "tirh", "tnsa", "vaii", "wara", "wcho",
+        // swift-foundation-icu's data doesn't have tols yet.
+    ] + (hasAppleData ? ["tols"] : []))
+    func numberingSystemDigits(system: String) {
+        let digits = style("d/M/y", locale: "en@numbers=\(system)").format(date).unicodeScalars.filter { $0 != "/" }
+        // A wrong digit in the data gives the wrong values.
+        #expect(digits.map(\.properties.numericValue) == [1, 8, 9, 2, 0, 2, 6])
+        // A system missing from the data falls back to ASCII digits, whose values still match.
+        #expect(system == "latn" || !digits.contains { $0.isASCII })
+    }
+
     // MARK: - Time zone offsets
 
     @Test(arguments: [
