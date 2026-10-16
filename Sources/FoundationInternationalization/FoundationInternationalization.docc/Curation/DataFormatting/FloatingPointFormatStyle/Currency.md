@@ -14,6 +14,7 @@
 - ``decimalSeparator(strategy:)``
 - ``grouping(_:)``
 - ``locale(_:)``
+- ``notation(_:)``
 - ``precision(_:)``
 - ``presentation(_:)``
 - ``rounded(rule:increment:)``

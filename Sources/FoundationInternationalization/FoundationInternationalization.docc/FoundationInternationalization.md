@@ -11,7 +11,7 @@ The FoundationInternationalization library builds on FoundationEssentials by pro
 
 ## Topics
 
-### Fundamentals
+### Data modeling
 
 - <doc:units-and-measurement>
 
