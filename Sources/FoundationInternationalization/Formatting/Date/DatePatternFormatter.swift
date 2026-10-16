@@ -49,8 +49,9 @@ final class DatePatternFormatter : Sendable {
         var pattern = info.pattern
         pattern.makeContiguousUTF8()
         self.pattern = pattern
-        locale = DateFormatLocale(identifier: info.localeIdentifier)
-        numbers = locale.numbers(identifier: info.localeIdentifier)
+        let identifier = DataLocaleIdentifier(info.localeIdentifier)
+        locale = DateFormatLocale(identifier)
+        numbers = locale.numbers(identifier)
         asciiDigits = numbers.hasASCIIDigits
         capitalizationContext = info.capitalizationContext
         caseLanguage = CaseLanguage(identifier: info.localeIdentifier)

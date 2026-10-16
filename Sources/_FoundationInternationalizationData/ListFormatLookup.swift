@@ -60,7 +60,7 @@ package enum ListFormatWidth: Hashable {
 /// locale stores its resolved rows, so the lookup only has to find the first
 /// listed locale in the identifier's chain.
 package func _listFormatPatterns(locale: String, type: ListFormatType, width: ListFormatWidth) -> ListFormatPatterns {
-    guard let slotRows = _localeSlotRows(_lookupLocale(from: locale)) ?? _localeSlotRows(_ListFormatData.fallbackLocale.description) ?? _localeSlotRows("root") else {
+    guard let slotRows = _localeSlotRows(DataLocaleIdentifier.baseName(of: locale)) ?? _localeSlotRows(_ListFormatData.fallbackLocale.description) ?? _localeSlotRows("root") else {
         // Only if root itself is missing from the data set, which is invalid.
         return ListFormatPatterns(start: "{0}, {1}", middle: "{0}, {1}", end: "{0}, {1}", pair: "{0}, {1}")
     }
@@ -74,17 +74,6 @@ package func _listFormatPatterns(locale: String, type: ListFormatType, width: Li
     case .narrow: 2
     }
     return _row(at: _ListFormatData.slotRows[Int(slotRows) &* 6 &+ typeIndex &* 3 &+ widthIndex])
-}
-
-/// Normalize the incoming `Locale.identifier` to the underscore separators the
-/// data tables are keyed on. On the `FOUNDATION_FRAMEWORK` build,
-/// `Locale.identifier` canonicalization (CoreFoundation) writes a script subtag
-/// with a `-` separator while a region keeps `_` (so `sr_Latn` arrives as
-/// `sr-Latn`), whereas the CLDR-derived tables use `_` throughout.
-private func _lookupLocale(from locale: String) -> String {
-    guard locale.utf8.contains(UInt8(ascii: "-")) else { return locale }
-    let bytes = locale.utf8.map { $0 == UInt8(ascii: "-") ? UInt8(ascii: "_") : $0 }
-    return String(decoding: bytes, as: UTF8.self)
 }
 
 /// The `slotRows` index of the first listed locale in `locale`'s chain: an

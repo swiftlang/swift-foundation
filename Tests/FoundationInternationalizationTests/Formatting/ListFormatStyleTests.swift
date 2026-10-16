@@ -238,6 +238,20 @@ private struct ListFormatStyleTests {
         #expect(["Alice", "Bob", "Charlie"].formatted(style(locale)) == "Alice, Bob, Charlie")
     }
 
+    // Identifiers in any case, in BCP 47 form, or with keywords.
+    @Test(arguments: [
+        ("EN_US", "Alice, Bob, and Charlie"),
+        ("en-us", "Alice, Bob, and Charlie"),
+        ("en@rg=gbzzzz", "Alice, Bob, and Charlie"),
+        ("en-US-u-nu-arab", "Alice, Bob, and Charlie"),
+        ("DE", "Alice, Bob und Charlie"),
+        ("de@calendar=japanese", "Alice, Bob und Charlie"),
+        ("zh_hant_tw", "Alice、Bob和Charlie"),
+    ])
+    func identifierForms(_ locale: String, _ expected: String) {
+        #expect(["Alice", "Bob", "Charlie"].formatted(style(locale)) == expected)
+    }
+
     /// Ported from ICU `TestRussian`. и = и
     @Test func russian() {
         let s = style("ru")

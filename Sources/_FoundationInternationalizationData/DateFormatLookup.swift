@@ -137,21 +137,13 @@ package struct DateFormatLocale : Sendable {
     ///
     /// Where the identifier's language has no data, this uses the tables' built-in fallback locale if they have one,
     /// else root.
-    package init(identifier: String) {
-        let index = Self.index(for: Self.baseName(identifier)) ?? Self.fallbackIndex()
-        row = Int(_DateFormatData.localeRows[index]) * _DateFormatData.rowWidth
+    package init(_ identifier: DataLocaleIdentifier) {
+        self.init(baseName: identifier.baseName)
     }
 
-    /// The identifier without keywords, with `_` separators. An empty identifier is root.
-    static func baseName(_ identifier: String) -> String {
-        var base = identifier
-        if let at = base.utf8.firstIndex(of: UInt8(ascii: "@")) {
-            base = String(base[..<at])
-        }
-        if base.utf8.contains(UInt8(ascii: "-")) {
-            base = String(decoding: base.utf8.map { $0 == UInt8(ascii: "-") ? UInt8(ascii: "_") : $0 }, as: UTF8.self)
-        }
-        return base.isEmpty ? "root" : base
+    private init(baseName: String) {
+        let index = Self.index(for: baseName) ?? Self.fallbackIndex()
+        row = Int(_DateFormatData.localeRows[index]) * _DateFormatData.rowWidth
     }
 
     /// Follows redirects, else drops the last subtag. The generator builds aliases, CLDR parent locales,
@@ -238,7 +230,7 @@ package struct DateFormatLocale : Sendable {
 
     /// The digits and minus sign for `identifier`, following its `numbers` and `rg` keywords as Apple's ICU does.
     /// This locale is the one `identifier` resolves to.
-    package func numbers(identifier: String) -> DateFormatNumbers {
+    package func numbers(_ identifier: DataLocaleIdentifier) -> DateFormatNumbers {
         let keywords = Keywords(identifier)
         let keyword = keywords.numbers
         // Apple's ICU drops numbers=hanidays and uses it only for the day field, so other fields get the default digits.
@@ -249,7 +241,7 @@ package struct DateFormatLocale : Sendable {
             // Apple's ICU picks the numbering system from the language, script, and
             // region (from `rg`, else the identifier), without other subtags.
             // The minus sign for negative fields such as `u` still comes from the full locale, as ICU's DecimalFormatSymbols does.
-            let regional = keywords.regionalBaseName(Self.baseName(identifier)).map { DateFormatLocale(identifier: $0) } ?? self
+            let regional = keywords.regionalBaseName(identifier.baseName).map { DateFormatLocale(baseName: $0) } ?? self
             let slot = switch keyword {
             case "native": 1
             case "traditional": 2
@@ -342,26 +334,18 @@ struct Keywords {
     var numbers: String?
     var region: String?
 
-    init(_ identifier: String) {
-        guard let at = identifier.firstIndex(of: "@") else { return }
-        for keyword in identifier[identifier.index(after: at)...].split(separator: ";") {
-            let parts = keyword.split(separator: "=", maxSplits: 1)
-            guard parts.count == 2 else { continue }
-            switch parts[0].lowercased() {
-            case "numbers": numbers = parts[1].lowercased()
-            case "rg":
-                // A subdivision such as "sazzzz" or "usca" names its first two letters' region, if that's valid.
-                // Foundation rewrites any value longer than that as the whole region's subdivision before ICU sees it.
-                let value = Array(parts[1].utf8.prefix(3))
-                guard value.count == 3 else { continue }
-                let letters = value.prefix(2).map { $0 & ~0x20 }
-                guard letters.allSatisfy({ $0 >= UInt8(ascii: "A") && $0 <= UInt8(ascii: "Z") }) else { continue }
-                let bit = Int(letters[0] - UInt8(ascii: "A")) * 26 + Int(letters[1] - UInt8(ascii: "A"))
-                if _DateFormatData.validRegions[bit / 32] & (1 << (bit % 32)) != 0 {
-                    region = String(decoding: letters, as: UTF8.self)
-                }
-            default: break
-            }
+    init(_ identifier: DataLocaleIdentifier) {
+        numbers = identifier.numbers
+        // A subdivision such as "sazzzz" or "usca" names its first two letters' region, if that's valid.
+        // Foundation rewrites any value longer than that as the whole region's subdivision before ICU sees it.
+        guard let value = identifier.regionOverride?.utf8, value.count >= 3 else { return }
+        let first = value[value.startIndex] & ~0x20
+        let second = value[value.index(after: value.startIndex)] & ~0x20
+        let letters = UInt8(ascii: "A") ... UInt8(ascii: "Z")
+        guard letters.contains(first) && letters.contains(second) else { return }
+        let bit = Int(first - UInt8(ascii: "A")) * 26 + Int(second - UInt8(ascii: "A"))
+        if _DateFormatData.validRegions[bit / 32] & (1 << (bit % 32)) != 0 {
+            region = String(decoding: [first, second], as: UTF8.self)
         }
     }
 
@@ -387,7 +371,9 @@ struct Keywords {
             }
         }
         if let region {
-            let result = String(baseName[..<end]) + "_" + region
+            var result = String(baseName[..<end])
+            result += "_"
+            result += region
             return result == baseName ? nil : result
         }
         return end == utf8.endIndex ? nil : String(baseName[..<end])

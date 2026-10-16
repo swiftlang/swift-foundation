@@ -597,6 +597,25 @@ private struct DatePatternFormattingTests {
         #expect(style(pattern, locale: locale).format(date) == expected)
     }
 
+    // Identifiers in any case, in BCP 47 form, or with keywords.
+    @Test(arguments: [
+        ("EN_GB", "EEEE d MMMM", "Friday 18 September"),
+        ("DE_DE", "EEEE MMMM G", "Freitag September n. Chr."),
+        ("zh_hant_tw", "MMMM G", "9月 西元"),
+        ("sr_latn", "EEEE MMMM", "petak septembar"),
+        ("en_gb", "h a", "2 pm"),
+        ("ar_eg", "d/M/y", "١٨/٩/٢٠٢٦"),
+        ("sr-Latn", "MMMM", "septembar"),
+        ("th-TH-u-nu-thai", "d/M/y", "๑๘/๙/๒๐๒๖"),
+        ("ar-EG-u-nu-latn", "d/M/y", "18/9/2026"),
+        ("en-US-u-nu-arab", "d/M/y", "١٨/٩/٢٠٢٦"),
+        ("ar-US-u-rg-egzzzz", "d/M/y", "١٨/٩/٢٠٢٦"),
+        ("en-GB-u-ca-gregory-nu-arab", "d MMMM", "١٨ September"),
+    ])
+    func identifierForms(locale: String, pattern: String, expected: String) {
+        #expect(style(pattern, locale: locale).format(date) == expected)
+    }
+
     // MARK: - Script fallback
 
     // As ICU falls back for a locale without data: with a script and a region, it drops the script if that's the default
