@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -571,3 +573,5 @@ extension Data {
         self = try readDataFromFile(path: path, reportProgress: reportProgress, maxLength: nil, options: options)
     }
 }
+
+#endif // !hasFeature(Embedded)

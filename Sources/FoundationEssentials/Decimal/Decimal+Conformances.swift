@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif // FOUNDATION_FRAMEWORK
@@ -849,3 +851,5 @@ extension Decimal : Strideable {
         return self + n
     }
 }
+
+#endif // !hasFeature(Embedded)

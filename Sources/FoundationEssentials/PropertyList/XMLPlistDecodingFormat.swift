@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
@@ -110,3 +111,5 @@ struct XMLPlistDecodingFormat: PlistDecodingFormat {
 }
 
 #endif  // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

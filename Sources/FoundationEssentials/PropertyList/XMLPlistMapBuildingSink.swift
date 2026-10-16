@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - XMLPlistMapBuildingSink
@@ -235,3 +237,5 @@ struct XMLPlistMapBuildingSink: ParseEventSink, ~Copyable {
     func releaseFragment(_ fragment: consuming Void) {}
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
+
+#endif // !hasFeature(Embedded)

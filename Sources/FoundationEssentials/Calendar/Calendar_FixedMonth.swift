@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // One class for Coptic, the two Ethiopic calendars, Persian and Indian. `FixedMonthArithmetic` holds the arithmetic of each. `Docs/Fixed_Month_Calendars.md` explains the rules.
 // `@unchecked Sendable` is safe because the properties change only in `init`. `Calendar` makes a copy to change a setting.
 internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable {
@@ -1022,3 +1024,5 @@ internal enum FixedMonthArithmetic: Sendable {
         return false
     }
 }
+
+#endif // !hasFeature(Embedded)

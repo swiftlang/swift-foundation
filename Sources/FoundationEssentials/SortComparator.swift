@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 /// A comparison algorithm for a specified type.
 ///
 /// Objects that conform to ``SortComparator`` provide a comparison algorithm and storage for the sort order to use when comparing.
@@ -312,3 +314,5 @@ extension MutableCollection where Self: RandomAccessCollection {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

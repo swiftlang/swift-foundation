@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -223,3 +225,5 @@ extension NotificationCenter {
 #endif
     }
 }
+
+#endif // !hasFeature(Embedded)

@@ -355,6 +355,8 @@ extension AttributedStringProtocol {
     }
 }
 
+// TODO: Should be enabled when Substring._range(of:options:) is enabled in Embedded Swift
+#if !hasFeature(Embedded)
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributedStringProtocol {
     internal func _range<T: StringProtocol>(of stringToFind: T, options: String.CompareOptions = []) -> Range<AttributedString.Index>? {
@@ -405,4 +407,5 @@ extension AttributedStringProtocol {
 #endif // FOUNDATION_FRAMEWORK
     }
 }
+#endif
 

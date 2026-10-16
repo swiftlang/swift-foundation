@@ -155,7 +155,6 @@ public extension CocoaError {
     }
 #endif
 
-#if !hasFeature(Embedded)
     /// The URL associated with this error, if any.
     var url: URL? {
 #if FOUNDATION_FRAMEWORK
@@ -164,7 +163,6 @@ public extension CocoaError {
         return userInfo[NSURLErrorKey] as? URL
 #endif
     }
-#endif
 }
 
 #if !hasFeature(Embedded)

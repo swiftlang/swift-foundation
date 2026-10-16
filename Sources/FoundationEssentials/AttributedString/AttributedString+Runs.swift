@@ -122,8 +122,8 @@ extension AttributedString.Runs: Equatable {
         // I.e., the runs of two equal attribute strings may or may not compare equal.
 
         // Shortcut: compare overall UTF-8 counts.
-        let leftUTF8Count = lhs._strBounds.ranges.map(\._utf8OffsetRange.count).reduce(0, +)
-        let rightUTF8Count = rhs._strBounds.ranges.map(\._utf8OffsetRange.count).reduce(0, +)
+        let leftUTF8Count = lhs._strBounds.ranges.map { $0._utf8OffsetRange.count }.reduce(0, +)
+        let rightUTF8Count = rhs._strBounds.ranges.map { $0._utf8OffsetRange.count }.reduce(0, +)
         guard leftUTF8Count == rightUTF8Count else { return false }
 
         // Shortcut: compare run counts.

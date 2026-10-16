@@ -1,4 +1,7 @@
 //===----------------------------------------------------------------------===//
+
+#if !hasFeature(Embedded)
+
  //
  // This source file is part of the Swift.org open source project
  //
@@ -689,3 +692,5 @@ extension POSIXError {
     }
     #endif
 }
+
+#endif // !hasFeature(Embedded)
