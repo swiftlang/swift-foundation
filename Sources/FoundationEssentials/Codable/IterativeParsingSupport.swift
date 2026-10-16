@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 // MARK: - ParseEventFilter protocol
 
@@ -134,5 +133,3 @@ struct ArrayMapRecords: MapRecordStorage {
     @inline(__always)
     subscript(position: Int) -> Int { storage[position] }
 }
-
-#endif // !hasFeature(Embedded)

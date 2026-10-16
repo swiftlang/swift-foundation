@@ -124,6 +124,8 @@ internal enum _CodingKey : CodingKey {
     internal static let `super` = _CodingKey.string("super")
 }
 
+#endif // !hasFeature(Embedded)
+
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 
 //===----------------------------------------------------------------------===//
@@ -364,6 +366,7 @@ extension FixedWidthInteger {
 // Error handling conveniences
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
 internal
 extension DecodingError {
     static func _dataCorrupted(_ debugDescription: String, for node: _CodingPathNode, _ additionalKey: (some CodingKey)?) -> Self {
@@ -374,6 +377,7 @@ extension DecodingError {
         Self.dataCorrupted(.init(codingPath: node.path, debugDescription: debugDescription))
     }
 }
+#endif // !hasFeature(Embedded)
 
 //===----------------------------------------------------------------------===//
 // Shared Plist Null Representation
@@ -634,6 +638,7 @@ extension BufferView where Element == UInt8 {
     }
 }
 
+#if !hasFeature(Embedded)
 // Non-RawRepresentable Codable enum cases with the same number and labels of associated values all share equivalent CodingKeys, but the compiler-synthesized implementation generates a new type for each case.
 // Each of these types has their own set of `metadata instantiation cache for protocol conformance descriptor` symbols for each of 5 protocol conformances which consumes DATA space.
 // Instead of using the synthesized CodingKey types, you can make a `private typealias <CaseName>CodingKeys = <one of these types>` inside the Codable enum to reduce the amount of redundant DATA.
@@ -645,6 +650,7 @@ package enum DefaultAssociatedValueCodingKeys2: String, CodingKey {
     case _0
     case _1
 }
+#endif // !hasFeature(Embedded)
 
 extension RawSpan {
     func bytesEqual(to other: RawSpan) -> Bool {
@@ -668,6 +674,8 @@ extension RawSpan {
         }
     }
 }
+
+#if !hasFeature(Embedded)
 
 //===----------------------------------------------------------------------===//
 // Missing-Key Decoder

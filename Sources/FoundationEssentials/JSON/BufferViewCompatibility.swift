@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 extension String {
     static func _tryFromUTF8(_ input: BufferView<UInt8>) -> String? {
         input.withUnsafePointer { pointer, capacity in
@@ -59,5 +57,3 @@ extension BufferView<UInt8> {
         uncheckedSlice(from: region.startOffset, count: region.count)
     }
 }
-
-#endif // !hasFeature(Embedded)
