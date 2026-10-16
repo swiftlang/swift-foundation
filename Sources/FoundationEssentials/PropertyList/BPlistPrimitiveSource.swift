@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 
@@ -299,5 +297,3 @@ struct BPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEventSo
     }
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
-
-#endif // !hasFeature(Embedded)

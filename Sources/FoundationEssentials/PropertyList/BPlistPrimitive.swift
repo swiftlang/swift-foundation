@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 // The existence of a ValidatedBPlistObjectIndex means that the contained object index is known to be valid for the bplist metadata it was created from, and does not need to be validated again.
 struct ValidatedBPlistObjectIndex: BitwiseCopyable, Hashable, Sendable {
@@ -1161,5 +1160,3 @@ enum BPlistError: Swift.Error, Equatable {
         return .typeMismatch(expected: expected, actual: actual)
     }
 }
-
-#endif // !hasFeature(Embedded)
