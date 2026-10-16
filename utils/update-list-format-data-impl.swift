@@ -293,6 +293,7 @@ func generate() throws -> String {
         parentMap: simplifiedParentMap,
         aliases: neededAliases,
         scriptRedirects: scriptRedirects,
+        languages: Set(included.map { String($0.prefix { $0 != "_" }) }).subtracting(["root"]).sorted(),
         cldrVersion: detectCLDRVersion(cldrURL: cldrURL)
     )
 }
@@ -531,6 +532,7 @@ func emit(
     parentMap: [String: String],
     aliases: [String: String],
     scriptRedirects: [String: String],
+    languages: [String],
     cldrVersion: String
 ) -> String {
     // The runtime follows aliases, parents, and script fallback redirects alike.
@@ -606,7 +608,8 @@ func emit(
         slots: slots,
         parents: parentMap,
         aliases: aliases,
-        scriptRedirects: scriptRedirects
+        scriptRedirects: scriptRedirects,
+        languages: languages
     )
 
     let encoder = JSONEncoder()

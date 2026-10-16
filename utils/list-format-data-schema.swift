@@ -65,6 +65,9 @@ internal struct ListFormatDataSchema: Codable {
     /// Redirects for ICU's script fallback where truncation gives other patterns, e.g. en_Latn_GB → en_GB.
     let scriptRedirects: [String: String]
 
+    /// The languages ICU builds. A language with no patterns of its own still uses root's, not the fallback locale's.
+    let languages: [String]
+
     /// One row of resolved patterns, indexed into the global `patterns` pool.
     internal struct Row: Codable, Hashable {
         let start: Int

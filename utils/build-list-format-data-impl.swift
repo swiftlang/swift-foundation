@@ -182,7 +182,7 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
         listed = Set(data.slots.values.flatMap { $0.keys })
         listed.insert("root")
     }
-    let fallback = keepAll ? "root" : options.fallback
+    let fallback = options.fallback
     // The listed locale an identifier resolves to, as the runtime does, or the fallback locale.
     func resolve(_ locale: String, _ redirects: [String: String]) -> String {
         var current = locale
@@ -197,6 +197,12 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
         }
         return current
     }
+    // A language ICU builds uses root's rows where it has none of its own, so with a fallback locale, list it.
+    if keepAll && fallback != "root" {
+        for language in data.languages where resolve(language, candidates) == fallback && language != fallback {
+            listed.insert(language)
+        }
+    }
     // Keep only the redirects that change the rows an identifier gets.
     let redirects = candidates.filter { source, _ in
         var without = candidates
@@ -208,8 +214,9 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
         precondition(resolvedRows(resolve(source, redirects)) == resolvedRows(resolve(source, candidates)), "trimming redirects changed \(source)")
     }
     if keepAll {
-        // Every identifier must get the rows the sparse walk gives it.
-        for locale in Set(candidates.keys).union(candidates.values).union(data.slots.values.flatMap { $0.keys }) {
+        // Every identifier of a language ICU builds must get the rows the sparse walk gives it.
+        let languages = Set(data.languages).union(["root"])
+        for locale in Set(candidates.keys).union(candidates.values).union(data.slots.values.flatMap { $0.keys }).union(data.languages) where languages.contains(String(locale.prefix { $0 != "_" })) {
             precondition(resolvedRows(resolve(locale, redirects)) == resolvedRows(locale), "listing changed \(locale)")
         }
     }
