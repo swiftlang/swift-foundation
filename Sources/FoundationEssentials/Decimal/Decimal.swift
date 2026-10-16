@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !FOUNDATION_FRAMEWORK
 
 /// A structure representing a base-10 number.
@@ -349,27 +347,6 @@ extension Decimal {
         return _toString(withDecimalSeparator: separator)
     }
 
-    // For testing
-    internal static func _decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
-        do {
-            let (result, _, processedCodeUnits) = try Self.__decimal(
-                from: stringView.span,
-                prevalidatedUTF8: true,
-                decimalSeparator: UTF8Span(unchecked: decimalSeparator.span),
-                matchEntireString: matchEntireString)
-            return (result, processedCodeUnits)
-        } catch {
-            return (nil, 0)
-        }
-    }
-#if !FOUNDATION_FRAMEWORK
-    // Make this function available for SwiftCorelibsFoundation
-    @_spi(SwiftCorelibsFoundation)
-    public static func decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
-        _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString)
-    }        
-#endif
-
     internal func _toString(withDecimalSeparator separator: String) -> String {
         if self._length == 0 {
             return self._isNegative == 0 ? "0" : "NaN"
@@ -416,6 +393,31 @@ extension Decimal {
             return i
         }
     }
+}
+
+// Parsing a decimal from a string uses Character iteration, which is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
+extension Decimal {
+    // For testing
+    internal static func _decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
+        do {
+            let (result, _, processedCodeUnits) = try Self.__decimal(
+                from: stringView.span,
+                prevalidatedUTF8: true,
+                decimalSeparator: UTF8Span(unchecked: decimalSeparator.span),
+                matchEntireString: matchEntireString)
+            return (result, processedCodeUnits)
+        } catch {
+            return (nil, 0)
+        }
+    }
+#if !FOUNDATION_FRAMEWORK
+    // Make this function available for SwiftCorelibsFoundation
+    @_spi(SwiftCorelibsFoundation)
+    public static func decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
+        _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString)
+    }        
+#endif
 
     internal enum _ParseError: Error {
         case empty
@@ -715,5 +717,4 @@ extension Decimal {
         }
     }
 }
-
 #endif // !hasFeature(Embedded)

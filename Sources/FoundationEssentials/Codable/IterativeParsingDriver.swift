@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 
@@ -432,5 +430,3 @@ struct ParseEventAccumulator<Fragment>: ~Copyable, ~Escapable {
     }
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
-
-#endif // !hasFeature(Embedded)

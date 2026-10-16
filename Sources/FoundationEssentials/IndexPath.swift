@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -409,6 +407,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             return i + 1
         }
         
+        #if !hasFeature(Embedded)
         var description: String {
             switch self {
             case .empty:
@@ -421,6 +420,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 return indexes.description
             }
         }
+        #endif
         
         func withUnsafeBufferPointer<R>(_ body: (UnsafeBufferPointer<Int>) throws -> R) rethrows -> R {
             switch self {
@@ -441,7 +441,9 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             }
         }
         
+        #if !hasFeature(Embedded)
         var debugDescription: String { return description }
+        #endif
         
         static func +(lhs: Storage, rhs: Storage) -> Storage {
             var res = lhs
@@ -669,6 +671,8 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
     }
 }
 
+// Array.description and Mirror are unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     public var description: String {
@@ -683,7 +687,10 @@ extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible, Cus
         return Mirror(self, unlabeledChildren: self, displayStyle: .collection)
     }
 }
+#endif
 
+// Codable is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension IndexPath : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -723,6 +730,7 @@ extension IndexPath : Codable {
         }
     }
 }
+#endif
 
 #if FOUNDATION_FRAMEWORK
 
@@ -807,4 +815,3 @@ extension IndexPath {
 
 #endif
 
-#endif // !hasFeature(Embedded)
