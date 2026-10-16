@@ -6,10 +6,10 @@
 
 ### Working with AM/PM styles
 
-- ``abbreviated:``
-- ``narrow:``
-- ``omitted:``
-- ``wide:``
+- ``abbreviated``
+- ``narrow``
+- ``omitted``
+- ``wide``
 
 ### Encoding and decoding
 
