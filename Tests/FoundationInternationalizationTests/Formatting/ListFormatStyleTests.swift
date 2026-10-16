@@ -170,9 +170,11 @@ private struct ListFormatStyleTests {
         ("ff_CM", "ff_Latn_CM"), ("ff_GN", "ff_Latn_GN"), ("ff_MR", "ff_Latn_MR"),
         ("ff_SN", "ff_Latn_SN"),
         ("in", "id"), ("in_ID", "id_ID"), ("iw", "he"), ("iw_IL", "he_IL"),
-        ("ks_IN", "ks_Arab_IN"), ("ku_SY", "ku_Latn_SY"), ("kxv_IN", "kxv_Latn_IN"),
+        ("ks_Aran", "ks_Arab"), ("ks_IN", "ks_Aran_IN"),
+        ("ku_SY", "ku_Latn_SY"), ("kxv_IN", "kxv_Latn_IN"),
         ("mni_IN", "mni_Beng_IN"), ("mo", "ro"), ("no_NO", "no"), ("no_NO_NY", "nn_NO"),
-        ("pa_IN", "pa_Guru_IN"), ("pa_PK", "pa_Arab_PK"), ("sat_IN", "sat_Olck_IN"),
+        ("pa_Aran", "pa_Arab"), ("pa_IN", "pa_Guru_IN"), ("pa_PK", "pa_Aran_PK"),
+        ("sat_IN", "sat_Olck_IN"),
         ("sd_IN", "sd_Deva_IN"), ("sd_PK", "sd_Arab_PK"),
         ("sh", "sr_Latn"), ("sh_BA", "sr_Latn_BA"), ("sh_CS", "sr_RS"),
         ("sh_YU", "sr_RS"), ("shi_MA", "shi_Tfng_MA"),
@@ -181,16 +183,49 @@ private struct ListFormatStyleTests {
         ("sr_Latn_YU", "sr_Latn_RS"), ("sr_ME", "sr_Latn_ME"), ("sr_RS", "sr_Cyrl_RS"),
         ("sr_XK", "sr_Cyrl_XK"), ("sr_YU", "sr_RS"),
         ("su_ID", "su_Latn_ID"), ("tl", "fil"), ("tl_PH", "fil_PH"),
-        ("uz_AF", "uz_Arab_AF"), ("uz_UZ", "uz_Latn_UZ"), ("vai_LR", "vai_Vaii_LR"),
+        ("ur_Aran", "ur_Arab"), ("ur_Aran_IN", "ur_Arab_IN"), ("ur_IN", "ur_Aran_IN"),
+        ("ur_PK", "ur_Aran_PK"),
+        ("uz_AF", "uz_Arab_AF"), ("uz_UZ", "uz_Latn_UZ"), ("vai_LR", "vai_Vaii_LR"), ("wuu", "zh"),
         ("yue_CN", "yue_Hans_CN"), ("yue_HK", "yue_Hant_HK"),
-        ("zh_CN", "zh_Hans_CN"), ("zh_HK", "zh_Hant_HK"), ("zh_MO", "zh_Hant_MO"),
-        ("zh_SG", "zh_Hans_SG"), ("zh_TW", "zh_Hant_TW"),
+        ("zh_CN", "zh_Hans_CN"), ("zh_HK", "zh_Hant_HK"), ("zh_JP", "zh_Hans_JP"),
+        ("zh_MO", "zh_Hant_MO"), ("zh_SG", "zh_Hans_SG"), ("zh_TW", "zh_Hant_TW"),
     ]
 
     @Test(arguments: Self.localeAliases)
     func localeAlias(_ alias: (source: String, target: String)) {
         let items = ["Alice", "Bob"]
         #expect(items.formatted(style(alias.source)) == items.formatted(style(alias.target)))
+    }
+
+    // CLDR locales that ICU doesn't build, or has no data for, which CLDR parents to root.
+    @Test(arguments: ["en_Dsrt", "ar_Latn", "zh_Latn", "az_Arab"])
+    func localesOutsideICU(_ locale: String) {
+        #expect(["Alice", "Bob"].formatted(style(locale)) == "Alice, Bob")
+    }
+
+#if !FOUNDATION_LIST_FORMAT_ICU
+    // CLDR languages that ICU doesn't build fall back to root, where ICU uses its default locale.
+    @Test(arguments: ["la", "kaa"])
+    func languagesOutsideICU(_ locale: String) {
+        #expect(["Alice", "Bob"].formatted(style(locale)) == "Alice, Bob")
+    }
+#endif
+
+    // As ICU falls back for a locale without data: with a script and a region, it drops the script if that's the default
+    // for the language and region (en_Latn_GB to en_GB), else the region (zh_Hans_HK to zh_Hans).
+    @Test(arguments: [
+        ("en_Latn_GB", "Alice, Bob and Charlie"),
+        ("az_RU", "Alice, Bob, Charlie"),
+        ("zh_Hans_HK", "Alice、Bob和Charlie"),
+    ])
+    func scriptFallback(_ locale: String, _ expected: String) {
+        #expect(["Alice", "Bob", "Charlie"].formatted(style(locale)) == expected)
+    }
+
+    // ICU's data leaves out patterns that CLDR marks provisional or unconfirmed, so these inherit root's.
+    @Test(arguments: ["co", "kab", "oc"])
+    func draftPatterns(_ locale: String) {
+        #expect(["Alice", "Bob", "Charlie"].formatted(style(locale)) == "Alice, Bob, Charlie")
     }
 
     /// Ported from ICU `TestRussian`. и = и

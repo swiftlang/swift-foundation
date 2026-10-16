@@ -42,16 +42,18 @@ fi
 
 echo "Generating ${targetFileRelativePath} from ${CLDR_PATH}..." 1>&2
 
-# Compile the schema + impl as a two-file module and run the result. Building a
-# real module with swiftc (rather than piping both files through `swift` in
-# immediate mode) keeps compilation deterministic and makes diagnostics point at
-# the original files with correct line numbers. `-parse-as-library` lets the
-# impl's `@main` provide the entry point instead of top-level script code.
+# Compile the schema, the shared locale fallback, and the impl as one module
+# and run the result. Building a real module with swiftc (rather than piping
+# the files through `swift` in immediate mode) keeps compilation deterministic
+# and makes diagnostics point at the original files with correct line numbers.
+# `-parse-as-library` lets the impl's `@main` provide the entry point instead
+# of top-level script code.
 bindir=$(mktemp -d -t "${commandName}.XXXXXX")
 trap 'rm -rf "${bindir}"' EXIT
 tool="${bindir}/${commandName}"
 swiftc -parse-as-library \
     "${utilsDir}/list-format-data-schema.swift" \
+    "${utilsDir}/cldr-locale-fallback.swift" \
     "${utilsDir}/${commandName}-impl.swift" \
     -o "${tool}"
 

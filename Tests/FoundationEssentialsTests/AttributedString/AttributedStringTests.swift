@@ -2830,4 +2830,41 @@ E {
         #expect(string.runs[\.writingDirection].count == 2)
         #expect(string.runs.last?.writingDirection == nil)
     }
+
+    @Test func utf8Runs() {
+        let int1 = AttributeContainer.testInt(1)
+        // The empty run is dropped, so the runs on either side of it merge.
+        let attrStr = AttributedString("abcdef", utf8Runs: [(count: 2, attributes: int1), (count: 0, attributes: AttributeContainer.testInt(9)), (count: 1, attributes: int1), (count: 3, attributes: AttributeContainer())])
+        #expect(attrStr == AttributedString("abc", attributes: int1) + AttributedString("def"))
+        #expect(attrStr.runs.count == 2)
+    }
+
+    @Test func utf8RunsForEmptyString() {
+        #expect(AttributedString("", utf8Runs: [(count: 0, attributes: AttributeContainer.testInt(1))]) == AttributedString())
+    }
+
+    @Test func utf8RunsWithMultibyteScalars() {
+        let int1 = AttributeContainer.testInt(1)
+        // é is 2 UTF-8 bytes, and 漢 is 3.
+        let attrStr = AttributedString("é漢", utf8Runs: [(count: 2, attributes: int1), (count: 3, attributes: AttributeContainer())])
+        #expect(attrStr == AttributedString("é", attributes: int1) + AttributedString("漢"))
+    }
+
+    #if FOUNDATION_EXIT_TESTS
+    @Test func utf8RunsMustCoverString() async {
+        await #expect(processExitsWith: .failure) {
+            _ = AttributedString("abc", utf8Runs: [(count: 2, attributes: AttributeContainer())])
+        }
+        await #expect(processExitsWith: .failure) {
+            _ = AttributedString("abc", utf8Runs: [(count: 0, attributes: AttributeContainer.testInt(1))])
+        }
+    }
+
+    @Test func utf8RunsMustSplitOnScalarBoundaries() async {
+        // é is 2 UTF-8 bytes.
+        await #expect(processExitsWith: .failure) {
+            _ = AttributedString("é", utf8Runs: [(count: 1, attributes: AttributeContainer.testInt(1)), (count: 1, attributes: AttributeContainer())])
+        }
+    }
+    #endif
 }

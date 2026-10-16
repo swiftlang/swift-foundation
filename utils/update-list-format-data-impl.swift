@@ -17,7 +17,8 @@
 //
 // Pipeline:
 //   1. Parse common/supplemental/supplementalData.xml into a parent-locale map.
-//   2. Walk common/main, extracting <listPatterns> for each locale .xml file.
+//   2. Walk common/main, extracting <listPatterns> for each locale ICU builds
+//      (see icuLocales).
 //   3. Resolve in-file <alias source="locale" .../> redirects (transitive).
 //   4. For each (locale, type, width) slot, resolve missing parts and ↑↑↑
 //      markers by walking the parent chain to root.
@@ -63,71 +64,6 @@ let slots: [(cldrType: String, type: String, width: String)] = [
     ("or-narrow",       "or",   "narrow"),
 ]
 
-// The list of locale aliases below is hand-maintained.
-// It's used to handle deprecated identifiers such as `iw` → `he` and minimized
-// identifiers such as `zh_HK` → `zh_Hant_HK`, so that we are able to retrieve
-// the correct patterns.
-// For example, with these aliases we are able to correctly resolve
-// `zh_HK` → `zh_Hant_HK` → `及`, instead of the incorrect `zh_HK` → `zh` → `和`.
-// This list was originally based on the `%%ALIAS` entries in
-// `icu/icu4c/source/data/locales/*.txt`, which were in turn derived from a
-// hard-coded list in `icu/tools/cldr/cldr-to-icu/config.xml`.
-let localeAliases: [String: String] = [
-    "ars": "ar_SA",
-    "az_AZ": "az_Latn_AZ",
-    "bs_BA": "bs_Latn_BA",
-    "en_NH": "en_VU",
-    "en_RH": "en_ZW",
-    "ff_CM": "ff_Latn_CM",
-    "ff_GN": "ff_Latn_GN",
-    "ff_MR": "ff_Latn_MR",
-    "ff_SN": "ff_Latn_SN",
-    "in": "id",
-    "in_ID": "id_ID",
-    "iw": "he",
-    "iw_IL": "he_IL",
-    "ks_IN": "ks_Arab_IN",
-    "ku_SY": "ku_Latn_SY",
-    "kxv_IN": "kxv_Latn_IN",
-    "mni_IN": "mni_Beng_IN",
-    "mo": "ro",
-    "no_NO": "no",
-    "no_NO_NY": "nn_NO",
-    "pa_IN": "pa_Guru_IN",
-    "pa_PK": "pa_Arab_PK",
-    "sat_IN": "sat_Olck_IN",
-    "sd_IN": "sd_Deva_IN",
-    "sd_PK": "sd_Arab_PK",
-    "sh": "sr_Latn",
-    "sh_BA": "sr_Latn_BA",
-    "sh_CS": "sr_Latn_RS",
-    "sh_YU": "sr_Latn_RS",
-    "shi_MA": "shi_Tfng_MA",
-    "sr_BA": "sr_Cyrl_BA",
-    "sr_CS": "sr_RS",
-    "sr_Cyrl_CS": "sr_Cyrl_RS",
-    "sr_Cyrl_YU": "sr_Cyrl_RS",
-    "sr_Latn_CS": "sr_Latn_RS",
-    "sr_Latn_YU": "sr_Latn_RS",
-    "sr_ME": "sr_Latn_ME",
-    "sr_RS": "sr_Cyrl_RS",
-    "sr_XK": "sr_Cyrl_XK",
-    "sr_YU": "sr_RS",
-    "su_ID": "su_Latn_ID",
-    "tl": "fil",
-    "tl_PH": "fil_PH",
-    "uz_AF": "uz_Arab_AF",
-    "uz_UZ": "uz_Latn_UZ",
-    "vai_LR": "vai_Vaii_LR",
-    "yue_CN": "yue_Hans_CN",
-    "yue_HK": "yue_Hant_HK",
-    "zh_CN": "zh_Hans_CN",
-    "zh_HK": "zh_Hant_HK",
-    "zh_MO": "zh_Hant_MO",
-    "zh_SG": "zh_Hans_SG",
-    "zh_TW": "zh_Hant_TW",
-]
-
 // MARK: - Errors
 
 enum GenerationError: Error, CustomStringConvertible {
@@ -142,43 +78,6 @@ enum GenerationError: Error, CustomStringConvertible {
         case .xmlParse(let url, let error): return "failed to parse \(url.lastPathComponent): \(error)"
         }
     }
-}
-
-// MARK: - Parent map
-
-func loadParentMap(supplementalURL: URL) throws -> [String: String] {
-    let doc: XMLDocument
-    do {
-        doc = try XMLDocument(contentsOf: supplementalURL)
-    } catch {
-        throw GenerationError.xmlParse(supplementalURL, error)
-    }
-    // Only the unnamed <parentLocales> block (no `component` attribute) applies
-    // to general data, including list patterns. Other blocks scope to
-    // collations / plurals / etc.
-    let nodes = try doc.nodes(forXPath: "//parentLocales[not(@component)]/parentLocale")
-    var map: [String: String] = [:]
-    for case let elt as XMLElement in nodes {
-        guard let parent = elt.attribute(forName: "parent")?.stringValue,
-            let locales = elt.attribute(forName: "locales")?.stringValue
-        else { continue }
-        for child in locales.split(separator: " ") {
-            map[String(child)] = parent
-        }
-    }
-    return map
-}
-
-// Walk up the locale chain. Explicit parents win; otherwise strip the trailing
-// subtag (en_AU → en, zh_Hant_HK → zh_Hant); single-tag locales other than
-// root fall back to root.
-func parent(of locale: String, explicit: [String: String]) -> String? {
-    if locale == "root" { return nil }
-    if let p = explicit[locale] { return p }
-    if let u = locale.lastIndex(of: "_") {
-        return String(locale[..<u])
-    }
-    return "root"
 }
 
 // MARK: - Per-locale extraction
@@ -232,7 +131,8 @@ func parseLocaleFile(at url: URL) throws -> LocaleData {
             let part = p.elements(forName: "listPatternPart").first {
                 $0.attribute(forName: "type")?.stringValue == partName
             }
-            guard let text = part?.stringValue else {
+            // A part ICU's data leaves out for its draft status inherits, as a missing one does.
+            guard let part, let text = part.stringValue, !excludedDrafts.contains(part.attribute(forName: "draft")?.stringValue ?? "") else {
                 inherits.insert(partName)
                 continue
             }
@@ -273,6 +173,11 @@ func resolve(
         var current: String? = locale
         var foundAlias: String? = nil
         while let l = current {
+            // ICU loads an alias's target in its place.
+            if let target = localeAliases[l] {
+                current = target
+                continue
+            }
             if let text = data[l]?.parts[currentType]?[partName] {
                 return text
             }
@@ -314,6 +219,7 @@ func generate() throws -> String {
 
     print("  loading parent map…", to: &standardError)
     let parentMap = try loadParentMap(supplementalURL: supplementalURL)
+    let likelySubtags = try loadLikelySubtags(supplementalURL: supplementalURL.deletingLastPathComponent().appendingPathComponent("likelySubtags.xml"))
 
     print("  scanning locale files…", to: &standardError)
     let xmlFiles = try FileManager.default.contentsOfDirectory(
@@ -323,11 +229,15 @@ func generate() throws -> String {
     .filter { $0.pathExtension == "xml" }
     .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
-    var allLocales: [String] = []
+    let available = Set(xmlFiles.map { $0.deletingPathExtension().lastPathComponent })
+    let included = icuLocales(available: available, parents: parentMap, likelySubtags: likelySubtags)
+    print("  \(included.count) of \(available.count) CLDR locales are ICU locales", to: &standardError)
+    // Resolve the ICU locales, and the identifiers with an explicit parent that ICU has no locale for, so that the
+    // parent survives simplification.
+    let allLocales = included.union(parentMap.keys.filter { !included.contains($0) && localeAliases[$0] == nil }).sorted()
     var data: [String: LocaleData] = [:]
-    for file in xmlFiles {
+    for file in xmlFiles where included.contains(file.deletingPathExtension().lastPathComponent) {
         let locale = file.deletingPathExtension().lastPathComponent
-        allLocales.append(locale)
         // Cheap pre-filter: most files have no <listPatterns> block.
         // Parsing every CLDR file via XMLDocument is slow; skip when possible.
         guard let s = try? String(contentsOf: file, encoding: .utf8),
@@ -365,13 +275,24 @@ func generate() throws -> String {
 
     print("  emitting JSON…", to: &standardError)
     var simplifiedParentMap = parentMap
-    simplifyParentMap(&simplifiedParentMap, slotTables: slotTables)
+    simplifyParentMap(&simplifiedParentMap, aliases: localeAliases, slotTables: slotTables)
     let neededAliases = trimRedundantAliases(localeAliases, slotTables: slotTables, parentMap: simplifiedParentMap)
     print("  aliases: \(localeAliases.count) → \(neededAliases.count) entries (dropped redundant)", to: &standardError)
+    let redirects = simplifiedParentMap.merging(neededAliases) { _, alias in alias }
+    let scriptRedirects = scriptFallbackRedirects(
+        included: included,
+        icuRedirects: parentMap.merging(localeAliases) { _, alias in alias },
+        defaultScripts: defaultScripts(likelySubtags: likelySubtags),
+        redirects: redirects
+    ) { identifier, redirects in
+        slotTables.map { resolveRow(identifier, $0.table, redirects) }
+    }.filter { redirects[$0.key] == nil }
+    print("  script fallback redirects: \(scriptRedirects.count)", to: &standardError)
     return emit(
         slotTables: slotTables,
         parentMap: simplifiedParentMap,
         aliases: neededAliases,
+        scriptRedirects: scriptRedirects,
         cldrVersion: detectCLDRVersion(cldrURL: cldrURL)
     )
 }
@@ -523,12 +444,15 @@ func buildSlotEmissions(
 // we only need to compare sizes.
 func simplifyParentMap(
     _ parentMap: inout [String: String],
+    aliases: [String: String],
     slotTables: [(type: String, width: String, table: [String: Row])]
 ) {
     func totalSize(_ emissions: [SlotEmission], _ map: [String: String]) -> Int {
         emissions.reduce(0) { $0 + $1.sparseIndex.count } + map.count
     }
-    var emissions = buildSlotEmissions(slotTables, parentMap: parentMap)
+    // The runtime follows aliases and parents alike.
+    func redirects(_ map: [String: String]) -> [String: String] { map.merging(aliases) { _, alias in alias } }
+    var emissions = buildSlotEmissions(slotTables, parentMap: redirects(parentMap))
     var currentSize = totalSize(emissions, parentMap)
     let originalParentCount = parentMap.count
     var passes = 0
@@ -539,7 +463,7 @@ func simplifyParentMap(
         for c in parentMap.keys.sorted() {
             guard let original = parentMap[c] else { continue }
             parentMap[c] = nil
-            let trial = buildSlotEmissions(slotTables, parentMap: parentMap)
+            let trial = buildSlotEmissions(slotTables, parentMap: redirects(parentMap))
             let trialSize = totalSize(trial, parentMap)
             if trialSize <= currentSize {
                 emissions = trial
@@ -555,6 +479,18 @@ func simplifyParentMap(
         to: &standardError
     )
     _ = emissions // silenced; emit() recomputes from the simplified parentMap
+}
+
+// Resolve a locale to its row in one slot table by walking the fallback
+// chain (explicit redirect first, then truncation, then root), mirroring the
+// runtime. root is present in every table, so this always terminates in a row.
+func resolveRow(_ locale: String, _ table: [String: Row], _ explicit: [String: String]) -> Row? {
+    var current: String? = locale
+    while let l = current {
+        if let r = table[l] { return r }
+        current = parent(of: l, explicit: explicit)
+    }
+    return nil
 }
 
 // Drop aliases that the plain fallback walk (truncation only, no alias redirect)
@@ -575,17 +511,6 @@ func trimRedundantAliases(
     slotTables: [(type: String, width: String, table: [String: Row])],
     parentMap: [String: String]
 ) -> [String: String] {
-    // Resolve a locale to its row in one slot table by walking the fallback
-    // chain (explicit redirect first, then truncation, then root), mirroring the
-    // runtime. root is present in every table, so this always terminates in a row.
-    func resolveRow(_ locale: String, _ table: [String: Row], _ explicit: [String: String]) -> Row? {
-        var current: String? = locale
-        while let l = current {
-            if let r = table[l] { return r }
-            current = parent(of: l, explicit: explicit)
-        }
-        return nil
-    }
     let withAliases = parentMap.merging(aliases) { _, alias in alias }
     var needed: [String: String] = [:]
     for (source, target) in aliases {
@@ -605,9 +530,12 @@ func emit(
     slotTables: [(type: String, width: String, table: [String: Row])],
     parentMap: [String: String],
     aliases: [String: String],
+    scriptRedirects: [String: String],
     cldrVersion: String
 ) -> String {
-    let emissions = buildSlotEmissions(slotTables, parentMap: parentMap)
+    // The runtime follows aliases, parents, and script fallback redirects alike.
+    let redirects = parentMap.merging(aliases) { _, alias in alias }.merging(scriptRedirects) { _, script in script }
+    let emissions = buildSlotEmissions(slotTables, parentMap: redirects)
 
     // Self-check: simulate the runtime parent-walk against the sparse output
     // and confirm every (locale, slot) still resolves to the original row.
@@ -617,7 +545,7 @@ func emit(
         let emission = emissions[i]
         let runtimeIndex = emission.sparseIndex.mapValues { UInt8($0) }
         for (locale, expectedRow) in slot.table {
-            guard let idx = lookup(locale, in: runtimeIndex, parentMap: parentMap),
+            guard let idx = lookup(locale, in: runtimeIndex, parentMap: redirects),
                 emission.uniqueRows[Int(idx)] == expectedRow
             else {
                 fatalError("sparse-lookup mismatch for \(locale) in \(slot.type)/\(slot.width)")
@@ -677,7 +605,8 @@ func emit(
         rows: rowTable,
         slots: slots,
         parents: parentMap,
-        aliases: aliases
+        aliases: aliases,
+        scriptRedirects: scriptRedirects
     )
 
     let encoder = JSONEncoder()

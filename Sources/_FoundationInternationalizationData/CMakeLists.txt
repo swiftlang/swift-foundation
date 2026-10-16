@@ -13,6 +13,8 @@
 ##===----------------------------------------------------------------------===##
 
 add_library(_FoundationInternationalizationData STATIC
+    DateFormatData.swift
+    DateFormatLookup.swift
     ListFormatData.swift
     ListFormatLookup.swift)
 
