@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 // CFCharSetAnnexStruct
 internal struct Annex: CustomStringConvertible, CustomDebugStringConvertible {
     // Index n is for plane n + 1: 0 for plane 1, 1 for plane 2
@@ -406,5 +404,3 @@ extension _CharacterSet {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)
