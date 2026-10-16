@@ -39,7 +39,7 @@ private struct DatePatternFormattingTests {
     // MARK: - Numeric fields
 
     @Test(arguments: [
-        ("y", "2026"), ("yy", "26"), ("yyy", "2026"), ("yyyy", "2026"), ("yyyyy", "02026"),
+        ("y", "2026"), ("yy", "26"), ("yyy", "2026"), ("yyyy", "2026"), ("yyyyy", "02026"), ("yyyyyyyyyyy", "0000002026"),
         ("u", "2026"), ("uuuuu", "02026"),
         ("M", "9"), ("MM", "09"), ("L", "9"), ("LL", "09"),
         ("d", "18"), ("dd", "18"),
@@ -131,6 +131,11 @@ private struct DatePatternFormattingTests {
         #expect(style("SSS A g").format(nan) == nan.description)
     }
 
+    @Test func julianDayAndMillisecondsBeforeEpoch() {
+        let before1970 = Date(timeIntervalSince1970: -43_200) // 1969-12-31 12:00 UTC
+        #expect(style("g A").format(before1970) == "2440587 43200000")
+    }
+
     // MARK: - Digits and minus signs
 
     @Test func localeDigits() {
@@ -160,6 +165,7 @@ private struct DatePatternFormattingTests {
         ("en@numbers=arab", "٢٥/٢/٢٠١٥"),
         ("fa@numbers=latn", "25/2/2015"),
         ("hi@numbers=deva", "२५/२/२०१५"),
+        ("hi@numbers=native", "२५/२/२०१५"),
     ])
     func defaultDigits(locale: String, expected: String) {
         #expect(style("d/M/y", locale: locale).format(Date(timeIntervalSince1970: 1_424_841_000)) == expected)
@@ -414,6 +420,10 @@ private struct DatePatternFormattingTests {
         #expect(style("ll d").attributedStyle.format(date) == attributed([(" ", nil), ("18", .day)]))
     }
 
+    @Test func julianDayAndMillisecondsAttributes() {
+        #expect(style("g A").attributedStyle.format(date) == attributed([("2461302", .day), (" ", nil), ("50709306", .second)]))
+    }
+
     // MARK: - Names
 
     // From ICU's DateFormatTest TestStandAloneMonths, TestStandAloneDays, TestShortDays, TestNarrowNames, and TestQuarters. Dates are UTC.
@@ -462,6 +472,10 @@ private struct DatePatternFormattingTests {
         ("en", "QQyy", 1_435_708_800.0, "0315"),
         ("es_MX", "qqq", 0.0, "1er. trim."),
         ("es_MX", "qqqqq", 0.0, "1T"),
+        // Standalone names that differ from the format names.
+        ("fi", "cccc", 1_789_740_309.306, "perjantai"),
+        ("de", "ccc", 1_789_740_309.306, "Fr"),
+        ("hu", "qqqq", 1_789_740_309.306, "3. negyedév"),
     ])
     func names(locale: String, pattern: String, seconds: Double, expected: String) {
         #expect(style(pattern, locale: locale).format(Date(timeIntervalSince1970: seconds)) == expected)
@@ -766,6 +780,8 @@ private struct DatePatternFormattingTests {
         ("hy", "'և' d", "Եվ 2"),
         ("de", "'ß' d", "Ss 2"),
         ("lt", "'i\u{307}x' d", "I\u{307}x 2"),
+        ("tur", "'iyi' d", "İyi 2"),
+        ("nl", "'ij\u{301}' d", "Ij\u{301} 2"),
     ])
     func titlecasing(locale: String, pattern: String, expected: String) {
         #expect(format(pattern, locale: locale, context: .beginningOfSentence) == expected)

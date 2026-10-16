@@ -2850,6 +2850,14 @@ E {
         #expect(attrStr == AttributedString("é", attributes: int1) + AttributedString("漢"))
     }
 
+    @Test func utf8RunsWithParagraphConstrainedAttribute() {
+        // As when it's set afterwards, a paragraph attribute on part of a paragraph covers the whole paragraph.
+        let attrStr = AttributedString("ab\ncd", utf8Runs: [(count: 1, attributes: AttributeContainer.testParagraphConstrained(3)), (count: 4, attributes: AttributeContainer())])
+        var expected = AttributedString("ab\ncd")
+        expected[expected.startIndex ..< expected.index(afterCharacter: expected.startIndex)].testParagraphConstrained = 3
+        #expect(attrStr == expected)
+    }
+
     #if FOUNDATION_EXIT_TESTS
     @Test func utf8RunsMustCoverString() async {
         await #expect(processExitsWith: .failure) {
