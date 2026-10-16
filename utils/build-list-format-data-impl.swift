@@ -96,11 +96,11 @@ func readOptions() -> Options {
         fatalError("OUTPUT_SWIFT environment variable not set")
     }
     let localesArg = env["LOCALES"] ?? ""
-    let fallback = env["FALLBACK"] ?? "root"
+    let fallback = (env["FALLBACK"] ?? "root").replacingOccurrences(of: "-", with: "_")
     let requestedLocales: Set<String>? =
         localesArg.isEmpty
         ? nil
-        : Set(localesArg.split(separator: ",").map(String.init))
+        : Set(localesArg.split(separator: ",").map { $0.replacingOccurrences(of: "-", with: "_") })
     return Options(
         inputPath: inputPath,
         outputSwiftPath: outputSwiftPath,
@@ -487,6 +487,10 @@ func swiftStringLiteral(_ s: String) -> String {
 func build() {
     let options = readOptions()
     let data = loadData(options.inputPath)
+    guard options.fallback == "root" || data.languages.contains(String(options.fallback.prefix { $0 != "_" })) else {
+        print("error: --fallback=\(options.fallback) isn't a language in the data", to: &standardError)
+        exit(1)
+    }
     let packed = pack(data, options: options)
     writeFile(renderSwift(packed), to: options.outputSwiftPath)
 }

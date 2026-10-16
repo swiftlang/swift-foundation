@@ -49,7 +49,7 @@ func readOptions() -> Options {
         inputPath: environment["INPUT"]!,
         outputSwiftPath: environment["OUTPUT_SWIFT"]!,
         requestedLocales: locales.isEmpty ? nil : Set(locales.split(separator: ",").map { String($0).replacingOccurrences(of: "-", with: "_") }),
-        fallback: environment["FALLBACK"].flatMap { $0.isEmpty ? nil : $0 }
+        fallback: environment["FALLBACK"].flatMap { $0.isEmpty ? nil : $0.replacingOccurrences(of: "-", with: "_") }
     )
 }
 
@@ -122,7 +122,7 @@ let subBlockSizes = ["numbers": 7, "months": 12, "weekdays": 7, "quarters": 4, "
 // MARK: - Subsetting
 
 /// The included locale an identifier resolves to, following `redirects` and truncation, as the runtime does.
-/// Where its language has no data, that's the fallback locale, else root.
+/// Where that reaches no included locale, that's the fallback locale, else root.
 func resolve(_ locale: String, included: Set<String>, redirects: [String: String], fallback: String?) -> String {
     var current = locale
     while !included.contains(current) {
@@ -166,6 +166,10 @@ struct BuildDateFormatData {
         }
         included.insert("root")
         if let fallback = options.fallback {
+            guard allLocales.contains(fallback) else {
+                print("error: --fallback=\(fallback) isn't a locale in the data", to: &standardError)
+                exit(1)
+            }
             included.insert(fallback)
         }
         let sortedLocales = included.sorted { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }

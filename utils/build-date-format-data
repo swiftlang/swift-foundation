@@ -21,8 +21,9 @@
 #                          [--output=path/to/DateFormatData.swift]
 #
 # --locales: comma-separated subset of locales to include (default: all).
-# --fallback: locale used where a language has no data; auto-included in the
-#             locale set. Without it, the runtime uses root.
+# --fallback: locale used for an identifier that resolves to none of the
+#             included locales; auto-included in the locale set. Without it,
+#             the runtime uses root.
 # --input: path to the JSON intermediate (default: in the source tree).
 # --output: path to the generated Swift file (default: in the source tree).
 
