@@ -160,6 +160,19 @@ private struct ListFormatStyleTests {
         #expect(["Alice", "Bob"].formatted(style("sr-Latn")) == ["Alice", "Bob"].formatted(style("sr_Latn")))
     }
 
+    /// Keywords such as a calendar or a collation don't change the list patterns.
+    @Test(arguments: [
+        ("de@collation=phonebook", "Alice, Bob und Charlie"),
+        ("en@calendar=buddhist", "Alice, Bob, and Charlie"),
+        ("en_GB@calendar=buddhist", "Alice, Bob and Charlie"),
+        ("es@collation=traditional", "Alice, Bob y Charlie"),
+        ("sr_Latn@calendar=gregorian", "Alice, Bob i Charlie"),
+        ("zh_Hant_HK@calendar=chinese", "Alice\u{3001}Bob\u{53CA}Charlie"),
+    ])
+    func localeKeywords(locale: String, expected: String) {
+        #expect(["Alice", "Bob", "Charlie"].formatted(style(locale)) == expected)
+    }
+
     // ICU locale aliases from `icu4c/source/data/locales/*.txt` (`%%ALIAS`),
     // derived by deprecated-subtag replacement and likely-subtags expansion. Each
     // source identifier must resolve its list patterns to the same output as its

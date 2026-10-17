@@ -82,7 +82,13 @@ package func _listFormatPatterns(locale: String, type: ListFormatType, width: Li
 /// `Locale.identifier` canonicalization (CoreFoundation) writes a script subtag
 /// with a `-` separator while a region keeps `_` (so `sr_Latn` arrives as
 /// `sr-Latn`), whereas the CLDR-derived tables use `_` throughout.
+///
+/// Also drop keywords such as `@calendar=buddhist`. List patterns don't depend on them, and the parent walk would otherwise skip the locale itself (`en_GB@calendar=buddhist` → `en`).
 private func _lookupLocale(from locale: String) -> String {
+    var locale = locale
+    if let at = locale.utf8.firstIndex(of: UInt8(ascii: "@")) {
+        locale = String(locale[..<at])
+    }
     guard locale.utf8.contains(UInt8(ascii: "-")) else { return locale }
     let bytes = locale.utf8.map { $0 == UInt8(ascii: "-") ? UInt8(ascii: "_") : $0 }
     return String(decoding: bytes, as: UTF8.self)
