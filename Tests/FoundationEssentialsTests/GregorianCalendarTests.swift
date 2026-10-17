@@ -221,6 +221,17 @@ private struct GregorianCalendarTests {
     // With ISO-style week rules a month that starts on a Friday, Saturday or
     // Sunday has a week 0. Components taken from a date in it must find that
     // date again, quickly, instead of searching to the end of time.
+    @Test(arguments: [2, 3, 5, 8, 11])
+    func testNextDateMatchingMonthAndWeekOfMonthZeroStaysInTheYear(month: Int) throws {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .gmt
+        // In 2026 these months start on a Friday, Saturday or Sunday, so the 1st is in week 0. Week 0 starts in the month before, which must not make the search skip to the next year.
+        let monthStart = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
+        let start = try #require(calendar.date(byAdding: .day, value: -2, to: monthStart))
+        let found = calendar.nextDate(after: start, matching: DateComponents(month: month, weekOfMonth: 0), matchingPolicy: .strict)
+        #expect(found == monthStart)
+    }
+
     @Test(.timeLimit(.minutes(1)))
     func testNextDateMatchingWeekOfMonthZero() throws {
         var calendar = Calendar(identifier: .gregorian)

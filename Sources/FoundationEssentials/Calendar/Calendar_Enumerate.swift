@@ -681,7 +681,12 @@ extension Calendar {
             var adjusted = comps
             adjusted.year = component(.year, from: date)
             // TODO: can year ever be nil here?
-            if let adjustedDate = self.date(from: adjusted) {
+            if var adjustedDate = self.date(from: adjusted) {
+                // A week of the month resolves to the start of that week, which can be in the month before (always for week 0). A match can't be before the month, so compare with the month's start instead.
+                if let month = adjusted.month, component(.month, from: adjustedDate) != month,
+                   let monthStart = self.date(from: DateComponents(era: adjusted.era, year: adjusted.year, month: month)), adjustedDate < monthStart {
+                    adjustedDate = monthStart
+                }
                 if direction == .forward && date > adjustedDate {
                     adjusted.year = adjusted.year! + 1
                 } else if direction == .backward && date < adjustedDate {
