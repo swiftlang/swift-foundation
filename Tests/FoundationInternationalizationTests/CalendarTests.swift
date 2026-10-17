@@ -1667,6 +1667,39 @@ private struct CalendarTests {
 
 #endif
 
+    @Test(arguments: ["Europe/Paris", "Africa/Ceuta", "Africa/Cairo", "America/Santiago", "Asia/Beirut", "America/Los_Angeles"])
+    func nextDateBackwardMatchingMonthAcrossDaylightSavingTime(timeZoneIdentifier: String) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: timeZoneIdentifier))
+        // A month with an extra hour from a daylight saving time change must not make the search skip the month before it.
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 12, day: 12, hour: 12)))
+        for month in 1...12 {
+            let expected = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
+            for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
+                #expect(calendar.nextDate(after: start, matching: DateComponents(month: month), matchingPolicy: policy, direction: .backward) == expected, "month \(month), \(policy)")
+            }
+        }
+    }
+
+    @Test func nextDateBackwardKeepsWeeksAndQuartersOnMain() throws {
+        var iso = Calendar(identifier: .iso8601)
+        iso.timeZone = .gmt
+        var us = Calendar(identifier: .gregorian)
+        us.timeZone = .gmt
+        us.locale = Locale(identifier: "en_US")
+        func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int = 0) throws -> Date {
+            try #require(us.date(from: DateComponents(year: year, month: month, day: day, hour: hour)))
+        }
+        // Searches that the backward search changes must not break. A week stage keeps a week that already matches, so the result has to start at the beginning of a day.
+        #expect(us.nextDate(after: try date(2027, 6, 10), matching: DateComponents(month: 5, weekday: 7, weekOfMonth: 1), matchingPolicy: .strict, direction: .backward) == (try date(2027, 5, 1)))
+        #expect(us.nextDate(after: try date(2027, 12, 10), matching: DateComponents(month: 10, weekday: 1, weekOfYear: 45), matchingPolicy: .strict, direction: .backward) == (try date(2027, 10, 31)))
+        // Week 1 of March 2025 starts on the 3rd: the 1st is in week 0 in the ISO 8601 calendar.
+        #expect(iso.nextDate(after: try date(2026, 1, 1, 12), matching: DateComponents(month: 3, weekday: 2, weekOfMonth: 1), matchingPolicy: .strict, direction: .backward) == (try date(2025, 3, 3)))
+        // The quarter doesn't move the day search out of the month.
+        #expect(us.nextDate(after: try date(2026, 8, 1, 12), matching: DateComponents(year: 2026, month: 7, day: 31, quarter: 3), matchingPolicy: .strict, direction: .backward) == (try date(2026, 7, 31)))
+        // January 29–31, 2026 have no Wednesday, so the fifth Wednesday after January 1 is in April.
+        #expect(iso.nextDate(after: try date(2026, 1, 1, 12), matching: DateComponents(weekday: 4, weekdayOrdinal: 5), matchingPolicy: .nextTime, direction: .forward) == (try date(2026, 4, 29)))
+    }
 }
 
 // MARK: - Bridging Tests
