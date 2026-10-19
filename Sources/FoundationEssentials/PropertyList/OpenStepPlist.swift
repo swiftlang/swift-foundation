@@ -337,12 +337,7 @@ private func parseU16Scalar(_ pInfo: inout _ParseInfo) -> UInt16? {
     // We have to have encountered at least one hex digit for the `\U` directive to be valid.
     if num == 0, numDigits == 4 {
         if !pInfo.isAtEnd {
-            #if hasFeature(Embedded)
-            // String(describing:) is unavailable in Embedded Swift.
             let unexpected = Unicode.Scalar(pInfo.currChar).map { "\($0)" } ?? "nil"
-            #else
-            let unexpected = String(describing: Unicode.Scalar(pInfo.currChar))
-            #endif
             pInfo.err = OpenStepPlistError("Unexpected character `\(unexpected)` while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")
         } else {
             pInfo.err = OpenStepPlistError("Unexpected end of file while parsing unicode character escape sequence on line \(lineNumberStrings(pInfo))")

@@ -413,14 +413,8 @@ extension DateComponents {
                 11
             case (UInt8(ascii: "D"), UInt8(ascii: "e"), UInt8(ascii: "c")):
                 12
-            #if hasFeature(Embedded)
-            // String(describing:) is unavailable in Embedded Swift.
             default:
                 throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Month \(dc.month.map { "\($0)" } ?? "nil") is out of bounds")
-            #else
-            default:
-                throw parseError(inputString, exampleFormattedString: Date.HTTPFormatStyle().format(Date.now), extendedDescription: "Month \(String(describing: dc.month)) is out of bounds")
-            #endif
             }
 
             try it.expectCharacter(UInt8(ascii: " "), input: inputString, onFailure: Date.HTTPFormatStyle().format(Date.now))

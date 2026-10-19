@@ -580,7 +580,7 @@ extension _CharacterSet: CustomStringConvertible, CustomDebugStringConvertible {
                 result += "\n    Planes:"
                 for (planeNumber, plane) in activePlanes {
                     #if hasFeature(Embedded)
-                    // String(describing:) is unavailable in Embedded Swift.
+                    // String(describing:) is unavailable in Embedded Swift - we use a simpler description.
                     let planeDesc = plane.storageDescription
                     #else
                     let planeDesc = String(describing: plane.storage)
