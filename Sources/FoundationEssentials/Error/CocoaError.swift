@@ -114,8 +114,8 @@ public extension CocoaError {
 #endif
     }
 
-#if !hasFeature(Embedded)
     /// The underlying error behind this error, if any.
+    @_unavailableInEmbedded
     var underlying: Error? {
 #if FOUNDATION_FRAMEWORK
         return _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error
@@ -126,6 +126,7 @@ public extension CocoaError {
 
     /// A list of underlying errors, if any. It includes the values of both NSUnderlyingErrorKey and NSMultipleUnderlyingErrorsKey. If there are no underlying errors, returns an empty array.
     @available(macOS 11.3, iOS 14.5, watchOS 7.4, tvOS 14.5, *)
+    @_unavailableInEmbedded
     var underlyingErrors: [Error] {
         var result : [Error] = []
 
@@ -153,7 +154,6 @@ public extension CocoaError {
         
         return result
     }
-#endif
 
     /// The URL associated with this error, if any.
     var url: URL? {
@@ -165,7 +165,7 @@ public extension CocoaError {
     }
 }
 
-#if !hasFeature(Embedded)
+@_unavailableInEmbedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CocoaError {
 #if FOUNDATION_FRAMEWORK
@@ -186,7 +186,6 @@ extension CocoaError {
     }
 #endif
 }
-#endif
 
 /// A specialized error that provides localized messages describing the error and why it occurred.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)

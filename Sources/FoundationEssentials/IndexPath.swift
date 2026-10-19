@@ -407,7 +407,7 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             return i + 1
         }
         
-        #if !hasFeature(Embedded)
+        @_unavailableInEmbedded
         var description: String {
             switch self {
             case .empty:
@@ -420,7 +420,6 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 return indexes.description
             }
         }
-        #endif
         
         func withUnsafeBufferPointer<R>(_ body: (UnsafeBufferPointer<Int>) throws -> R) rethrows -> R {
             switch self {
@@ -441,9 +440,8 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             }
         }
         
-        #if !hasFeature(Embedded)
+        @_unavailableInEmbedded
         var debugDescription: String { return description }
-        #endif
         
         static func +(lhs: Storage, rhs: Storage) -> Storage {
             var res = lhs

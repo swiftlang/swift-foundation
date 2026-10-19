@@ -528,7 +528,7 @@ extension LocalePreferences.ICUSymbolsAndStrings: Codable {
 #endif
 
 // Codable is unavailable in Embedded Swift.
-#if !hasFeature(Embedded)
+@_unavailableInEmbedded
 extension LocalePreferences.MeasurementUnit : Codable {}
+@_unavailableInEmbedded
 extension LocalePreferences.TemperatureUnit : Codable {}
-#endif
