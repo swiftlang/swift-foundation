@@ -782,6 +782,7 @@ private struct DatePatternFormattingTests {
         ("lt", "'i\u{307}x' d", "I\u{307}x 2"),
         ("tur", "'iyi' d", "İyi 2"),
         ("nl", "'ij\u{301}' d", "Ij\u{301} 2"),
+        ("trv", "'iyi' d", "Iyi 2"),
     ])
     func titlecasing(locale: String, pattern: String, expected: String) {
         #expect(format(pattern, locale: locale, context: .beginningOfSentence) == expected)

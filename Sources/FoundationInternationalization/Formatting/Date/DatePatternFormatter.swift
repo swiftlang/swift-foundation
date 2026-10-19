@@ -51,7 +51,7 @@ final class DatePatternFormatter : Sendable {
         numbers = locale.numbers(identifier)
         asciiDigits = numbers.hasASCIIDigits
         capitalizationContext = info.capitalizationContext
-        caseLanguage = CaseLanguage(identifier: info.localeIdentifier)
+        caseLanguage = CaseLanguage(identifier)
         var calendar = Calendar(identifier: info.calendarIdentifier)
         calendar.firstWeekday = info.firstWeekday
         calendar.minimumDaysInFirstWeek = info.minimumDaysInFirstWeek
@@ -334,18 +334,18 @@ final class DatePatternFormatter : Sendable {
     enum CaseLanguage {
         case `default`, turkic, dutch, armenian
 
-        init(identifier: String) {
-            // The language subtag, lowercased, packed into an integer to compare without allocating.
-            var language: UInt32 = 0
-            for byte in identifier.utf8.prefix(4) {
-                guard (byte | 0x20) >= UInt8(ascii: "a") && (byte | 0x20) <= UInt8(ascii: "z") else { break }
-                language = language << 8 | UInt32(byte | 0x20)
-            }
-            switch language {
-            case 0x7472, 0x747572, 0x617A, 0x617A65: self = .turkic // tr, tur, az, aze
-            case 0x6E6C, 0x6E6C64: self = .dutch // nl, nld
-            case 0x6879, 0x687965: self = .armenian // hy, hye
-            default: self = .default
+        init(_ identifier: DataLocaleIdentifier) {
+            let baseName = identifier.baseName
+            let language = baseName[..<(baseName.utf8.firstIndex(of: UInt8(ascii: "_")) ?? baseName.endIndex)]
+            let utf8 = language.utf8Span.span
+            if utf8.equals("tr") || utf8.equals("tur") || utf8.equals("az") || utf8.equals("aze") {
+                self = .turkic
+            } else if utf8.equals("nl") || utf8.equals("nld") {
+                self = .dutch
+            } else if utf8.equals("hy") || utf8.equals("hye") {
+                self = .armenian
+            } else {
+                self = .default
             }
         }
     }
