@@ -173,6 +173,7 @@ final class DatePatternFormatter : Sendable {
 
         init(recordsFields: Bool) {
             self.recordsFields = recordsFields
+            // Enough for most formatted dates, so most calls allocate once.
             bytes.reserveCapacity(64)
         }
     }
