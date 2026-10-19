@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-
 extension TimeZone {
     package enum Error: Swift.Error {
         case dateOverflow
@@ -41,7 +39,7 @@ extension Date {
 }
 
 package struct _TimeZoneOffsets: Sendable {
-    // Fixed offset timezone rule (equivalent to ICU's simple rules)
+    // Fixed offset timezone rule
     // All available fixed offset timezone rules. Values are in seconds.
     private let fixedOffsetRules: [(rawOffset: Int, dstSavings: Int)]
 
@@ -50,7 +48,6 @@ package struct _TimeZoneOffsets: Sendable {
 
     package var count: Int { fixedOffsetRules.count }
 
-    // Initialize from ICU raw data
     // Caller is responsible to validate that `offsets` has >= 2 elements
     package init(offsets: Span<Int32>, offsetMap: Span<UInt8>?, identifier: String) {
         precondition(offsets.count >= 2)
@@ -100,7 +97,7 @@ package struct _TimeZoneOffsets: Sendable {
 
 
 /// Time zone data made up of historical transitions, a table of (raw offset, DST savings) pairs, and an optional final DST rule.
-/// This type has no dependency on ICU. Data can come from any source (e.g. ICU's `zoneinfo64` resource, or provided directly).
+/// Data can come from any source (e.g. ICU's `zoneinfo64` resource, or provided directly).
 package final class _TimeZoneRules: Sendable {
     package let identifier: String
 
@@ -243,7 +240,7 @@ package final class _TimeZoneRules: Sendable {
         return nextHistoricalTransition(afterTimeIntervalSince1970: baseSec)
     }
     
-    // MARK: - Historical Transition Search (Direct Port from olsontz.cpp)
+    // MARK: - Historical Transition Search
     
     // Lazy computed first historical transition
     private var firstTZTransition: Date? {

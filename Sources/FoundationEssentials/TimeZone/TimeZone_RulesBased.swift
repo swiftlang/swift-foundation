@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A time zone that answers all queries from a `_TimeZoneRules` (transitions, offsets and a final DST rule). It does not use ICU.
+/// A time zone that answers all queries from a `_TimeZoneRules` (transitions, offsets and a final DST rule).
 package final class _TimeZoneRulesBased: _TimeZoneProtocol, Sendable {
     let rules: _TimeZoneRules
 
@@ -26,7 +26,7 @@ package final class _TimeZoneRulesBased: _TimeZoneProtocol, Sendable {
         }
         self.rules = rules
 #else
-        // There is no built-in data outside of Foundation.framework
+        // There is no built-in data yet
         return nil
 #endif
     }
@@ -48,7 +48,7 @@ package final class _TimeZoneRulesBased: _TimeZoneProtocol, Sendable {
     }
 
     package func abbreviation(for date: Date) -> String? {
-        // No abbreviation data is kept; fall back to the GMT offset form
+        // FIXME: not available yet; fall back to the GMT offset form
         _TimeZoneGMT.abbreviation(for: secondsFromGMT(for: date))
     }
 
