@@ -32,8 +32,6 @@ package struct DataLocaleIdentifier {
     }
 
     private init(_ identifier: String, readsKeywords: Bool) {
-        var identifier = identifier
-        identifier.makeContiguousUTF8()
         let utf8 = identifier.utf8Span.span
         // One pass finds the keywords and checks whether the base name already has `_` separators, each subtag in the
         // case the tables use, and no extensions.

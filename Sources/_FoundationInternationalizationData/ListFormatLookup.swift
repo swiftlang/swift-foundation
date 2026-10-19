@@ -83,7 +83,6 @@ package func _listFormatPatterns(locale: String, type: ListFormatType, width: Li
 private func _localeSlotRows(_ locale: String) -> UInt16? {
     var current = locale
     while true {
-        current.makeContiguousUTF8()
         if let slotRows = _searchLocaleTable(current.utf8Span.span, count: _ListFormatData.locales.count, { _ListFormatData.locales[$0] }, key: { $0.locale }, value: { $0.slotRows }) {
             return slotRows
         }
@@ -103,8 +102,6 @@ private func _localeSlotRows(_ locale: String) -> UInt16? {
 /// alias) in the redirect map. Returns the target locale, or nil if there's no
 /// entry for `locale`.
 private func _redirectLookup(_ locale: String) -> String? {
-    var locale = locale
-    locale.makeContiguousUTF8()
     guard let targetIndex = _searchLocaleTable(locale.utf8Span.span, count: _ListFormatData.redirects.count, { _ListFormatData.redirects[$0] }, key: { $0.from }, value: { $0.to }) else { return nil }
     return _locale(at: targetIndex)
 }

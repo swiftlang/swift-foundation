@@ -45,10 +45,7 @@ final class DatePatternFormatter : Sendable {
         // ISO 8601 uses the Gregorian names.
         let isSupported = info.calendarIdentifier == .gregorian || info.calendarIdentifier == .iso8601
         unsupportedCalendar = isSupported ? nil : "\(info.calendarIdentifier.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED"
-        // Contiguous, so `fill` can read it as a span.
-        var pattern = info.pattern
-        pattern.makeContiguousUTF8()
-        self.pattern = pattern
+        pattern = info.pattern
         let identifier = DataLocaleIdentifier(info.localeIdentifier)
         locale = DateFormatLocale(identifier)
         numbers = locale.numbers(identifier)

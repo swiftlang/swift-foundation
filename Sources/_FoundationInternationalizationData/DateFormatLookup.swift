@@ -99,9 +99,7 @@ private func _search(_ target: Span<UInt8>, count: Int, _ entry: (Int) -> UInt32
 }
 
 private func _search(_ target: String, count: Int, _ entry: (Int) -> UInt32) -> Int? {
-    var target = target
-    target.makeContiguousUTF8()
-    return _search(target.utf8Span.span, count: count, entry)
+    _search(target.utf8Span.span, count: count, entry)
 }
 
 // MARK: - Locales
@@ -252,8 +250,7 @@ package struct DateFormatLocale : Sendable {
             systemIndex = system.withUTF8 { _search($0, count: _DateFormatData.numberingSystemIDs.count, { _DateFormatData.numberingSystemIDs[$0] }) }
             minusSlot = system.withUTF8 { Self.minusSlot(forSystem: $0) }
         } else {
-            var system = keyword!
-            system.makeContiguousUTF8()
+            let system = keyword!
             systemIndex = _search(system.utf8Span.span, count: _DateFormatData.numberingSystemIDs.count, { _DateFormatData.numberingSystemIDs[$0] })
             minusSlot = Self.minusSlot(forSystem: system.utf8Span.span)
         }
