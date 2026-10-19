@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Builds the plural-rules Swift data (PluralRulesData.swift) for the
+# _FoundationInternationalizationData library from PluralRulesData.json.
+#
+# Usage:
+#   build-plural-rules-data [--locales=en,es,...] [--fallback=en] \
+#                           [--input=path/to/PluralRulesData.json] \
+#                           [--output=path/to/PluralRulesData.swift]
+#
+# --locales: comma-separated subset of locales to include (default: all).
+# --fallback: locale whose rules a lookup uses when it finds no data; included
+#             in the data (default: root, where every number is "other").
+# --input: path to the JSON intermediate (default: in the source tree).
+# --output: path to the generated Swift file (default: in the source tree).
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r inputDefault="${foundationRepoDir}/Sources/FoundationInternationalization/Formatting/PluralRulesData.json"
+declare -r outputSwiftDefault="${foundationRepoDir}/Sources/_FoundationInternationalizationData/PluralRulesData.swift"
+
+INPUT="${INPUT:-${inputDefault}}"
+OUTPUT_SWIFT="${OUTPUT_SWIFT:-${outputSwiftDefault}}"
+LOCALES="${LOCALES:-}"
+FALLBACK="${FALLBACK:-root}"
+
+for arg in "$@"; do
+  case "$arg" in
+    --locales=*)       LOCALES="${arg#--locales=}" ;;
+    --fallback=*)      FALLBACK="${arg#--fallback=}" ;;
+    --input=*)         INPUT="${arg#--input=}" ;;
+    --output=*)        OUTPUT_SWIFT="${arg#--output=}" ;;
+    --help|-h)
+      echo "Usage: ${commandName} [--locales=en,es,...] [--fallback=en] [--input=path] [--output=path]" 1>&2
+      exit 0
+      ;;
+    *)
+      echo "error: unknown argument: ${arg}" 1>&2
+      echo "Try --help." 1>&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ ! -f "${INPUT}" ]]; then
+  echo "error: input JSON not found at ${INPUT}" 1>&2
+  echo "Run utils/update-plural-rules-data first to generate it from CLDR." 1>&2
+  exit 1
+fi
+
+echo "Building plural-rules data" 1>&2
+echo "  from:     ${INPUT}" 1>&2
+echo "  output:   ${OUTPUT_SWIFT}" 1>&2
+echo "  locales:  ${LOCALES:-all}" 1>&2
+echo "  fallback: ${FALLBACK}" 1>&2
+
+# Build the schema and the impl as one module, then run it. `-parse-as-library`
+# lets the impl's `@main` provide the entry point.
+bindir=$(mktemp -d -t "${commandName}.XXXXXX")
+trap 'rm -rf "${bindir}"' EXIT
+tool="${bindir}/${commandName}"
+swiftc -parse-as-library \
+    "${utilsDir}/plural-rules-data-schema.swift" \
+    "${utilsDir}/${commandName}-impl.swift" \
+    -o "${tool}"
+
+env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${INPUT}" OUTPUT_SWIFT="${OUTPUT_SWIFT}" \
+  "${tool}"
+
+echo "Done." 1>&2

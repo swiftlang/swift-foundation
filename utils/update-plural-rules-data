@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Generates Sources/FoundationInternationalization/Formatting/PluralRulesData.json
+# and the test samples in
+# Tests/FoundationInternationalizationTests/Formatting/PluralRulesSampleData.swift
+# from a CLDR XML checkout. The CLDR_PATH environment variable must point at
+# the CLDR root (the directory containing common/supplemental/ and common/dtd/),
+# e.g.:
+#   CLDR_PATH=/path/to/cldr utils/update-plural-rules-data
+#
+# Then run utils/build-plural-rules-data to update the Swift tables.
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r jsonRelativePath="Sources/FoundationInternationalization/Formatting/PluralRulesData.json"
+declare -r testsRelativePath="Tests/FoundationInternationalizationTests/Formatting/PluralRulesSampleData.swift"
+
+if [[ -z "${CLDR_PATH:-}" ]]; then
+  echo "error: CLDR_PATH environment variable is not set." 1>&2
+  echo "Set it to the root of a CLDR checkout, e.g.:" 1>&2
+  echo "  CLDR_PATH=/path/to/cldr ${commandName}" 1>&2
+  exit 1
+fi
+
+if [[ ! -f "${CLDR_PATH}/common/supplemental/plurals.xml" || ! -f "${CLDR_PATH}/common/supplemental/ordinals.xml" ]]; then
+  echo "error: CLDR_PATH does not point at a CLDR root." 1>&2
+  echo "Expected ${CLDR_PATH}/common/supplemental/plurals.xml and ordinals.xml." 1>&2
+  exit 1
+fi
+
+echo "Generating ${jsonRelativePath} and ${testsRelativePath} from ${CLDR_PATH}..." 1>&2
+
+# Build the schema and the impl as one module, then run it. `-parse-as-library`
+# lets the impl's `@main` provide the entry point.
+bindir=$(mktemp -d -t "${commandName}.XXXXXX")
+trap 'rm -rf "${bindir}"' EXIT
+tool="${bindir}/${commandName}"
+swiftc -parse-as-library \
+    "${utilsDir}/plural-rules-data-schema.swift" \
+    "${utilsDir}/${commandName}-impl.swift" \
+    -o "${tool}"
+
+env CLDR_PATH="${CLDR_PATH}" \
+    OUTPUT_JSON="${foundationRepoDir}/${jsonRelativePath}" \
+    OUTPUT_TESTS="${foundationRepoDir}/${testsRelativePath}" \
+    "${tool}"
+
+echo "Done." 1>&2
