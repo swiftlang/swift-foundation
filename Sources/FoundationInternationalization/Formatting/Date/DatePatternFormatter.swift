@@ -100,7 +100,7 @@ final class DatePatternFormatter : Sendable {
         case UInt8(ascii: "z"), UInt8(ascii: "v"), UInt8(ascii: "B"): false
         // Only `VV`, the time zone's identifier.
         case UInt8(ascii: "V"): count == 2
-        // `ddd` and longer are day-of-month names such as ordinals, as in Apple's ICU and ICU 79 (ICU-23364). Earlier ICU pads to three digits.
+        // `ddd` and longer are day-of-month names such as ordinals.
         case UInt8(ascii: "d"): count < 3
         default: true
         }
@@ -191,7 +191,7 @@ final class DatePatternFormatter : Sendable {
         var i = 0
         var inQuote = false
         var fieldIndex = 0
-        // Whether text from the pattern comes before the first field, as Apple's ICU tracks it.
+        // Whether text from the pattern comes before the first field.
         var textBeforeFirstField = false
         while i < pattern.count {
             let byte = pattern[i]
@@ -213,7 +213,7 @@ final class DatePatternFormatter : Sendable {
                 guard let recordsField = appendField(byte, count: end - i, &values, to: &output.bytes) else {
                     return false
                 }
-                // ICU capitalizes the first field. Apple's ICU skips it when text comes before it.
+                // Capitalize the first field, unless text comes before it.
                 if fieldIndex == 0 && !textBeforeFirstField && Self.isSupported(byte, count: end - i) && titlecases(Self.capitalizationUsage(byte, count: end - i)) {
                     titlecaseFirstLetter(&output.bytes, from: start)
                 }
@@ -230,11 +230,11 @@ final class DatePatternFormatter : Sendable {
                 i += 1
             }
         }
-        // Apple's ICU capitalizes text before the first field instead.
+        // Where text comes before the first field, capitalize the text instead.
         if textBeforeFirstField && titlecases(.dateOtherBeginning) {
             let shift = titlecaseFirstLetter(&output.bytes, from: 0)
             if shift != 0 {
-                // Keep the field ranges on their fields. Apple's ICU leaves them where they were.
+                // Keep the field ranges on their fields.
                 output.fields = output.fields.map { ($0.letter, $0.range.lowerBound + shift ..< $0.range.upperBound + shift) }
             }
         }
@@ -381,7 +381,7 @@ final class DatePatternFormatter : Sendable {
             }
         case UInt8(ascii: "d"):
             if numbers.usesHanidays {
-                // Apple's ICU spells out the day, without padding.
+                // Spell out the day, without padding.
                 DateFormatNumbers.hanidaysDay(values.components.day).append(to: &bytes)
             } else {
                 appendNumber(values.components.day, minimumDigits: count, to: &bytes)

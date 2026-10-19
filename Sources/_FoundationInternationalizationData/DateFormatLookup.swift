@@ -226,19 +226,18 @@ package struct DateFormatLocale : Sendable {
 
     // MARK: Numbers
 
-    /// The digits and minus sign for `identifier`, following its `numbers` and `rg` keywords as Apple's ICU does.
+    /// The digits and minus sign for `identifier`, following its `numbers` and `rg` keywords.
     /// This locale is the one `identifier` resolves to.
     package func numbers(_ identifier: DataLocaleIdentifier) -> DateFormatNumbers {
         let keywords = Keywords(identifier)
         let keyword = keywords.numbers
-        // Apple's ICU drops numbers=hanidays and uses it only for the day field, so other fields get the default digits.
+        // `numbers=hanidays` applies only to the day field, so other fields get the default digits.
         let usesHanidays = keyword == "hanidays"
         let systemIndex: Int?
         let minusSlot: Int
         if keyword == nil || keyword == "default" || keyword == "native" || keyword == "traditional" || keyword == "finance" || usesHanidays {
-            // Apple's ICU picks the numbering system from the language, script, and
-            // region (from `rg`, else the identifier), without other subtags.
-            // The minus sign for negative fields such as `u` still comes from the full locale, as ICU's DecimalFormatSymbols does.
+            // The numbering system comes from the language, script, and region (from `rg`, else the identifier), without other subtags.
+            // The minus sign for negative fields such as `u` still comes from the full locale.
             let regional = keywords.regionalBaseName(identifier.baseName).map { DateFormatLocale(baseName: $0) } ?? self
             let slot = switch keyword {
             case "native": 1
@@ -279,7 +278,7 @@ package struct DateFormatNumbers : Sendable {
     /// Each digit's UTF-8 length, or 0 for a system in `irregularDigits`.
     let digitLength: Int
     package let minusSign: DateFormatDataString
-    /// Whether the day field uses Chinese day numerals, as Apple's ICU does for `numbers=hanidays`.
+    /// Whether the day field uses Chinese day numerals, for `numbers=hanidays`.
     package let usesHanidays: Bool
 
     /// `zero` is an entry in `numberingSystemZeros`.
