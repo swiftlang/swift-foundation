@@ -360,7 +360,7 @@ private struct TimeZoneGMTTests {
 @Suite("TimeZone ICU", .tags(.timeZone))
 private struct TimeZoneICUTests {
     @Test func timeZoneOffset() throws {
-        let tz = _TimeZoneICU(identifier: "America/Los_Angeles")!
+        let tz = TimeZone(identifier: "America/Los_Angeles")!
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
 
@@ -405,7 +405,7 @@ private struct TimeZoneICUTests {
         gmt_calendar.timeZone = .gmt
 
         func test(_ identifier: String, _ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) throws {
-            let tz = try #require(_TimeZoneICU(identifier: identifier))
+            let tz = try #require(TimeZone(identifier: identifier))
             let d = try #require(gmt_calendar.date(from: dateComponent)) // date in GMT
             let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: d)
             #expect(rawOffset == expectedRawOffset, sourceLocation: sourceLocation)
@@ -482,7 +482,7 @@ private struct TimeZone_ICUResourceTests {
     }
 
 
-    @Test(.disabled("This test takes a long time to run because it tests all known timezones. Also this test is only useful when ICUResourceTimeZone feature flag is disabled"))
+    @Test(.disabled("This test takes a long time to run because it tests all known timezones."))
     func allKnownTimeZones() throws {
         func buildTestDates(_ seeds: [Date]) -> [Date] {
 
