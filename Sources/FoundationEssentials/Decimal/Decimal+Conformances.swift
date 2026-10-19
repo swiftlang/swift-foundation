@@ -17,12 +17,12 @@ internal import _ForSwiftFoundation
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : CustomStringConvertible {
     // Parsing a decimal from a string is unavailable in Embedded Swift, because `Character` iteration is unavailable in Embedded Swift.
-    #if !hasFeature(Embedded)
     /// Creates and initializes a decimal by parsing a string according to the provided locale's conventions.
     ///
     /// - Parameters:
     ///   - string: A string containing a formatted decimal value.
     ///   - locale: A locale that indicates the formatting conventions used by `string`.
+    @_unavailableInEmbedded
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
         guard let (value, _, _) = try? Decimal.__decimal(
@@ -35,7 +35,6 @@ extension Decimal : CustomStringConvertible {
         }
         self = value
     }
-    #endif
 
     public var description: String {
         return self._toString(withDecimalSeparator: ".")

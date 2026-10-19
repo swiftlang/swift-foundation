@@ -396,7 +396,7 @@ extension Decimal {
 }
 
 // Parsing a decimal from a string uses Character iteration, which is unavailable in Embedded Swift.
-#if !hasFeature(Embedded)
+@_unavailableInEmbedded
 extension Decimal {
     // For testing
     internal static func _decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
@@ -717,4 +717,3 @@ extension Decimal {
         }
     }
 }
-#endif // !hasFeature(Embedded)
