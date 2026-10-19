@@ -13,11 +13,23 @@
 internal import _ForSwiftFoundation
 #endif
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
 
 #if !FOUNDATION_FRAMEWORK
+#if hasFeature(Embedded)
+// Embedded Swift doesn't support dynamic replacement.
+public func _cfStringEncodingConvert(string: String, using encoding: UInt, allowLossyConversion: Bool) -> Data? {
+    return nil
+}
+
+package func _icuStringEncodingConvert(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
+    return nil
+}
+#else
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _cfStringEncodingConvert(string: String, using encoding: UInt, allowLossyConversion: Bool) -> Data? {
     // Dynamically replaced by swift-corelibs-foundation to implement encodings that we do not have Swift replacements for, yet
@@ -28,6 +40,7 @@ dynamic package func _icuStringEncodingConvert(string: String, using encoding: S
     // Concrete implementation is provided by FoundationInternationalization.
     return nil
 }
+#endif
 #endif
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
@@ -206,6 +219,8 @@ extension String {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
+#if !NO_UNI_CHAR_DATA
+    // Word capitalization reads the CFUniChar case bitmaps in _FoundationCShims. Embedded doesn't build _FoundationCShims.
     /// A copy of the string with each word changed to its corresponding
     /// capitalized spelling.
     ///
@@ -228,6 +243,7 @@ extension StringProtocol {
     public var capitalized: String {
         String(self)._capitalized()
     }
+#endif
 
 #if FOUNDATION_FRAMEWORK
     /// Finds and returns the range in the `String` of the first

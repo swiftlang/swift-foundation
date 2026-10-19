@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 /// Record marker for one value in a `JSONMap`'s record buffer. Declared at file scope rather than nested in `JSONMap` because that type is generic over its record storage, and a nested type of a generic type can't be referenced without spelling the generic arguments.
 internal enum JSONMapTypeDescriptor: Int {
     case string  // [marker, count, sourceByteOffset]
@@ -151,3 +153,5 @@ internal struct JSONMap<Records: MapRecordStorage & ~Copyable>: ~Copyable {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

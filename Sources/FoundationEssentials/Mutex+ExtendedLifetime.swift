@@ -8,6 +8,9 @@
 // See https://swift.org/LICENSE.txt for license information
 //
 //===----------------------------------------------------------------------===//
+
+#if !hasFeature(Embedded)
+
 package import Synchronization
 
 extension Mutex where Value : Sendable {
@@ -33,3 +36,5 @@ extension Mutex where Value : Sendable {
         return result.bodyResult
     }
 }
+
+#endif // !hasFeature(Embedded)

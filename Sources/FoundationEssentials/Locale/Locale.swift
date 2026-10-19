@@ -841,23 +841,9 @@ public struct Locale : Hashable, Equatable, Sendable {
 #if FOUNDATION_FRAMEWORK
         return _canonicalLocaleIdentifier(from: string)
 #else
-        // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
+        // Intentionally not supported. This deprecated API will be removed in a future release.
         return string
-#endif // FOUNDATION_FRAMEWORK
-    }
-
-    /// Same as `canonicalIdentifier` but not deprecated, for internal usage. Also, it handles a nil result (e.g. non-ASCII identifier input) correctly.
-    package static func _canonicalLocaleIdentifier(from string: String) -> String {
-#if FOUNDATION_FRAMEWORK
-        if let id = CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorSystemDefault, string as CFString) {
-            return id.rawValue as String
-        } else {
-            return ""
-        }
-#else
-        // TODO: (Locale.canonicalIdentifier) implement in Swift: https://github.com/apple/swift-foundation/issues/45
-        return string
-#endif // FOUNDATION_FRAMEWORK
+#endif
     }
 
     /// Returns a canonical language identifier from the given string.

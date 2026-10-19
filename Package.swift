@@ -73,7 +73,7 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                exact: "1.1.6"),
+                exact: "1.7.3"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main"),
@@ -128,6 +128,7 @@ let package = Package(
             .product(name: "OrderedCollections", package: "swift-collections"),
           ],
           exclude: [
+            "Bytes/CMakeLists.txt",
             "Formatting/CMakeLists.txt",
             "PropertyList/CMakeLists.txt",
             "Decimal/CMakeLists.txt",
@@ -147,6 +148,7 @@ let package = Package(
             "URL/CMakeLists.txt",
             "NotificationCenter/CMakeLists.txt",
             "ProgressManager/CMakeLists.txt",
+            "CharacterSet/CMakeLists.txt",
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))

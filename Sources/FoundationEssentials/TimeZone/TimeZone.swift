@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
+#if !NO_CSHIMS
 internal import _FoundationCShims
 #endif
 

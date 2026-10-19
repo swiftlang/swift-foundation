@@ -28,13 +28,16 @@ add_library(FoundationEssentials
     Progress+Stub.swift
     SortComparator.swift
     Span+Utils.swift
+    UInt8+ASCII.swift
     UUID_Wrappers.swift
     UUID.swift
     WASILibc+Extensions.swift
     WinSDK+Extensions.swift)
 
 add_subdirectory(AttributedString)
+add_subdirectory(Bytes)
 add_subdirectory(Calendar)
+add_subdirectory(CharacterSet)
 add_subdirectory(Codable)
 add_subdirectory(Data)
 add_subdirectory(Decimal)

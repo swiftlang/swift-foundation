@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // Below is for sin/cos
 
 #if canImport(Darwin)
@@ -296,3 +298,4 @@ internal enum _CalendarAstronomy {
     }
 }
 
+#endif // !hasFeature(Embedded)

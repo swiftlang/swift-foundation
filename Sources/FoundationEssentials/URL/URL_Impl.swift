@@ -22,6 +22,8 @@ import Darwin
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -1062,6 +1064,10 @@ extension _URL {
                     isDirectory: isDirectory
                 )
             }
+        }
+        if pathIsEmpty && span.isEmpty && !isDirectory && !flags.contains(.hasOldNetLocation) {
+            // E.g. "scheme://", return the URL unchanged for compatibility.
+            return nil
         }
         return withPathSpan { path in
             appending(

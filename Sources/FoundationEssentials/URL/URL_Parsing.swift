@@ -1020,43 +1020,43 @@ extension URL {
 
             @inline(__always)
             func updateUserRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.userRange = start..<end
             }
 
             @inline(__always)
             func updatePasswordRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.passwordRange = start..<end
             }
 
             @inline(__always)
             func updateHostRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.hostRange = start..<end
             }
 
             @inline(__always)
             func updatePortRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.portRange = start..<end
             }
 
             @inline(__always)
             func updatePathRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.pathRange = start..<end
             }
 
             @inline(__always)
             func updateQueryRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.queryRange = start..<end
             }
 
             @inline(__always)
             func updateFragmentRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.fragmentRange = start..<end
             }
 

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 @available(FoundationPreview 6.2, *)
 public extension FormatStyle where Self == Date.HTTPFormatStyle {
     static var http: Self {
@@ -452,3 +454,4 @@ extension DateComponents {
     }
 }
 
+#endif // !hasFeature(Embedded)

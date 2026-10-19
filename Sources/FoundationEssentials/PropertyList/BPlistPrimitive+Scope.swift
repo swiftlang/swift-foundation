@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // MARK: - BPlistPrimitiveScope
 
 /// The pure identity of a single object in a parsed binary property list: its owning `BPlistMetadata` (by value) plus its `ValidatedBPlistObjectIndex`. To reconstitute the `BPlistPrimitive`, the caller supplies a `RawSpan` over the same byte range that produced `metadata`.
@@ -50,3 +52,5 @@ extension BPlistPrimitiveScope {
         return try body(primitive)
     }
 }
+
+#endif // !hasFeature(Embedded)

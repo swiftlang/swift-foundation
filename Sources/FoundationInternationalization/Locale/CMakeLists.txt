@@ -16,5 +16,7 @@ target_include_directories(FoundationInternationalization PRIVATE .)
 target_sources(FoundationInternationalization PRIVATE
     Locale+Components_ICU.swift
     Locale_Bridge.swift
+    Locale_CanonicalIdentifier.swift
+    Locale_CanonicalIdentifierTables.swift
     Locale_ICU.swift
     Locale_ObjC.swift)

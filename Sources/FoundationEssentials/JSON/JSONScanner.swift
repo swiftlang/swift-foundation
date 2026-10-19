@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
@@ -1265,3 +1267,5 @@ enum JSONError: Swift.Error, Equatable {
     }
 #endif // FOUNDATION_FRAMEWORK
 }
+
+#endif // !hasFeature(Embedded)
