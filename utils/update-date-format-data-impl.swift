@@ -546,10 +546,10 @@ struct GenerateDateFormatData {
         }
 
         // Known values, to catch a resolver that reads the data wrongly.
-        func check(_ locale: String, _ group: String, _ slot: String, _ expected: String) {
+        func check(_ locale: String, _ group: String, _ slot: String, _ expected: String?) {
             let block = groupBlocks[group]![localeBlocks[locale]![group]!]
             let actual = block[groupSlots[group]!.firstIndex(of: slot)!]
-            precondition(actual == expected, "\(locale) \(slot): expected \(expected), got \(actual ?? "nil")")
+            precondition(actual == expected, "\(locale) \(slot): expected \(expected ?? "nil"), got \(actual ?? "nil")")
         }
         check("en", "months", "months|format|abbreviated|9", "Sep")
         check("en", "months", "months|stand-alone|narrow|9", "S")
@@ -563,7 +563,9 @@ struct GenerateDateFormatData {
         check("cs", "capitalization", "month-standalone-except-narrow", "10")
         check("fr", "capitalization", "month-format-except-narrow", "01")
         check("pt", "capitalization", "day-format-except-narrow", "11")
-        check("vi", "capitalization", "date-other-beginning", "11")
+        // Only some CLDR sources have this usage, so expect it where the source has it.
+        let vi = (try? String(contentsOf: cldrURL.appendingPathComponent("common/main/vi.xml"), encoding: .utf8)) ?? ""
+        check("vi", "capitalization", "date-other-beginning", vi.contains(#"<contextTransformUsage type="date-other-beginning">"#) ? "11" : nil)
         precondition(groupBlocks["capitalization"]![localeBlocks["pt_PT"]!["capitalization"]!].allSatisfy { $0 == nil }, "pt_PT should hide pt's contextTransforms")
 
         let hanidays = try loadAlgorithmicDays("hanidays", cldrURL: cldrURL)
