@@ -607,19 +607,19 @@ final class DatePatternFormatter : Sendable {
             return nil
         }
         let hours = Int(magnitude / 3600), minutes = Int(magnitude % 3600 / 60), seconds = Int(magnitude % 60)
-        let pattern: [UInt8]
-        if seconds != 0 {
-            pattern = patterns.hoursMinutesSeconds
+        let patternString: String? = if seconds != 0 {
+            patterns.hoursMinutesSeconds
         } else if minutes == 0 && short {
-            guard let hoursOnly = patterns.hours else {
-                return nil
-            }
-            pattern = hoursOnly
+            patterns.hours
         } else {
-            pattern = patterns.hoursMinutes
+            patterns.hoursMinutes
         }
+        guard let patternString else {
+            return nil
+        }
+        let pattern = patternString.utf8Span.span
 
-        bytes.append(contentsOf: localizedGMT.prefix)
+        bytes.append(contentsOf: localizedGMT.prefix.utf8)
         var inQuote = false
         var i = 0
         while i < pattern.count {
@@ -649,7 +649,7 @@ final class DatePatternFormatter : Sendable {
             bytes.append(byte)
             i += 1
         }
-        bytes.append(contentsOf: localizedGMT.suffix)
+        bytes.append(contentsOf: localizedGMT.suffix.utf8)
         return true
     }
 
@@ -657,14 +657,14 @@ final class DatePatternFormatter : Sendable {
     struct LocalizedGMTFormat : Sendable {
         /// The offset patterns for one sign.
         struct Patterns : Sendable {
-            let hoursMinutes: [UInt8]
+            let hoursMinutes: String
             /// Nil where ICU can't make an hours-only pattern.
-            let hours: [UInt8]?
-            let hoursMinutesSeconds: [UInt8]
+            let hours: String?
+            let hoursMinutesSeconds: String
         }
 
         /// The text around the offset, unquoted.
-        let prefix: [UInt8], suffix: [UInt8]
+        let prefix: String, suffix: String
         /// Nil where the pattern for that sign has no minutes field, which ICU rejects.
         let positive: Patterns?, negative: Patterns?
 
@@ -680,8 +680,8 @@ final class DatePatternFormatter : Sendable {
             var prefix: [UInt8] = [], suffix: [UInt8] = []
             DatePatternFormatter.appendUnquoted(gmtFormat[..<argument.lowerBound], to: &prefix)
             DatePatternFormatter.appendUnquoted(gmtFormat[argument.upperBound...], to: &suffix)
-            self.prefix = prefix
-            self.suffix = suffix
+            self.prefix = String(decoding: prefix, as: UTF8.self)
+            self.suffix = String(decoding: suffix, as: UTF8.self)
             positive = Self.patterns(hourFormat[..<semicolon])
             negative = Self.patterns(hourFormat[(semicolon + 1)...])
         }
@@ -698,7 +698,7 @@ final class DatePatternFormatter : Sendable {
             withSeconds += pattern[minuteField.upperBound...]
             let beforeMinutes = pattern[..<minuteField.lowerBound]
             let hourEnd = beforeMinutes.lastRange(of: Array("HH".utf8))?.upperBound ?? beforeMinutes.lastIndex(of: UInt8(ascii: "H")).map { $0 + 1 }
-            return Patterns(hoursMinutes: Array(pattern), hours: hourEnd.map { Array(pattern[..<$0]) }, hoursMinutesSeconds: withSeconds)
+            return Patterns(hoursMinutes: String(decoding: pattern, as: UTF8.self), hours: hourEnd.map { String(decoding: pattern[..<$0], as: UTF8.self) }, hoursMinutesSeconds: String(decoding: withSeconds, as: UTF8.self))
         }
     }
 
