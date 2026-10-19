@@ -278,52 +278,56 @@ final class DatePatternFormatter : Sendable {
     /// `U_TITLECASE_NO_LOWERCASE | U_TITLECASE_NO_BREAK_ADJUSTMENT`. Returns the change in length.
     @discardableResult
     private func titlecaseFirstLetter(_ bytes: inout [UInt8], from start: Int) -> Int {
-        guard start < bytes.count else { return 0 }
-        var scalars = String(decoding: bytes[start...], as: UTF8.self).unicodeScalars[...]
-        guard let first = scalars.first, first.properties.generalCategory == .lowercaseLetter else { return 0 }
-        scalars = scalars.dropFirst()
+        guard let first = Self.scalar(in: bytes, at: start), first.properties.generalCategory == .lowercaseLetter else { return 0 }
         var title: String
         switch (caseLanguage, first) {
         case (.turkic, "i"): title = "\u{130}"
         case (.armenian, "\u{587}"): title = "\u{535}\u{57E}"
         default: title = first.properties.titlecaseMapping
         }
-        if caseLanguage == .dutch, let (ij, rest) = Self.dutchIJ(after: title, scalars) {
+        var end = start + UTF8.width(first)
+        if caseLanguage == .dutch, let (ij, ijEnd) = Self.dutchIJ(after: title, in: bytes, at: end) {
             title += ij
-            scalars = rest
+            end = ijEnd
         }
-        var replacement = Array(title.utf8)
-        replacement += String(scalars).utf8
-        let shift = replacement.count - (bytes.count - start)
-        bytes.replaceSubrange(start..., with: replacement)
-        return shift
+        bytes.replaceSubrange(start ..< end, with: title.utf8)
+        return title.utf8.count - (end - start)
     }
 
-    /// The rest of a Dutch "IJ" after its titlecased "I" or "Í", as ICU's `maybeTitleDutchIJ` writes it, and the text after it.
-    /// Returns nil where the text doesn't continue an "ij".
-    private static func dutchIJ(after title: String, _ scalars: Substring.UnicodeScalarView) -> (String, Substring.UnicodeScalarView)? {
+    /// The scalar whose UTF-8 starts at `index`, or nil at the end.
+    private static func scalar(in bytes: [UInt8], at index: Int) -> Unicode.Scalar? {
+        guard index < bytes.count else { return nil }
+        var iterator = bytes[index...].makeIterator()
+        var decoder = UTF8()
+        guard case .scalarValue(let scalar) = decoder.decode(&iterator) else { return nil }
+        return scalar
+    }
+
+    /// The rest of a Dutch "IJ" after its titlecased "I" or "Í", as ICU's `maybeTitleDutchIJ` writes it, and where the text
+    /// after it starts in `bytes`. Returns nil where the text at `start` doesn't continue an "ij".
+    private static func dutchIJ(after title: String, in bytes: [UInt8], at start: Int) -> (String, Int)? {
         let acute: Unicode.Scalar = "\u{301}"
-        var rest = scalars
+        var position = start
         var text = ""
         var withAcute = title == "\u{CD}"
-        if title == "I" && rest.first == acute {
+        if title == "I" && scalar(in: bytes, at: position) == acute {
             withAcute = true
             text.unicodeScalars.append(acute)
-            rest = rest.dropFirst()
+            position += UTF8.width(acute)
         }
-        guard let j = rest.first, j == "j" || j == "J" else { return nil }
+        guard let j = scalar(in: bytes, at: position), j == "j" || j == "J" else { return nil }
         text += "J"
-        rest = rest.dropFirst()
+        position += 1
         // An accented i needs an accented j.
         if withAcute {
-            guard rest.first == acute else { return nil }
+            guard scalar(in: bytes, at: position) == acute else { return nil }
             text.unicodeScalars.append(acute)
-            rest = rest.dropFirst()
+            position += UTF8.width(acute)
         }
-        if let next = rest.first, [.nonspacingMark, .spacingMark, .enclosingMark].contains(next.properties.generalCategory) {
+        if let next = scalar(in: bytes, at: position), [.nonspacingMark, .spacingMark, .enclosingMark].contains(next.properties.generalCategory) {
             return nil
         }
-        return (text, rest)
+        return (text, position)
     }
 
     /// The languages whose titlecasing differs from the default, as ICU's `ucase_getCaseLocale` finds them.
