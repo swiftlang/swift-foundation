@@ -10,7 +10,7 @@ Foundation adds support for formatting a floating-point value with a `FormatStyl
 
 ## Topics
 
-### Creating an floating-point value by parsing
+### Creating a floating-point value by parsing
 
 - ``BinaryFloatingPoint/init(_:format:lenient:)-72i7z`` 
 - ``BinaryFloatingPoint/init(_:strategy:)-4l0ts``

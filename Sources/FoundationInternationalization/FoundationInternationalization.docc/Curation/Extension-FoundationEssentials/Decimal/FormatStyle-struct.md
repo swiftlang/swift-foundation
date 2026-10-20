@@ -27,7 +27,7 @@
 - ``Configuration``
 - ``NumberFormatStyleConfiguration``
 
-### Accesssing style locale
+### Accessing style locale
 
 - ``locale``
 

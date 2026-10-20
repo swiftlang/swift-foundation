@@ -3,7 +3,7 @@
 
 ## Topics
 
-### Specifying Configuration
+### Specifying configuration
 
 - ``DecimalSeparatorDisplayStrategy``
 - ``Grouping``

@@ -5,7 +5,7 @@ Methods and supporting types that extend FoundationEssentials's date type.
 
 ## Topics
 
-### Formatting a Date
+### Formatting a date
 
 - ``formatted()``
 - ``formatted(date:time:)``

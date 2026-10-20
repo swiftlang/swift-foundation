@@ -71,7 +71,7 @@ Methods and properties that extend the FoundationEssentials format style type.
 - ``units(allowed:width:maximumUnitCount:zeroValueUnits:valueLength:fractionalPart:)``
 - ``units(allowed:width:maximumUnitCount:zeroValueUnits:valueLengthLimits:fractionalPart:)``
 
-### Applying currency styles 
+### Applying currency styles
 
 - ``currency(code:)-yeeu``                                                                   <!-- static func currency(code: String) -> Self -->
 - ``currency(code:)-9j47r``                                                                  <!-- static func currency<V>(code: String) -> Self where Self == IntegerFormatStyle<V>.Currency, V : BinaryInteger -->

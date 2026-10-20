@@ -33,7 +33,7 @@
 
 - ``init(from:)``
 
-### Supporting Types
+### Supporting types
 
 - ``Presentation``
 - ``UnitsStyle``

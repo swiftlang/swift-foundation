@@ -2,7 +2,7 @@
 
 ## Topics
 
-### Customizing Style Behavior
+### Customizing style behavior
 
 - ``unknown``
 - ``standalone``

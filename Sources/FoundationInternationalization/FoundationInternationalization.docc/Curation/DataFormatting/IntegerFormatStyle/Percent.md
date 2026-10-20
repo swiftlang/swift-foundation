@@ -52,7 +52,7 @@
 - ``RegexOutput``
 - ``consuming(_:startingAt:in:)``
 
-### Encoding and decoing
+### Encoding and decoding
 
 - ``init(from:)``
 

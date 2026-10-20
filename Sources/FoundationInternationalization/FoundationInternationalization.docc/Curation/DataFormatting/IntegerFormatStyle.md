@@ -33,7 +33,7 @@
 - ``Configuration``
 - ``NumberFormatStyleConfiguration``
 
-### Acessing style locale
+### Accessing style locale
 
 - ``locale``
 

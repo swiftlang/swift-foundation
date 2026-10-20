@@ -24,7 +24,7 @@
 
 - ``format(_:)``
 
-### Supporting Types
+### Supporting types
 
 - ``Presentation``
 - ``UnitsStyle``

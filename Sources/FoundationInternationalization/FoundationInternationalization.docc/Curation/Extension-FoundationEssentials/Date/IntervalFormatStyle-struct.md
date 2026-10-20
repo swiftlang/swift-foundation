@@ -42,7 +42,7 @@ Use `Date.IntervalFormatStyle` to create user-readable strings of date intervals
 
 - ``init(from:)``
 
-### Supporting Types
+### Supporting types
 
 - ``DateStyle``
 - ``Symbol``

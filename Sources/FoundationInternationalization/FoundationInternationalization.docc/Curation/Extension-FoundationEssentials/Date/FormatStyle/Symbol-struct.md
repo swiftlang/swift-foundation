@@ -26,7 +26,7 @@
 - ``Year``
 - ``YearForWeekOfYear``
 
-### Comparing Date Style Format Symbols
+### Comparing date style format symbols
 
 - ``!=(_:_:)``
 

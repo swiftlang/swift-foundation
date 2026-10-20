@@ -14,13 +14,13 @@ FoundationInternationalization extends the Swift string protocol by adding suppo
 - ``localizedCapitalized``
 - ``capitalized(with:)``
 
-### Lower casing
+### Lowercasing
 
 - ``localizedLowercase``
 - ``lowercased(with:)``
 
 
-### Upper casing
+### Uppercasing
 
 - ``localizedUppercase``
 - ``uppercased(with:)``

@@ -2,7 +2,7 @@
 
 ## Topics
 
-### Working with weekdsay styles
+### Working with weekday styles
 
 - ``omitted``
 - ``abbreviated``

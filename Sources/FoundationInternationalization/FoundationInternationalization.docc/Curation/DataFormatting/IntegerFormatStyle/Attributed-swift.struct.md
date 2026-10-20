@@ -12,7 +12,7 @@
 
 - ``locale(_:)``
 
-### Encoding and decoing
+### Encoding and decoding
 
 - ``init(from:)``
 
