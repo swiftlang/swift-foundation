@@ -20,9 +20,7 @@ import FoundationEssentials
 internal import _FoundationInternationalizationData
 #endif
 
-/// Fills in a date pattern such as `"MMM d, y"` in Swift, in place of `ICUDateFormatter`'s formatting.
-///
-/// The pattern is walked on every call, as ICU's `SimpleDateFormat` does.
+/// Formats dates with a pattern such as `"MMM d, y"`, in place of `ICUDateFormatter`.
 final class DatePatternFormatter : Sendable {
     let pattern: String
     let calendar: Calendar
