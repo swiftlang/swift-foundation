@@ -182,7 +182,7 @@ let package = Package(
         // FoundationInternationalization
         .target(
             name: "_FoundationInternationalizationData",
-            exclude: ["CMakeLists.txt"],
+            exclude: ["CMakeLists.txt", "DateFormatData.json", "ListFormatData.json"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),
@@ -205,8 +205,6 @@ let package = Package(
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt",
-                "Formatting/ListFormatData.json",
-                "Formatting/DateFormatData.json",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [

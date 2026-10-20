@@ -11,7 +11,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# Generates Sources/FoundationInternationalization/Formatting/DateFormatData.json
+# Generates Sources/_FoundationInternationalizationData/DateFormatData.json
 # from a CLDR XML checkout. The CLDR_PATH environment variable must point at
 # the CLDR root (the directory containing common/main/ and common/supplemental/),
 # e.g. /path/to/cldr.
@@ -25,7 +25,7 @@ set -eu
 declare -r commandName="$(basename "$0")"
 declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
 declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
-declare -r targetFileRelativePath="Sources/FoundationInternationalization/Formatting/DateFormatData.json"
+declare -r targetFileRelativePath="Sources/_FoundationInternationalizationData/DateFormatData.json"
 
 if [[ -z "${CLDR_PATH:-}" ]]; then
   echo "error: CLDR_PATH environment variable is not set." 1>&2

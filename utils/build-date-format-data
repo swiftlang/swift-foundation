@@ -33,7 +33,7 @@ declare -r commandName="$(basename "$0")"
 declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
 declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
 declare -r dataDir="${foundationRepoDir}/Sources/_FoundationInternationalizationData"
-declare -r inputDefault="${foundationRepoDir}/Sources/FoundationInternationalization/Formatting/DateFormatData.json"
+declare -r inputDefault="${dataDir}/DateFormatData.json"
 declare -r outputSwiftDefault="${dataDir}/DateFormatData.swift"
 
 INPUT="${INPUT:-${inputDefault}}"
