@@ -432,13 +432,9 @@ open class JSONEncoder {
                                              EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values."))
         }
 
-        if case .nonPrettyDirectArray(let serialized) = topLevel {
-            return serialized
-        }
-
         let writingOptions = self.outputFormatting
         do {
-            var writer = JSONWriter(options: writingOptions)
+            var writer = JSONWriter(options: writingOptions, nonConformingFloatStrategy: encoder.options.nonConformingFloatEncodingStrategy)
             writer.reserveCapacity(forSerializing: topLevel)
             try writer.serializeJSON(topLevel)
             // Release the value tree before copying the output, so they're never resident at the same time
@@ -577,7 +573,7 @@ private class __JSONEncoder : Encoder {
 // MARK: - Encoding Storage and Containers
 
 // TODO: Switch to a ~Copyable type once we can freely use UniqueArray. The addition of the base64 case made copies on Darwin platforms slightly more expensive, which a ~Copyable type could avoid entirely.
-internal enum JSONEncoderValue: Equatable {
+internal enum JSONEncoderValue {
     case string(String)
     case number(String)
     case bool(Bool)
@@ -586,8 +582,9 @@ internal enum JSONEncoderValue: Equatable {
     case array([JSONEncoderValue])
     case object([String: JSONEncoderValue])
 
-    case directArray(Data, lengths: [Int])
-    case nonPrettyDirectArray(Data)
+    /// An array of simple values that is written directly from the original array, without building a per-element value tree.
+    /// The counts are only used to estimate the output size. They are limited to 32 bits to keep this payload, and therefore every `JSONEncoderValue`, no larger than the others.
+    case directArray(elementCount: UInt32, underestimatedElementBytes: UInt32, write: (_ writer: inout JSONWriter, _ depth: Int) throws -> Void)
 
     case base64EncodedData(Data)
 }
@@ -744,18 +741,36 @@ extension JSONEncoderValue {
         ))
     }
 
+    /// The string that a non-finite value is encoded as, or `nil` if the strategy is to throw.
+    fileprivate static func nonConformingNumberString<T: BinaryFloatingPoint>(for float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy) -> String? {
+        guard case .convertToString(let posInfString, let negInfString, let nanString) = options else {
+            return nil
+        }
+        switch float {
+        case T.infinity:
+            return posInfString
+        case -T.infinity:
+            return negInfString
+        default:
+            // must be nan in this case
+            return nanString
+        }
+    }
+
+    /// The JSON number text for a finite value.
+    @inline(__always)
+    fileprivate static func finiteNumberString<T: BinaryFloatingPoint & CustomStringConvertible>(_ float: T) -> String {
+        var string = float.description
+        if string.hasSuffix(".0") {
+            string.removeLast(2)
+        }
+        return string
+    }
+
     @inline(never)
     fileprivate static func nonConformantNumber<T: BinaryFloatingPoint>(from float: T, with options: JSONEncoder.NonConformingFloatEncodingStrategy, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> JSONEncoderValue {
-        if case .convertToString(let posInfString, let negInfString, let nanString) = options {
-            switch float {
-            case T.infinity:
-                return .string(posInfString)
-            case -T.infinity:
-                return .string(negInfString)
-            default:
-                // must be nan in this case
-                return .string(nanString)
-            }
+        if let string = nonConformingNumberString(for: float, with: options) {
+            return .string(string)
         }
         throw cannotEncodeNumber(float, encoder: encoder, additionalKey)
     }
@@ -766,11 +781,7 @@ extension JSONEncoderValue {
             return try nonConformantNumber(from: float, with: options, encoder: encoder, additionalKey)
         }
 
-        var string = float.description
-        if string.hasSuffix(".0") {
-            string.removeLast(2)
-        }
-        return .number(string)
+        return .number(finiteNumberString(float))
     }
 
     @inline(__always)
@@ -1291,13 +1302,8 @@ private extension __JSONEncoder {
             return try self.wrap(data, for: additionalKey)
         } else if !options.keyEncodingStrategy.isDefault, let encodable = value as? _JSONStringDictionaryEncodableMarker {
             return try self.wrap(encodable as! [String:Encodable], for: additionalKey)
-        } else if let array = _asDirectArrayEncodable(value) {
-            if options.outputFormatting.contains(.prettyPrinted) {
-                let (elements, lengths) = try array.individualElementRepresentation(encoder: self, additionalKey)
-                return .directArray(elements, lengths: lengths)
-            } else {
-                return .nonPrettyDirectArray(try array.nonPrettyJSONRepresentation(encoder: self, additionalKey))
-            }
+        } else if let directArray = try _directArrayValue(value, additionalKey) {
+            return directArray
         }
 
         return try _wrapGeneric({
@@ -1321,40 +1327,40 @@ private extension __JSONEncoder {
         return encoder.takeValue()
     }
 
-    func _asDirectArrayEncodable<T: Encodable>(_ value: T) -> _JSONDirectArrayEncodable? {
-        return if let array = _specialize(value, for: [Int8].self) {
-            array
+    /// Encodes arrays of simple values directly, without creating an unkeyed container or a value per element, using a type-specialized implementation.
+    func _directArrayValue<T: Encodable>(_ value: T, _ additionalKey: (some CodingKey)?) throws -> JSONEncoderValue? {
+        if let array = _specialize(value, for: [Int8].self) {
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [Int16].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [Int32].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [Int64].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [Int128].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [Int].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [UInt8].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [UInt16].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [UInt32].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [UInt64].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [UInt128].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [UInt].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [String].self) {
-            array
+            return directArrayValue(array)
         } else if let array = _specialize(value, for: [Float].self) {
-            array
+            return try directFloatingPointArrayValue(array, additionalKey)
         } else if let array = _specialize(value, for: [Double].self) {
-            array
-        } else {
-            nil
+            return try directFloatingPointArrayValue(array, additionalKey)
         }
+        return nil
     }
 
     @inline(__always)
@@ -1486,22 +1492,22 @@ private protocol _JSONStringDictionaryEncodableMarker { }
 
 extension Dictionary : _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
-/// A protocol used to determine whether a value is an `Array` containing values that allow
-/// us to bypass UnkeyedEncodingContainer overhead by directly encoding the contents as
-/// strings as passing that down to the JSONWriter.
-fileprivate protocol _JSONDirectArrayEncodable {
-    @inline(__always)
-    func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Data
-    @inline(__always)
-    func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> (Data, lengths: [Int])
-}
+/// A protocol for the element types of arrays that can bypass UnkeyedEncodingContainer overhead by directly writing the contents to the JSONWriter.
 fileprivate protocol _JSONSimpleValueArrayElement {
     @inline(__always)
-    func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Int
+    func serializeJsonRepresentation(into writer: inout JSONWriter)
+
+    /// The underestimated number of bytes the elements will take once encoded, excluding separators.
+    static func underestimatedEncodedByteCount(of array: [Self]) -> Int
 }
 extension _JSONSimpleValueArrayElement where Self: FixedWidthInteger & CustomStringConvertible {
-    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Int {
-        return writer.serializeSimpleStringContents(description)
+    fileprivate static func underestimatedEncodedByteCount(of array: [Self]) -> Int {
+        // There's no simple estimate for the size of an integer. Understimating is OK, so assume 1 byte each as the absolute minimum.
+        return array.count * 1
+    }
+
+    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter) {
+        writer.serializeSimpleStringContents(description)
     }
 }
 extension Int : _JSONSimpleValueArrayElement { }
@@ -1519,69 +1525,56 @@ extension UInt64 : _JSONSimpleValueArrayElement { }
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
 extension UInt128 : _JSONSimpleValueArrayElement { }
 extension String: _JSONSimpleValueArrayElement {
-    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) -> Int {
-        return writer.serializeString(self)
+    fileprivate static func underestimatedEncodedByteCount(of array: [String]) -> Int {
+        // Content plus the quotes. The writer's reservation also allows for escapes.
+        array.reduce(0) { $0 + $1.utf8.count + 2 }
+    }
+
+    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter) {
+        writer.serializeString(self)
     }
 }
-extension Float: _JSONSimpleValueArrayElement {
-    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Int {
-        switch try JSONEncoderValue.number(from: self, encoder: encoder, additionalKey) {
-        case .number(let string):
-            return writer.serializeSimpleStringContents(string)
-        case .string(let string):
-            return writer.serializeSimpleString(string)
-        default:
-            fatalError("Impossible JSON value type coming from number formatting")
+
+extension _JSONSimpleValueArrayElement where Self: BinaryFloatingPoint & CustomStringConvertible {
+    fileprivate static func underestimatedEncodedByteCount(of array: [Self]) -> Int {
+        // There's no simple estimate for the size of a floating point number. Understimating is OK, so assume 1 byte each as the absolute minimum.
+        array.count * 1
+    }
+
+    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter) {
+        if isNaN || isInfinite {
+            guard let string = JSONEncoderValue.nonConformingNumberString(for: self, with: writer.nonConformingFloatStrategy) else {
+                preconditionFailure("Non-conforming float should have failed validation")
+            }
+            writer.serializeSimpleString(string)
+        } else {
+            writer.serializeSimpleStringContents(JSONEncoderValue.finiteNumberString(self))
         }
     }
 }
+extension Float: _JSONSimpleValueArrayElement { }
+extension Double: _JSONSimpleValueArrayElement { }
 
-extension Double: _JSONSimpleValueArrayElement {
-    fileprivate func serializeJsonRepresentation(into writer: inout JSONWriter, encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Int {
-        switch try JSONEncoderValue.number(from: self, encoder: encoder, additionalKey) {
-        case .number(let string):
-            return writer.serializeSimpleStringContents(string)
-        case .string(let string):
-            return writer.serializeSimpleString(string)
-        default:
-            fatalError("Impossible JSON value type coming from number formatting")
-        }
-    }
-}
-
-// This is not yet extended to Double & Float. That case is more complicated, given the possibility of Infinity or NaN values, which require nonConformingFloatEncodingStrategy and the ability to throw errors.
-
-extension Array : _JSONDirectArrayEncodable where Element: _JSONSimpleValueArrayElement {
-    func nonPrettyJSONRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> Data {
-        var writer = JSONWriter(options: encoder.options.outputFormatting)
-
-        writer.writer(ascii: ._openbracket)
-
-        let count = count
-        if count > 0 {
-            _ = try self[0].serializeJsonRepresentation(into: &writer, encoder: encoder, additionalKey)
-
-            for idx in 1 ..< count {
-                writer.writer(ascii: ._comma)
-                _ = try self[idx].serializeJsonRepresentation(into: &writer, encoder: encoder, additionalKey)
+extension __JSONEncoder {
+    /// Floating-point arrays are written later, when there is no encoding context left to report a non-finite value with, so with the `.throw` strategy they are checked here.
+    fileprivate func directFloatingPointArrayValue<Element: BinaryFloatingPoint & _JSONSimpleValueArrayElement>(_ array: [Element], _ additionalKey: (some CodingKey)?) throws -> JSONEncoderValue {
+        if case .throw = options.nonConformingFloatEncodingStrategy {
+            for element in array where !element.isFinite {
+                throw JSONEncoderValue.cannotEncodeNumber(element, encoder: self, additionalKey)
             }
         }
-
-        writer.writer(ascii: ._closebracket)
-        return writer.makeData()
+        return directArrayValue(array)
     }
-    
-    func individualElementRepresentation(encoder: __JSONEncoder, _ additionalKey: (some CodingKey)?) throws -> (Data, lengths: [Int]) {
-        var writer = JSONWriter(options: encoder.options.outputFormatting)
-        var byteLengths = [Int]()
-        byteLengths.reserveCapacity(self.count)
 
-        for element in self {
-            let length = try element.serializeJsonRepresentation(into: &writer, encoder: encoder, additionalKey)
-            byteLengths.append(length)
+    fileprivate func directArrayValue<Element: _JSONSimpleValueArrayElement>(_ array: [Element]) -> JSONEncoderValue {
+        // Captures only the array itself (copy-on-write, so no copy) rather than rendering it. Notably it doesn't capture the (pooled) encoder.
+        let count = UInt32(clamping: array.count)
+        let underestimatedBytes = UInt32(clamping: Element.underestimatedEncodedByteCount(of: array))
+        return .directArray(elementCount: count, underestimatedElementBytes: underestimatedBytes) { writer, depth in
+            try writer.serializeDirectArray(array, depth: depth) { element, writer in
+                element.serializeJsonRepresentation(into: &writer)
+            }
         }
-
-        return (writer.makeData(), lengths: byteLengths)
     }
 }
 
