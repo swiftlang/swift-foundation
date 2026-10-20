@@ -40,6 +40,7 @@ final class DatePatternFormatter : Sendable {
     let unsupportedCalendar: String?
 
     init(_ info: ICUDateFormatter.DateFormatInfo) {
+        // FIXME: Support the other calendars before the Swift path becomes the default.
         // ISO 8601 uses the Gregorian names.
         let isSupported = info.calendarIdentifier == .gregorian || info.calendarIdentifier == .iso8601
         unsupportedCalendar = isSupported ? nil : "\(info.calendarIdentifier.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED"
@@ -94,6 +95,7 @@ final class DatePatternFormatter : Sendable {
     /// Whether `appendField` fills in a run of `count` copies of `letter`, rather than writing it with `_IS_UNSUPPORTED`.
     /// Letters that aren't ICU fields fail in `fill`, as in ICU.
     private static func isSupported(_ letter: UInt8, count: Int) -> Bool {
+        // FIXME: Support these fields before the Swift path becomes the default.
         switch letter {
         case UInt8(ascii: "z"), UInt8(ascii: "v"), UInt8(ascii: "B"): false
         // Only `VV`, the time zone's identifier.
