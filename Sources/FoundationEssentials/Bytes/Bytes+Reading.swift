@@ -49,19 +49,17 @@ extension Bytes {
         }
     }
 
-    package var mutableBytes: MutableRawSpan {
-        @_lifetime(&self)
-        @inline(__always)
-        mutating get {
-            self._storage.mutableBytes
-        }
+    // Unlike the other variables, use a function to workaround the problem of vending a mutable computed property when library evolution is enabled.
+    @_lifetime(&self)
+    @inline(__always)
+    package mutating func mutableBytes() -> MutableRawSpan {
+        self._storage.mutableBytes
     }
 
-    package var mutableSpan: MutableSpan<UInt8> {
-        @_lifetime(&self)
-        @inline(__always)
-        mutating get {
-            self._storage.mutableSpan
-        }
+    // Unlike the other variables, use a function to workaround the problem of vending a mutable computed property when library evolution is enabled.
+    @_lifetime(&self)
+    @inline(__always)
+    package mutating func mutableSpan() -> MutableSpan<UInt8> {
+        self._storage.mutableSpan
     }
 }
