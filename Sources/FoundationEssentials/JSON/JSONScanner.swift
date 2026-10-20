@@ -10,13 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
 
-internal class JSONDocument {
+internal final class JSONDocument {
     let map: JSONMap<ArrayMapRecords>
     let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
@@ -1267,5 +1265,3 @@ enum JSONError: Swift.Error, Equatable {
     }
 #endif // FOUNDATION_FRAMEWORK
 }
-
-#endif // !hasFeature(Embedded)

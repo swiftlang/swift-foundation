@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 // MARK: Immutable functions - bitmapRepresentation (Data), hasMember (Bool), inverted (CharacterSet)
 extension _CharacterSet {
     
@@ -123,5 +121,3 @@ extension _CharacterSet {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)

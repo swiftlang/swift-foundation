@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 internal struct JSON5Scanner {
     let options: Options
     var reader: DocumentReader
@@ -1224,5 +1222,3 @@ extension UnicodeScalar {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)

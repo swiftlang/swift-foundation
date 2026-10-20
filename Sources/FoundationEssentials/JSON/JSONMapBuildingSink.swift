@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK || !os(macOS)
 
 
@@ -150,5 +148,3 @@ extension UniqueArray {
     }
 }
 #endif // FOUNDATION_FRAMEWORK || !os(macOS)
-
-#endif // !hasFeature(Embedded)

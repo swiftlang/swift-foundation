@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
@@ -537,31 +535,33 @@ extension _CharacterSet: Equatable, Hashable {
 
 
 extension _CharacterSet: CustomStringConvertible, CustomDebugStringConvertible {
-    var description: String {
-        
-        var result = ""
-
+    private var storageDescription: String {
         switch storage {
         case .empty:
-            result += "CharacterSet: empty"
+            return "CharacterSet: empty"
 
         case .builtIn(let predefined):
-            result += "CharacterSet: \(predefined.charset)"
-            
+            return "CharacterSet: \(predefined.charset)"
+
         case .range(let rangeBacked):
-            result += "CharacterSet: \(rangeBacked.closedRange.lowerBound)...\(rangeBacked.closedRange.upperBound)"
-            
+            return "CharacterSet: \(rangeBacked.closedRange.lowerBound)...\(rangeBacked.closedRange.upperBound)"
+
         case .string(let stringBacked):
-            result += "CharacterSet: \(stringBacked.guts)"
-            
+            return "CharacterSet: \(stringBacked.guts)"
+
         case .bitmap(let bitmapBacked):
-            result += "CharacterSet: \(bitmapBacked.data.description)"
-            
+            return "CharacterSet: \(bitmapBacked.data.description)"
+
         case .compactBitmap(let cBitmapBacked):
-            result += "CharacterSet: \(cBitmapBacked.data.description)"
-            
+            return "CharacterSet: \(cBitmapBacked.data.description)"
+
         }
-        
+    }
+
+    var description: String {
+
+        var result = storageDescription
+
         result += ", Inverted: \(isInverted)"
         
         if annex.populatedPlanes != 0 || annex.isInverted {
@@ -579,9 +579,14 @@ extension _CharacterSet: CustomStringConvertible, CustomDebugStringConvertible {
             } else {
                 result += "\n    Planes:"
                 for (planeNumber, plane) in activePlanes {
+                    #if hasFeature(Embedded)
+                    // String(describing:) is unavailable in Embedded Swift - we use a simpler description.
+                    let planeDesc = plane.storageDescription
+                    #else
                     let planeDesc = String(describing: plane.storage)
                         .split(separator: "\n")
                         .joined(separator: "\n      ")
+                    #endif
                     result += "\n      Plane \(planeNumber): \(planeDesc)"
                     if plane.isInverted {
                         result += " [Plane Inverted]"
@@ -600,4 +605,3 @@ extension _CharacterSet: CustomStringConvertible, CustomDebugStringConvertible {
     }
 }
 
-#endif // !hasFeature(Embedded)

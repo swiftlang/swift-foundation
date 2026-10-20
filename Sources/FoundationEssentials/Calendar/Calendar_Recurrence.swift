@@ -15,8 +15,6 @@
 // This file implements enumerating occurences according to a recurrence rule as
 // specified in RFC5545 and RFC7529
 
-#if !hasFeature(Embedded)
-
 extension Calendar.RecurrenceRule.Frequency {
     /// The calendar component corresponding to the frequency interval
     var component: Calendar.Component {
@@ -1060,7 +1058,7 @@ extension Calendar {
 
         let isStrictMatching = matchingPolicy == .strict
 
-        var dates = [(date: startDate, components: DateComponents())]
+        var dates: [(Date, DateComponents)] = [(startDate, DateComponents())]
         var lastMatchedComponent: Calendar.Component? = nil
 
         if let weeks = combinationComponents.weeksOfYear {
@@ -1221,5 +1219,3 @@ extension Calendar {
         return foundDates
     }
 }
-
-#endif // !hasFeature(Embedded)

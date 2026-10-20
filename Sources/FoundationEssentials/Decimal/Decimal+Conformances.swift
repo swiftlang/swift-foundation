@@ -10,19 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif // FOUNDATION_FRAMEWORK
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : CustomStringConvertible {
+    // Parsing a decimal from a string is unavailable in Embedded Swift, because `Character` iteration is unavailable in Embedded Swift.
     /// Creates and initializes a decimal by parsing a string according to the provided locale's conventions.
     ///
     /// - Parameters:
     ///   - string: A string containing a formatted decimal value.
     ///   - locale: A locale that indicates the formatting conventions used by `string`.
+    @_unavailableInEmbedded
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
         guard let (value, _, _) = try? Decimal.__decimal(
@@ -563,6 +563,7 @@ extension Decimal : Comparable {
     }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Decimal : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -629,6 +630,7 @@ extension Decimal : Codable {
         try mantissaContainer.encode(_mantissa.7)
     }
 }
+#endif
 
 // MARK: - SignedNumeric
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -852,4 +854,3 @@ extension Decimal : Strideable {
     }
 }
 
-#endif // !hasFeature(Embedded)
