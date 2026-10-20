@@ -65,7 +65,7 @@ package struct PluralOperands: Sendable, Hashable {
         if let marker = utf8.first, marker == UInt8(ascii: "c") || marker == UInt8(ascii: "e") {
             utf8 = utf8.dropFirst()
             let exponentPart = readDigits(&utf8)
-            guard !exponentPart.isEmpty, exponentPart.count <= 4 else { return nil }
+            guard !exponentPart.isEmpty, exponentPart.count <= Self.maxExponentDigitCount else { return nil }
             for digit in exponentPart { exponent = exponent * 10 + Int(digit &- UInt8(ascii: "0")) }
         }
         guard utf8.isEmpty else { return nil }
@@ -78,12 +78,18 @@ package struct PluralOperands: Sendable, Hashable {
         for _ in movedCount ..< exponent { integerDigits.append(0) }
 
         let remainingFraction = fractionPart.dropFirst(movedCount)
-        guard remainingFraction.count <= 18 else { return nil }
+        guard remainingFraction.count <= Self.maxFractionDigitCount else { return nil }
         var fractionDigits: UInt64 = 0
         for digit in remainingFraction { fractionDigits = fractionDigits * 10 + UInt64(digit &- UInt8(ascii: "0")) }
 
         self.init(integerDigits: integerDigits.value, fractionDigits: fractionDigits, fractionDigitCount: remainingFraction.count, exponent: exponent)
     }
+
+    /// The most digits an exponent can have, so a number never gets more than 9999 zeros appended.
+    private static let maxExponentDigitCount = 4
+
+    /// The most fraction digits a number can have after the exponent is applied. 18 digits always fit in `fractionDigits`.
+    private static let maxFractionDigitCount = 18
 
     /// Builds the integer digits one digit at a time, keeping the form that `integerDigits` describes.
     private struct ExactInteger {

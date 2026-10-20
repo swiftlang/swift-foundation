@@ -125,7 +125,7 @@ func renderTestSamples(_ data: PluralRulesDataSchema) -> String {
     #if canImport(_FoundationInternationalizationData) && FOUNDATION_PLURAL_RULES_SWIFT
     import _FoundationInternationalizationData
 
-    // The samples CLDR lists for each rule. Each sample must get the category of its rule.
+    // The documented samples of each rule. Each sample must get the category of its rule.
     let pluralRulesSamples: [PluralRulesSampleSet] = [
 
     """

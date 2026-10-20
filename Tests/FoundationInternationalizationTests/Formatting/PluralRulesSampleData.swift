@@ -16,7 +16,7 @@
 #if canImport(_FoundationInternationalizationData) && FOUNDATION_PLURAL_RULES_SWIFT
 import _FoundationInternationalizationData
 
-// The samples CLDR lists for each rule. Each sample must get the category of its rule.
+// The documented samples of each rule. Each sample must get the category of its rule.
 let pluralRulesSamples: [PluralRulesSampleSet] = [
     PluralRulesSampleSet(type: .cardinal, locales: ["af", "an", "asa", "az", "bal", "bem", "bez", "bg", "brx", "ce", "cgg", "chr", "ckb", "dv", "ee", "el", "eo", "eu", "fo", "fur", "gsw", "ha", "haw", "hu", "jgo", "jmc", "ka", "kaj", "kcg", "kk", "kkj", "kl", "ks", "ksb", "ku", "ky", "lb", "lg", "mas", "mgo", "ml", "mn", "mr", "nah", "nb", "nd", "ne", "nn", "nnh", "no", "nr", "ny", "nyn", "om", "or", "os", "pap", "ps", "rm", "rof", "rwk", "saq", "sd", "sdh", "seh", "sn", "so", "sq", "ss", "ssy", "st", "syr", "ta", "te", "teo", "tig", "tk", "tn", "tr", "ts", "ug", "uz", "ve", "vo", "vun", "wae", "xh", "xog"], rules: [
         ("one", integer: "1", decimal: "1.0, 1.00, 1.000, 1.0000"),
