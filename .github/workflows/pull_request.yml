@@ -10,7 +10,7 @@ on:
 jobs:
   tests:
     name: Test (SwiftPM)
-    uses: swiftlang/github-workflows/.github/workflows/swift_package_test.yml@0.0.15
+    uses: swiftlang/github-workflows/.github/workflows/swift_package_test.yml@0.0.16
     with:
       linux_swift_versions: '["nightly-main"]'
       windows_swift_versions: '["nightly-main"]'
@@ -38,7 +38,7 @@ jobs:
         run: apt update && apt install -y ninja-build jq curl
       - name: Install CMake
         id: install-cmake
-        uses: swiftlang/github-workflows/.github/actions/install-cmake@0.0.15
+        uses: swiftlang/github-workflows/.github/actions/install-cmake@0.0.16
         with:
           # Version from swiftlang/swift update-checkout-config.json
           cmake-version: 3.30.2
@@ -73,7 +73,7 @@ jobs:
 
   soundness:
     name: Soundness
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.15
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.16
     with:
       license_header_check_project_name: "Swift.org"
       license_header_check_enabled: false

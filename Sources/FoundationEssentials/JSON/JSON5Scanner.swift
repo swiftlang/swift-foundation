@@ -1037,11 +1037,11 @@ extension JSON5Scanner {
         }
 
         if (!isHex) {
-            // Explicitly exclude a trailing 'e'. JSON5 and strtod both disallow it, but Decimal unfortunately accepts it so we need to prevent it in advance.
+            // Explicitly exclude a trailing 'e' or an exponent sign with no digits after it (`1e+`, `1E-`). JSON5 and strtod both disallow these, but Decimal unfortunately accepts them so we need to prevent them in advance.
             let lastIndex = jsonBytes.index(before: jsonBytes.endIndex)
             let lastByte = jsonBytes[unchecked: lastIndex]
             switch lastByte {
-            case UInt8(ascii: "e"), UInt8(ascii: "E"):
+            case UInt8(ascii: "e"), UInt8(ascii: "E"), UInt8(ascii: "+"), UInt8(ascii: "-"):
                 throw JSONError.unexpectedCharacter(context: "at end of number", ascii: lastByte, location: .sourceLocation(at: lastIndex, fullSource: fullSource))
             default:
                 break
