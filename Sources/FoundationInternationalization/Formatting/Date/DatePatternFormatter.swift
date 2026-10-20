@@ -705,9 +705,9 @@ final class DatePatternFormatter : Sendable {
 
 // MARK: - Field values
 
-/// The values a pattern's fields read, computed on first use.
+/// The values a pattern's fields read.
 private struct FieldValues {
-    /// Calendar components as plain integers, which are cheaper to pass around than `DateComponents`.
+    /// Calendar components as plain integers.
     /// Components the pattern doesn't read are 0.
     struct Components {
         var era = 0, year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0, weekday = 0
@@ -743,7 +743,7 @@ private struct FieldValues {
     /// The Julian day of 1970-01-01.
     static let epochStartAsJulianDay: Int64 = 2_440_588
 
-    /// Milliseconds since 1970, rounded down and clamped to Julian day ±0x7F000000, as ICU's calendar reads them.
+    /// Milliseconds since 1970, rounded down and clamped to Julian day ±0x7F000000.
     var udateMilliseconds: Int64 {
         let maxMilliseconds = Double((0x7F00_0000 - Self.epochStartAsJulianDay) * 86_400_000)
         let minMilliseconds = Double((-0x7F00_0000 - Self.epochStartAsJulianDay) * 86_400_000)
