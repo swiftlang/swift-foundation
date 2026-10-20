@@ -128,19 +128,19 @@ private struct ChineseFamilyCalendarTests {
         #expect(calendar.maximumRange(of: .isLeapMonth) == 0..<2)
     }
 
-    // The ranges of .yearForWeekOfYear are the same for the three calendars. The guards of date from components and of add use the number that the calendar reports.
+    // The ranges of .yearForWeekOfYear are the same for the three calendars. The guards of date from components and of add use the first number past the supported years (49,637 for the extended year).
     @Test(arguments: [(Calendar.Identifier.chinese, 0), (.vietnamese, 0), (.dangi, -304)])
     func weekYearLimits(_ identifier: Calendar.Identifier, _ shift: Int) throws {
         let calendar = Self.calendar(identifier)
         #expect(calendar.minimumRange(of: .yearForWeekOfYear) == -5_000_000..<5_000_001)
         #expect(calendar.maximumRange(of: .yearForWeekOfYear) == -5_000_000..<5_000_001)
         var components = DateComponents()
-        components.yearForWeekOfYear = 5_000_000 + shift
+        components.yearForWeekOfYear = 49_637 + shift
         #expect(calendar.date(from: components) == nil)
         let start = Self.date((2026, 1, 1))
         let weekYear = try #require(calendar.dateComponents([.yearForWeekOfYear], from: start).yearForWeekOfYear)
         var amount = DateComponents()
-        amount.yearForWeekOfYear = 5_000_000 + shift - weekYear
+        amount.yearForWeekOfYear = 49_637 + shift - weekYear
         #expect(calendar.date(byAdding: amount, to: start, wrappingComponents: false) == nil)
     }
 
@@ -458,6 +458,46 @@ private struct ChineseFamilyCalendarTests {
         #expect(ObjectIdentifier(type) == ObjectIdentifier(_CalendarChinese.self))
     }
 #endif
+
+    // The class supports the Gregorian years from -46,999 to 46,999. A date past them has no fields and no range, ordinality, interval or add.
+    @Test(arguments: identifiers, [3e12, -3e12, 2e12, -2e12])
+    func datesPastTheLimitHaveNoAnswer(_ identifier: Calendar.Identifier, _ seconds: Double) {
+        let calendar = Self.calendar(identifier)
+        let date = Date(timeIntervalSinceReferenceDate: seconds)
+        let fields = calendar.dateComponents([.era, .year, .month, .day, .weekOfYear], from: date)
+        #expect(fields.era == nil && fields.year == nil && fields.month == nil && fields.day == nil && fields.weekOfYear == nil)
+        #expect(calendar.range(of: .day, in: .year, for: date) == nil)
+        #expect(calendar.ordinality(of: .day, in: .year, for: date) == nil)
+        #expect(calendar.dateInterval(of: .month, for: date) == nil)
+        #expect(calendar.date(byAdding: DateComponents(day: 1), to: date, wrappingComponents: false) == nil)
+        #expect(calendar.dateComponents([.day], from: date, to: date + 86400).day == nil)
+    }
+
+    @Test(arguments: identifiers, [1.3e12, -1.4e12])
+    func datesInsideTheLimitHaveFields(_ identifier: Calendar.Identifier, _ seconds: Double) {
+        let calendar = Self.calendar(identifier)
+        let date = Date(timeIntervalSinceReferenceDate: seconds)
+        let fields = calendar.dateComponents([.era, .year, .month, .day], from: date)
+        #expect(fields.era != nil && fields.year != nil && fields.month != nil && fields.day != nil)
+        #expect(calendar.range(of: .day, in: .year, for: date) != nil)
+        #expect(calendar.date(byAdding: DateComponents(day: 1), to: date, wrappingComponents: false) != nil)
+    }
+
+    // The first year past the limit has no date. Cycle 828 year 16 is the last supported year and cycle -739 year 38 is the first.
+    @Test(arguments: identifiers, [(828, 16, true), (828, 17, false), (-739, 38, true), (-739, 37, false)])
+    func yearsPastTheLimitHaveNoDate(_ identifier: Calendar.Identifier, _ row: (era: Int, year: Int, exists: Bool)) {
+        let components = DateComponents(era: row.era, year: row.year, month: 1, day: 1)
+        #expect((Self.calendar(identifier).date(from: components) != nil) == row.exists)
+    }
+
+    #if FOUNDATION_EXIT_TESTS
+    @Test(arguments: [Calendar.Identifier.dangi, .vietnamese])
+    func rangeFarInTheFutureDoesNotStop(identifier: Calendar.Identifier) async {
+        await #expect(processExitsWith: .success) { [identifier] in
+            _ = Self.calendar(identifier).range(of: .day, in: .year, for: Date(timeIntervalSinceReferenceDate: 3e12))
+        }
+    }
+    #endif
 
     // An hourly rule for the last day of the year needs the range of the day of the year. The rule must give 5 dates, and each date must be on the last day.
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)

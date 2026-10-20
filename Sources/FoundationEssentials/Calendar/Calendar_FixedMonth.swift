@@ -713,8 +713,12 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
             return rebuilt(year: extendedYear, month: fields.month, day: fields.day, secondsInDay: fields.secondsInDay, forward: amount > 0, in: timeZone)
 
         case .yearForWeekOfYear:
+            // The roll adds to `.yearForWeekOfYear`. In an era after 0 it stops at 1, as the roll of `.year` stops at year 1.
             var components = DateComponents()
             components.yearForWeekOfYear = amount
+            if rules.eraAndYear(extendedYear: fields.year).era > 0 {
+                components.yearForWeekOfYear = max(amount, 1 - weekYearAndWeek(rataDie: fields.rataDie, year: fields.year).weekYear)
+            }
             return self.date(byAdding: components, to: date, wrappingComponents: false)
 
         case .month:

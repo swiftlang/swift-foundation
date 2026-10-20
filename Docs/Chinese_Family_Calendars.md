@@ -69,6 +69,16 @@ The class keeps one internal year key, the related Gregorian year plus 2637, for
 | Dangi | related Gregorian year plus 2333, the year of the Dangun epoch |
 | Vietnamese | related Gregorian year plus 2637 |
 
+## The supported years
+
+Outside 1901 to 2100 the months come from the astronomy, not from a table. The class supports the Gregorian years from -46,999 to 46,999 and no others.
+
+* **Why:** the astronomy first gives a month of 28 or 31 days in the year 47,240 (and in the year -51,001). In some years from 12,868 (and from -17,832) the leap month is lost.
+* **Reported ranges:** `minimumRange` and `maximumRange` of `.yearForWeekOfYear` stay at the ICU limits of -5,000,000 and 5,000,000. They say which numbers the field can hold. They do not say where the astronomy is right.
+* **A date past the limit:** it has no answer. `dateComponents` gives an empty `DateComponents`. `range`, `ordinality` and `dateInterval` give `nil`. An add that starts or ends there gives `nil`.
+* **A date from components past the limit:** `date(from:)` gives `nil`.
+* **Agreement with the ICU based calendar:** it is about 100% inside the tables, 94 to 99% until the year 2999, and falls to half by the year 6000. Beyond that both calendars are models and nobody knows the right answer.
+
 ## Adding another variant
 
 A new variant is a new case in `ChineseCalendarVariant`. It needs a day boundary function, a baked table, and a week year offset. Pass the variant as a value to the rule functions. Do not use a closure, because the Chinese path must stay fast.

@@ -289,9 +289,20 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // extended year = related Gregorian year + 2637; era = 60-year cycle.
     static let extendedYearOffset = 2637
 
-    // Supported extended-year domain (same convention as Hebrew's icuYearLowerBound/icuYearUpperBound).
-    private static let extendedYearLowerBound = -5_000_000
-    private static let extendedYearUpperBound = 5_000_000
+    // The reported ranges of the year numbers are the ICU limits.
+    private static let reportedYearLimit = 5_000_000
+
+    // The class computes the related Gregorian years from -46,999 to 46,999. Past about year 47,000 the astronomy gives months of 28 or 31 days, so a date past them has no answer.
+    private static let relatedISOYearLimit = 47_000
+    private static let extendedYearLowerBound = extendedYearOffset - relatedISOYearLimit
+    private static let extendedYearUpperBound = extendedYearOffset + relatedISOYearLimit
+
+    // The supported part of the time line, in seconds from the reference date: from 1 January of year -46,999 to 1 January of year 47,000.
+    private static let supportedTimes: Range<Double> = Double(_CalendarAstronomy.gregorianRataDie(1 - relatedISOYearLimit, 1, 1) - _CalendarUtility.rataDieAtDateReference) * 86400.0..<Double(_CalendarAstronomy.gregorianRataDie(relatedISOYearLimit, 1, 1) - _CalendarUtility.rataDieAtDateReference) * 86400.0
+
+    private func isSupported(_ date: Date) -> Bool {
+        Self.supportedTimes.contains(date.timeIntervalSinceReferenceDate)
+    }
 
     private func yearData(extendedYear: Int) -> _ChineseYear {
         Self.year(relatedISOYear: extendedYear - Self.extendedYearOffset, variant)
@@ -331,7 +342,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         case .quarter: return Range(1...4)
         case .weekOfMonth: return 1..<(29 + 7 - minimumDaysInFirstWeek) / 7 + 1
         case .weekOfYear: return Range(1...50)
-        case .yearForWeekOfYear: return Range(Self.extendedYearLowerBound...Self.extendedYearUpperBound)
+        case .yearForWeekOfYear: return -Self.reportedYearLimit..<Self.reportedYearLimit + 1
         case .nanosecond: return Range(0...999_999_999)
         case .isLeapMonth: return Range(0...1)
         case .isRepeatedDay: return Range(0...0)
@@ -355,7 +366,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         case .quarter: return Range(1...4)
         case .weekOfMonth: return (minimumDaysInFirstWeek == 1 ? 1 : 0)..<(30 + 13 - minimumDaysInFirstWeek) / 7 + 1
         case .weekOfYear: return Range(1...55)
-        case .yearForWeekOfYear: return Range(Self.extendedYearLowerBound...Self.extendedYearUpperBound)
+        case .yearForWeekOfYear: return -Self.reportedYearLimit..<Self.reportedYearLimit + 1
         case .nanosecond: return Range(0...999_999_999)
         case .isLeapMonth: return Range(0...1)
         case .isRepeatedDay: return Range(0...0)
@@ -366,6 +377,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     }
 
     func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
+        guard isSupported(date) else { return nil }
         switch smaller {
         case .weekday:
             switch larger {
@@ -446,6 +458,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Ordinality
 
     func ordinality(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Int? {
+        guard isSupported(date) else { return nil }
         let timeZone = self.timeZone
         switch (smaller, larger) {
         case (.day, .year), (.dayOfYear, .year):
@@ -590,6 +603,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
+        guard isSupported(date) else { return nil }
         let timeZone = self.timeZone
         let (extendedYear, ordinal, day) = fields(for: date, in: timeZone)
 
@@ -656,6 +670,11 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Date ↔ DateComponents
 
     func date(from components: DateComponents) -> Date? {
+        guard let result = makeDate(from: components), isSupported(result) else { return nil }
+        return result
+    }
+
+    private func makeDate(from components: DateComponents) -> Date? {
         var secondsInDay: Double = 0
         if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
         if let minute = components.minute { secondsInDay += Double(minute) * 60 }
@@ -741,6 +760,8 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from date: Date, in timeZone: TimeZone) -> DateComponents {
+        // A date past the supported years has no fields.
+        guard isSupported(date) else { return DateComponents() }
         let totalOffset = timeZone.secondsFromGMT(for: date)
         let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
         let (rataDie, secondsInDay): (Int, Double) = _CalendarUtility.rataDieAndSecondsInDay(localSeconds: localSeconds)
@@ -876,6 +897,11 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Adding
 
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
+        guard isSupported(date), let result = addingComponents(components, to: date, wrappingComponents: wrappingComponents), isSupported(result) else { return nil }
+        return result
+    }
+
+    private func addingComponents(_ components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date? {
         var result = date
 
         // How many fields carry a non-zero value.
@@ -1050,6 +1076,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // MARK: Difference
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
+        guard isSupported(start), isSupported(end) else { return DateComponents() }
         var result = DateComponents()
         var curr = start
         for component in _CalendarUtility.orderedDifferenceComponents(components) {

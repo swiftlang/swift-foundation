@@ -175,6 +175,19 @@ private struct FixedMonthCalendarTests {
         #expect(result == Date(timeIntervalSinceReferenceDate: expected))
     }
 
+    // A roll of `.yearForWeekOfYear` stops at 1 in an era after 0, and it goes on into era 1 from era 0. Amete Mihret, UTC, first weekday 4, minimum days 7. The values come from the system calendar.
+    @Test(arguments: [
+        (-60_125_591_457.0, -192, -62_871_383_457.0), (-60_125_591_457.0, -88, -62_871_383_457.0), (-60_125_591_457.0, -1_000, -62_871_383_457.0),
+        (-60_125_591_457.0, 100, -56_969_745_057.0), (-60_125_591_457.0, 1_000, -28_567_732_257.0),
+        (-63_099_820_800.0, -100, -66_255_667_200.0), (-63_099_820_800.0, -1, -63_131_270_400.0), (-63_099_820_800.0, 1, -63_068_371_200.0),
+        (-63_099_820_800.0, 100, -59_943_974_400.0), (-63_099_820_800.0, 1_000, -31_541_961_600.0), (-63_099_820_800.0, 5_600, 113_622_739_200.0),
+    ])
+    func rollWeekYear(_ start: Double, _ amount: Int, _ expected: Double) throws {
+        let calendar = Self.calendar(.ethiopicAmeteMihret, firstWeekday: 4, minimumDays: 7)
+        let rolled = try #require(calendar.date(byAdding: DateComponents(yearForWeekOfYear: amount), to: Date(timeIntervalSinceReferenceDate: start), wrappingComponents: true))
+        #expect(rolled == Date(timeIntervalSinceReferenceDate: expected))
+    }
+
 #if !FOUNDATION_FRAMEWORK
     // In the package build, Calendar(identifier:) uses this class for these identifiers. The framework build leaves the routing off for now.
     @Test(arguments: [Calendar.Identifier.coptic, .ethiopicAmeteMihret, .persian, .indian])
