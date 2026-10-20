@@ -20,10 +20,6 @@ import FoundationInternationalization
 import Foundation
 #endif
 
-// Benchmarks for formatting date patterns. These call the public API, so swapping
-// between the ICU formatter and the Swift implementation is a build-flag concern:
-// the default build uses ICU; pass `-Xswiftc -DFOUNDATION_DATE_FORMAT_SWIFT` to
-// build the Swift implementation instead, and diff the runs.
 func dateFormatBenchmarks() {
     let scaling = Benchmark.Configuration(scalingFactor: .kilo)
     // The same 64 dates every run, covering AM and PM, one- and two-digit days, and every month and weekday.
