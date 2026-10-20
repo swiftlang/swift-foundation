@@ -13,9 +13,8 @@
 #if FOUNDATION_DATE_FORMAT_SWIFT
 
 // Reads the tables in DateFormatData.swift, which stay `internal` to this
-// module so they compile into read-only data. The slot orders here match
-// utils/update-date-format-data-impl.swift, and the sub-blocks match
-// `subBlockSizes` in utils/build-date-format-data-impl.swift.
+// module so they compile into read-only data. The slot orders and sub-blocks
+// here match the generators in utils/.
 
 // MARK: - Strings
 
@@ -68,7 +67,7 @@ package struct DateFormatDataString : Sendable {
         return body(bytes.span)
     }
 
-    /// Compares with UTF-8 bytes, as `strcmp` orders ASCII identifiers.
+    /// Compares with UTF-8 bytes, in byte order.
     func compare(_ other: Span<UInt8>) -> Int {
         let count = Int(entry & 0xFF)
         let offset = Int(entry >> 8)

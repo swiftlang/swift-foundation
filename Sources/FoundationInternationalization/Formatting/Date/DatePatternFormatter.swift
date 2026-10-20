@@ -26,7 +26,7 @@ final class DatePatternFormatter : Sendable {
     let calendar: Calendar
     let locale: DateFormatLocale
     let numbers: DateFormatNumbers
-    /// Whether the digits are ASCII 0-9, which `appendNumber` writes directly.
+    /// Whether the digits are ASCII 0-9.
     let asciiDigits: Bool
     let capitalizationContext: FormatStyleCapitalizationContext
     let caseLanguage: CaseLanguage
@@ -58,7 +58,7 @@ final class DatePatternFormatter : Sendable {
         localizedGMT = info.pattern.utf8.contains { $0 == UInt8(ascii: "O") || $0 == UInt8(ascii: "Z") } ? LocalizedGMTFormat(locale) : nil
     }
 
-    /// The calendar components that `appendField` reads for the fields in `pattern`.
+    /// The calendar components the fields in `pattern` read.
     private static func components(for pattern: String) -> Calendar.ComponentSet {
         var components: Calendar.ComponentSet = []
         var inQuote = false
@@ -90,8 +90,7 @@ final class DatePatternFormatter : Sendable {
         return components
     }
 
-    /// Whether `appendField` fills in a run of `count` copies of `letter`, rather than writing it with `_IS_UNSUPPORTED`.
-    /// Letters that aren't ICU fields fail in `fill`, as in ICU.
+    /// Returns false for fields that the formatter writes as their letters followed by `_IS_UNSUPPORTED`, such as `zzzz`.
     private static func isSupported(_ letter: UInt8, count: Int) -> Bool {
         // FIXME: Support these fields before the Swift path becomes the default.
         switch letter {
@@ -226,7 +225,7 @@ final class DatePatternFormatter : Sendable {
 
     // MARK: - Capitalization
 
-    /// The contextTransforms usage for a field, as ICU's `SimpleDateFormat::subFormat` picks it, or nil for fields without one.
+    /// The capitalization usage for a field, or nil for fields that aren't capitalized.
     private static func capitalizationUsage(_ letter: UInt8, count: Int) -> DateFormatCapitalizationUsage? {
         switch letter {
         case UInt8(ascii: "G"):
@@ -257,8 +256,7 @@ final class DatePatternFormatter : Sendable {
         }
     }
 
-    /// Titlecases the letter at `start` if it's lowercase, leaving the rest unchanged, as ICU's `toTitle` does with
-    /// `U_TITLECASE_NO_LOWERCASE | U_TITLECASE_NO_BREAK_ADJUSTMENT`. Returns the change in length.
+    /// Titlecases the letter at `start` if it's lowercase, leaving the rest unchanged. Returns the change in length.
     @discardableResult
     private func titlecaseFirstLetter(_ bytes: inout [UInt8], from start: Int) -> Int {
         guard let first = Self.scalar(in: bytes, at: start), first.properties.generalCategory == .lowercaseLetter else { return 0 }
@@ -286,8 +284,7 @@ final class DatePatternFormatter : Sendable {
         return scalar
     }
 
-    /// The rest of a Dutch "IJ" after its titlecased "I" or "Í", as ICU's `maybeTitleDutchIJ` writes it, and where the text
-    /// after it starts in `bytes`. Returns nil where the text at `start` doesn't continue an "ij".
+    /// The rest of a Dutch "IJ" after its titlecased "I" or "Í", and where the text after it starts in `bytes`. Returns nil where the text at `start` doesn't continue an "ij".
     private static func dutchIJ(after title: String, in bytes: [UInt8], at start: Int) -> (String, Int)? {
         let acute: Unicode.Scalar = "\u{301}"
         var position = start
@@ -313,7 +310,7 @@ final class DatePatternFormatter : Sendable {
         return (text, position)
     }
 
-    /// The languages whose titlecasing differs from the default, as ICU's `ucase_getCaseLocale` finds them.
+    /// The languages whose titlecasing differs from the default.
     enum CaseLanguage {
         case `default`, turkic, dutch, armenian
 
@@ -478,7 +475,7 @@ final class DatePatternFormatter : Sendable {
                 return true
             }
         case UInt8(ascii: "V"):
-            // `VV`, as `isSupported` allows.
+            // `VV`, the time zone's identifier.
             appendZoneID(to: &bytes)
         case UInt8(ascii: "l"):
             // ICU ignores `l`, and reports no field for it.
@@ -525,8 +522,7 @@ final class DatePatternFormatter : Sendable {
         }
     }
 
-    /// Appends `value` in the locale's digits, zero-padded to `minimumDigits`, keeping at most the low `maximumDigits` digits, as ICU's `zeroPaddingNumber` does.
-    /// The default is ICU's `maxIntCount`, which `subFormat` passes for every numeric field but `yy`.
+    /// Appends `value` in the locale's digits, zero-padded to `minimumDigits`, keeping at most the low `maximumDigits` digits.
     private func appendNumber(_ value: Int, minimumDigits: Int, maximumDigits: Int = 10, to bytes: inout [UInt8]) {
         if value < 0 {
             numbers.minusSign.append(to: &bytes)
@@ -556,7 +552,7 @@ final class DatePatternFormatter : Sendable {
         }
     }
 
-    /// Appends an ISO 8601 offset, as ICU's `TimeZoneFormat::formatOffsetISO8601` does. Returns nil for offsets of a day or more, which ICU rejects.
+    /// Appends an ISO 8601 offset. Returns nil for offsets of a day or more.
     private func appendISOOffset(_ offset: Int, basic: Bool, utcIndicator: Bool, short: Bool, ignoresSeconds: Bool, to bytes: inout [UInt8]) -> Bool? {
         let magnitude = offset.magnitude
         if utcIndicator && (magnitude == 0 || (ignoresSeconds && magnitude < 60)) {
@@ -585,7 +581,7 @@ final class DatePatternFormatter : Sendable {
         return true
     }
 
-    /// Appends a localized GMT offset such as "GMT-07:00", as ICU's `TimeZoneFormat::formatOffsetLocalizedGMT` does. Returns nil for offsets of a day or more, which ICU rejects.
+    /// Appends a localized GMT offset such as "GMT-07:00". Returns nil for offsets of a day or more.
     ///
     /// The short form drops zero minutes and pads hours to one digit, not two.
     private func appendLocalizedGMT(_ offset: Int, short: Bool, to bytes: inout [UInt8]) -> Bool? {
@@ -641,7 +637,7 @@ final class DatePatternFormatter : Sendable {
         return true
     }
 
-    /// A locale's localized GMT format, parsed once from its `gmtFormat` and `hourFormat`, as ICU's `TimeZoneFormat` does when it's created.
+    /// A locale's localized GMT format and offset patterns.
     struct LocalizedGMTFormat : Sendable {
         /// The offset patterns for one sign.
         struct Patterns : Sendable {
@@ -744,7 +740,7 @@ private struct FieldValues {
         }
     }
 
-    /// The Julian day of 1970-01-01, ICU's `kEpochStartAsJulianDay`.
+    /// The Julian day of 1970-01-01.
     static let epochStartAsJulianDay: Int64 = 2_440_588
 
     /// Milliseconds since 1970, rounded down and clamped to Julian day ±0x7F000000, as ICU's calendar reads them.
@@ -801,7 +797,7 @@ extension UInt8 {
 }
 
 extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
-    /// The attribute for a pattern letter, matching `init(udateFormatField:)`.
+    /// The attribute for a pattern letter.
     init?(patternLetter: UInt8) {
         switch patternLetter {
         case UInt8(ascii: "G"): self = .era
@@ -821,7 +817,7 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
         case UInt8(ascii: "S"): self = .secondFraction
         case UInt8(ascii: "z"), UInt8(ascii: "Z"), UInt8(ascii: "v"), UInt8(ascii: "V"), UInt8(ascii: "O"), UInt8(ascii: "X"), UInt8(ascii: "x"): self = .timeZone
         default:
-            // `init(udateFormatField:)` has no attribute for `r` (related year).
+            // `r` (related year) has no attribute.
             return nil
         }
     }

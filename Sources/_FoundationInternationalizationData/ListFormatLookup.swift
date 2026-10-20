@@ -135,9 +135,7 @@ private func _searchLocaleTable<Entry>(
 
 /// Lexicographic byte comparison of `target` with pooled locale `index`:
 /// negative if `target` sorts first, zero if equal, positive if it sorts after.
-/// Matches `strcmp` ordering on the ASCII locale identifiers. Reads the pool by
-/// subscript, since passing a static `InlineArray`'s `.span` to a call that
-/// isn't inlined copies the whole table to the stack.
+/// Reads the pool by subscript, since passing a static `InlineArray`'s `.span` to a call that isn't inlined copies the whole table to the stack.
 private func _compareLocale(_ target: Span<UInt8>, _ index: Int) -> Int {
     let start = Int(_ListFormatData.localeOffsets[index])
     let count = Int(_ListFormatData.localeOffsets[index &+ 1]) &- start
