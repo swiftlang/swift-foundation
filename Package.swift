@@ -183,7 +183,7 @@ let package = Package(
         // FoundationInternationalization
         .target(
             name: "_FoundationInternationalizationData",
-            exclude: ["CMakeLists.txt"],
+            exclude: ["CMakeLists.txt", "PluralRulesData.json"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),
@@ -207,7 +207,6 @@ let package = Package(
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt",
                 "Formatting/ListFormatData.json",
-                "Formatting/PluralRulesData.json",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [

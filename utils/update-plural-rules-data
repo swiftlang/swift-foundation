@@ -11,7 +11,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# Generates Sources/FoundationInternationalization/Formatting/PluralRulesData.json
+# Generates Sources/_FoundationInternationalizationData/PluralRulesData.json
 # and the test samples in
 # Tests/FoundationInternationalizationTests/Formatting/PluralRulesSampleData.swift
 # from a CLDR XML checkout. The CLDR_PATH environment variable must point at
@@ -26,7 +26,7 @@ set -eu
 declare -r commandName="$(basename "$0")"
 declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
 declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
-declare -r jsonRelativePath="Sources/FoundationInternationalization/Formatting/PluralRulesData.json"
+declare -r jsonRelativePath="Sources/_FoundationInternationalizationData/PluralRulesData.json"
 declare -r testsRelativePath="Tests/FoundationInternationalizationTests/Formatting/PluralRulesSampleData.swift"
 
 if [[ -z "${CLDR_PATH:-}" ]]; then

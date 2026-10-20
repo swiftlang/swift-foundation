@@ -30,7 +30,7 @@ set -eu
 declare -r commandName="$(basename "$0")"
 declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
 declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
-declare -r inputDefault="${foundationRepoDir}/Sources/FoundationInternationalization/Formatting/PluralRulesData.json"
+declare -r inputDefault="${foundationRepoDir}/Sources/_FoundationInternationalizationData/PluralRulesData.json"
 declare -r outputSwiftDefault="${foundationRepoDir}/Sources/_FoundationInternationalizationData/PluralRulesData.swift"
 
 INPUT="${INPUT:-${inputDefault}}"
