@@ -12,28 +12,28 @@
 
 extension Bytes {
     @inline(__always)
-    var capacity: Int {
+    package var capacity: Int {
         self._storage.capacity
     }
 
     @inline(__always)
-    var freeCapacity: Int {
+    package var freeCapacity: Int {
         self._storage.freeCapacity
     }
 
     @inline(__always)
-    var count: Int {
+    package var count: Int {
         self._storage.count
     }
 
     @inline(__always)
-    var isEmpty: Bool {
+    package var isEmpty: Bool {
         self._storage.isEmpty
     }
 }
 
 extension Bytes {
-    var bytes: RawSpan {
+    package var bytes: RawSpan {
         @_lifetime(borrow self)
         @inline(__always)
         get {
@@ -41,7 +41,7 @@ extension Bytes {
         }
     }
 
-    var span: Span<UInt8> {
+    package var span: Span<UInt8> {
         @_lifetime(borrow self)
         @inline(__always)
         get {
@@ -49,19 +49,17 @@ extension Bytes {
         }
     }
 
-    var mutableBytes: MutableRawSpan {
-        @_lifetime(&self)
-        @inline(__always)
-        mutating get {
-            self._storage.mutableBytes
-        }
+    // Unlike the other variables, use a function to workaround the problem of vending a mutable computed property when library evolution is enabled.
+    @_lifetime(&self)
+    @inline(__always)
+    package mutating func mutableBytes() -> MutableRawSpan {
+        self._storage.mutableBytes
     }
 
-    var mutableSpan: MutableSpan<UInt8> {
-        @_lifetime(&self)
-        @inline(__always)
-        mutating get {
-            self._storage.mutableSpan
-        }
+    // Unlike the other variables, use a function to workaround the problem of vending a mutable computed property when library evolution is enabled.
+    @_lifetime(&self)
+    @inline(__always)
+    package mutating func mutableSpan() -> MutableSpan<UInt8> {
+        self._storage.mutableSpan
     }
 }

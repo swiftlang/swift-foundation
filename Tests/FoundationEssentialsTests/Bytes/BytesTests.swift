@@ -26,25 +26,25 @@ private struct BytesTests {
         var d = Bytes()
         #expect(d.count == 0)
         #expect(d.bytes.byteCount == 0)
-        #expect(d.mutableBytes.byteCount == 0)
+        #expect(d.mutableBytes().byteCount == 0)
         #expect(d.span.count == 0)
-        #expect(d.mutableSpan.count == 0)
+        #expect(d.mutableSpan().count == 0)
         #expect(d.isEmpty == true)
         
         d = Bytes(capacity: 0)
         #expect(d.count == 0)
         #expect(d.bytes.byteCount == 0)
-        #expect(d.mutableBytes.byteCount == 0)
+        #expect(d.mutableBytes().byteCount == 0)
         #expect(d.span.count == 0)
-        #expect(d.mutableSpan.count == 0)
+        #expect(d.mutableSpan().count == 0)
         #expect(d.isEmpty == true)
         
         d = Bytes(count: 0)
         #expect(d.count == 0)
         #expect(d.bytes.byteCount == 0)
-        #expect(d.mutableBytes.byteCount == 0)
+        #expect(d.mutableBytes().byteCount == 0)
         #expect(d.span.count == 0)
-        #expect(d.mutableSpan.count == 0)
+        #expect(d.mutableSpan().count == 0)
         #expect(d.isEmpty == true)
     }
     
@@ -196,9 +196,9 @@ private struct BytesTests {
         }
 
         do {
-            let mutableRawSpan = d.mutableBytes
+            let mutableRawSpan = d.mutableBytes()
             #expect(mutableRawSpan.byteCount == 5)
-            var mutableSpan = d.mutableSpan
+            var mutableSpan = d.mutableSpan()
             #expect(mutableSpan.count == 5)
             for i in 0 ..< 5 {
                 #expect(mutableSpan[i] == 2)
