@@ -75,6 +75,7 @@ extension Data {
             if !isKnownUniquelyReferenced(&_storage) {
                 _storage = _storage.mutableCopy(_slice)
             }
+            _storage.ensureUniqueBufferReference()
         }
         
         @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)

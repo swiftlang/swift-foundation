@@ -98,6 +98,7 @@ extension Data {
             if !isKnownUniquelyReferenced(&storage) {
                 storage = storage.mutableCopy(range)
             }
+            storage.ensureUniqueBufferReference()
             if !isKnownUniquelyReferenced(&slice) {
                 slice = RangeReference(range)
             }
