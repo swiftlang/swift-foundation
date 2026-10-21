@@ -730,10 +730,10 @@ extension DatePatternFormatter {
     /// The Julian day of 1970-01-01.
     private static let epochStartAsJulianDay: Int64 = 2_440_588
 
-    /// Milliseconds since 1970, rounded down and clamped to Julian day ±0x7F000000.
+    /// Milliseconds since 1970, rounded down and clamped to the Julian days the calendar supports.
     private static func udateMilliseconds(for date: Date) -> Int64 {
-        let maxMilliseconds = Double((0x7F00_0000 - epochStartAsJulianDay) * 86_400_000)
-        let minMilliseconds = Double((-0x7F00_0000 - epochStartAsJulianDay) * 86_400_000)
+        let maxMilliseconds = Double((Int64(Date.maxJulianDay) - epochStartAsJulianDay) * 86_400_000)
+        let minMilliseconds = Double((Int64(Date.minJulianDay) - epochStartAsJulianDay) * 86_400_000)
         return Int64(min(max((date.timeIntervalSince1970 * 1000).rounded(.down), minMilliseconds), maxMilliseconds))
     }
 
