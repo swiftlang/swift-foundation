@@ -538,6 +538,7 @@ final class DatePatternFormatter : Sendable {
         }
     }
 
+    // TODO: Share the sign and digit writing with `DateComponents.ISO8601FormatStyle` once both write to the same buffer type.
     /// Appends an ISO 8601 offset. Returns nil for offsets of a day or more.
     private func appendISOOffset(_ offset: Int, basic: Bool, utcIndicator: Bool, short: Bool, ignoresSeconds: Bool, to bytes: inout [UInt8]) -> Bool? {
         let magnitude = offset.magnitude
