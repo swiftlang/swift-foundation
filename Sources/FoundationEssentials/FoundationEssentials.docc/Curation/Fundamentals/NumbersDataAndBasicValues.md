@@ -8,7 +8,7 @@ Work with primitive values and other fundamental types.
 
 - ``Decimal``
 
-### Binary Data
+### Binary data
 
 - ``Data``
 - ``DataProtocol``

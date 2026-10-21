@@ -3,14 +3,12 @@
 
 ## Topics
 
-### Initializers
 
-- ``init(rawValue:)``
-
-### Instance Properties
-
-- ``rawValue``
-
-### Type Properties
+### Working with decoding options
 
 - ``ignoreUnknownCharacters``
+
+### Working with raw values
+
+- ``init(rawValue:)``
+- ``rawValue``

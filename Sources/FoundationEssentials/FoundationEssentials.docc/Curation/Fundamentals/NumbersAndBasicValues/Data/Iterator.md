@@ -3,6 +3,6 @@
 
 ## Topics
 
-### Instance Methods
+### Performing iteration
 
 - ``next()``
