@@ -803,15 +803,6 @@ extension JSONDecoderImpl {
     }
 }
 
-// MARK: - Optional helper
-
-extension Optional {
-    fileprivate mutating func _setIfNil(to value: Wrapped) {
-        guard _fastPath(self == nil) else { return }
-        self = value
-    }
-}
-
 // MARK: - UnkeyedContainer_Primitive
 
 @available(anyAppleOS 26.0, *)
