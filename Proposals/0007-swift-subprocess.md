@@ -1071,7 +1071,7 @@ var platformOptions: PlatformOptions = .default
 // Set Group ID for process
 platformOptions.preSpawnProcessConfigurator = { flag, startupInfo in
     // Set CREATE_NEW_CONSOLE for flag
-    flag |= DWORD(CREATE_NEW_CONSOLE)
+    flag |= CREATE_NEW_CONSOLE
 
     // Set the window position
     startupInfo.dwX = 0
