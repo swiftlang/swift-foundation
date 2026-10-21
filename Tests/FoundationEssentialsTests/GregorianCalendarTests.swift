@@ -1604,7 +1604,7 @@ private struct GregorianCalendarTests {
     func testNextDateBackwardFindsMatchingDay(components: Set<Calendar.Component>) throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-        // Searching backward from three days later, every day's own components must lead back to that same day.
+        // Searching backward from three days later with a day's own components must find that day.
         var day = try #require(calendar.date(from: DateComponents(year: 2027, month: 1, day: 1, hour: 9)))
         let end = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 31, hour: 9)))
         while day <= end {
@@ -1619,7 +1619,7 @@ private struct GregorianCalendarTests {
     func testNextDateBackwardMatchingMonthFindsItsStart(month: Int) throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-        // A month alone is found at its start, as a forward search finds it, December too although the search starts inside it.
+        // A search for only a month finds the start of the month, like a forward search. This includes December, where the search starts.
         let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 12)))
         let expected = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
         for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
@@ -1644,7 +1644,7 @@ private struct GregorianCalendarTests {
     func testNextDateBackwardMatchingMonthAndHourFindsTheMonthsLastDay(month: Int) throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-        // The hour is searched within the month, so the nearest match is on the month's last day, not in the month after it.
+        // The nearest match is on the last day of the month, because the hour is searched inside the month.
         let start = try #require(calendar.date(from: DateComponents(year: 2029, month: 7, day: 7, hour: 3, minute: 56)))
         for hour in [0, 15, 23] {
             let expected = try firstDay(from: start, direction: .backward, hour: hour, in: calendar) { $0.month == month }
@@ -1658,8 +1658,8 @@ private struct GregorianCalendarTests {
     func testNextDateBackwardMatchingDayAndWeekdayDoesNotSkipMonths(day: Int) throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-        // A day and a weekday are searched month by month. The months that don't have that day, or have it on another weekday, must not make the search skip the next month back.
-        // These two also fail before the backward search fixes. The search skips the start's own month when the match is earlier on the start's day, and skips January when it comes from February, which has no 31st.
+        // A month that doesn't have the day, or has it on another weekday, must not make the search skip the month before it.
+        // Two cases are still missed and are marked as known issues: a match on the start date before the start time, and a search from February, which has no 31st, back to January.
         let knownMisses: Set<[Int]> = [[31, 5, 2028, 8, 31], [31, 2, 2028, 4, 5]]
         var start = try #require(calendar.date(from: DateComponents(year: 2028, month: 12, day: 20, hour: 9)))
         for _ in 0..<12 {
@@ -1668,7 +1668,7 @@ private struct GregorianCalendarTests {
             for weekday in 1...7 {
                 let expected = try firstDay(from: start, direction: .backward, in: calendar) { $0.day == day && $0.weekday == weekday }
                 let found = calendar.nextDate(after: start, matching: DateComponents(day: day, weekday: weekday), matchingPolicy: .strict, direction: .backward)
-                withKnownIssue("A pre-existing miss in the backward day search") {
+                withKnownIssue("A known miss in the backward day search") {
                     #expect(found == expected, "day \(day), weekday \(weekday) from \(start)")
                 } when: {
                     knownMisses.contains([day, weekday] + startDay)
@@ -1682,7 +1682,7 @@ private struct GregorianCalendarTests {
     func testNextDateMatchingFifthWeekdayFindsIt(weekday: Int) throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-        // The fifth run of a month (the 29th–31st) is short and can miss the weekday. The search then continues to the next month that has it, in both directions.
+        // The fifth group of days in a month is short and may not have the weekday. Then the search continues to the next month that has it, in both directions.
         var start = try #require(calendar.date(from: DateComponents(year: 2021, month: 1, day: 1, hour: 14)))
         for _ in 0..<12 {
             for direction in [Calendar.SearchDirection.forward, .backward] {

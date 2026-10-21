@@ -223,7 +223,7 @@ extension DateComponents {
         return setUnits.count
     }
 
-    /// Whether a day, a weekday or a time of day is set: a unit that a backward search for a month or a week has to look for within it.
+    /// Whether any unit smaller than a week is set.
     var hasDayOrTimeUnits: Bool {
         !setUnits.isDisjoint(with: [.day, .weekday, .weekdayOrdinal, .hour, .minute, .second, .nanosecond])
     }
@@ -1575,9 +1575,9 @@ extension Calendar {
         }
     }
 
-    /// Where a backward search lands in a month or a week before the finer stages run.
+    /// Returns where a backward search starts inside a month or a week, so that the later stages can find a match anywhere in it.
     ///
-    /// The day stages work in whole days, and the time stages walk forward from where they start. So the search lands at the start of the period's last day, or of its last hour or minute when the finest set unit is a minute or a second: the last instant would leave a time of day that no later stage clears, and walking forward from it would leave the period.
+    /// The later stages move forward inside a day or an hour, so starting at the last instant would leave the period. Instead, start at the beginning of the last day, hour, or minute, depending on the smallest unit that is set.
     private func backwardLandingDate(in interval: DateInterval, components: DateComponents) -> Date {
         let lastInstant = interval.end - 1
         let unit: Calendar.Component
@@ -1588,7 +1588,7 @@ extension Calendar {
         } else if components.second != nil || components.nanosecond != nil {
             unit = .minute
         } else if components.weekOfMonth != nil {
-            // The week stage keeps a week that already matches, so start from the last week's start.
+            // The week stage doesn't move when the week already matches, so start at the beginning of the last week.
             unit = .weekOfMonth
         } else {
             return lastInstant
@@ -1634,7 +1634,7 @@ extension Calendar {
             try verifyAdvancingResult(result, previous: lastResult, direction: direction)
         } while weekOfYear != dateWeekOfYear
 
-        // As for the month: searching backward for anything finer than the week, start from its last instant so the units below are searched within it.
+        // When searching backward, start at the end of the week, so the later stages can search the whole week.
         if direction == .backward && components.hasDayOrTimeUnits {
             guard let foundRange = dateInterval(of: .weekOfYear, for: result) else {
                 throw CalendarEnumerationError.dateOutOfRange(.weekOfYear, result)
@@ -1691,69 +1691,47 @@ extension Calendar {
 
         let isLeapMonthDesired = hasRepeatingMonths && (components.isLeapMonth ?? false)
 
-        // After this point, result is at least startDate
         var result = startDate
-        var dateMonth = component(.month, from: result)
-        // The units searched after the month. The week of year and the day of year are searched before it.
-        let hasFinerUnits = components.hasDayOrTimeUnits || components.weekOfMonth != nil
-
-        // The week of year stage has already found the week. When that week starts in the month before and runs into this one, the month is later in the same week: searching backward for it would leave the week.
-        if month != dateMonth && direction == .backward && components.weekOfYear != nil, let week = dateInterval(of: .weekOfYear, for: result) {
-            var day = startOfDay(for: result)
-            while day < week.end {
-                if component(.month, from: day) == month {
-                    return day
-                }
-                guard let next = date(byAdding: .day, value: 1, to: day) else { break }
-                day = next
+        switch direction {
+        case .forward:
+            if component(.month, from: result) != month {
+                result = try dateMovedToMonth(month, from: result, components: components, direction: direction, isLeapMonthDesired: isLeapMonthDesired, strictMatching: strictMatching)
             }
-        }
+        case .backward:
+            // Units that are searched after the month. Week of year and day of year are searched before it.
+            let hasFinerUnits = components.hasDayOrTimeUnits || components.weekOfMonth != nil
 
-        if month != dateMonth {
-            // Fast-path: advance to target month directly.
-            if !isLeapMonthDesired || !strictMatching {
-                if _supportsNextDateFastPath(for: [.month]) {
-                    var minimal = DateComponents()
-                    minimal.month = month
-                    minimal.isLeapMonth = components.isLeapMonth
-                    if let fast = _calendarNextDate(after: result, matching: minimal, direction: direction) {
-                        result = fast
-                        dateMonth = month
+            if component(.month, from: result) != month {
+                // The week of year stage already found the week. If that week starts in the previous month, the month we want is later in the same week. Look for it inside the week instead of searching backward out of it.
+                if components.weekOfYear != nil, let week = dateInterval(of: .weekOfYear, for: result) {
+                    var day = startOfDay(for: result)
+                    while day < week.end {
+                        if component(.month, from: day) == month {
+                            return day
+                        }
+                        guard let next = date(byAdding: .day, value: 1, to: day) else { break }
+                        day = next
                     }
                 }
-            }
-            if month != dateMonth {
-                repeat {
-                    let lastResult = result
 
+                result = try dateMovedToMonth(month, from: result, components: components, direction: direction, isLeapMonthDesired: isLeapMonthDesired, strictMatching: strictMatching)
+
+                // The search above can stop anywhere in the month. Move to the end of the month, so the later stages can search the whole month.
+                if hasFinerUnits {
                     guard let foundRange = dateInterval(of: .month, for: result) else {
                         throw CalendarEnumerationError.dateOutOfRange(.month, result)
                     }
-
-                    // Backward, step to the last instant of the previous month. Stepping back by this month's length less a day can skip the previous month when this month has an extra hour from a daylight saving time change.
-                    let searchDate = direction == .backward ? foundRange.start - 1 : foundRange.start + foundRange.duration
-                    dateMonth = component(.month, from: searchDate)
-                    result = searchDate
-
-                    try verifyAdvancingResult(result, previous: lastResult, direction: direction)
-                } while month != dateMonth
+                    result = backwardLandingDate(in: foundRange, components: components)
+                }
             }
 
-            // Searching backward, the loop above lands somewhere inside the month. When finer units are set, move to the month's last instant, so the backward searches that follow see the whole month instead of only the days before that point.
-            if direction == .backward && hasFinerUnits {
+            // When only the month is set, return the start of the month, like a forward search does. When week of year or day of year is set, those stages already chose the date.
+            if !hasFinerUnits && components.weekOfYear == nil && components.dayOfYear == nil {
                 guard let foundRange = dateInterval(of: .month, for: result) else {
                     throw CalendarEnumerationError.dateOutOfRange(.month, result)
                 }
-                result = backwardLandingDate(in: foundRange, components: components)
+                result = foundRange.start
             }
-        }
-
-        // A month alone is found at its start, as a forward search lands, also when the search starts inside it. With a week of year or a day of year, the earlier stages have already placed the result, so leave it.
-        if direction == .backward && !hasFinerUnits && components.weekOfYear == nil && components.dayOfYear == nil {
-            guard let foundRange = dateInterval(of: .month, for: result) else {
-                throw CalendarEnumerationError.dateOutOfRange(.month, result)
-            }
-            result = foundRange.start
         }
 
         // This is relevant for the Chinese, Vietnamese, Korean, and Hindu lunisolar calendars.  In those calendars, the leap month has the same month number as the preceding month.
@@ -1797,6 +1775,42 @@ extension Calendar {
                     try verifyAdvancingResult(searchDate, previous: lastResult, direction: direction)
                 } while true
             }
+        }
+
+        return result
+    }
+
+    /// Moves from `start` to the nearest month with the number `month` in `direction`.
+    private func dateMovedToMonth(_ month: Int, from start: Date, components: DateComponents, direction: SearchDirection, isLeapMonthDesired: Bool, strictMatching: Bool) throws -> Date {
+        var result = start
+        var dateMonth = component(.month, from: result)
+
+        // Fast-path: advance to target month directly.
+        if !isLeapMonthDesired || !strictMatching {
+            if _supportsNextDateFastPath(for: [.month]) {
+                var minimal = DateComponents()
+                minimal.month = month
+                minimal.isLeapMonth = components.isLeapMonth
+                if let fast = _calendarNextDate(after: result, matching: minimal, direction: direction) {
+                    result = fast
+                    dateMonth = month
+                }
+            }
+        }
+
+        while month != dateMonth {
+            let lastResult = result
+
+            guard let foundRange = dateInterval(of: .month, for: result) else {
+                throw CalendarEnumerationError.dateOutOfRange(.month, result)
+            }
+
+            // When searching backward, go to the last instant of the previous month. Subtracting the month's length isn't safe: a daylight saving time change can make a month one hour longer, and then we would skip a month.
+            let searchDate = direction == .backward ? foundRange.start - 1 : foundRange.start + foundRange.duration
+            dateMonth = component(.month, from: searchDate)
+            result = searchDate
+
+            try verifyAdvancingResult(result, previous: lastResult, direction: direction)
         }
 
         return result
@@ -1888,7 +1902,7 @@ extension Calendar {
                     }
                 }
 
-                // When the 1st is in week 0 (the month starts late in a week and the calendar needs more days in a first week), week 1 is the week after it. Searching backward, go there instead of walking on into the previous month.
+                // Depending on the calendar's first weekday and minimum days in the first week, the 1st of the month can be in week 0, and week 1 starts later in the month. When searching backward, go to week 1 instead of continuing into the previous month.
                 if direction == .backward && weekOfMonth == 1 && component(.weekOfMonth, from: today) == 0,
                    let weekZero = dateInterval(of: .weekOfMonth, for: today), weekZero.end < result {
                     today = weekZero.end
@@ -1903,7 +1917,7 @@ extension Calendar {
             result = tempSearchDate
         } while weekOfMonth != dateWeekOfMonth
 
-        // As for the month: searching backward for anything finer than the week, start from its last instant so the units below are searched within it.
+        // When searching backward, start at the end of the week, so the later stages can search the whole week.
         if direction == .backward && components.hasDayOrTimeUnits {
             guard let foundRange = dateInterval(of: .weekOfMonth, for: result) else {
                 throw CalendarEnumerationError.dateOutOfRange(.weekOfMonth, result)
@@ -1934,7 +1948,7 @@ extension Calendar {
         // After this point, result is at least startDate
         var result = startingAt
 
-        // Moves `result` day by day in the search direction until it reaches a day with the wanted ordinal.
+        // Moves `result` one day at a time in the search direction until it reaches a day with the requested weekday ordinal.
         func advanceToWeekdayOrdinal() throws {
             repeat {
                 let lastResult = result
@@ -1977,8 +1991,8 @@ extension Calendar {
             return result
         }
 
-        // A weekday ordinal is a run of seven days (the 1st–7th, the 8th–14th…), so a run holds each weekday once. Walk forward from the run's first day whichever way the search goes: walking from `startingAt`, or in the search's direction, can leave the run. `dateInterval(of: .weekdayOrdinal)` returns a single day, so find the first day from the day of the month.
-        // The last run of a month (the 29th–31st) is shorter and can miss the weekday. Then move on to the next run with this ordinal in the search direction.
+        // Weekday ordinals split a month into groups of seven days (days 1–7, 8–14, and so on), so a full group has each weekday once. Search forward from the first day of the group, whatever the search direction, so the search stays in the group. `dateInterval(of: .weekdayOrdinal)` returns only one day, so compute the group's first day from the day of the month.
+        // The last group of a month has fewer than seven days, so it may not have the weekday. Then continue to the next group with this ordinal in the search direction.
         while true {
             guard let runStart = date(byAdding: .day, value: -((component(.day, from: result) - 1) % 7), to: startOfDay(for: result)) else {
                 throw CalendarEnumerationError.dateOutOfRange(.weekdayOrdinal, result)
@@ -1994,7 +2008,7 @@ extension Calendar {
                     throw CalendarEnumerationError.unexpectedResult(.day, result)
                 }
 
-                // The walk goes forward whatever the search direction.
+                // Always move forward inside the group, also when searching backward.
                 result = foundRange.start + foundRange.duration
                 try verifyAdvancingResult(result, previous: lastResult, direction: .forward)
                 dateWeekday = component(.weekday, from: result)
@@ -2005,7 +2019,7 @@ extension Calendar {
                 return result
             }
 
-            // This run doesn't have the weekday. Continue from the run's edge in the search direction.
+            // This group doesn't have the weekday. Continue to the next group in the search direction.
             if direction == .backward {
                 result = runStart
             } else {
@@ -2101,7 +2115,7 @@ extension Calendar {
         var dateDay = component(.day, from: result)
         var dateIsRepeatedDay = _dateComponents(.isRepeatedDay, from: result).isRepeatedDay ?? false
 
-        // Searching backward within a month, look for the day from the month's last day (or from the start date, if it is earlier), not from where the weekday stages stopped: walking back from there can leave the month, and the next search step then skips the month before it. A day in a month has one weekday, so a mismatch is caught when the result is checked.
+        // When searching backward, look for the day from the last day of the month, or from the start date if it is earlier. Starting where the weekday stages stopped can move the search out of the month and skip the month before it. If the weekday doesn't match that day, the final check rejects the result.
         if comps.month != nil && direction == .backward && !dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay) {
             if let foundRange = dateInterval(of: .month, for: result) {
                 let lastInstant = foundRange.end - 1
