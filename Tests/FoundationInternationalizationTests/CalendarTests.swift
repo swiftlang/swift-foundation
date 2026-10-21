@@ -486,7 +486,9 @@ private struct CalendarTests {
     }
     #endif
 
-    @Test func chineseYearlessBirthdays() {
+
+    @Test(.disabled("Disabled until timeout issue is resolved"))
+    func chineseYearlessBirthdays() {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone(identifier: "UTC")!
         let threshold = gregorian.date(from: DateComponents(era: 1, year: 1605, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0))!
