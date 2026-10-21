@@ -13,6 +13,6 @@ Label numeric quantities with physical dimensions to allow locale-aware formatti
 - ``Dimension``
 
 
-### Time and Motion
+### Time and motion
 
 - ``UnitDuration``

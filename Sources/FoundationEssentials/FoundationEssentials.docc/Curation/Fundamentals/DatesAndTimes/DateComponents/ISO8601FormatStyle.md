@@ -26,7 +26,7 @@
 - ``timeZoneSeparator(_:)``
 - ``timeZone(separator:)``
 
-### Modfying date formatting
+### Modifying date formatting
 
 - ``year()``
 - ``month()``
@@ -47,6 +47,6 @@
 - ``init(from:)``
 - ``encode(to:)``
 
-### Hashing 
+### Hashing
 
 - ``hash(into:)``

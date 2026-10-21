@@ -17,7 +17,7 @@
 
 - ``evaluate(_:)``
 
-### Type Aliases
+### Supporting types
 
 - ``Element``
 - ``Output``

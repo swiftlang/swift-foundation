@@ -10,7 +10,7 @@ Compare dates and times, and perform calendar and time zone calculations.
 - ``DateInterval``
 - ``TimeInterval``
 
-### Calendrical Calculations
+### Calendrical calculations
 
 - ``DateComponents``
 - ``Calendar``

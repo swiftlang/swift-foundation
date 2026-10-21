@@ -10,6 +10,6 @@
 - ``lessThan``
 - ``lessThanOrEqual``
 
-### Initializers
+### Encoding and decoding
 
 - ``init(from:)``
