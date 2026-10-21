@@ -80,8 +80,7 @@ final class DatePatternFormatter : Sendable {
             case UInt8(ascii: "w"): components.insert(.weekOfYear)
             case UInt8(ascii: "W"): components.insert(.weekOfMonth)
             case UInt8(ascii: "E"), UInt8(ascii: "e"), UInt8(ascii: "c"): components.insert(.weekday)
-            case UInt8(ascii: "a"), UInt8(ascii: "H"), UInt8(ascii: "k"), UInt8(ascii: "K"), UInt8(ascii: "h"): components.insert(.hour)
-            case UInt8(ascii: "b"): components.formUnion([.hour, .minute, .second])
+            case UInt8(ascii: "a"), UInt8(ascii: "b"), UInt8(ascii: "H"), UInt8(ascii: "k"), UInt8(ascii: "K"), UInt8(ascii: "h"): components.insert(.hour)
             case UInt8(ascii: "m"): components.insert(.minute)
             case UInt8(ascii: "s"): components.insert(.second)
             default: break
@@ -401,7 +400,8 @@ final class DatePatternFormatter : Sendable {
             locale.dayPeriod(components.hour < 12 ? 0 : 1, width: width).append(to: &bytes)
         case UInt8(ascii: "b"):
             // Noon only when it's exactly noon as displayed. ICU never prints midnight.
-            if components.hour == 12 && (components.minute == 0 || !patternShows(UInt8(ascii: "m"))) && (components.second == 0 || !patternShows(UInt8(ascii: "s"))) {
+            // Minutes and seconds the pattern doesn't show are 0.
+            if components.hour == 12 && components.minute == 0 && components.second == 0 {
                 let noon = locale.dayPeriod(2, width: count == 5 ? .narrow : count == 4 || count > 5 ? .wide : .abbreviated)
                 if !noon.isEmpty {
                     noon.append(to: &bytes)
@@ -483,19 +483,6 @@ final class DatePatternFormatter : Sendable {
             return nil
         }
         return true
-    }
-
-    /// Whether `letter` appears outside quoted text anywhere in the pattern.
-    private func patternShows(_ letter: UInt8) -> Bool {
-        var inQuote = false
-        for byte in pattern.utf8 {
-            if byte == UInt8(ascii: "'") {
-                inQuote.toggle()
-            } else if byte == letter && !inQuote {
-                return true
-            }
-        }
-        return false
     }
 
     /// Appends the time zone's identifier, writing an offset zone such as "GMT+0530" as ICU does, "GMT+05:30".
