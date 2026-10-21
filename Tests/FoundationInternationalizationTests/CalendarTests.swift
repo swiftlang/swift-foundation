@@ -1319,6 +1319,38 @@ private struct CalendarTests {
         #expect(dateComponents.year == regeneratedDateComponents.year)
     }
 
+    @Test(arguments: [
+        // January 1, 2027 belongs to week-year 2026. Searching forward must reach week-year 2027.
+        (
+            DateComponents(year: 2027, month: 5, day: 2, hour: 9, minute: 0, second: 0, yearForWeekOfYear: 2027),
+            Date(timeIntervalSince1970: 1791504000), // 2026-10-09 00:00:00 GMT
+            Calendar.SearchDirection.forward,
+            Date(timeIntervalSince1970: 1809248400) // 2027-05-02 09:00:00 GMT
+        ),
+        // A backward search must include the days of week-year 2027 that fall in civil year 2028.
+        (
+            DateComponents(year: 2028, month: 1, day: 1, hour: 9, minute: 0, second: 0, yearForWeekOfYear: 2027),
+            Date(timeIntervalSince1970: 1886198400), // 2029-10-09 00:00:00 GMT
+            Calendar.SearchDirection.backward,
+            Date(timeIntervalSince1970: 1830330000) // 2028-01-01 09:00:00 GMT
+        ),
+        // Keep the existing behavior when January 1 already belongs to the requested week-year.
+        (
+            DateComponents(year: 2025, month: 5, day: 2, hour: 9, minute: 0, second: 0, yearForWeekOfYear: 2025),
+            Date(timeIntervalSince1970: 1728432000), // 2024-10-09 00:00:00 GMT
+            Calendar.SearchDirection.forward,
+            Date(timeIntervalSince1970: 1746176400) // 2025-05-02 09:00:00 GMT
+        ),
+    ])
+    func nextDateMatchingYearForWeekOfYear(components: DateComponents, start: Date, direction: Calendar.SearchDirection, expected: Date) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+
+        #expect(calendar.nextDate(after: start, matching: components, matchingPolicy: .strict, direction: direction) == expected)
+    }
+
     @Test func dateFromComponents() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
