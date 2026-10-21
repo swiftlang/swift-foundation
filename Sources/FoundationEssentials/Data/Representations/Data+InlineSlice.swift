@@ -102,6 +102,7 @@ extension Data {
             if !isKnownUniquelyReferenced(&storage) {
                 storage = storage.mutableCopy(self.range)
             }
+            storage.ensureUniqueBufferReference()
         }
         
         @inlinable // This is @inlinable as trivially computable.
