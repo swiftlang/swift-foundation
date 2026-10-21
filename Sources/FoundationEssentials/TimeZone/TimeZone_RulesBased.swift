@@ -20,7 +20,7 @@ package final class _TimeZoneRulesBased: _TimeZoneProtocol, Sendable {
 
     /// Creates a time zone from the built-in data. Returns nil if there is no data for `identifier`.
     required package init?(identifier: String) {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || FOUNDATION_BUILTIN_TIMEZONE_DATA
         guard let rules = _timeZoneRules(forIdentifier: identifier) else {
             return nil
         }

@@ -243,7 +243,7 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 fixedTimeZones[identifier] = innerTZ
                 return innerTZ
             } else {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || FOUNDATION_BUILTIN_TIMEZONE_DATA
                 // Without ICU, fall back to the built-in time zone data
                 let innerTz: (any _TimeZoneProtocol)?
                 if let icuClass = _timeZoneICUClass() {
