@@ -31,7 +31,7 @@ final class DatePatternFormatter : Sendable {
     let capitalizationContext: FormatStyleCapitalizationContext
     let caseLanguage: CaseLanguage
     /// The calendar components the pattern's fields read.
-    let components: Calendar.ComponentSet
+    let componentSet: Calendar.ComponentSet
     /// The locale's localized GMT format, for patterns with `O` or `Z` fields.
     let localizedGMT: LocalizedGMTFormat?
     /// The whole output for a calendar the data has no names for, such as `japanese_CALENDAR_IS_UNSUPPORTED`.
@@ -54,7 +54,7 @@ final class DatePatternFormatter : Sendable {
         calendar.minimumDaysInFirstWeek = info.minimumDaysInFirstWeek
         calendar.timeZone = TimeZone(identifier: info.timeZoneIdentifier) ?? .gmt
         self.calendar = calendar
-        components = Self.components(for: info.pattern)
+        componentSet = Self.components(for: info.pattern)
         localizedGMT = info.pattern.utf8.contains { $0 == UInt8(ascii: "O") || $0 == UInt8(ascii: "Z") } ? LocalizedGMTFormat(locale) : nil
     }
 
@@ -166,7 +166,7 @@ final class DatePatternFormatter : Sendable {
         guard !date.timeIntervalSinceReferenceDate.isNaN else {
             return false
         }
-        var values = FieldValues(date: date, calendar: calendar, components: components)
+        let components = componentSet.isEmpty ? Components() : Components(calendar._dateComponents(componentSet, from: date))
         // A local, because a span can't borrow from a class property.
         let patternString = pattern
         let pattern = patternString.utf8Span.span
@@ -192,7 +192,7 @@ final class DatePatternFormatter : Sendable {
                     end += 1
                 }
                 let start = output.bytes.count
-                guard let recordsField = appendField(byte, count: end - i, &values, to: &output.bytes) else {
+                guard let recordsField = appendField(byte, count: end - i, date, components, to: &output.bytes) else {
                     return false
                 }
                 // Capitalize the first field, unless text comes before it.
@@ -335,7 +335,7 @@ final class DatePatternFormatter : Sendable {
     /// Appends one field, a run of `count` copies of `letter`.
     ///
     /// Returns whether the field gets a position, or nil where ICU would fail.
-    private func appendField(_ letter: UInt8, count: Int, _ values: inout FieldValues, to bytes: inout [UInt8]) -> Bool? {
+    private func appendField(_ letter: UInt8, count: Int, _ date: Date, _ components: Components, to bytes: inout [UInt8]) -> Bool? {
         guard Self.isSupported(letter, count: count) else {
             bytes.append(contentsOf: repeatElement(letter, count: count))
             bytes.append(contentsOf: "_IS_UNSUPPORTED".utf8)
@@ -344,40 +344,40 @@ final class DatePatternFormatter : Sendable {
         switch letter {
         case UInt8(ascii: "y"), UInt8(ascii: "U"):
             // Gregorian has no cyclic year names, so `U` is the year.
-            appendYear(values.components.year, count: count, to: &bytes)
+            appendYear(components.year, count: count, to: &bytes)
         case UInt8(ascii: "Y"):
-            appendYear(values.components.yearForWeekOfYear, count: count, to: &bytes)
+            appendYear(components.yearForWeekOfYear, count: count, to: &bytes)
         case UInt8(ascii: "u"), UInt8(ascii: "r"):
-            appendNumber(values.extendedYear, minimumDigits: count, to: &bytes)
+            appendNumber(components.extendedYear, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "G"):
-            locale.era(values.components.era, width: count == 5 ? .narrow : count == 4 ? .wide : .abbreviated).append(to: &bytes)
+            locale.era(components.era, width: count == 5 ? .narrow : count == 4 ? .wide : .abbreviated).append(to: &bytes)
         case UInt8(ascii: "M"), UInt8(ascii: "L"):
             let context: DateFormatNameContext = letter == UInt8(ascii: "M") ? .format : .standalone
             switch count {
-            case 3: locale.month(values.components.month, context: context, width: .abbreviated).append(to: &bytes)
-            case 4: locale.month(values.components.month, context: context, width: .wide).append(to: &bytes)
-            case 5: locale.month(values.components.month, context: context, width: .narrow).append(to: &bytes)
-            default: appendNumber(values.components.month, minimumDigits: count, to: &bytes)
+            case 3: locale.month(components.month, context: context, width: .abbreviated).append(to: &bytes)
+            case 4: locale.month(components.month, context: context, width: .wide).append(to: &bytes)
+            case 5: locale.month(components.month, context: context, width: .narrow).append(to: &bytes)
+            default: appendNumber(components.month, minimumDigits: count, to: &bytes)
             }
         case UInt8(ascii: "d"):
             if numbers.usesHanidays {
                 // Spell out the day, without padding.
-                DateFormatNumbers.hanidaysDay(values.components.day).append(to: &bytes)
+                DateFormatNumbers.hanidaysDay(components.day).append(to: &bytes)
             } else {
-                appendNumber(values.components.day, minimumDigits: count, to: &bytes)
+                appendNumber(components.day, minimumDigits: count, to: &bytes)
             }
         case UInt8(ascii: "D"):
-            appendNumber(values.components.dayOfYear, minimumDigits: count, to: &bytes)
+            appendNumber(components.dayOfYear, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "F"):
-            appendNumber(values.components.weekdayOrdinal, minimumDigits: count, to: &bytes)
+            appendNumber(components.weekdayOrdinal, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "w"):
-            appendNumber(values.components.weekOfYear, minimumDigits: count, to: &bytes)
+            appendNumber(components.weekOfYear, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "W"):
-            appendNumber(values.components.weekOfMonth, minimumDigits: count, to: &bytes)
+            appendNumber(components.weekOfMonth, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "E"), UInt8(ascii: "e"), UInt8(ascii: "c"):
             if count < 3 && letter != UInt8(ascii: "E") {
                 // ICU doesn't pad `cc`.
-                appendNumber(values.localWeekday(firstWeekday: calendar.firstWeekday), minimumDigits: letter == UInt8(ascii: "c") ? 1 : count, to: &bytes)
+                appendNumber(components.localWeekday(firstWeekday: calendar.firstWeekday), minimumDigits: letter == UInt8(ascii: "c") ? 1 : count, to: &bytes)
             } else {
                 let width: DateFormatNameWidth = switch count {
                 case 4: .wide
@@ -385,10 +385,10 @@ final class DatePatternFormatter : Sendable {
                 case 6: .short
                 default: .abbreviated
                 }
-                locale.weekday(values.components.weekday, context: letter == UInt8(ascii: "c") ? .standalone : .format, width: width).append(to: &bytes)
+                locale.weekday(components.weekday, context: letter == UInt8(ascii: "c") ? .standalone : .format, width: width).append(to: &bytes)
             }
         case UInt8(ascii: "Q"), UInt8(ascii: "q"):
-            let quarter = (values.components.month - 1) / 3 + 1
+            let quarter = (components.month - 1) / 3 + 1
             let context: DateFormatNameContext = letter == UInt8(ascii: "Q") ? .format : .standalone
             switch count {
             case 1, 2: appendNumber(quarter, minimumDigits: count, to: &bytes)
@@ -398,10 +398,9 @@ final class DatePatternFormatter : Sendable {
             }
         case UInt8(ascii: "a"):
             let width: DateFormatNameWidth = count == 4 ? .wide : count == 5 ? .narrow : .abbreviated
-            locale.dayPeriod(values.components.hour < 12 ? 0 : 1, width: width).append(to: &bytes)
+            locale.dayPeriod(components.hour < 12 ? 0 : 1, width: width).append(to: &bytes)
         case UInt8(ascii: "b"):
             // Noon only when it's exactly noon as displayed. ICU never prints midnight.
-            let components = values.components
             if components.hour == 12 && (components.minute == 0 || !patternShows(UInt8(ascii: "m"))) && (components.second == 0 || !patternShows(UInt8(ascii: "s"))) {
                 let noon = locale.dayPeriod(2, width: count == 5 ? .narrow : count == 4 || count > 5 ? .wide : .abbreviated)
                 if !noon.isEmpty {
@@ -409,24 +408,24 @@ final class DatePatternFormatter : Sendable {
                     return true
                 }
             }
-            return appendField(UInt8(ascii: "a"), count: count, &values, to: &bytes)
+            return appendField(UInt8(ascii: "a"), count: count, date, components, to: &bytes)
         case UInt8(ascii: "H"):
-            appendNumber(values.components.hour, minimumDigits: count, to: &bytes)
+            appendNumber(components.hour, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "k"):
-            let hour = values.components.hour
+            let hour = components.hour
             appendNumber(hour == 0 ? 24 : hour, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "K"):
-            appendNumber(values.components.hour % 12, minimumDigits: count, to: &bytes)
+            appendNumber(components.hour % 12, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "h"):
-            let hour = values.components.hour % 12
+            let hour = components.hour % 12
             appendNumber(hour == 0 ? 12 : hour, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "m"):
-            appendNumber(values.components.minute, minimumDigits: count, to: &bytes)
+            appendNumber(components.minute, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "s"):
-            appendNumber(values.components.second, minimumDigits: count, to: &bytes)
+            appendNumber(components.second, minimumDigits: count, to: &bytes)
         case UInt8(ascii: "S"):
             // Fractional seconds are whole milliseconds, left-justified.
-            var milliseconds = values.millisecond
+            var milliseconds = Self.millisecond(for: date)
             if count == 1 {
                 milliseconds /= 100
             } else if count == 2 {
@@ -437,22 +436,22 @@ final class DatePatternFormatter : Sendable {
                 appendNumber(0, minimumDigits: count - 3, to: &bytes)
             }
         case UInt8(ascii: "A"):
-            appendNumber(values.millisecondsInDay, minimumDigits: count, to: &bytes)
+            appendNumber(millisecondsInDay(for: date), minimumDigits: count, to: &bytes)
         case UInt8(ascii: "g"):
-            appendNumber(values.julianDay, minimumDigits: count, to: &bytes)
+            appendNumber(julianDay(for: date), minimumDigits: count, to: &bytes)
         case UInt8(ascii: "Z"):
             switch count {
             case 1...3:
-                return appendISOOffset(values.offset, basic: true, utcIndicator: false, short: false, ignoresSeconds: false, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: true, utcIndicator: false, short: false, ignoresSeconds: false, to: &bytes)
             case 5:
-                return appendISOOffset(values.offset, basic: false, utcIndicator: true, short: false, ignoresSeconds: false, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: false, utcIndicator: true, short: false, ignoresSeconds: false, to: &bytes)
             default:
-                return appendLocalizedGMT(values.offset, short: false, to: &bytes)
+                return appendLocalizedGMT(offset(for: date), short: false, to: &bytes)
             }
         case UInt8(ascii: "O"):
             switch count {
-            case 1: return appendLocalizedGMT(values.offset, short: true, to: &bytes)
-            case 4: return appendLocalizedGMT(values.offset, short: false, to: &bytes)
+            case 1: return appendLocalizedGMT(offset(for: date), short: true, to: &bytes)
+            case 4: return appendLocalizedGMT(offset(for: date), short: false, to: &bytes)
             default:
                 // ICU writes nothing, but still reports the field.
                 return true
@@ -461,15 +460,15 @@ final class DatePatternFormatter : Sendable {
             let utcIndicator = letter == UInt8(ascii: "X")
             switch count {
             case 1:
-                return appendISOOffset(values.offset, basic: true, utcIndicator: utcIndicator, short: true, ignoresSeconds: true, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: true, utcIndicator: utcIndicator, short: true, ignoresSeconds: true, to: &bytes)
             case 2:
-                return appendISOOffset(values.offset, basic: true, utcIndicator: utcIndicator, short: false, ignoresSeconds: true, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: true, utcIndicator: utcIndicator, short: false, ignoresSeconds: true, to: &bytes)
             case 3:
-                return appendISOOffset(values.offset, basic: false, utcIndicator: utcIndicator, short: false, ignoresSeconds: true, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: false, utcIndicator: utcIndicator, short: false, ignoresSeconds: true, to: &bytes)
             case 4:
-                return appendISOOffset(values.offset, basic: true, utcIndicator: utcIndicator, short: false, ignoresSeconds: false, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: true, utcIndicator: utcIndicator, short: false, ignoresSeconds: false, to: &bytes)
             case 5:
-                return appendISOOffset(values.offset, basic: false, utcIndicator: utcIndicator, short: false, ignoresSeconds: false, to: &bytes)
+                return appendISOOffset(offset(for: date), basic: false, utcIndicator: utcIndicator, short: false, ignoresSeconds: false, to: &bytes)
             default:
                 // ICU writes nothing, but still reports the field.
                 return true
@@ -705,87 +704,75 @@ final class DatePatternFormatter : Sendable {
 
 // MARK: - Field values
 
-/// The values a pattern's fields read.
-private struct FieldValues {
+extension DatePatternFormatter {
     /// Calendar components as plain integers.
     /// Components the pattern doesn't read are 0.
     struct Components {
         var era = 0, year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0, weekday = 0
         var weekdayOrdinal = 0, dayOfYear = 0, weekOfYear = 0, weekOfMonth = 0, yearForWeekOfYear = 0
-    }
 
-    let date: Date
-    let calendar: Calendar
-    let componentSet: Calendar.ComponentSet
-    private var _components: Components?
+        init() {}
 
-    init(date: Date, calendar: Calendar, components: Calendar.ComponentSet) {
-        self.date = date
-        self.calendar = calendar
-        componentSet = components
-    }
+        init(_ values: DateComponents) {
+            era = values.era ?? 0
+            year = values.year ?? 0
+            month = values.month ?? 0
+            day = values.day ?? 0
+            hour = values.hour ?? 0
+            minute = values.minute ?? 0
+            second = values.second ?? 0
+            weekday = values.weekday ?? 0
+            weekdayOrdinal = values.weekdayOrdinal ?? 0
+            dayOfYear = values.dayOfYear ?? 0
+            weekOfYear = values.weekOfYear ?? 0
+            weekOfMonth = values.weekOfMonth ?? 0
+            yearForWeekOfYear = values.yearForWeekOfYear ?? 0
+        }
 
-    var components: Components {
-        mutating get {
-            if let _components {
-                return _components
-            }
-            let values = calendar._dateComponents(componentSet, from: date)
-            let components = Components(era: values.era ?? 0, year: values.year ?? 0, month: values.month ?? 0, day: values.day ?? 0,
-                                        hour: values.hour ?? 0, minute: values.minute ?? 0, second: values.second ?? 0, weekday: values.weekday ?? 0,
-                                        weekdayOrdinal: values.weekdayOrdinal ?? 0, dayOfYear: values.dayOfYear ?? 0, weekOfYear: values.weekOfYear ?? 0,
-                                        weekOfMonth: values.weekOfMonth ?? 0, yearForWeekOfYear: values.yearForWeekOfYear ?? 0)
-            _components = components
-            return components
+        /// The year counted without eras: 1 BC is 0, 2 BC is -1.
+        var extendedYear: Int {
+            era == 0 ? 1 - year : year
+        }
+
+        /// The weekday counted from the calendar's first weekday, starting at 1.
+        func localWeekday(firstWeekday: Int) -> Int {
+            (weekday - firstWeekday + 7) % 7 + 1
         }
     }
 
     /// The Julian day of 1970-01-01.
-    static let epochStartAsJulianDay: Int64 = 2_440_588
+    private static let epochStartAsJulianDay: Int64 = 2_440_588
 
     /// Milliseconds since 1970, rounded down and clamped to Julian day ±0x7F000000.
-    var udateMilliseconds: Int64 {
-        let maxMilliseconds = Double((0x7F00_0000 - Self.epochStartAsJulianDay) * 86_400_000)
-        let minMilliseconds = Double((-0x7F00_0000 - Self.epochStartAsJulianDay) * 86_400_000)
+    private static func udateMilliseconds(for date: Date) -> Int64 {
+        let maxMilliseconds = Double((0x7F00_0000 - epochStartAsJulianDay) * 86_400_000)
+        let minMilliseconds = Double((-0x7F00_0000 - epochStartAsJulianDay) * 86_400_000)
         return Int64(min(max((date.timeIntervalSince1970 * 1000).rounded(.down), minMilliseconds), maxMilliseconds))
     }
 
-    var millisecond: Int {
-        let remainder = Int(udateMilliseconds % 1000)
+    private static func millisecond(for date: Date) -> Int {
+        let remainder = Int(udateMilliseconds(for: date) % 1000)
         return remainder < 0 ? remainder + 1000 : remainder
     }
 
     /// The offset from GMT in seconds.
-    var offset: Int {
+    private func offset(for date: Date) -> Int {
         calendar.timeZone.secondsFromGMT(for: date)
     }
 
-    var localMilliseconds: Int64 {
-        udateMilliseconds + Int64(offset) * 1000
+    private func localMilliseconds(for date: Date) -> Int64 {
+        Self.udateMilliseconds(for: date) + Int64(offset(for: date)) * 1000
     }
 
-    var millisecondsInDay: Int {
-        let remainder = Int(localMilliseconds % 86_400_000)
+    private func millisecondsInDay(for date: Date) -> Int {
+        let remainder = Int(localMilliseconds(for: date) % 86_400_000)
         return remainder < 0 ? remainder + 86_400_000 : remainder
     }
 
-    var julianDay: Int {
-        let milliseconds = localMilliseconds
+    private func julianDay(for date: Date) -> Int {
+        let milliseconds = localMilliseconds(for: date)
         let days = milliseconds >= 0 ? milliseconds / 86_400_000 : (milliseconds + 1) / 86_400_000 - 1
         return Int(days + Self.epochStartAsJulianDay)
-    }
-
-    /// The year counted without eras: 1 BC is 0, 2 BC is -1.
-    var extendedYear: Int {
-        mutating get {
-            let components = components
-            return components.era == 0 ? 1 - components.year : components.year
-        }
-    }
-
-    /// The weekday counted from the calendar's first weekday, starting at 1.
-    mutating func localWeekday(firstWeekday: Int) -> Int {
-        (components.weekday - firstWeekday + 7) % 7 + 1
     }
 }
 
