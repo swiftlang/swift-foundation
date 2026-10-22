@@ -7,4 +7,5 @@ updates:
     groups:
       swiftlang-actions:
         patterns:
+          - "swiftlang/github-workflows"
           - "swiftlang/github-workflows/*"
