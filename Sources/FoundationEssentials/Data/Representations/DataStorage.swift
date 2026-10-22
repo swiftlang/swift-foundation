@@ -43,7 +43,7 @@ internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
 
-    #if !DATA_LEGACY_ABI
+    #if !DATA_LEGACY_ABI || hasFeature(Embedded)
     @usableFromInline static let empty = __DataStorage.init(bytes: nil, length: 0)
     #endif
 
@@ -194,7 +194,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -220,7 +220,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)

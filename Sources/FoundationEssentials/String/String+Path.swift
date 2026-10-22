@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-internal import os
+import Darwin
 #elseif canImport(Android)
 @preconcurrency import Android
 #elseif canImport(Glibc)

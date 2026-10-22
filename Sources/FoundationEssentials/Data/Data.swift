@@ -299,7 +299,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
     @inline(__always)
     @export(implementation)
     public init(_ data: Data) {
-        #if DATA_LEGACY_ABI
+        #if DATA_LEGACY_ABI && !hasFeature(Embedded)
         switch data._representation {
         case .empty, .inline:
             self = data
@@ -465,7 +465,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.withUnsafeBytes(body)
     }
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @abi(func withUnsafeBytes<R>(_: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -547,7 +547,7 @@ public struct Data : RandomAccessCollection, MutableCollection, RangeReplaceable
         try _representation.withUnsafeMutableBytes(body)
     }
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @abi(mutating func withUnsafeMutableBytes<R>(_: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -1154,7 +1154,7 @@ extension Data {
     /// Returns `true` if the two `Data` arguments are equal.
     @inlinable // This is @inlinable as emission into clients is safe -- the concept of equality on Data will not change.
     public static func ==(d1 : Data, d2 : Data) -> Bool {
-        #if DATA_LEGACY_ABI
+        #if DATA_LEGACY_ABI && !hasFeature(Embedded)
         // See if both are empty
         switch (d1._representation, d2._representation) {
         case (.empty, .empty):

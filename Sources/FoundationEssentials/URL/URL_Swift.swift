@@ -12,7 +12,7 @@
 
 #if FOUNDATION_FRAMEWORK
 
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os
 #endif
 internal import _ForSwiftFoundation
@@ -156,12 +156,12 @@ internal final class _SwiftURL: Sendable, Hashable, Equatable {
         // "scheme:" as an absolute "scheme:" URL string.
         if URL.compatibility1 {
             if filePath.utf8.starts(with: "file:".utf8) {
-                #if canImport(os)
+                #if canImport(os) && !hasFeature(Embedded)
                 URL.logger.fault("API MISUSE: URL(filePath:) called with a \"file:\" scheme. Input must only contain a path. Dropping \"file:\" scheme.")
                 #endif
                 filePath = String(filePath.dropFirst(5))._compressingSlashes()
             } else if filePath.utf8.starts(with: "http:".utf8) || filePath.utf8.starts(with: "https:".utf8) {
-                #if canImport(os)
+                #if canImport(os) && !hasFeature(Embedded)
                 URL.logger.fault("API MISUSE: URL(filePath:) called with an HTTP URL string. Using URL(string:) instead.")
                 #endif
                 guard let parseInfo = Self.parse(string: filePath, encodingInvalidCharacters: true) else {

@@ -164,7 +164,7 @@ extension Data : ContiguousBytes { }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeRawBufferPointer : ContiguousBytes {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
@@ -191,7 +191,7 @@ extension UnsafeRawBufferPointer : ContiguousBytes {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeMutableRawBufferPointer : ContiguousBytes {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
@@ -219,7 +219,7 @@ extension UnsafeMutableRawBufferPointer : ContiguousBytes {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
@@ -247,7 +247,7 @@ extension UnsafeBufferPointer : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
@@ -275,7 +275,7 @@ extension UnsafeMutableBufferPointer : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension EmptyCollection : ContiguousBytes where Element == UInt8 {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
@@ -303,7 +303,7 @@ extension EmptyCollection : ContiguousBytes where Element == UInt8 {
 // FIXME: When possible, expand conformance to `where Element : Trivial`.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
@@ -339,7 +339,7 @@ extension CollectionOfOne : ContiguousBytes where Element == UInt8 {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Slice : ContiguousBytes where Base : ContiguousBytes {
-    #if DATA_LEGACY_ABI
+    #if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
     @available(watchOS, obsoleted: 1.0)
