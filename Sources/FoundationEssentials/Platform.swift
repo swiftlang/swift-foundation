@@ -357,12 +357,9 @@ extension Platform {
 #if os(Android)
 // MARK: - Android System Properties
 extension Platform {
-    /// The longest value a system property can have, including the null terminator.
-    private static let systemPropertyValueMaxLength = 92
-
     /// The value of the Android system property `name`, or `nil` if the property isn't set.
     static func androidSystemProperty(_ name: String) -> String? {
-        withUnsafeTemporaryAllocation(of: CChar.self, capacity: systemPropertyValueMaxLength) { buffer in
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PROP_VALUE_MAX)) { buffer in
             guard let base = buffer.baseAddress, __system_property_get(name, base) > 0 else {
                 return nil
             }
