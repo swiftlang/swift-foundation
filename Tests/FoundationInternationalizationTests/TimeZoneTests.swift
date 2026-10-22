@@ -19,6 +19,10 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
+#if canImport(Android)
+import Android
+#endif
+
 extension Testing.Tag {
     @Tag static var timeZone: Self
 }
@@ -32,11 +36,14 @@ private struct TimeZoneTests {
     }
 
 #if os(Android)
+    // `localtime_r` reads the device's time zone on its own, so its offset is an independent answer.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TZ"] == nil))
-    func currentIsTheDeviceTimeZone() async throws {
-        let deviceTimeZone = try #require(Platform.androidSystemProperty("persist.sys.timezone"))
+    func currentMatchesLocaltime() async {
+        var now = time(nil)
+        var local = tm()
+        localtime_r(&now, &local)
         await usingCurrentInternationalizationPreferences {
-            #expect(TimeZone.current.identifier == deviceTimeZone)
+            #expect(TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: TimeInterval(now))) == local.tm_gmtoff)
         }
     }
 #endif
