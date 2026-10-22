@@ -217,15 +217,12 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
-    // https://github.com/swiftlang/swift-foundation/issues/2313
-    // With ISO-style week rules a month that starts on a Friday, Saturday or
-    // Sunday has a week 0. Components taken from a date in it must find that
-    // date again, quickly, instead of searching to the end of time.
+    // In ISO 8601, a month that starts on a Friday, Saturday, or Sunday has a week 0. Searching with the components of a day in week 0 must find that day quickly.
     @Test(arguments: [2, 3, 5, 8, 11])
     func testNextDateMatchingMonthAndWeekOfMonthZeroStaysInTheYear(month: Int) throws {
         var calendar = Calendar(identifier: .iso8601)
         calendar.timeZone = .gmt
-        // In 2026 these months start on a Friday, Saturday or Sunday, so the 1st is in week 0. Week 0 starts in the month before, which must not make the search skip to the next year.
+        // In 2026 these months start on a Friday, Saturday, or Sunday, so the 1st is in week 0. Week 0 starts in the previous month, and the search must not skip to the next year.
         let monthStart = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
         let start = try #require(calendar.date(byAdding: .day, value: -2, to: monthStart))
         let found = calendar.nextDate(after: start, matching: DateComponents(month: month, weekOfMonth: 0), matchingPolicy: .strict)
@@ -248,9 +245,7 @@ private struct GregorianCalendarTests {
         let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 9)))
         #expect(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents) == target)
 
-        // Week of month alone, both ways: week 0 is the first days of a month
-        // that has one — November 2026 forward from October, April 2028
-        // backward from June.
+        // Searching for week 0 alone finds the first days of the nearest month that has a week 0: November 2026 forward from October, and April 2028 backward from June.
         let weekZero = calendar.nextDate(after: start, matching: DateComponents(weekOfMonth: 0), matchingPolicy: .strict)
         #expect(weekZero == calendar.date(from: DateComponents(year: 2026, month: 11, day: 1)))
         let lastWeekZero = calendar.nextDate(after: try #require(calendar.date(from: DateComponents(year: 2028, month: 6, day: 5))), matching: DateComponents(weekOfMonth: 0), matchingPolicy: .strict, direction: .backward)
@@ -263,9 +258,7 @@ private struct GregorianCalendarTests {
         calendar.timeZone = .gmt
         calendar.firstWeekday = 2
         calendar.minimumDaysInFirstWeek = minimumDaysInFirstWeek
-        // Without .yearForWeekOfYear and .quarter, which have problems of their
-        // own: week-years that begin in the previous civil year, and the last
-        // day of a quarter reported as the next quarter.
+        // `.yearForWeekOfYear` and `.quarter` are left out: they don't find every day yet, for reasons not related to week 0.
         let full: Set<Calendar.Component> = [.year, .month, .day, .hour,
             .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .dayOfYear]
 
