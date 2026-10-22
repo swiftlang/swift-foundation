@@ -31,6 +31,16 @@ private struct TimeZoneTests {
         #expect(!tz.identifier.isEmpty)
     }
 
+#if os(Android)
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TZ"] == nil))
+    func currentIsTheDeviceTimeZone() async throws {
+        let deviceTimeZone = try #require(Platform.androidSystemProperty("persist.sys.timezone"))
+        await usingCurrentInternationalizationPreferences {
+            #expect(TimeZone.current.identifier == deviceTimeZone)
+        }
+    }
+#endif
+
     @Test func equality() async {
         await usingCurrentInternationalizationPreferences {
             let autoupdating = TimeZone.autoupdatingCurrent
