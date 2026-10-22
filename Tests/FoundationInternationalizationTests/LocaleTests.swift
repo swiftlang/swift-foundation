@@ -513,6 +513,43 @@ private struct LocaleTests {
         #expect(nilLanguage.script == nil)
         #expect(nilLanguage.region == nil)
     }
+
+#if !FOUNDATION_FRAMEWORK
+    @Test(arguments: [
+        // (language tag, Locale.current.identifier, Locale.preferredLanguages)
+        ("ru-RU", "ru_RU", ["ru-RU"]),
+        ("de-CH", "de_CH", ["de-CH"]),
+        ("es-419", "es_419", ["es-419"]),
+        ("sr-Latn-RS", "sr-Latn_RS", ["sr-Latn-RS"]),
+        ("zh-Hant-TW", "zh_TW", ["zh-Hant-TW"]),
+        ("zh-Hans-CN", "zh_CN", ["zh-Hans-CN"]),
+        ("iw-IL", "he_IL", ["he-IL"]),
+        ("en-US-u-fw-mon", "en_US@fw=mon", ["en-US-u-fw-mon"]),
+    ])
+    func currentFromLanguageTag(tag: String, identifier: String, languages: [String]) async {
+        let prefs = LocalePreferences(languageTag: tag)
+        #expect(prefs.languages == languages)
+        await usingCurrentInternationalizationPreferences {
+            LocaleCache.cache.resetCurrent(to: prefs)
+            #expect(Locale.current.identifier == identifier)
+        }
+    }
+
+    @Test(arguments: [
+        // (system properties, device language tag)
+        (["persist.sys.locale": "ru-RU", "persist.sys.language": "de", "ro.product.locale": "en-US"], "ru-RU"),
+        // The factory default applies until the user picks a language.
+        (["ro.product.locale": "en-US"], "en-US"),
+        // A device upgraded from Android 5 that kept its language.
+        (["persist.sys.language": "de", "persist.sys.country": "CH", "ro.product.locale": "en-US"], "de-CH"),
+        (["persist.sys.language": "es", "ro.product.locale": "en-US"], "es"),
+        (["ro.product.locale.language": "fr", "ro.product.locale.region": "CA"], "fr-CA"),
+        ([:], "en-US"),
+    ])
+    func androidLanguageTagOrder(properties: [String: String], tag: String) {
+        #expect(LocaleCache.androidLanguageTag { properties[$0] } == tag)
+    }
+#endif
 }
 
 @Suite("Locale Properties", .tags(.locale))
