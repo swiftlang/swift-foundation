@@ -217,21 +217,6 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
-    // The last day of each quarter was reported as the next quarter.
-    @Test(arguments: [2027, 2028])
-    func testQuarterOfEveryDay(year: Int) throws {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-
-        var day = try #require(calendar.date(from: DateComponents(year: year, month: 1, day: 1, hour: 12)))
-        while calendar.component(.year, from: day) == year {
-            let components = calendar.dateComponents([.month, .quarter], from: day)
-            let month = try #require(components.month)
-            #expect(components.quarter == (month - 1) / 3 + 1, "\(day)")
-            day += 86400
-        }
-    }
-
     @Test func testDateFromComponentsWeekOfMonth() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -304,6 +289,21 @@ private struct GregorianCalendarTests {
         test(Date(timeIntervalSince1970: -62135769600.0), expectedEra: 1, year: 1, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 7, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 1, isLeapMonth: false) // 0001-01-01T00:00:00Z
         test(Date(timeIntervalSince1970: 64092211200.0), expectedEra: 1, year: 4001, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: 4001, isLeapMonth: false)
         test(Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712, isLeapMonth: false)
+    }
+
+    // Each day reports the quarter of its month, including the last day of each quarter.
+    @Test(arguments: [2027, 2028])
+    func testQuarterOfEveryDay(year: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        var day = try #require(calendar.date(from: DateComponents(year: year, month: 1, day: 1, hour: 12)))
+        while calendar.component(.year, from: day) == year {
+            let components = calendar.dateComponents([.month, .quarter], from: day)
+            let month = try #require(components.month)
+            #expect(components.quarter == (month - 1) / 3 + 1, "\(day)")
+            day += 86400
+        }
     }
 
     // MARK: - Add
