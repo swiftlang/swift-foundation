@@ -59,6 +59,22 @@ private final class DataIOTests {
         }
     }
     
+    private static var isLinux: Bool {
+        #if os(Linux)
+        true
+        #else
+        false
+        #endif
+    }
+    
+    private static var isAndroid: Bool {
+        #if os(Android)
+        true
+        #else
+        false
+        #endif
+    }
+    
     // MARK: - Tests
     
     @Test func basicReadWrite() throws {
@@ -192,6 +208,21 @@ private final class DataIOTests {
         // Ensure that these files can still be read despite appearing to be empty
         let maps = try String(contentsOfFile: "/proc/self/maps", encoding: .utf8)
         #expect(!maps.isEmpty)
+    }
+
+    @Test(.enabled(if: isLinux || isAndroid, "This test is not applicable on this platform"))
+    func zeroSizeFileReadsEntireContents() throws {
+        // /proc/self/maps reports a size of 0, and read(2) can return fewer bytes than were asked for before reaching the end. The mappings are listed by ascending address and the main thread's stack sits at the top of the address space, so a read that stopped early does not reach it.
+        let path = "/proc/self/maps"
+        let reads = [
+            ("Data(contentsOf:)", String(decoding: try Data(contentsOf: URL(fileURLWithPath: path)), as: UTF8.self)),
+            ("String(contentsOfFile:)", try String(contentsOfFile: path, encoding: .utf8)),
+            ("FileManager.contents(atPath:)", String(decoding: try #require(FileManager.default.contents(atPath: path)), as: UTF8.self)),
+        ]
+        for (api, maps) in reads {
+            #expect(maps.contains("[stack]"), "\(api) stopped before the end of \(path)")
+            #expect(maps.hasSuffix("\n"), "\(api) stopped before the end of \(path)")
+        }
     }
 
     @Test
