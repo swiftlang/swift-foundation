@@ -1604,7 +1604,6 @@ private struct GregorianCalendarTests {
     func testNextDateBackwardFindsMatchingDay(components: Set<Calendar.Component>) throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-        // Searching backward from three days later with a day's own components must find that day.
         var day = try #require(calendar.date(from: DateComponents(year: 2027, month: 1, day: 1, hour: 9)))
         let end = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 31, hour: 9)))
         while day <= end {

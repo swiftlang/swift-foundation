@@ -1991,9 +1991,10 @@ extension Calendar {
             return result
         }
 
-        // Weekday ordinals split a month into groups of seven days (days 1–7, 8–14, and so on), so a full group has each weekday once. Search forward from the first day of the group, whatever the search direction, so the search stays in the group. `dateInterval(of: .weekdayOrdinal)` returns only one day, so compute the group's first day from the day of the month.
+        // Weekday ordinals split a month into groups of seven days (1–7, 8–14, and so on). Search forward from the first day of the group in both directions, so the search stays in the group.
         // The last group of a month has fewer than seven days, so it may not have the weekday. Then continue to the next group with this ordinal in the search direction.
         while true {
+            // `dateInterval(of: .weekdayOrdinal)` returns only one day, so compute the group's first day from the day of the month.
             guard let runStart = date(byAdding: .day, value: -((component(.day, from: result) - 1) % 7), to: startOfDay(for: result)) else {
                 throw CalendarEnumerationError.dateOutOfRange(.weekdayOrdinal, result)
             }
