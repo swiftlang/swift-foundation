@@ -84,14 +84,20 @@ fileprivate func chineseLocalDay(_ moment: Double, _ variant: ChineseCalendarVar
     Int((moment + variant.utcOffsetHours(atMoment: moment) / 24.0).rounded(.down))
 }
 
-// Winter solstice day on or after Dec 1 (chnsecal winterSolstice).
+// The day of the winter solstice: the last day before the local midnight at which the solar longitude reaches 270 degrees.
+// The search starts from the longitude, not from a date, because the solstice moves through the Gregorian calendar over the millennia.
 fileprivate func chineseWinterSolstice(_ gregorianYear: Int, _ variant: ChineseCalendarVariant) -> Int {
-    var day = _CalendarAstronomy.gregorianRataDie(gregorianYear, 12, 10)
-    while true {
-        let lon = _CalendarAstronomy.solarLongitude(at: chineseMidnight(day + 1, variant))
-        if lon >= 270.0 && lon < 350.0 { break }
-        day += 1
+    func reached(_ day: Int) -> Bool {
+        let longitude = _CalendarAstronomy.solarLongitude(at: chineseMidnight(day + 1, variant))
+        return longitude >= 270.0 && longitude < 350.0
     }
+    var day = _CalendarAstronomy.gregorianRataDie(gregorianYear, 12, 21)
+    // The sun moves about 0.9856 degrees a day.
+    var degreesPast = _CalendarAstronomy.solarLongitude(at: chineseMidnight(day + 1, variant)) - 270.0
+    if degreesPast >= 180.0 { degreesPast -= 360.0 } else if degreesPast < -180.0 { degreesPast += 360.0 }
+    day -= Int((degreesPast / 0.9856).rounded())
+    while reached(day - 1) { day -= 1 }
+    while !reached(day) { day += 1 }
     return day
 }
 

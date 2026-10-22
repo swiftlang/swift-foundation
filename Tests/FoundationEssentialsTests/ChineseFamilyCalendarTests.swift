@@ -459,6 +459,34 @@ private struct ChineseFamilyCalendarTests {
     }
 #endif
 
+    // Years outside the tables: a year with 13 months has one leap month, and each year ends on the day the next one starts.
+    @Test(arguments: identifiers, Array(stride(from: -46_999, through: 46_999, by: 467)))
+    func computedYearsAreWellFormed(_ identifier: Calendar.Identifier, _ relatedISOYear: Int) throws {
+        let variant = try Self.variant(identifier)
+        let year = _CalendarChinese.year(relatedISOYear: relatedISOYear, variant)
+        let next = _CalendarChinese.year(relatedISOYear: relatedISOYear + 1, variant)
+        #expect(year.monthCount == 12 || year.monthCount == 13)
+        #expect((year.monthCount == 13) == (year.leapMonthNumber != 0))
+        #expect(next.newYearRataDie == year.endRataDie)
+    }
+
+    // The winter solstice falls in month 11, which is a rule of the calendar. The test finds the solstice day from the solar longitude at Chinese midnight (UTC+8).
+    @Test(arguments: [1_700, 2_300] + Array(stride(from: 13_000, through: 46_000, by: 1_100)) + Array(stride(from: -46_000, through: -18_000, by: 1_100)))
+    func winterSolsticeIsInMonth11(_ gregorianYear: Int) {
+        func reachesSolstice(_ rataDie: Int) -> Bool {
+            let longitude = _CalendarAstronomy.solarLongitude(at: Double(rataDie) + 16.0 / 24.0)
+            return longitude >= 270.0 && longitude < 350.0
+        }
+        var day = _CalendarAstronomy.gregorianRataDie(gregorianYear, 12, 21)
+        // Far from the present the solstice is weeks from 21 December, so move by the distance in longitude first, at about one degree a day.
+        var degreesPast = _CalendarAstronomy.solarLongitude(at: Double(day) + 16.0 / 24.0) - 270.0
+        if degreesPast >= 180.0 { degreesPast -= 360.0 } else if degreesPast < -180.0 { degreesPast += 360.0 }
+        day -= Int(degreesPast)
+        while reachesSolstice(day - 1) { day -= 1 }
+        while !reachesSolstice(day) { day += 1 }
+        #expect(Self.calendar(.chinese).dateComponents([.month], from: Self.date(rataDie: day)).month == 11)
+    }
+
     // The class supports the Gregorian years from -46,999 to 46,999. A date past them has no fields and no range, ordinality, interval or add.
     @Test(arguments: identifiers, [3e12, -3e12, 2e12, -2e12])
     func datesPastTheLimitHaveNoAnswer(_ identifier: Calendar.Identifier, _ seconds: Double) {
@@ -483,8 +511,8 @@ private struct ChineseFamilyCalendarTests {
         #expect(calendar.date(byAdding: DateComponents(day: 1), to: date, wrappingComponents: false) != nil)
     }
 
-    // The first year past the limit has no date. Cycle 828 year 16 is the last supported year and cycle -739 year 38 is the first.
-    @Test(arguments: identifiers, [(828, 16, true), (828, 17, false), (-739, 38, true), (-739, 37, false)])
+    // The years past the limit have no date. The last year is cycle 828 year 16. The first is cycle -739 year 39, because year 38 starts 40 days before the limit.
+    @Test(arguments: identifiers, [(828, 16, true), (828, 17, false), (-739, 39, true), (-739, 38, false)])
     func yearsPastTheLimitHaveNoDate(_ identifier: Calendar.Identifier, _ row: (era: Int, year: Int, exists: Bool)) {
         let components = DateComponents(era: row.era, year: row.year, month: 1, day: 1)
         #expect((Self.calendar(identifier).date(from: components) != nil) == row.exists)
