@@ -291,7 +291,6 @@ private struct GregorianCalendarTests {
         test(Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712, isLeapMonth: false)
     }
 
-    // Each day reports the quarter of its month, including the last day of each quarter.
     @Test(arguments: [2027, 2028])
     func testQuarterOfEveryDay(year: Int) throws {
         var calendar = Calendar(identifier: .gregorian)
