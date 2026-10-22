@@ -15,7 +15,9 @@ internal import _FoundationCShims
 
 #if canImport(Darwin)
 import Darwin
+#if !hasFeature(Embedded)
 internal import MachO.dyld
+#endif
 
 fileprivate let _pageSize: Int = {
     Int(_platform_shims_vm_size())
@@ -360,6 +362,16 @@ extension Platform {
             return nil
         }
         return String(cString: cPath).standardizingPath
+#elseif canImport(Darwin) && hasFeature(Embedded)
+        // Embedded Swift has no MachO module (for _NSGetExecutablePath) and no FileManager.
+        // proc_pidpath returns an absolute path with symlinks resolved.
+        let size = 4 * Int(MAXPATHLEN) // PROC_PIDPATHINFO_MAXSIZE
+        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: size) { buffer -> String? in
+            guard proc_pidpath(getpid(), buffer.baseAddress!, UInt32(size)) > 0 else {
+                return nil
+            }
+            return String(cString: buffer.baseAddress!)
+        }
 #elseif canImport(Darwin)
         // Apple platforms, first check for env override
         #if os(macOS)

@@ -624,7 +624,7 @@ internal func foundation_swift_url_enabled() -> Bool { return true }
 internal func foundation_swift_url_v2_enabled() -> Bool { return true }
 #endif
 
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os
 #endif
 
@@ -643,7 +643,7 @@ internal import os
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "url")
     }()

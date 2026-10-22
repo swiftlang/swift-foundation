@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
 
 // Legacy ABI is only enabled on Darwin - other platforms do not use it
 import Darwin

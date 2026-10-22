@@ -45,10 +45,6 @@ let featureSettings: [SwiftSetting] = [
     .swiftLanguageMode(.v5)
 ]
 
-// Embedded builds do not use ICU, so they omit swift-foundation-icu and the targets which depend on it.
-// SwiftPM manifests cannot see the selected Swift SDK, so opt in with e.g. `SWIFT_FOUNDATION_EMBEDDED=1 swift build --swift-sdk <embedded sdk>`.
-let buildingForEmbedded = !(Context.environment["SWIFT_FOUNDATION_EMBEDDED"] ?? "").isEmpty
-
 var dependencies: [Package.Dependency] = []
 
 if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLocalDepsEnv.isEmpty {
@@ -65,14 +61,11 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 path: "\(root)/swift-collections"),
             .package(
                 name: "swift-syntax",
-                path: "\(root)/swift-syntax")
-        ]
-    if !buildingForEmbedded {
-        dependencies.append(
+                path: "\(root)/swift-syntax"),
             .package(
                 name: "swift-foundation-icu",
-                path: "\(root)/swift-foundation-icu"))
-    }
+                path: "\(root)/swift-foundation-icu")
+        ]
 } else {
     // These dependencies should match `update-checkout`
     // See `update-checkout-config.json` for the `main` branch-scheme
@@ -83,14 +76,11 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 exact: "1.7.3"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                branch: "main")
-        ]
-    if !buildingForEmbedded {
-        dependencies.append(
+                branch: "main"),
             .package(
                 url: "https://github.com/apple/swift-foundation-icu",
-                branch: "main"))
-    }
+                branch: "main")
+        ]
 }
 
 let wasiLibcCSettings: [CSetting] = [
@@ -261,13 +251,3 @@ var package = Package(
         )
     ]
 )
-
-if buildingForEmbedded {
-    let icuDependentTargets: Set<String> = [
-        "_FoundationInternationalizationData",
-        "FoundationInternationalization",
-        "FoundationInternationalizationTests",
-    ]
-    package.products.removeAll { $0.name == "FoundationInternationalization" }
-    package.targets.removeAll { icuDependentTargets.contains($0.name) }
-}

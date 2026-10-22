@@ -405,7 +405,7 @@ extension TimeZone {
 
 extension TimeZone {
     internal static func dataFromTZFile(_ name: String) -> Data {
-#if NO_TZFILE || os(Windows) || os(WASI) || os(Emscripten)
+#if NO_TZFILE || os(Windows) || os(WASI) || os(Emscripten) || hasFeature(Embedded)
         return Data()
 #else
         let path = TZDIR + "/" + name

@@ -29,7 +29,7 @@ import _FoundationPlatformExtras
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import Synchronization
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os
 #endif
 #endif
@@ -192,7 +192,7 @@ extension _URL {
             }
             switch misuse {
             case .http:
-                #if canImport(os)
+                #if canImport(os) && !hasFeature(Embedded)
                 URL.logger.error("API MISUSE: URL(filePath:) called with an HTTP URL string. Using URL(string:) instead.")
                 #endif
                 // Drop any base URL since we have an HTTP scheme
@@ -202,7 +202,7 @@ extension _URL {
                 }
                 // Fall through to file path handling
             case .file(let compressed):
-                #if canImport(os)
+                #if canImport(os) && !hasFeature(Embedded)
                 URL.logger.error("API MISUSE: URL(filePath:) called with a \"file:\" scheme. Input must only contain a path. Dropping \"file:\" scheme.")
                 #endif
                 path = compressed
@@ -1186,7 +1186,7 @@ extension _URL {
             guard let fsRep else { return nil }
             var fileInfo = stat()
             guard lstat(fsRep, &fileInfo) == 0 else { return nil }
-            return (mode_t(fileInfo.st_mode) & S_IFMT) == S_IFDIR
+            return (mode_t(fileInfo.st_mode) & mode_t(S_IFMT)) == mode_t(S_IFDIR)
         }
         #endif
     }

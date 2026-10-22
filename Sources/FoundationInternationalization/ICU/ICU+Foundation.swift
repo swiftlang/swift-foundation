@@ -12,7 +12,7 @@
 
 internal import _FoundationICU
 
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os
 #endif
 
@@ -35,7 +35,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
         return String(cString: error)
     }
 
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "icu")
     }()
@@ -54,7 +54,7 @@ extension UErrorCode {
     }
 
     func checkSuccessAndLogError(_ message: @escaping @autoclosure () -> String) -> Bool {
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
         if !isSuccess {
             ICUError.logger.error("\(message()). Error: \(ICUError(code: self).debugDescription)")
         }
