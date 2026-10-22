@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -63,3 +65,5 @@ extension BinaryInteger {
         self = Self(parsed)
     }
 }
+
+#endif // !hasFeature(Embedded)

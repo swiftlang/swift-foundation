@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -754,3 +756,5 @@ public extension FormatStyle where Self == URL.FormatStyle {
 public extension ParseableFormatStyle where Self == URL.FormatStyle {
     static var url: Self { .init() }
 }
+
+#endif // !hasFeature(Embedded)

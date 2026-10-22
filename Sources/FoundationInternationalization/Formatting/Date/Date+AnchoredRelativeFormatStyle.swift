@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -274,3 +276,5 @@ extension Date {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

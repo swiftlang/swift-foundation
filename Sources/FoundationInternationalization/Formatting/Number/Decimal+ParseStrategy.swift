@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -180,4 +182,4 @@ public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Curre
     }
 }
 
-
+#endif // !hasFeature(Embedded)

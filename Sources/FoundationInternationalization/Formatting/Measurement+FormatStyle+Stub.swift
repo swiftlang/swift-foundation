@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !FOUNDATION_FRAMEWORK
 
 // stub
@@ -56,3 +58,5 @@ extension Measurement where UnitType: Dimension {
     }
 }
 #endif // !FOUNDATION_FRAMEWORK
+
+#endif // !hasFeature(Embedded)

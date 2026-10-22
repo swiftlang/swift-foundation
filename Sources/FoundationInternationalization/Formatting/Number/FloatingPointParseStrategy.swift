@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -106,3 +108,5 @@ public extension FloatingPointParseStrategy {
         self.lenient = lenient
     }
 }
+
+#endif // !hasFeature(Embedded)

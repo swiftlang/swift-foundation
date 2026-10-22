@@ -232,7 +232,6 @@ extension NSDateInterval : _HasCustomAnyHashableRepresentation {
 }
 #endif
 
-// Codable is unavailable in Embedded Swift.
 #if !hasFeature(Embedded)
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
 extension DateInterval : Codable {}

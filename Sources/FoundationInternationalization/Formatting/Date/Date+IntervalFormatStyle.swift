@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -201,3 +203,4 @@ extension Range where Bound == Date {
     
 }
 
+#endif // !hasFeature(Embedded)

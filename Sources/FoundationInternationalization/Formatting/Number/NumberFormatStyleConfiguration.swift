@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -1086,3 +1088,5 @@ extension CurrencyFormatStyleConfiguration.Presentation {
         return stem
     }
 }
+
+#endif // !hasFeature(Embedded)

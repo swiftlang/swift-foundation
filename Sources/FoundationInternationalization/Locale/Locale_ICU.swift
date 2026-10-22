@@ -221,6 +221,8 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             // `preferredLanguages` has not yet been canonicalized, and if we won't perform the bundle matching below (and have a preferred locale), we don't need to canonicalize the list up-front. We'll do so below on demand.
             var canonicalizedLocalizations: [String]?
 
+            // Embedded Swift has no Bundle, so there are no main bundle localizations to match.
+            #if !hasFeature(Embedded)
             if let preferredLocale, let preferredLanguages, performBundleMatching {
                 let mainBundle = Bundle.main
                 let availableLocalizations = mainBundle.localizations
@@ -228,6 +230,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
                 ident = Locale.localeIdentifierForCanonicalizedLocalizations(canonicalizedLocalizations!, preferredLanguages: preferredLanguages, preferredLocaleID: preferredLocale)
             }
+            #endif
 
             if ident == nil {
                 // Either we didn't need to match the locale identifier against the main bundle's localizations, or were unable to.
@@ -394,6 +397,13 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 return uloc_toLanguageTag(string, buffer, size, UBool.false, &status)
             }
 
+            #if hasFeature(Embedded)
+            // Embedded Swift has no _StringProcessing, so `replacing(_:with:)` is not available.
+            if let bcp47 {
+                let canonicalized = String(bcp47.map { $0 == "-" ? "_" : $0 })
+                result = canonicalized == "und" ? "root" : canonicalized
+            }
+            #else
             if let canonicalized = bcp47?.replacing("-", with: "_") {
                 if canonicalized == "und" {
                     result = canonicalized.replacing("und", with: "root")
@@ -401,6 +411,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                     result = canonicalized
                 }
             }
+            #endif
         }
         return result
     }
@@ -1708,6 +1719,7 @@ extension Locale {
 
     // MARK: -
 
+    #if !hasFeature(Embedded)
     /// Creates a new locale identifier by identifying the most preferred localization (using `canonicalizedLocalizations` and `preferredLanguages`) and then creating a locale based on the most preferred localization, while retaining any relevant attributes from `preferredLocaleID`.
     /// For example, if `canonicalizedLocalizations` is `[ "en", "fr", "de" ]`, `preferredLanguages` is `[ "ar-AE", "en-AE" ]`, `preferredLocaleID` is `ar_AE@numbers=arab;calendar=islamic-civil`, it will return `en_AE@calendar=islamic-civil`, i.e. the language will be matched to `en` since that’s the only available localization that matches, `calendar` will be retained since it’s language-agnostic, but `numbers` will be discarded because the `arab` numbering system is not valid for `en`.
     internal static func localeIdentifierForCanonicalizedLocalizations(_ canonicalizedLocalizations: [String], preferredLanguages: [String], preferredLocaleID: String) -> String? {
@@ -1740,6 +1752,7 @@ extension Locale {
 
         return nil
     }
+    #endif // !hasFeature(Embedded)
 
     static fileprivate func canonicalizeLocalizations(_ locs: [String]) -> [String] {
         locs.compactMap {

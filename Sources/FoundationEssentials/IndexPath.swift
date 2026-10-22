@@ -687,7 +687,6 @@ extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible, Cus
 }
 #endif
 
-// Codable is unavailable in Embedded Swift.
 #if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension IndexPath : Codable {

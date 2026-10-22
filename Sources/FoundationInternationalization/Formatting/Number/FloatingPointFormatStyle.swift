@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -872,3 +874,5 @@ extension RegexComponent where Self == FloatingPointFormatStyle<Double>.Percent 
         FloatingPointFormatStyle.Percent(locale: locale)
     }
 }
+
+#endif // !hasFeature(Embedded)

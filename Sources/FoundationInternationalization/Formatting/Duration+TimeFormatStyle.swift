@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -513,3 +515,5 @@ extension Duration.TimeFormatStyle : DiscreteFormatStyle {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

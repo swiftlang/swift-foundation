@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -545,3 +547,5 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
         return stem
     }
 }
+
+#endif // !hasFeature(Embedded)

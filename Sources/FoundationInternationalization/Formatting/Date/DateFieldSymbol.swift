@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -1539,3 +1541,5 @@ extension Date.FormatStyle.Symbol.TimeZone {
     /// The option for not including the symbol in the formatted output.
     public static let omitted: Self = .init(option: nil)
 }
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -351,3 +353,5 @@ private func setCapitalizationContext(_ context: FormatStyleCapitalizationContex
     unum_setContext(formatter, context.icuContext, &status)
     // status ignored, nothing to do on failure
 }
+
+#endif // !hasFeature(Embedded)

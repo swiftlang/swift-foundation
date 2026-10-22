@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -117,3 +119,5 @@ public extension IntegerParseStrategy {
         self.lenient = lenient
     }
 }
+
+#endif // !hasFeature(Embedded)

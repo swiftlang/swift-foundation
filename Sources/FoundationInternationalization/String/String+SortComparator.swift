@@ -9,6 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -289,3 +291,4 @@ extension SortComparator where Self == String.Comparator {
     }
 }
 
+#endif // !hasFeature(Embedded)

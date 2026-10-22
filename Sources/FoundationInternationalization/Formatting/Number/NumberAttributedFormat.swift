@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -72,3 +74,5 @@ extension AttributeScopes.FoundationAttributes.MeasurementAttribute.Component {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -770,3 +772,5 @@ extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
         return (smallestInterval, forceRoundingToFull)
     }
 }
+
+#endif // !hasFeature(Embedded)

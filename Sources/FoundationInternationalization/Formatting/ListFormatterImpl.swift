@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !FOUNDATION_LIST_FORMAT_ICU
 
 #if canImport(FoundationEssentials)
@@ -656,3 +658,5 @@ private func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
 }
 
 #endif // !FOUNDATION_LIST_FORMAT_ICU
+
+#endif // !hasFeature(Embedded)

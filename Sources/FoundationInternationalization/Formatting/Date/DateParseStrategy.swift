@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -179,3 +181,5 @@ extension RegexComponent where Self == Date.ParseStrategy {
 
 
 }
+
+#endif // !hasFeature(Embedded)

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -505,3 +507,5 @@ public extension FormatStyle where Self == Date.RelativeFormatStyle {
             .init(presentation: presentation, unitsStyle: unitsStyle)
     }
 }
+
+#endif // !hasFeature(Embedded)

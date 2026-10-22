@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -461,3 +463,5 @@ extension RegexComponent where Self == URL.ParseStrategy {
             fragment: fragment)
     }
 }
+
+#endif // !hasFeature(Embedded)

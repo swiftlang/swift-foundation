@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -426,3 +428,5 @@ extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Unit {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

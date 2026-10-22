@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -659,3 +661,5 @@ extension String {
             .joined()
     }
 }
+
+#endif // !hasFeature(Embedded)

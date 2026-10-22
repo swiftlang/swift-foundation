@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -228,3 +230,5 @@ extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
         base.input(after: input)
     }
 }
+
+#endif // !hasFeature(Embedded)

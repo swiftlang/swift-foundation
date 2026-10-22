@@ -2040,6 +2040,8 @@ internal final class _CalendarICU: _CalendarProtocol, @unchecked Sendable {
     }
 }
 
+// The calendar symbols come from ICUDateFormatter, which is not available in Embedded Swift.
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Calendar {
     private func symbols(for key: UDateFormatSymbolType) -> [String] {
@@ -2233,6 +2235,7 @@ extension Calendar {
     }
 
 }
+#endif // !hasFeature(Embedded)
 
 extension Calendar.Component {
     internal var icuFieldCode: UCalendarDateFields? {

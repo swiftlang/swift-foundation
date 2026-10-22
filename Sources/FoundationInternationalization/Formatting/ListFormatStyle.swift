@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -292,3 +294,5 @@ public extension FormatStyle {
         return style
     }
 }
+
+#endif // !hasFeature(Embedded)

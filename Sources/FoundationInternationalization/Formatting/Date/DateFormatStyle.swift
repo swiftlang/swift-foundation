@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -1597,3 +1599,5 @@ extension String {
         return attrstr
     }
 }
+
+#endif // !hasFeature(Embedded)

@@ -85,6 +85,8 @@ final class ICUPatternGenerator : @unchecked Sendable {
 
     static let _patternGeneratorCache = FormatterCache<PatternGeneratorInfo, ICUPatternGenerator?>()
 
+    // Date.FormatStyle is not available in Embedded Swift.
+    #if !hasFeature(Embedded)
     static func localizedPattern(symbols: Date.FormatStyle.DateFieldCollection, locale: Locale, calendar: Calendar) -> String {
         let skeleton = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
         guard let upatternGenerator = cachedPatternGenerator(localeIdentifier: locale.identifierCapturingPreferences, calendarIdentifier: calendar.identifier), let pattern = upatternGenerator._patternForSkeleton(skeleton) else {
@@ -93,6 +95,7 @@ final class ICUPatternGenerator : @unchecked Sendable {
 
         return pattern
     }
+    #endif
 
     static func cachedPatternGenerator(localeIdentifier: String, calendarIdentifier: Calendar.Identifier) -> ICUPatternGenerator? {
         let patternInfo = PatternGeneratorInfo(localeIdentifier: localeIdentifier, calendarIdentifier: calendarIdentifier)

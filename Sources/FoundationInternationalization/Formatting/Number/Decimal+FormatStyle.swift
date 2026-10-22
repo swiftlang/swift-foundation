@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -881,3 +883,5 @@ extension RegexComponent where Self == Decimal.FormatStyle.Currency {
         Decimal.FormatStyle.Currency(code: code.identifier, locale: locale)
     }
 }
+
+#endif // !hasFeature(Embedded)

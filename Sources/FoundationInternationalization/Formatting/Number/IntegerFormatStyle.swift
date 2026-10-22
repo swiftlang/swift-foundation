@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -1089,3 +1091,5 @@ extension RegexComponent where Self == IntegerFormatStyle<Int>.Currency {
         IntegerFormatStyle.Currency(code: code.identifier, locale: locale)
     }
 }
+
+#endif // !hasFeature(Embedded)
