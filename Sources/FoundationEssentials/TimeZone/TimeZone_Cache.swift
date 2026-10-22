@@ -154,6 +154,12 @@ struct TimeZoneCache : Sendable, ~Copyable {
             // WASI/Emscripten doesn't provide a way to get the current timezone for now, so
             // just return the default GMT timezone.
 #else
+#if os(Android)
+            // Android has no `TZDEFAULT` link, and `tm_zone` below is only an abbreviation that often names another zone or none. The device's time zone identifier is in this system property.
+            if let name = Platform.androidSystemProperty("persist.sys.timezone"), let result = fixed(name) {
+                return TimeZone(inner: result)
+            }
+#endif
             let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: Int(PATH_MAX + 1))
             defer { buffer.deallocate() }
             buffer.initialize(repeating: 0)
