@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 internal import CollectionsInternal
@@ -185,6 +187,9 @@ extension NotificationCenter {
             await withTaskCancellationHandler {
                 return await withUnsafeContinuation { (continuation: UnsafeContinuation<Message?, Never>) in
                     state.withLock { _state -> Resumption? in
+                        if _state.observer == nil {
+                            return Resumption(cancelling: [continuation])
+                        }
                         _state.continuations.append(continuation)
                         if _state.buffer.isEmpty {
                             return nil
@@ -199,3 +204,5 @@ extension NotificationCenter {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

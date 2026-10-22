@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_LIST_FORMAT_ICU
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -82,3 +84,5 @@ internal final class ICUListFormatter : @unchecked Sendable {
         return formatter
     }
 }
+
+#endif // FOUNDATION_LIST_FORMAT_ICU

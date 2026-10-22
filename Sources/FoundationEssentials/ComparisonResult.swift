@@ -36,6 +36,19 @@ public enum ComparisonResult : Int, Sendable {
 
 #endif // !FOUNDATION_FRAMEWORK
 
+extension ComparisonResult {
+    init<T: Comparable>(_ t1: T, _ t2: T) {
+        if t1 < t2 {
+            self = .orderedAscending
+        } else if t1 > t2 {
+            self = .orderedDescending
+        } else {
+            self = .orderedSame
+        }
+    }
+}
+
+#if !hasFeature(Embedded)
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 extension ComparisonResult : Codable {
     public func encode(to encoder: Encoder) throws {
@@ -52,3 +65,4 @@ extension ComparisonResult : Codable {
         self = value
     }
 }
+#endif

@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // IMPORTANT: Any changes to __PlistEncoderBPlist and its related types should be repeated for __PlistEncoderXML.
 // This code is duplicate for performance reasons, as use of `@_specialize` has not been able to completely replicate the benefits of manual duplication.
 
 private protocol _BPlistStringDictionaryEncodableMarker { }
 extension Dictionary : _BPlistStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
 
-internal import _FoundationCShims
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -818,7 +819,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             }
             
             let trailer = BPlistTrailer(
-                _unused: (0,0,0,0,0),
+                _unused0: 0, _unused1: 0, _unused2: 0, _unused3: 0, _unused4: 0,
                 _sortVersion: 0,
                 _offsetIntSize: offsetIntSize,
                 _objectRefSize: objectRefSize,
@@ -1251,3 +1252,5 @@ extension FixedWidthInteger {
         return UInt8(self.bitWidth/8 - leadingZeroBytes)
     }
 }
+
+#endif // !hasFeature(Embedded)

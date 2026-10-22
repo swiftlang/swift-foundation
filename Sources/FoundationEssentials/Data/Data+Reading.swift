@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -29,6 +31,8 @@ import CRT
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 #if FOUNDATION_FRAMEWORK && NO_FILESYSTEM
@@ -65,7 +69,7 @@ private func readExtendedAttributesFromFileDescriptor(_ fd: Int32, attrsToRead: 
                     // ERANGE indicates that the buffer was too small
                     // Get its needed size (passing nil buffer)
                     let neededSize = _fgetxattr(fd, keyStr, nil, 0, 0, 0)
-                    let fullBuffer = malloc(neededSize)!
+                    let fullBuffer = Platform.malloc(neededSize)!
                     if _fgetxattr(fd, keyStr, fullBuffer, neededSize, 0, 0) != neededSize {
                         // If still an error, then give up
                         free(fullBuffer)
@@ -283,7 +287,7 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
             }
         }))
     } else {
-        guard let ptr: UnsafeMutableRawPointer = malloc(Int(szFileSize)) else {
+        guard let ptr: UnsafeMutableRawPointer = Platform.malloc(Int(szFileSize)) else {
             throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
         let buffer = UnsafeMutableRawBufferPointer(start: ptr, count: Int(szFileSize))
@@ -366,7 +370,7 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
     let localProgress = (reportProgress && Progress.current() != nil) ? Progress(totalUnitCount: Int64(fileSize)) : nil
     
     if fileSize == 0 {
-        #if os(Linux) || os(Android)
+        #if os(Linux) || os(Android) || os(WASI)
         // Some files report a size of 0 but still have contents. read(2) may return fewer bytes than requested before EOF, so read until it returns 0.
         let chunkSize = 1024 * 4
         guard var ptr = malloc(chunkSize) else {
@@ -434,7 +438,7 @@ internal func readBytesFromFile(path inPath: borrowing some FileSystemRepresenta
 #endif
     } else {
         // We've verified above that fileSize will fit in `Int`
-        guard let bytes = malloc(Int(fileSize)) else {
+        guard let bytes = Platform.malloc(Int(fileSize)) else {
             throw CocoaError.errorWithFilePath(inPath, errno: ENOMEM, reading: true)
         }
         let buffer = UnsafeMutableRawBufferPointer(start: bytes, count: Int(fileSize))
@@ -586,3 +590,5 @@ extension Data {
         self = try readDataFromFile(path: path, reportProgress: reportProgress, maxLength: nil, options: options)
     }
 }
+
+#endif // !hasFeature(Embedded)

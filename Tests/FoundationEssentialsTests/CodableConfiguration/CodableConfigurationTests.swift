@@ -38,6 +38,39 @@ struct CodableConfigurationTests {
         let sut = try decoder.decode(UsingCodableConfiguration.self, from: jsonData)
         #expect(sut.testObject == nil)
     }
+
+    @Test
+    func decodeIfPresentKeyed_succeedsForNull() async throws {
+        let json = "{\"testObject\":null,\"testObject2\":null}"
+        let jsonData = try #require(json.data(using: .utf8))
+
+        let decoder = JSONDecoder()
+        let sut = try decoder.decode(UsingDecodeIfPresent.self, from: jsonData)
+        #expect(sut.testObject == nil)
+        #expect(sut.testObject2 == nil)
+    }
+
+    @Test
+    func decodeIfPresentKeyed_succeedsForMissingKey() async throws {
+        let json = "{}"
+        let jsonData = try #require(json.data(using: .utf8))
+
+        let decoder = JSONDecoder()
+        let sut = try decoder.decode(UsingDecodeIfPresent.self, from: jsonData)
+        #expect(sut.testObject == nil)
+        #expect(sut.testObject2 == nil)
+    }
+
+    @Test
+    func decodeIfPresentKeyed_succeedsForValue() async throws {
+        let json = "{\"testObject\":\"Hello There\",\"testObject2\":\"General Kenobi\"}"
+        let jsonData = try #require(json.data(using: .utf8))
+
+        let decoder = JSONDecoder()
+        let sut = try decoder.decode(UsingDecodeIfPresent.self, from: jsonData)
+        #expect(sut.testObject?.value == "Hello There")
+        #expect(sut.testObject2?.value == "General Kenobi")
+    }
 }
 
 private extension CodableConfigurationTests {
@@ -49,6 +82,26 @@ private extension CodableConfigurationTests {
     struct UsingCodableConfiguration: Codable {
         @CodableConfiguration(wrappedValue: nil, from: CustomConfig.self)
         var testObject: NonCodableType?
+    }
+
+    /// Type that decodes optional values by calling the keyed
+    /// `decodeIfPresent(_:forKey:configuration:)` APIs directly, covering both
+    /// the `DecodingConfigurationProviding` overload and the overload that takes
+    /// a configuration instance.
+    struct UsingDecodeIfPresent: Decodable {
+        let testObject: NonCodableType?
+        let testObject2: NonCodableType?
+
+        enum CodingKeys: String, CodingKey {
+            case testObject
+            case testObject2
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            testObject = try container.decodeIfPresent(NonCodableType.self, forKey: .testObject, configuration: CustomConfig.self)
+            testObject2 = try container.decodeIfPresent(NonCodableType.self, forKey: .testObject2, configuration: CustomConfig.decodingConfiguration)
+        }
     }
 
     /// Helper object allowing to decode Date using ISO8601 scheme

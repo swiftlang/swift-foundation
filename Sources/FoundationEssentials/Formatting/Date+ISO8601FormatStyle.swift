@@ -34,7 +34,7 @@ extension Date {
     /// ```swift
     /// let now = Date()
     /// print(now.formatted(Date.ISO8601FormatStyle().dateSeparator(.dash)))
-    /// // 2021-06-21T211015Z
+    /// // 2021-06-21T21:10:15Z
     /// ```
     ///
     ///
@@ -54,7 +54,7 @@ extension Date {
     /// ```
     public struct ISO8601FormatStyle : Sendable {
         /// A type describing the character separating the time and time zone of a date in an ISO 8601 date format.
-        public enum TimeZoneSeparator : String, Codable, Sendable {
+        public enum TimeZoneSeparator : String, Sendable {
             /// Use a colon (`:`) to separate the time zone components.
             case colon = ":"
             /// Omit the time zone separator.
@@ -62,7 +62,7 @@ extension Date {
         }
 
         /// A type describing the character separating year, month, and day components of a date in an ISO 8601 date format.
-        public enum DateSeparator : String, Codable, Sendable {
+        public enum DateSeparator : String, Sendable {
             /// Use a dash (`-`) to separate date components.
             case dash = "-"
             /// Omit the date separator.
@@ -70,7 +70,7 @@ extension Date {
         }
 
         /// Type describing the character separating the time components of a date in an ISO 8601 date format.
-        public enum TimeSeparator : String, Codable, Sendable {
+        public enum TimeSeparator : String, Sendable {
             /// Use a colon (`:`) to separate time components.
             case colon = ":"
             /// Omit the time separator.
@@ -78,7 +78,7 @@ extension Date {
         }
 
         /// Type describing the character separating the date and time components of a date in an ISO 8601 date format.
-        public enum DateTimeSeparator : String, Codable, Sendable {
+        public enum DateTimeSeparator : String, Sendable {
             /// Use a space to separate the date and time components.
             case space = " "
             /// Use the standard `T` separator between date and time components.
@@ -156,6 +156,7 @@ extension Date {
         
         // MARK: - Encoding
         
+#if !hasFeature(Embedded)
         public init(from decoder: any Decoder) throws {
             // Delegate to the DateComponents.ISO8601FormatStyle type
             componentsFormatStyle = try DateComponents.ISO8601FormatStyle(from: decoder)
@@ -165,6 +166,7 @@ extension Date {
             // Delegate to the DateComponents.ISO8601FormatStyle type
             try componentsFormatStyle.encode(to: encoder)
         }
+#endif
         
         public func hash(into hasher: inout Hasher) {
             hasher.combine(componentsFormatStyle)
@@ -184,12 +186,12 @@ extension Date {
         /// ```swift
         /// let aDate = Date()
         /// print(aDate.formatted(Date.ISO8601FormatStyle(dateSeparator: .omitted, dateTimeSeparator: .standard)))
-        /// // 20210622T172132Z
+        /// // 20210622T17:21:32Z
         ///
         /// if let centralStandardTimeZone = TimeZone(identifier: "CST") {
         ///    print(aDate.formatted(Date.ISO8601FormatStyle(dateSeparator: .dash, dateTimeSeparator: .space, timeZone: centralStandardTimeZone)))
         /// }
-        /// // 2021-06-22 122132-0500
+        /// // 2021-06-22 12:21:32-0500
         /// ```
         ///
         /// - Parameters:
@@ -358,12 +360,21 @@ extension Date.ISO8601FormatStyle : FormatStyle {
         }
 
         let secondsFromGMT: Int?
-        let components = componentsFormatStyle._calendar._dateComponents(whichComponents, from: value)
+        var components = componentsFormatStyle._calendar._dateComponents(whichComponents, from: value)
         if fields.contains(.timeZone) {
             secondsFromGMT = timeZone.secondsFromGMT(for: value)
         } else {
             secondsFromGMT = nil
         }
+
+        // A `Date` built from a fractional `TimeInterval` cannot represent that fraction exactly, so the calendar extracts a nanosecond that sits just below the intended value (.123 arrives as 122999906). Truncating that to milliseconds reads back .122. Rounding to the nearest millisecond recovers .123, which is the value the caller asked for.
+        //
+        // The rounding is clamped so it can never carry into the next second. Correcting representation error is the goal, and a fraction genuinely close to a full second (45.9999) should still format as 45.999 rather than advancing the second, minute, or day.
+        if includingFractionalSeconds, let ns = components.nanosecond {
+            let milliseconds = min(Int((Double(ns) / 1_000_000.0).rounded()), 999)
+            components.nanosecond = milliseconds * 1_000_000
+        }
+
         return format(components, appendingTimeZoneOffset: secondsFromGMT)
     }
 
@@ -462,6 +473,7 @@ extension Date.ISO8601FormatStyle: ParseableFormatStyle {
 
 // MARK: - Regex
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.ISO8601FormatStyle : CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
@@ -526,3 +538,18 @@ extension RegexComponent where Self == Date.ISO8601FormatStyle {
         return Date.ISO8601FormatStyle(dateSeparator: dateSeparator, timeZone: timeZone).year().month().day()
     }
 }
+#endif
+
+// Codable is unavailable in Embedded Swift.
+@_unavailableInEmbedded
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.TimeZoneSeparator : Codable {}
+@_unavailableInEmbedded
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.DateSeparator : Codable {}
+@_unavailableInEmbedded
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.TimeSeparator : Codable {}
+@_unavailableInEmbedded
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.ISO8601FormatStyle.DateTimeSeparator : Codable {}

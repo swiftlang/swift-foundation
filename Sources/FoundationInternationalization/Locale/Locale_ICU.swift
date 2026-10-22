@@ -24,10 +24,6 @@ internal import os
 internal import _FoundationICU
 internal import Synchronization
 
-#if canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
 #if !FOUNDATION_FRAMEWORK
 @_dynamicReplacement(for: _localeICUClass())
 private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
@@ -141,9 +137,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
     // MARK: - Logging
 #if FOUNDATION_FRAMEWORK
-    static private let log: SendableOSLog = {
-        .init(OSLog(subsystem: "com.apple.foundation", category: "locale"))
-    }()
+    static private let log = Logger(subsystem: "com.apple.foundation", category: "locale")
 #endif // FOUNDATION_FRAMEWORK
     
 #if FOUNDATION_FRAMEWORK
@@ -190,11 +184,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
         if let name {
             ident = Locale._canonicalLocaleIdentifier(from: name)
 #if FOUNDATION_FRAMEWORK
-            if Self.log.log.isEnabled(type: .debug) {
+            if Self.log.isEnabled(type: .debug) {
                 if let ident {
                     let components = Locale.Components(identifier: ident)
                     if components.languageComponents.region == nil {
-                        Logger(Self.log.log).debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
+                        Self.log.debug("Current locale fetched with overriding locale identifier '\(ident, privacy: .public)' which does not have a country code")
                     }
                 }
             }
@@ -219,7 +213,7 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
 
             #if FOUNDATION_FRAMEWORK
             if preferredLanguages == nil && (preferredLocale == nil || performBundleMatching) {
-                Logger(Self.log.log).debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
+                Self.log.debug("Lookup of 'AppleLanguages' from current preferences failed lookup (app preferences do not contain the key); likely falling back to default locale identifier as current")
             }
             #endif
 
@@ -252,18 +246,18 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                         // Country???
                         if let countryCode = prefs.country {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
+                            Self.log.debug("Locale.current constructing a locale identifier from preferred languages by combining with set country code '\(countryCode, privacy: .public)'")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: "\(languageIdentifier)_\(countryCode)")
                         } else {
                             #if FOUNDATION_FRAMEWORK
-                            Logger(Self.log.log).debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
+                            Self.log.debug("Locale.current constructing a locale identifier from preferred languages without a set country code")
                             #endif // FOUNDATION_FRAMEWORK
                             ident = Locale._canonicalLocaleIdentifier(from: languageIdentifier)
                         }
                     } else {
                         #if FOUNDATION_FRAMEWORK
-                        Logger(Self.log.log).debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
+                        Self.log.debug("Value for 'AppleLanguages' found in preferences contains no valid entries; falling back to default locale identifier as current")
                         #endif // FOUNDATION_FRAMEWORK
                     }
                 } else {
@@ -1599,24 +1593,27 @@ extension Locale {
     }
 
     internal static func identifierWithKeywordValue(_ identifier: String, key: ICULegacyKey, value: String) -> String {
-        var identifierWithKeywordValue: String?
-        withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(ULOC_FULLNAME_CAPACITY) + 1) { buffer in
-            guard let buf: UnsafeMutablePointer<CChar> = buffer.baseAddress else {
-                return
-            }
+        identifierWithKeywordValues(identifier, keyValues: [(key, value)])
+    }
+
+    internal static func identifierWithKeywordValues(_ identifier: String, keyValues: [(key: ICULegacyKey, value: String)]) -> String {
+        let newCapacity = max(Int(ULOC_FULLNAME_CAPACITY), identifier.utf8.count)
+        return String(unsafeUninitializedCapacity: newCapacity + 1) { buffer in
+            let buf = UnsafeMutableRawPointer(buffer.baseAddress!).assumingMemoryBound(to: CChar.self)
             var status = U_ZERO_ERROR
-            Platform.copyCString(dst: buf, src: identifier, size: Int(ULOC_FULLNAME_CAPACITY))
 
-            // TODO: This could probably be lifted out of ICU; it is mostly string concatenation
-            let len = uloc_setKeywordValue(key.key, value, buf, ULOC_FULLNAME_CAPACITY, &status)
-            if status.isSuccess && len > 0 {
-                let last = buf.advanced(by: Int(len))
-                last.pointee = 0
-                identifierWithKeywordValue = String(cString: buf)
+            var len = Platform.copyCString(dst: buf, src: identifier, size: newCapacity)
+
+            for (key, value) in keyValues {
+                guard status.isSuccess else { break }
+                let newLen = uloc_setKeywordValue(key.key, value, buf, Int32(newCapacity), &status)
+                if status.isSuccess && newLen > 0 {
+                    len = Int(newLen)
+                }
             }
-        }
 
-        return identifierWithKeywordValue ?? identifier
+            return len
+        }
     }
     // MARK: -
 

@@ -595,9 +595,9 @@ extension URL {
                         // host, it would remain in the final string, so fail now.
                         if containsInvalidASCII(host: host) { return false }
                     } else {
-                        // Don't allow an unterminated IP-literal for any scheme
+                        // Don't allow partial IP-literal brackets for any scheme.
                         assert(!host.isEmpty) // Validation failed, so host is non-empty
-                        if host[0] == UInt8(ascii: "[") { return false }
+                        if containsIPLiteralBracket(host: host) { return false }
                     }
                 }
                 flags.insert(.shouldEncodeHost)
@@ -764,7 +764,7 @@ extension URL {
             return false
         }
         if T.self == UInt8.self {
-            return memcmp(buffer.baseAddress!.advanced(by: pathStart), "/.file/id=", 10) == 0
+            return Platform.memcmp(buffer.baseAddress!.advanced(by: pathStart), "/.file/id=", 10) == 0
         }
         return (
             buffer[pathStart] == UInt8(ascii: "/") &&
@@ -822,7 +822,7 @@ extension URL {
             return false
         }
         if T.self == UInt8.self {
-            return memcmp(buffer.baseAddress!, "addressbook", 11) == 0
+            return Platform.memcmp(buffer.baseAddress!, "addressbook", 11) == 0
         }
         return (
             buffer[0] == UInt8(ascii: "a") &&
@@ -989,6 +989,10 @@ extension URL {
             func idnaEncodeHost(range: Range<Int>) -> Bool {
                 guard !range.isEmpty else { return true }
                 guard flush() else { return false }
+                #if hasFeature(Embedded)
+                // There is no IDNA hook in embedded mode.
+                return false
+                #else
                 guard let uidnaHook = _uidnaHook() else { return false }
                 let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
                     return uidnaHook.nameToASCII(
@@ -999,6 +1003,7 @@ extension URL {
                 guard success else { return false }
                 updateIndices(currentIndex: range.endIndex)
                 return true
+                #endif
             }
 
             // Returns false if there's not enough room in the output buffer.
@@ -1020,43 +1025,43 @@ extension URL {
 
             @inline(__always)
             func updateUserRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.userRange = start..<end
             }
 
             @inline(__always)
             func updatePasswordRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.passwordRange = start..<end
             }
 
             @inline(__always)
             func updateHostRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.hostRange = start..<end
             }
 
             @inline(__always)
             func updatePortRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.portRange = start..<end
             }
 
             @inline(__always)
             func updatePathRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.pathRange = start..<end
             }
 
             @inline(__always)
             func updateQueryRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.queryRange = start..<end
             }
 
             @inline(__always)
             func updateFragmentRange(_ start: Int, _ end: Int) {
-                guard updateRanges && extraBytesAdded != 0 else { return }
+                guard updateRanges else { return }
                 impl.pointee.fragmentRange = start..<end
             }
 
@@ -1112,7 +1117,7 @@ extension URL {
                             guard encode(range: copyEnd..<endBracketIndex, component: .hostIPvFuture) else { return false }
                         }
                         copyEnd += 1 // Include trailing "]"
-                    } else if updateRanges && flags.contains(.hasSpecialScheme) && _uidnaHook() != nil {
+                    } else if updateRanges && flags.contains(.hasSpecialScheme) && RFC3986Parser.supportsIDNA {
                         // Support IDNA-encoding for NSURL (updateRanges: true)
                         guard idnaEncodeHost(range: hostRange) else { return false }
                     } else {

@@ -14,11 +14,25 @@
 internal import _ForSwiftFoundation
 #endif
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
+#if !NO_FILESYSTEM
 fileprivate let stringEncodingAttributeName = "com.apple.TextEncoding"
+#endif
 
 #if !FOUNDATION_FRAMEWORK
+#if hasFeature(Embedded)
+// Embedded Swift doesn't support dynamic replacement.
+public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
+    return nil
+}
+
+package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
+    return nil
+}
+#else
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: UInt) -> String? {
     // Provide swift-corelibs-foundation with an entry point to convert some bytes into a String
@@ -29,6 +43,7 @@ dynamic package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>
     // Concrete implementation is provided by FoundationInternationalization.
     return nil
 }
+#endif
 #endif
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -175,17 +190,14 @@ extension String {
             self.init(decoding: bytes.lazy.map { UInt16($0) }, as: UTF16.self)
         case .macOSRoman:
             func buildString(_ bytes: UnsafeBufferPointer<UInt8>) -> String {
-                String(unsafeUninitializedCapacity: bytes.count * 3) { buffer in
-                    var next = 0
+                String(_capacity: bytes.count * 3) { buffer in
                     for byte in bytes {
                         if Unicode.ASCII.isASCII(byte) {
-                            buffer.initializeElement(at: next, to: byte)
-                            next += 1
+                            buffer.append(byte)
                         } else {
-                            next = buffer.suffix(from: next).initialize(fromContentsOf: byte.macRomanNonASCIIAsUTF8)
+                            buffer._append(copying: String.utf8(forMacRomanNonASCII: byte))
                         }
                     }
-                    return next
                 }
             }
             self = bytes.withContiguousStorageIfAvailable(buildString) ?? Array(bytes).withUnsafeBufferPointer(buildString)
@@ -229,7 +241,7 @@ extension String {
     }
 
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !hasFeature(Embedded)
     /// Produces a string created by reading data from the file at a given path interpreted using a given encoding.
     public init(contentsOfFile path: __shared String, encoding enc: Encoding) throws {
         let data = try Data(contentsOfFile: path)
@@ -435,7 +447,7 @@ internal func extendedAttributeData(for encoding: String.Encoding) -> Data? {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !hasFeature(Embedded)
     /// Writes the contents of the `String` to a file at a given path using a given encoding.
     public func write<T : StringProtocol>(toFile path: T, atomically useAuxiliaryFile: Bool, encoding enc: String.Encoding) throws {
         guard let data = data(using: enc) else {
@@ -449,7 +461,7 @@ extension StringProtocol {
             attributes = [:]
         }
 
-#if os(WASI)
+#if os(WASI) || os(Emscripten)
         guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
         let options : Data.WritingOptions = []
 #else
@@ -472,7 +484,7 @@ extension StringProtocol {
             attributes = [:]
         }
 
-#if os(WASI)
+#if os(WASI) || os(Emscripten)
         guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
         let options : Data.WritingOptions = []
 #else

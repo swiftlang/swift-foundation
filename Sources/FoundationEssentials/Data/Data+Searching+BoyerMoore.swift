@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
     func _searchBoyerMoore(_ needle: Span<UInt8>, in searchRange: Range<Index>, backwards: Bool) -> Range<Index>? {
@@ -227,3 +229,5 @@ extension Data {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

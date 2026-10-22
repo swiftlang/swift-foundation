@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 /// A protocol whose conformers provide a configuration instance to help encode types that don't support encoding by themselves.
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 public protocol EncodingConfigurationProviding {
@@ -114,7 +116,7 @@ public extension KeyedDecodingContainer {
         forKey key: Self.Key,
         configuration: C.Type
     ) throws -> T? where T.DecodingConfiguration == C.DecodingConfiguration {
-        if contains(key) {
+        if contains(key), try !decodeNil(forKey: key) {
             return try self.decode(T.self, forKey: key, configuration: configuration)
         } else {
             return nil
@@ -133,7 +135,7 @@ public extension KeyedDecodingContainer {
         forKey key: Self.Key,
         configuration: T.DecodingConfiguration
     ) throws -> T? {
-        if contains(key) {
+        if contains(key), try !decodeNil(forKey: key) {
             return try self.decode(T.self, forKey: key, configuration: configuration)
         } else {
             return nil
@@ -304,3 +306,5 @@ extension Array : DecodableWithConfiguration where Element : DecodableWithConfig
         self = result
     }
 }
+
+#endif // !hasFeature(Embedded)

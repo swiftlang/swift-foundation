@@ -532,6 +532,28 @@ public struct DateComponents : Hashable, Equatable, Sendable {
     }
 }
 
+extension DateComponents {
+    internal var _populatedComponentSet: Calendar.ComponentSet {
+        var result = Calendar.ComponentSet()
+        if era != nil { result.insert(.era) }
+        if year != nil { result.insert(.year) }
+        if month != nil { result.insert(.month) }
+        if day != nil { result.insert(.day) }
+        if hour != nil { result.insert(.hour) }
+        if minute != nil { result.insert(.minute) }
+        if second != nil { result.insert(.second) }
+        if weekday != nil { result.insert(.weekday) }
+        if weekdayOrdinal != nil { result.insert(.weekdayOrdinal) }
+        if weekOfMonth != nil { result.insert(.weekOfMonth) }
+        if weekOfYear != nil { result.insert(.weekOfYear) }
+        if yearForWeekOfYear != nil { result.insert(.yearForWeekOfYear) }
+        if nanosecond != nil { result.insert(.nanosecond) }
+        if dayOfYear != nil { result.insert(.dayOfYear) }
+        return result
+    }
+}
+
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
 
@@ -569,7 +591,9 @@ extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
     }
 }
+#endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension DateComponents : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -672,6 +696,7 @@ extension DateComponents : Codable {
         try container.encodeIfPresent(self.dayOfYear, forKey: .dayOfYear)
     }
 }
+#endif
 
 // MARK: - Bridging
 

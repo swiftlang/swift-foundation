@@ -10,74 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _FoundationCShims
+#if !hasFeature(Embedded)
+
 internal import Synchronization
 
 typealias BPlistObjectIndex = Int
+typealias BPlistDictionaryPair = (key: BPlistObjectIndex, value: BPlistObjectIndex)
 
-private enum BPlistTypeMarker: UInt8 {
-    case null = 0x00
-    case `false` = 0x08
-    case `true` = 0x09
-    case int = 0x10
-    case real = 0x20
-    case date = 0x33
-    case data = 0x40
-    case asciiString = 0x50
-    case utf16String = 0x60
-    case uid = 0x80
-    case array = 0xA0
-    case set = 0xC0
-    case dict = 0xD0
-    
-    init?(_ marker: UInt8) {
-        switch marker & 0xf0 {
-        case 0x00:
-            switch (marker) {
-            case Self.null.rawValue:
-                self = .null
-            case Self.false.rawValue:
-                self = .false
-            case Self.true.rawValue:
-                self = .true
-            default:
-                return nil
-            }
-        case Self.int.rawValue:
-            self = .int
-        case Self.real.rawValue:
-            self = .real
-        case Self.date.rawValue & 0xf0:
-            guard marker == Self.date.rawValue else {
-                return nil
-            }
-            self = .date
-        case Self.data.rawValue:
-            self = .data
-        case Self.asciiString.rawValue:
-            self = .asciiString
-        case Self.utf16String.rawValue:
-            self = .utf16String
-        case Self.uid.rawValue:
-            self = .uid
-        case Self.array.rawValue:
-            self = .array
-        case Self.set.rawValue:
-            self = .set
-        case Self.dict.rawValue:
-            self = .dict
-        default:
-            return nil
-        }
-    }
-}
-
-class BPlistMap : PlistDecodingMap {
+class BPlistLegacyDecodingDocument : PlistDecodingDocument {
     internal enum Value {
         case string(Region, isAscii: Bool)
         case array([BPlistObjectIndex])
         case set([BPlistObjectIndex])
-        case dict([BPlistObjectIndex:BPlistObjectIndex])
+        case dict([BPlistDictionaryPair])
         case data(Region)
         case date(UInt64)
         case boolean(Bool)
@@ -92,9 +37,6 @@ class BPlistMap : PlistDecodingMap {
         let startOffset: Int
         let count: Int
     }
-
-    @inline(__always)
-    static var nullValue: Value { .nativeNull }
 
     private let trailer : BPlistTrailer
     let topObjectIndex : BPlistObjectIndex
@@ -200,8 +142,8 @@ class BPlistMap : PlistDecodingMap {
     }
     
     struct DictionaryIterator: PlistDictionaryIterator {
-        var iter: [BPlistObjectIndex:BPlistObjectIndex].Iterator
-        
+        var iter: [BPlistDictionaryPair].Iterator
+
         @inline(__always)
         mutating func next() -> (key: BPlistObjectIndex, value: BPlistObjectIndex)? {
             iter.next()
@@ -209,7 +151,7 @@ class BPlistMap : PlistDecodingMap {
     }
 }
 
-extension BPlistMap.Value {
+extension BPlistLegacyDecodingDocument.Value {
     var isNull : Bool {
         switch self {
             case .nativeNull, .sentinelNull:
@@ -219,7 +161,7 @@ extension BPlistMap.Value {
         }
     }
 
-    func integerValue<T: BinaryInteger>(in map: BPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
+    func integerValue<T: BinaryInteger>(in map: BPlistLegacyDecodingDocument, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
         if case .real = self {
             let double = try self.realValue(in: map, as: Double.self, for: codingPathNode, additionalKey)
             guard let integer = T(exactly: double) else {
@@ -246,7 +188,7 @@ extension BPlistMap.Value {
         return val
     }
 
-    func realValue<T: BinaryFloatingPoint>(in map: BPlistMap, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
+    func realValue<T: BinaryFloatingPoint>(in map: BPlistLegacyDecodingDocument, as type: T.Type, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> T {
         if case .integer = self {
             if let uintValue = try? self.integerValue(in: map, as: UInt64.self, for: codingPathNode, additionalKey) {
                 return T(uintValue)
@@ -285,7 +227,7 @@ extension BPlistMap.Value {
         }
     }
 
-    func dataValue(in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Data {
+    func dataValue(in map: BPlistLegacyDecodingDocument, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Data {
         guard case let .data(region) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: Data.self, reality: self)
         }
@@ -294,7 +236,7 @@ extension BPlistMap.Value {
         }
     }
 
-    func dateValue(in map: BPlistMap, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Date {
+    func dateValue(in map: BPlistLegacyDecodingDocument, for codingPathNode: _CodingPathNode, _ additionalKey: (some CodingKey)? = _CodingKey?.none) throws -> Date {
         guard case let .date(u64Rep) = self else {
             throw DecodingError._typeMismatch(at: codingPathNode.path(byAppending: additionalKey), expectation: Date.self, reality: self)
         }
@@ -303,7 +245,7 @@ extension BPlistMap.Value {
     }
 }
 
-extension BPlistMap.Value: DecodingErrorValueTypeDebugStringConvertible {
+extension BPlistLegacyDecodingDocument.Value: DecodingErrorValueTypeDebugStringConvertible {
     var debugDataTypeDescription: String {
         switch self {
         case .string: return "a string"
@@ -416,7 +358,7 @@ internal struct BPlistScanner {
     
     private static let bplistXXLen = 8
 
-    static func hasBPlistMagic(in buff: BufferView<UInt8>) -> Bool {
+    static func validateBPlistMagicAndSize(in buff: BufferView<UInt8>) -> Bool {
         guard buff.count >= MemoryLayout<BPlistTrailer>.size + bplistXXLen + 1 else {
             return false
         }
@@ -428,26 +370,18 @@ internal struct BPlistScanner {
     }
 
     static func parseTopLevelInfo(from buff: BufferView<UInt8>) -> BPlistTrailer? {
-        guard hasBPlistMagic(in: buff) else {
+        guard validateBPlistMagicAndSize(in: buff) else {
             return nil
         }
-        let trailer = buff.withUnsafePointer { buffPtr, buffCount in
-            var trailer = BPlistTrailer()
-            let trailerBegin = buffPtr + buffCount - MemoryLayout<BPlistTrailer>.size
-            _ = withUnsafeMutableBytes(of: &trailer) {
-                memmove($0.baseAddress!, trailerBegin, MemoryLayout<BPlistTrailer>.size)
-            }
-            
-            // The bplist format is big endian by definition. On a little-endian machine, the 64-bit values need to be swapped. X.bigEndian is equivalent to "convert big- to host-endianness".
-            trailer._numObjects = trailer._numObjects.bigEndian
-            trailer._topObject = trailer._topObject.bigEndian
-            trailer._offsetTableOffset = trailer._offsetTableOffset.bigEndian
-            
-            return trailer
-        }
+        var trailer = buff.loadUnaligned(from: buff.endIndex.advanced(by: -MemoryLayout<BPlistTrailer>.size), as: BPlistTrailer.self)
+        
+        // The bplist format is big endian by definition. On a little-endian machine, the 64-bit values need to be swapped. X.bigEndian is equivalent to "convert big- to host-endianness".
+        trailer._numObjects = trailer._numObjects.bigEndian
+        trailer._topObject = trailer._topObject.bigEndian
+        trailer._offsetTableOffset = trailer._offsetTableOffset.bigEndian
 
         // Don't overflow on the number of objects or offset of the table
-        guard trailer._numObjects <= LONG_MAX, trailer._offsetTableOffset <= LONG_MAX else {
+        guard trailer._numObjects <= Int.max, trailer._offsetTableOffset <= Int.max else {
             return nil
         }
 
@@ -544,7 +478,7 @@ internal struct BPlistScanner {
         self.baseIdx = buffer.startIndex
     }
 
-    static func scanBinaryPropertyList(from buffer: BufferView<UInt8>) throws -> BPlistMap {
+    static func scanBinaryPropertyList(from buffer: BufferView<UInt8>) throws -> BPlistLegacyDecodingDocument {
 
         guard let trailer = Self.parseTopLevelInfo(from: buffer) else {
             throw BPlistError.corruptTopLevelInfo
@@ -571,7 +505,7 @@ internal struct BPlistScanner {
         return .init(buffer: buffer, trailer: trailer, objectOffsets: objectOffsets)
     }
     
-    func scanObject(at offset: UInt64) throws -> BPlistMap.Value {
+    func scanObject(at offset: UInt64) throws -> BPlistLegacyDecodingDocument.Value {
         let idx = reader.index(offset: try Int(bplistSafe: offset))
         let rawMarker = reader.char(at: idx)
 
@@ -609,7 +543,7 @@ internal struct BPlistScanner {
         }
     }
     
-    func scanASCIIStringRegion(at offset: UInt64) throws -> BPlistMap.Region? {
+    func scanASCIIStringRegion(at offset: UInt64) throws -> BPlistLegacyDecodingDocument.Region? {
         let idx = reader.index(offset: try Int(bplistSafe: offset))
         let rawMarker = reader.char(at: idx)
 
@@ -624,7 +558,7 @@ internal struct BPlistScanner {
         }
     }
     
-    private func scanInteger(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanInteger(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         let integerSize = 1 << (rawTypeMarker & 0x0f)
         guard integerSize <= 16 else {
             throw BPlistError.invalidMarker
@@ -637,7 +571,7 @@ internal struct BPlistScanner {
         return .integer(integer, useSignedRepresentation: integerSize <= MemoryLayout<UInt64>.size)
     }
     
-    private func scanReal(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanReal(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         let dataStartIdx = idx.advanced(by: 1)
         switch rawTypeMarker & 0xf {
         case 2: // 4 byte real
@@ -655,7 +589,7 @@ internal struct BPlistScanner {
         }
     }
     
-    private func scanDate(index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanDate(index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         let dataStartIdx = idx.advanced(by: 1)
         guard let integer = reader.getSizedInt(at: dataStartIdx, endIndex: objectRangeEndIndex, size: 8) else {
             throw BPlistError.corruptedValue("date")
@@ -663,7 +597,7 @@ internal struct BPlistScanner {
         return .date(integer)
     }
     
-    private func scanData(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanData(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         var count = UInt64(rawTypeMarker & 0x0f)
         var dataStartIdx = idx.advanced(by: 1)
         if count == 0xf {
@@ -676,7 +610,7 @@ internal struct BPlistScanner {
         return .data(.init(startOffset: baseIdx.distance(to: dataStartIdx), count: Int(count)))
     }
     
-    private func scanASCIIString(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanASCIIString(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         var count = UInt64(rawTypeMarker & 0x0f)
         var dataStartIdx = idx.advanced(by: 1)
         if count == 0xf {
@@ -693,7 +627,7 @@ internal struct BPlistScanner {
         return .string(.init(startOffset: baseIdx.distance(to: dataStartIdx), count: Int(count)), isAscii: true)
     }
     
-    private func scanASCIIStringRegion(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Region? {
+    private func scanASCIIStringRegion(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Region? {
         var count = UInt64(rawTypeMarker & 0x0f)
         var dataStartIdx = idx.advanced(by: 1)
         if count == 0xf {
@@ -710,17 +644,14 @@ internal struct BPlistScanner {
     }
 
     
-    private func scanUTF16BEString(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanUTF16BEString(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         var count = UInt64(rawTypeMarker & 0x0f)
         var dataStartIdx = idx.advanced(by: 1)
         if count == 0xf {
             count = try reader.readInt(updatingIndex: &dataStartIdx, objectRangeEnd: objectRangeEndIndex, for: "UTF16 string")
         }
-        guard dataStartIdx.distance(to: objectRangeEndIndex) >= count else {
-            throw BPlistError.corruptedValue("UTF16 string")
-        }
         let (byteCount, overflow) = count.multipliedReportingOverflow(by: 2) // 2 bytes per character
-        guard !overflow else {
+        guard !overflow, byteCount <= UInt64(dataStartIdx.distance(to: objectRangeEndIndex)) else {
             throw BPlistError.corruptedValue("UTF16 string")
         }
 
@@ -728,7 +659,7 @@ internal struct BPlistScanner {
         return .string(.init(startOffset: baseIdx.distance(to: dataStartIdx), count: Int(byteCount)), isAscii: false)
     }
     
-    private func scanArrayOrSet(typeMarker: BPlistTypeMarker, rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanArrayOrSet(typeMarker: BPlistTypeMarker, rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         var count = UInt64(rawTypeMarker & 0x0f)
         var dataStartIdx = idx.advanced(by: 1)
         if count == 0xf {
@@ -752,7 +683,7 @@ internal struct BPlistScanner {
         return (typeMarker == .array) ? .array(arr) : .set(arr)
     }
     
-    private func scanDictionary(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistMap.Value {
+    private func scanDictionary(rawTypeMarker: UInt8, index idx: BufferViewIndex<UInt8>, objectRangeEndIndex: BufferViewIndex<UInt8>) throws -> BPlistLegacyDecodingDocument.Value {
         var count = UInt64(rawTypeMarker & 0x0f)
         var dataStartIdx = idx.advanced(by: 1)
         if count == 0xf {
@@ -767,16 +698,18 @@ internal struct BPlistScanner {
         guard !overflow2, dataStartIdx.distance(to: objectRangeEndIndex) >= Int(byteCount) else {
             throw BPlistError.corruptedValue("dictionary")
         }
-        var dict = [BPlistObjectIndex:BPlistObjectIndex](minimumCapacity: Int(count))
+        // Keep the pairs in source order so that duplicate keys can be handled deterministically.
+        var pairs = [BPlistDictionaryPair]()
+        pairs.reserveCapacity(Int(count))
         let offsetFromKeyToObject = Int(count) * Int(trailer._objectRefSize)
         var keyIndexCursor = dataStartIdx
         for _ in 0..<Int(count) {
             let keyIdx = try Int(bplistSafe: reader.getBoundsCheckedSizedInt(at: keyIndexCursor, size: refSize))
             let valIdx = try Int(bplistSafe: reader.getBoundsCheckedSizedInt(at: keyIndexCursor.advanced(by: offsetFromKeyToObject), size: refSize))
-            dict[keyIdx] = valIdx
+            pairs.append((key: keyIdx, value: valIdx))
             reader.bytes.formIndex(&keyIndexCursor, offsetBy: refSize)
         }
-        return .dict(dict)
+        return .dict(pairs)
 
     }
 }
@@ -793,33 +726,15 @@ extension Int {
 }
 
 
-enum BPlistError: Swift.Error, Equatable {
-    case invalidMarker
-    case corruptedValue(String)
-    case corruptTopLevelInfo
-
-    var debugDescription : String {
-        switch self {
-        case .invalidMarker: return "Invalid marker"
-        case .corruptedValue(let type): return "Corrupt \(type) value"
-        case .corruptTopLevelInfo: return "Corrupt top-level info"
-        }
-    }
-
-    var cocoaError: CocoaError {
-        .init(.propertyListReadCorrupt, userInfo: [
-            NSDebugDescriptionErrorKey : self.debugDescription
-        ])
-    }
-}
-
 extension BufferView<UInt8> {
     // TODO: Here temporarily until it can be moved to CodableUtilities.swift on the FoundationPreview size
-    internal subscript(region: BPlistMap.Region) -> BufferView {
+    internal subscript(region: BPlistLegacyDecodingDocument.Region) -> BufferView {
         slice(from: region.startOffset, count: region.count)
     }
 
-    internal subscript(unchecked region: BPlistMap.Region) -> BufferView {
+    internal subscript(unchecked region: BPlistLegacyDecodingDocument.Region) -> BufferView {
         uncheckedSlice(from: region.startOffset, count: region.count)
     }
 }
+
+#endif // !hasFeature(Embedded)

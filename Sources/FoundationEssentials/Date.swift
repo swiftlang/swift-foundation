@@ -22,6 +22,10 @@ import Darwin
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
+#elseif canImport(_FoundationPlatformExtras)
+import _FoundationPlatformExtras
 #endif
 
 #if !FOUNDATION_FRAMEWORK
@@ -159,7 +163,9 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
     /// Returns a date instance that represents the current date and time, at the moment of access.
     ///
     /// This property is equivalent to calling ``Date/init()``. If you assign this value to a variable or property, the assigned value doesn't automatically update as time passes.
+    #if !hasFeature(Embedded)
     @backDeployed(before: macOS 12, iOS 15, tvOS 15, watchOS 8)
+    #endif
     public static var now : Date { Date() }
 
     public func hash(into hasher: inout Hasher) {
@@ -196,13 +202,18 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
   
     // These two symbols are backDeployed; when building with an older SDK users still get the default implementation from Comparable, which isn't quite right (because of NaN), but this lets us make it do the right thing when they recompile with an up-to-date SDK.
     /// Returns true if the left hand `Date` is earlier in time than or equal to the right hand `Date`.
+    #if !hasFeature(Embedded)
+    // A back-deployment thunk has a ThunkKind the Embedded optimizer cannot classify, so it aborts in Function.thunkKind. The single fixed deployment target makes back deployment moot here.
     @backDeployed(before: FoundationPreview 6.4.2)
+    #endif
     public static func <=(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate <= rhs.timeIntervalSinceReferenceDate
     }
 
     /// Returns true if the left hand `Date` is later in time than or equal to the right hand `Date`.
+    #if !hasFeature(Embedded)
     @backDeployed(before: FoundationPreview 6.4.2)
+    #endif
     public static func >=(lhs: Date, rhs: Date) -> Bool {
         return lhs.timeIntervalSinceReferenceDate >= rhs.timeIntervalSinceReferenceDate
     }
@@ -265,7 +276,7 @@ extension Date {
 }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+extension Date : CustomDebugStringConvertible, CustomStringConvertible {
 // For backwards compatibility, the Darwin version of this method is left alone
 // because it uses `NSDateFormatter` and may behave slightly differently.
 #if !FOUNDATION_FRAMEWORK
@@ -327,17 +338,11 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
     public var debugDescription: String {
         return description
     }
-
-    public var customMirror: Mirror {
-        let c: [(label: String?, value: Any)] = [
-          ("timeIntervalSinceReferenceDate", timeIntervalSinceReferenceDate)
-        ]
-        return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
-    }
 }
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Date : Codable {
+extension Date : Codable, CustomReflectable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let timestamp = try container.decode(Double.self)
@@ -348,7 +353,15 @@ extension Date : Codable {
         var container = encoder.singleValueContainer()
         try container.encode(self.timeIntervalSinceReferenceDate)
     }
+
+    public var customMirror: Mirror {
+        let c: [(label: String?, value: Any)] = [
+          ("timeIntervalSinceReferenceDate", timeIntervalSinceReferenceDate)
+        ]
+        return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
+    }
 }
+#endif
 
 // MARK: - Bridging
 #if FOUNDATION_FRAMEWORK

@@ -33,6 +33,26 @@ private struct URLInternationalizationTests {
         #expect(chineseURL?.host(percentEncoded: false) == "xn--nw2a.xn--j6w193g")
     }
     
+    @Test func idnaShrinkCanceledByPercentEncoding() throws {
+        // IDNA removes U+00AD (-2 UTF-8 bytes), which cancels out " " becoming "%20" (+2). Ranges should still be correct.
+        var url = try #require(URL(string: "https://u ser@te\u{AD}st.com/p"))
+        #expect(url.user() == "u%20ser")
+        #expect(url.host() == "test.com")
+        #expect(url.path() == "/p")
+
+        url = try #require(URL(string: "https://te\u{AD}st.com/pa th"))
+        #expect(url.host() == "test.com")
+        #expect(url.path() == "/pa%20th")
+
+        url = try #require(URL(string: "https://te\u{AD}st.com/p?q u"))
+        #expect(url.path() == "/p")
+        #expect(url.query() == "q%20u")
+
+        url = try #require(URL(string: "https://te\u{AD}st.com/p#f r"))
+        #expect(url.path() == "/p")
+        #expect(url.fragment() == "f%20r")
+    }
+
     @Test func componentsUnixDomainSocketOverWebSocketScheme() {
         var comp = URLComponents()
         comp.scheme = "ws+unix"

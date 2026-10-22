@@ -138,4 +138,94 @@ private struct CalendarRecurrenceRuleTests {
         ]
         #expect(results == expectedResults)
     }
+
+    @Test func manyHours() {
+        let bigCount = Array(repeating: 0, count: 100)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let rule = Calendar.RecurrenceRule(
+            calendar: calendar,
+            frequency: .daily,
+            interval: 1,
+            end: .afterOccurrences(1),
+            hours: bigCount,
+            minutes: bigCount,
+            seconds: bigCount
+        )
+
+        let recurrences = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0))
+        var count = 0
+        for r in recurrences {
+            #expect(r.timeIntervalSinceReferenceDate == 0)
+            count += 1
+        }
+        #expect(count == 1)
+    }
+
+    @Test func outOfRangeHoursMinutesSecondsDoNotHang() {
+        let rule = Calendar.RecurrenceRule(
+            calendar: Calendar(identifier: .gregorian),
+            frequency: .yearly,
+            interval: 1,
+            end: .afterOccurrences(1),
+            hours: [9999],
+            minutes: [9999],
+            seconds: [9999]
+        )
+
+        var iterator = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0)).makeIterator()
+        #expect(iterator.next() == nil)
+    }
+
+    @Test func outOfRangeMonth() {
+        let rule = Calendar.RecurrenceRule(
+            calendar: Calendar(identifier: .gregorian),
+            frequency: .yearly,
+            interval: 1,
+            end: .afterOccurrences(1),
+            months: [Calendar.RecurrenceRule.Month(9999)]
+        )
+
+        var iterator = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0)).makeIterator()
+        #expect(iterator.next() == nil)
+    }
+
+    @Test func outOfRangeDaysOfTheMonth() {
+        let rule = Calendar.RecurrenceRule(
+            calendar: Calendar(identifier: .gregorian),
+            frequency: .yearly,
+            interval: 1,
+            end: .afterOccurrences(1),
+            daysOfTheMonth: [9999]
+        )
+
+        var iterator = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0)).makeIterator()
+        #expect(iterator.next() == nil)
+    }
+
+    @Test func outOfRangeDaysOfTheYear() {
+        let rule = Calendar.RecurrenceRule(
+            calendar: Calendar(identifier: .gregorian),
+            frequency: .yearly,
+            interval: 1,
+            end: .afterOccurrences(1),
+            daysOfTheYear: [9999]
+        )
+
+        var it = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0)).makeIterator()
+        #expect(it.next() == nil)
+    }
+
+    @Test func outOfRangeWeeks() {
+        let rule = Calendar.RecurrenceRule(
+            calendar: Calendar(identifier: .gregorian),
+            frequency: .yearly,
+            interval: 1,
+            end: .afterOccurrences(1),
+            weeks: [9999]
+        )
+
+        var it = rule.recurrences(of: Date(timeIntervalSinceReferenceDate: 0)).makeIterator()
+        #expect(it.next() == nil)
+    }
 }

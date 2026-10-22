@@ -9,6 +9,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if compiler(<5.9)
 #error("Building FoundationPreview requires a Swift 5.9 toolchain")
 #endif
+
+#endif // !hasFeature(Embedded)

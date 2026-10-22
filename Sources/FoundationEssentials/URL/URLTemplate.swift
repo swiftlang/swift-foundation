@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(CollectionsInternal)
 internal import CollectionsInternal
 #elseif canImport(OrderedCollections)
@@ -186,3 +188,5 @@ extension URL.Template.Element: CustomStringConvertible {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

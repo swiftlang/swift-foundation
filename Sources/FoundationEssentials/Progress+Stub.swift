@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !FOUNDATION_FRAMEWORK
 
 // Placeholder for Progress
@@ -32,3 +34,5 @@ internal final class Progress {
 }
 
 #endif // !FOUNDATION_FRAMEWORK
+
+#endif // !hasFeature(Embedded)

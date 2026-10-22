@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 //===--- DataProtocol -----------------------------------------------------===//
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -66,3 +68,5 @@ extension Array: MutableDataProtocol where Element == UInt8 { }
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension ContiguousArray: MutableDataProtocol where Element == UInt8 { }
+
+#endif // !hasFeature(Embedded)

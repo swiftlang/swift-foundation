@@ -9,7 +9,7 @@ import CompilerPluginSupport
 let availabilityTags: [_Availability] = [
     _Availability("FoundationPreview"), // Default FoundationPreview availability
 ]
-let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.4.2"]
+let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.4.2", "6.5"]
 
 // Availability Macro Utilities
 
@@ -33,6 +33,10 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
     }
 }
 
+let availabilityCheckingSettings: [SwiftSetting] = [
+    .unsafeFlags(["-library-level", "api", "-Xfrontend", "-require-explicit-availability=ignore"], .when(platforms: [.macOS]))
+]
+
 let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
     .enableExperimentalFeature("ImportMacroAliases"),
@@ -40,6 +44,10 @@ let featureSettings: [SwiftSetting] = [
     .enableUpcomingFeature("MemberImportVisibility"),
     .swiftLanguageMode(.v5)
 ]
+
+// Embedded builds do not use ICU, so they omit swift-foundation-icu and the targets which depend on it.
+// SwiftPM manifests cannot see the selected Swift SDK, so opt in with e.g. `SWIFT_FOUNDATION_EMBEDDED=1 swift build --swift-sdk <embedded sdk>`.
+let buildingForEmbedded = !(Context.environment["SWIFT_FOUNDATION_EMBEDDED"] ?? "").isEmpty
 
 var dependencies: [Package.Dependency] = []
 
@@ -56,12 +64,15 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 name: "swift-collections",
                 path: "\(root)/swift-collections"),
             .package(
-                name: "swift-foundation-icu",
-                path: "\(root)/swift-foundation-icu"),
-            .package(
                 name: "swift-syntax",
                 path: "\(root)/swift-syntax")
         ]
+    if !buildingForEmbedded {
+        dependencies.append(
+            .package(
+                name: "swift-foundation-icu",
+                path: "\(root)/swift-foundation-icu"))
+    }
 } else {
     // These dependencies should match `update-checkout`
     // See `update-checkout-config.json` for the `main` branch-scheme
@@ -69,14 +80,17 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
         [
             .package(
                 url: "https://github.com/apple/swift-collections",
-                exact: "1.1.6"),
-            .package(
-                url: "https://github.com/apple/swift-foundation-icu",
-                branch: "release/6.4.x"),
+                exact: "1.7.3"),
             .package(
                 url: "https://github.com/swiftlang/swift-syntax",
-                branch: "release/6.4.x")
+                branch: "main")
         ]
+    if !buildingForEmbedded {
+        dependencies.append(
+            .package(
+                url: "https://github.com/apple/swift-foundation-icu",
+                branch: "main"))
+    }
 }
 
 let wasiLibcCSettings: [CSetting] = [
@@ -88,7 +102,7 @@ let testOnlySwiftSettings: [SwiftSetting] = [
     .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
 ]
 
-let package = Package(
+var package = Package(
     name: "swift-foundation",
     platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
     products: [
@@ -124,6 +138,7 @@ let package = Package(
             .product(name: "OrderedCollections", package: "swift-collections"),
           ],
           exclude: [
+            "Bytes/CMakeLists.txt",
             "Formatting/CMakeLists.txt",
             "PropertyList/CMakeLists.txt",
             "Decimal/CMakeLists.txt",
@@ -133,6 +148,7 @@ let package = Package(
             "Data/CMakeLists.txt",
             "TimeZone/CMakeLists.txt",
             "JSON/CMakeLists.txt",
+            "Codable/CMakeLists.txt",
             "AttributedString/CMakeLists.txt",
             "Calendar/CMakeLists.txt",
             "Predicate/CMakeLists.txt",
@@ -142,6 +158,7 @@ let package = Package(
             "URL/CMakeLists.txt",
             "NotificationCenter/CMakeLists.txt",
             "ProgressManager/CMakeLists.txt",
+            "CharacterSet/CMakeLists.txt",
           ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux, .wasi]))
@@ -153,8 +170,8 @@ let package = Package(
             .enableExperimentalFeature("AllowUnsafeAttribute"),
             .enableExperimentalFeature("BuiltinModule"),
             .enableExperimentalFeature("AccessLevelOnImport"),
-            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS]))
-          ] + availabilityMacros + featureSettings,
+            .define("DATA_LEGACY_ABI", .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
+          ] + availabilityMacros + featureSettings + availabilityCheckingSettings,
           linkerSettings: [
             .linkedLibrary("wasi-emulated-getpid", .when(platforms: [.wasi])),
           ]
@@ -175,10 +192,19 @@ let package = Package(
 
         // FoundationInternationalization
         .target(
+            name: "_FoundationInternationalizationData",
+            exclude: ["CMakeLists.txt"],
+            swiftSettings: [
+                .enableExperimentalFeature("AccessLevelOnImport"),
+                .enableExperimentalFeature("Lifetimes"),
+            ] + availabilityMacros + featureSettings + availabilityCheckingSettings
+        ),
+        .target(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
+                .target(name: "_FoundationInternationalizationData"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             exclude: [
@@ -190,12 +216,13 @@ let package = Package(
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
                 "Predicate/CMakeLists.txt",
+                "Formatting/ListFormatData.json",
             ],
             cSettings: wasiLibcCSettings,
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),
-            ] + availabilityMacros + featureSettings
+            ] + availabilityMacros + featureSettings + availabilityCheckingSettings
         ),
         
         .testTarget(
@@ -234,3 +261,13 @@ let package = Package(
         )
     ]
 )
+
+if buildingForEmbedded {
+    let icuDependentTargets: Set<String> = [
+        "_FoundationInternationalizationData",
+        "FoundationInternationalization",
+        "FoundationInternationalizationTests",
+    ]
+    package.products.removeAll { $0.name == "FoundationInternationalization" }
+    package.targets.removeAll { icuDependentTargets.contains($0.name) }
+}

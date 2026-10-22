@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 // IMPORTANT: Any changes to __PlistEncoderXML and its related types should be repeated for __PlistEncoderBPlist.
 // This code is duplicate for performance reasons, as use of `@_specialize` has not been able to completely replicate the benefits of manual duplication.
 
@@ -1016,10 +1018,7 @@ struct _XMLPlistEncodingFormat : PlistEncodingFormat {
         }
         
         mutating func appendDate(_ date: Date) {
-            var c = Calendar(identifier: .iso8601)
-            c.timeZone = .gmt
-
-            let dc = c.dateComponents([.era, .year, .month, .day, .hour, .minute, .second], from: date)
+            let dc = Calendar.sufficientlyProlepticISO8601Calendar.dateComponents([.era, .year, .month, .day, .hour, .minute, .second], from: date)
             let str = Date.ISO8601FormatStyle().format(dc, appendingTimeZoneOffset: 0)
             append(str)
         }
@@ -1125,3 +1124,5 @@ extension _XMLPlistEncodingFormat.Reference {
         return str
     }
 }
+
+#endif // !hasFeature(Embedded)

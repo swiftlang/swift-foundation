@@ -1252,8 +1252,8 @@ private struct JSONEncoderTests {
     }
 
     @Test func jsonNumberFragments() {
-        let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10"]
-        let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0]
+        let array = ["0 ", "1.0 ", "0.1 ", "1e3 ", "-2.01e-3 ", "0", "1.0", "1e3", "-2.01e-3", "0e-10", "0e1", "0E1", "0.00e1", "-0.0e5"]
+        let expected = [0, 1.0, 0.1, 1000, -0.00201, 0, 1.0, 1000, -0.00201, 0, 0, 0, 0, 0]
         for (json, expected) in zip(array, expected) {
             _test(JSONString: json, to: expected)
         }
@@ -1267,6 +1267,47 @@ private struct JSONEncoderTests {
                 _ = try JSONDecoder().decode(Float.self, from: data)
             }
         }
+    }
+
+    @Test func malformedDecimalLiteralsFailForEveryDecodedType() {
+        // Short mantissas, long mantissas (more than 17 significant digits), and exponent forms, each with a malformed tail or shape. Every consumer must reject these, whether or not it would otherwise parse the digits itself.
+        let literals = [
+            "1.5x", "1.5.3", "1e5x", "1e+x", "1.5e", "1.5e+", "1.5-2", "1..5", "1.5e5.5",
+            "1.2345678901234567890x", "1.2345678901234567890.5", "1.2345678901234567890e5x", "12345678901234567890-2.6",
+            "1234567890123456789012345678901234567890abc",
+        ]
+        for literal in literals {
+            for json5 in [false, true] {
+                let decoder = JSONDecoder()
+                decoder.allowsJSON5 = json5
+                let data = Data("[\(literal)]".utf8)
+                #expect(throws: (any Error).self, "Double \(literal) json5=\(json5)") { try decoder.decode([Double].self, from: data) }
+                #expect(throws: (any Error).self, "Float \(literal) json5=\(json5)") { try decoder.decode([Float].self, from: data) }
+                #expect(throws: (any Error).self, "Int \(literal) json5=\(json5)") { try decoder.decode([Int].self, from: data) }
+                #expect(throws: (any Error).self, "UInt8 \(literal) json5=\(json5)") { try decoder.decode([UInt8].self, from: data) }
+                #expect(throws: (any Error).self, "Decimal \(literal) json5=\(json5)") { try decoder.decode([Decimal].self, from: data) }
+            }
+        }
+    }
+
+    @Test func negativeZero() throws {
+        let negZero = Data("-0".utf8)
+
+        let d = try JSONDecoder().decode(Double.self, from: negZero)
+        #expect(d == 0)
+        #expect(d.sign == .minus)
+
+        let f = try JSONDecoder().decode(Float.self, from: negZero)
+        #expect(f == 0)
+        #expect(f.sign == .minus)
+
+        // Integer decodes drop the sign of zero: `-0` is the integer 0.
+        #expect(try JSONDecoder().decode(Int.self, from: negZero) == 0)
+        #expect(try JSONDecoder().decode(UInt.self, from: negZero) == 0)
+
+        // A positive `0` stays positive zero, and the fractional `-0.0` form is likewise negative.
+        #expect(try JSONDecoder().decode(Double.self, from: Data("0".utf8)).sign == .plus)
+        #expect(try JSONDecoder().decode(Double.self, from: Data("-0.0".utf8)).sign == .minus)
     }
 
     func _checkExpectedThrownDataCorruptionUnderlyingError(contains substring: String, sourceLocation: SourceLocation = #_sourceLocation, closure: () throws -> Void) {
@@ -1312,12 +1353,10 @@ private struct JSONEncoderTests {
     @Test
     @MainActor // Deeply recursive tests which requires running on the main thread which has a higher stack size limit
     func depthTraversal() {
-        struct SuperNestedArray : Decodable {
+        // The important part to test is the parsing pass, not the decoding pass.
+        struct DecodeNothing : Decodable {
             init(from decoder: Decoder) throws {
-                var container = try decoder.unkeyedContainer()
-                while container.count! > 0 {
-                    container = try container.nestedUnkeyedContainer()
-                }
+                // Do nothing.
             }
         }
 
@@ -1326,10 +1365,10 @@ private struct JSONEncoderTests {
         let jsonBad = String(repeating: "[", count: MAX_DEPTH + 1) + String(repeating: "]", count: MAX_DEPTH + 1)
 
         #expect(throws: Never.self) {
-            try JSONDecoder().decode(SuperNestedArray.self, from: jsonGood.data(using: .utf8)!)
+            try JSONDecoder().decode(DecodeNothing.self, from: jsonGood.data(using: .utf8)!)
         }
         #expect(throws: (any Error).self) {
-            try JSONDecoder().decode(SuperNestedArray.self, from: jsonBad.data(using: .utf8)!)
+            try JSONDecoder().decode(DecodeNothing.self, from: jsonBad.data(using: .utf8)!)
         }
 
     }
@@ -1356,6 +1395,30 @@ private struct JSONEncoderTests {
         _testRoundTrip(of: [["magic_number" : 7.45673334164903e-115]])
     }
 
+    @Test func floatOverflowAndUnderflowFailToDecode() {
+        // Overflow to infinity or underflow to zero is judged in the target type, not in `Double`.
+        for json in ["1e100", "-1e100", "3.5e38", "1e-100", "-1e-100", "1e-46"] {
+            _testDecodeFailure(of: Float.self, data: Data(json.utf8))
+        }
+        // The same literals are fine as Double where representable.
+        _test(JSONString: "1e100", to: 1e100 as Double)
+        _test(JSONString: "1e-100", to: 1e-100 as Double)
+    }
+
+    @Test func floatBoundaries() throws {
+        _test(JSONString: "3.4028234663852886e38", to: Float.greatestFiniteMagnitude)
+        _test(JSONString: "1.17549435e-38", to: Float.leastNormalMagnitude)
+        _test(JSONString: "1e-45", to: Float.leastNonzeroMagnitude)
+        _test(JSONString: "1.4e-45", to: Float.leastNonzeroMagnitude)
+        _test(JSONString: "1e-40", to: Float(1e-40))
+    }
+
+    @Test func inexactFloatsStillRoundWhenDecoding() throws {
+        _test(JSONString: "0.1", to: 0.1 as Float)
+        _test(JSONString: "3.14", to: 3.14 as Float)
+        _test(JSONString: "0e5", to: 0 as Float)
+    }
+
     @Test func largeIntegerNumber() throws {
         let num : UInt64 = 6032314514195021674
         let json = "{\"a\":\(num)}"
@@ -1380,6 +1443,9 @@ private struct JSONEncoderTests {
             ( "9223372036854775808", nil),            //  2^63        (Double:  2^63)
             ( "9223372036854776832", nil),            //  2^63 + 1024 (Double:  2^63)
             ( "9223372036854776833", nil),            //  2^63 + 1025 (Double:  2^63 + 2048)
+
+            // An integral literal written with an exponent parses through a Double (rounded above 2^53) but must coerce to the exact source integer, not the nearest Double.
+            (  "92233720368595512e0",  92233720368595512), // >2^53, exponent form: exact, not nearest Double (…520)
         ]
         
         let uint64s: [(String, UInt64?)] = [
@@ -1392,6 +1458,8 @@ private struct JSONEncoderTests {
             ("18446744073709551616", nil),            //  2^64        (Double:  2^64)
             ("18446744073709553664", nil),            //  2^64 + 2048 (Double:  2^64)
             ("18446744073709553665", nil),            //  2^64 + 2049 (Double:  2^64 + 4096)
+
+            ( "92233720368595512e0", 92233720368595512), // >2^53, exponent form: exact, not nearest Double (…520)
         ]
         
         for json5 in [true, false] {
@@ -1408,6 +1476,54 @@ private struct JSONEncoderTests {
                 #expect(result == value, "Unexpected \(decoder) result for input \"\(json)\"")
             }
         }
+    }
+
+    @Test func integerLiteralsRoundWhenDecodedAsFloatingPoint() throws {
+        _test(JSONString: "16777217", to: 16777216 as Float)
+        _test(JSONString: "-16777217", to: -16777216 as Float)
+        _test(JSONString: "9007199254740993", to: 9007199254740992 as Double)
+        _test(JSONString: "18446744073709551615", to: 18446744073709551616.0 as Double)
+        _test(JSONString: "-9223372036854775809", to: -9223372036854775808.0 as Double)
+        _test(JSONString: "9223372036854775807", to: 9223372036854775808.0 as Double)
+        _test(JSONString: "-9223372036854775808", to: -9223372036854775808.0 as Double)
+        _test(JSONString: "9223372036854775807", to: Float(sign: .plus, exponent: 63, significand: 1))
+    }
+
+    @Test func longMantissaDoubleIsCorrectlyRounded() throws {
+        let decoder = JSONDecoder()
+        // More significant digits than a Double holds losslessly must still round to the nearest Double, matching a correctly-rounded parse rather than an approximate narrowing.
+        let cases = [
+            "6.8567125748313281724118833107250630e-37",
+            "9532897707105712955449594938418935855741",
+            "553254383491997013609552689141502945",
+            "130792879449993459016464914",
+            "1.7976931348623157081452742373170435e+308", // near Double.greatestFiniteMagnitude
+        ]
+        for s in cases {
+            let expected = try #require(Double(s), "\(s)")   // Swift's correctly-rounded parse
+            let got = try decoder.decode(Double.self, from: Data(s.utf8))
+            #expect(got.bitPattern == expected.bitPattern, "\(s): got \(got.bitPattern), expected \(expected.bitPattern)")
+        }
+    }
+
+    @Test func longMantissaFloatIsCorrectlyRounded() throws {
+        _test(JSONString: "3.14159265358979323846264338327950288", to: Float(bitPattern: 0x40490fdb))
+        _testDecodeFailure(of: Float.self, data: Data("1.00000000000000000000000001e100".utf8))
+    }
+
+    @Test func floatIsRoundedOnceNotTwice() throws {
+        // Just above the halfway point between 1.0 and the next Float (1 + 2^-24). Rounding to Double first lands exactly on the tie, which then rounds down to even.
+        _test(JSONString: "1.0000000596046447753906251", to: 1.0000001 as Float)
+        // Just below the halfway point.
+        _test(JSONString: "1.0000000596046447753906249", to: 1.0 as Float)
+        // Exactly on the tie rounds to even.
+        _test(JSONString: "1.000000059604644775390625", to: 1.0 as Float)
+        // Nested, with an exponent, and via JSON5.
+        _test(JSONString: "[1.0000000596046447753906251e0]", to: [1.0000001] as [Float])
+        _test(JSONString: "[10000000596046447753906251e-25]", to: [1.0000001] as [Float])
+        let decoder = JSONDecoder()
+        decoder.allowsJSON5 = true
+        #expect(try decoder.decode(Float.self, from: Data("1.0000000596046447753906251".utf8)) == 1.0000001)
     }
 
     @Test func roundTrippingExtremeValues() {
@@ -1443,19 +1559,14 @@ private struct JSONEncoderTests {
             let json = "\(value).0".data(using: .utf8)!
             #expect(try value == decoder.decode(Int128.self, from: json))
         }
-        // These should work, but making them do so probably requires
-        // rewriting the slow path to use a dedicated parser. For now,
-        // we ensure that they throw instead of returning some bogus
-        // result.
-        let shouldWorkButDontYet: [Int128] = [
+        // These should work and now do, with improvements to `Decimal` and a latent bugfix.
+        let alsoWork: [Int128] = [
             .min, -18446744073709551616, 18446744073709551616, .max
         ]
-        for value in shouldWorkButDontYet {
+        for value in alsoWork {
             // force the slow-path by appending ".0"
             let json = "\(value).0".data(using: .utf8)!
-            #expect(throws: (any Error).self) {
-                try decoder.decode(Int128.self, from: json)
-            }
+            #expect(try value == decoder.decode(Int128.self, from: json))
         }
     }
     
@@ -1481,19 +1592,14 @@ private struct JSONEncoderTests {
             let json = "\(value).0".data(using: .utf8)!
             #expect(try value == decoder.decode(UInt128.self, from: json))
         }
-        // These should work, but making them do so probably requires
-        // rewriting the slow path to use a dedicated parser. For now,
-        // we ensure that they throw instead of returning some bogus
-        // result.
-        let shouldWorkButDontYet: [UInt128] = [
+        // These should work and now do, with improvements to `Decimal` and a latent bugfix.
+        let alsoWork: [UInt128] = [
             18446744073709551616, .max
         ]
-        for value in shouldWorkButDontYet {
+        for value in alsoWork {
             // force the slow-path by appending ".0"
             let json = "\(value).0".data(using: .utf8)!
-            #expect(throws: (any Error).self) {
-                try decoder.decode(UInt128.self, from: json)
-            }
+            #expect(try value == decoder.decode(UInt128.self, from: json))
         }
     }
 
@@ -1703,6 +1809,118 @@ private struct JSONEncoderTests {
         // The expected valueNotFound error is swalled by the init(from:) implementation.
         #expect(throws: Never.self) {
             try JSONDecoder().decode(ValueNotFound.self, from: json)
+        }
+    }
+
+    // Exercises every reachable method on the Decoder returned by `keyedContainer.superDecoder(forKey:)` when the key is absent from the input.
+    @Test func superDecoderForAbsentKey() throws {
+        enum CodingKeys: String, CodingKey {
+            case present, absent
+        }
+
+        // Collector class: captured error is stored on the instance so no
+        // shared mutable state is needed. The `probe` closure is passed
+        // through `JSONDecoder.userInfo`.
+        final class ProbeResult: Decodable, @unchecked Sendable {
+            var thrown: (any Error)?
+            init() {}
+            required init(from decoder: Decoder) throws {
+                let keyed = try decoder.container(keyedBy: CodingKeys.self)
+                let sup = try keyed.superDecoder(forKey: .absent)
+                let probeKey = CodingUserInfoKey(rawValue: "superDecoderProbe")!
+                let probe = decoder.userInfo[probeKey] as? @Sendable (Decoder) throws -> Void
+                do {
+                    try probe?(sup)
+                    self.thrown = nil
+                } catch {
+                    self.thrown = error
+                }
+            }
+        }
+
+        let json = #"{"present":true}"#.data(using: .utf8)!
+        let probeKey = CodingUserInfoKey(rawValue: "superDecoderProbe")!
+
+        func run(_ probe: @escaping @Sendable (Decoder) throws -> Void) throws -> (any Error)? {
+            let decoder = JSONDecoder()
+            decoder.userInfo[probeKey] = probe
+            return try decoder.decode(ProbeResult.self, from: json).thrown
+        }
+
+        // decodeNil() on a single-value container: should report true.
+        do {
+            let error = try run { decoder in
+                let svc = try decoder.singleValueContainer()
+                #expect(svc.decodeNil())
+            }
+            #expect(error == nil)
+        }
+
+        // decode(_: T.self) on a single-value container: valueNotFound for every type except `Bool`, which reports typeMismatch against null, matching the legacy implementation.
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(Bool.self)
+            }
+            guard case DecodingError.typeMismatch? = error else {
+                Issue.record("expected typeMismatch for Bool, got \(String(describing: error))")
+                return
+            }
+        }
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(String.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("expected valueNotFound for String, got \(String(describing: error))")
+                return
+            }
+        }
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(Int.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("expected valueNotFound for Int, got \(String(describing: error))")
+                return
+            }
+        }
+        do {
+            let error = try run { decoder in
+                _ = try decoder.singleValueContainer().decode(Double.self)
+            }
+            guard case DecodingError.valueNotFound? = error else {
+                Issue.record("expected valueNotFound for Double, got \(String(describing: error))")
+                return
+            }
+        }
+
+        // container(keyedBy:): synthetic scope is null, so this should throw
+        // valueNotFound (or typeMismatch; both are acceptable non-crash outcomes).
+        do {
+            let error = try run { decoder in
+                _ = try decoder.container(keyedBy: CodingKeys.self)
+            }
+            #expect(error != nil, "expected an error opening a keyed container on absent-key superDecoder")
+            switch error {
+            case DecodingError.valueNotFound?, DecodingError.typeMismatch?:
+                break
+            default:
+                Issue.record("expected valueNotFound or typeMismatch, got \(String(describing: error))")
+            }
+        }
+
+        // unkeyedContainer(): same expectation.
+        do {
+            let error = try run { decoder in
+                _ = try decoder.unkeyedContainer()
+            }
+            #expect(error != nil, "expected an error opening an unkeyed container on absent-key superDecoder")
+            switch error {
+            case DecodingError.valueNotFound?, DecodingError.typeMismatch?:
+                break
+            default:
+                Issue.record("expected valueNotFound or typeMismatch, got \(String(describing: error))")
+            }
         }
     }
 
@@ -1980,6 +2198,8 @@ extension JSONEncoderTests {
             ("-0X1f", -0x1f),
             ("+0X1f", +0x1f),
             ("1.", 1),
+            ("0.", 0),
+            ("10.", 10),
             ("1.e2", 100),
             ("1e2", 100),
             ("1E2", 100),
@@ -2014,6 +2234,8 @@ extension JSONEncoderTests {
             ("NaN", Double.nan),
             (".1", 0.1),
             ("1.", 1.0),
+            ("0.", 0.0),
+            ("10.", 10.0),
             ("-.1", -0.1),
             ("+.1", +0.1),
             ("1e-2", 1e-2),
@@ -2026,6 +2248,7 @@ extension JSONEncoderTests {
             ("1E+2", 1E+2),
             ("1e+02", 1e+02),
             ("1E+02", 1E+02),
+            ("8e-0185", 8e-185), // leading zeros are legal in the exponent, unlike the mantissa
             ("0x1F", Double(0x1F)),
             ("-0X1f", Double(-0x1f)),
             ("+0X1f", Double(+0x1f)),
@@ -2091,12 +2314,29 @@ extension JSONEncoderTests {
             "0x2.2",
             ".e1",
             "0xFFFFFFFFFFFFFFFFFFFFFF",
+            "00",
+            "01",
+            "-01",
+            "00.5",
+            "00e2",
+            "008885e8",
         ];
         for json in unsuccessfulDoubles {
             #expect(throws: (any Error).self, "Expected failure for input \"\(json)\"") {
                 try decoder.decode(Double.self, from: json.data(using: .utf8)!)
             }
         }
+    }
+
+    @Test func json5HexLiteralsConvertToFloatingPointExactly() throws {
+        let decoder = json5Decoder
+        // Exactly representable.
+        #expect(try decoder.decode(Float.self, from: Data("0x1000000".utf8)) == 16777216)
+        #expect(try decoder.decode(Double.self, from: Data("-0x20000000000000".utf8)) == -9007199254740992)
+        // Not exactly representable: hex values historically have not been rounded like decimal numbers.
+        #expect(throws: (any Error).self) { try decoder.decode(Float.self, from: Data("0xFFFFFF1".utf8)) }
+        #expect(throws: (any Error).self) { try decoder.decode(Double.self, from: Data("0xFFFFFFFFFFFFFFFF".utf8)) }
+        #expect(try decoder.decode(Float.self, from: Data("268435441".utf8)) == 268435440)
     }
 
     @Test func json5Null() {

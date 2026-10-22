@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if os(Windows)
 
 import WinSDK
@@ -126,10 +128,13 @@ internal import _FoundationCShims
 #elseif os(WASI)
 @preconcurrency import WASILibc
 internal import _FoundationCShims
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 // MARK: Directory Iteration
 
+#if !os(Emscripten) // Emscripten doesn't have fts.h
 struct _FTSSequence: Sequence {
     enum Element {
         struct SwiftFTSENT {
@@ -333,11 +338,12 @@ extension Sequence<_FTSSequence.Element> {
         }
     }
 }
+#endif // !os(Emscripten)
 
 struct _POSIXDirectoryContentsSequence: Sequence {
     #if canImport(Darwin)
     typealias DirectoryEntryPtr = UnsafeMutablePointer<DIR>
-    #elseif canImport(Android) || canImport(Glibc) || canImport(Musl) || os(WASI)
+    #elseif canImport(Android) || canImport(Glibc) || canImport(Musl) || os(WASI) || os(Emscripten)
     typealias DirectoryEntryPtr = OpaquePointer
     #endif
     
@@ -488,3 +494,5 @@ struct _POSIXDirectoryContentsSequence: Sequence {
 }
 
 #endif
+
+#endif // !hasFeature(Embedded)

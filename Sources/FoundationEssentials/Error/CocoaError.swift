@@ -115,6 +115,7 @@ public extension CocoaError {
     }
 
     /// The underlying error behind this error, if any.
+    @_unavailableInEmbedded
     var underlying: Error? {
 #if FOUNDATION_FRAMEWORK
         return _nsUserInfo[NSUnderlyingErrorKey as NSString] as? Error
@@ -125,6 +126,7 @@ public extension CocoaError {
 
     /// A list of underlying errors, if any. It includes the values of both NSUnderlyingErrorKey and NSMultipleUnderlyingErrorsKey. If there are no underlying errors, returns an empty array.
     @available(macOS 11.3, iOS 14.5, watchOS 7.4, tvOS 14.5, *)
+    @_unavailableInEmbedded
     var underlyingErrors: [Error] {
         var result : [Error] = []
 
@@ -163,6 +165,7 @@ public extension CocoaError {
     }
 }
 
+@_unavailableInEmbedded
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CocoaError {
 #if FOUNDATION_FRAMEWORK
@@ -276,4 +279,5 @@ internal let NSURLErrorKey = "NSURL"
 internal let NSSourceFilePathErrorKey = "NSSourceFilePathErrorKey"
 internal let NSDestinationFilePathErrorKey = "NSDestinationFilePath"
 package let NSDebugDescriptionErrorKey = "NSDebugDescription"
+internal let _NSUnknownErrnoKey = "NSUnknownErrno"
 #endif

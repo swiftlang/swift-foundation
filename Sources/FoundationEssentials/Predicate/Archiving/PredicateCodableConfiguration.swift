@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 
 #if canImport(ReflectionInternal)
@@ -197,12 +199,12 @@ public struct PredicateCodableConfiguration: Sendable, CustomDebugStringConverti
         }
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func allowKeyPath(_ keyPath: AnyKeyPath & Sendable, identifier: String) {
         self.allowKeyPath(keyPath as AnyKeyPath, identifier: identifier)
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public mutating func disallowKeyPath(_ keyPath: AnyKeyPath & Sendable) {
         self.disallowKeyPath(keyPath as AnyKeyPath)
     }
@@ -549,3 +551,5 @@ extension PredicateCodableConfiguration {
 
 #endif // canImport(ReflectionInternal)
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !hasFeature(Embedded)

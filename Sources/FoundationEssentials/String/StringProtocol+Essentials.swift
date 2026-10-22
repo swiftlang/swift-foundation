@@ -13,79 +13,23 @@
 internal import _ForSwiftFoundation
 #endif
 
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#endif
-
+#if !NO_CSHIMS
 internal import _FoundationCShims
-
-extension UInt8 {
-    private typealias UTF8Representation = (UInt8, UInt8, UInt8)
-    private static func withMacRomanMap<R>(_ body: (UnsafeBufferPointer<UTF8Representation>) -> R) -> R {
-        withUnsafePointer(to: _stringshims_macroman_mapping) {
-            $0.withMemoryRebound(to: UTF8Representation.self, capacity: Int(_STRINGSHIMS_MACROMAN_MAP_SIZE)) {
-                body(UnsafeBufferPointer(start: $0, count: Int(_STRINGSHIMS_MACROMAN_MAP_SIZE)))
-            }
-        }
-    }
-    
-    var macRomanNonASCIIAsUTF8: some Collection<UInt8> {
-        assert(!Unicode.ASCII.isASCII(self))
-        return Self.withMacRomanMap { map in
-            let utf8Rep = map[Int(self) - 128]
-            if utf8Rep.2 == 0 {
-                return [utf8Rep.0, utf8Rep.1]
-            } else {
-                return [utf8Rep.0, utf8Rep.1, utf8Rep.2]
-            }
-        }
-    }
-    
-    init?(macRomanFor scalar: UnicodeScalar) {
-        guard !scalar.isASCII else {
-            self.init(scalar.value)
-            return
-        }
-        
-        let utf8 = Array(scalar.utf8)
-        guard utf8.count <= 3 else {
-            return nil
-        }
-        let tuple = (utf8[0], utf8[1], utf8.count == 2 ? 0 : utf8[2])
-        
-        let value: UInt8? = Self.withMacRomanMap { map in
-            if let found = map.firstIndex(where: { $0 == tuple }) {
-                return UInt8(found) + 128
-            } else {
-                return nil
-            }
-        }
-        
-        guard let value else { return nil }
-        self = value
-    }
-}
-
-extension UInt16 {
-    init(nextStep codepoint: UInt8) {
-        if codepoint < 128 {
-            self = Self(codepoint)
-        } else {
-            let tableOffset = Int(codepoint - 128)
-            self = withUnsafePointer(to: _stringshims_nextstep_mapping) {
-                $0.withMemoryRebound(to: Self.self, capacity: Int(_STRINGSHIMS_NEXTSTEP_MAP_SIZE)) {
-                    $0.advanced(by: tableOffset).pointee
-                }
-            }
-        }
-    }
-}
+#endif
 
 // These provides concrete implementations for String and Substring, enhancing performance over generic StringProtocol.
 
 #if !FOUNDATION_FRAMEWORK
+#if hasFeature(Embedded)
+// Embedded Swift doesn't support dynamic replacement.
+public func _cfStringEncodingConvert(string: String, using encoding: UInt, allowLossyConversion: Bool) -> Data? {
+    return nil
+}
+
+package func _icuStringEncodingConvert(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
+    return nil
+}
+#else
 @_spi(SwiftCorelibsFoundation)
 dynamic public func _cfStringEncodingConvert(string: String, using encoding: UInt, allowLossyConversion: Bool) -> Data? {
     // Dynamically replaced by swift-corelibs-foundation to implement encodings that we do not have Swift replacements for, yet
@@ -96,6 +40,7 @@ dynamic package func _icuStringEncodingConvert(string: String, using encoding: S
     // Concrete implementation is provided by FoundationInternationalization.
     return nil
 }
+#endif
 #endif
 
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
@@ -111,9 +56,9 @@ extension String {
                 return Data(capacity: self.utf8.count) {
                     for scalar in self.unicodeScalars {
                         if scalar.isASCII {
-                            $0.append(fromContentsOf: scalar.utf8)
+                            $0._append(copying: scalar.utf8)
                         } else {
-                            $0.appendElement(lossyReplacement)
+                            $0.append(lossyReplacement)
                         }
                     }
                 }
@@ -169,7 +114,7 @@ extension String {
             let outputCount = bom == nil ? inputCount : inputCount + 1
             
             // Allocate enough memory to hold the UTF16 bytes after conversion. We will pass this off to Data.
-            let utf16Pointer = calloc(outputCount, MemoryLayout<UInt16>.size)!.assumingMemoryBound(to: UInt16.self)
+            let utf16Pointer = Platform.calloc(outputCount, MemoryLayout<UInt16>.size)!.assumingMemoryBound(to: UInt16.self)
             let utf16Buffer = UnsafeMutableBufferPointer<UInt16>(start: utf16Pointer, count: outputCount)
             
             if let bom {
@@ -242,7 +187,7 @@ extension String {
                     guard let valid = UInt8(exactly: scalar.value) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(valid)
+                    buffer.append(valid)
                 }
             }
         case .macOSRoman:
@@ -251,7 +196,7 @@ extension String {
                     guard let value = UInt8(macRomanFor: scalar) else {
                         throw CocoaError(.fileWriteInapplicableStringEncoding)
                     }
-                    buffer.appendElement(value)
+                    buffer.append(value)
                 }
             }
         case .japaneseEUC:
@@ -274,6 +219,8 @@ extension String {
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
+#if !NO_UNI_CHAR_DATA
+    // Word capitalization reads the CFUniChar case bitmaps in _FoundationCShims. Embedded doesn't build _FoundationCShims.
     /// A copy of the string with each word changed to its corresponding
     /// capitalized spelling.
     ///
@@ -296,6 +243,7 @@ extension StringProtocol {
     public var capitalized: String {
         String(self)._capitalized()
     }
+#endif
 
 #if FOUNDATION_FRAMEWORK
     /// Finds and returns the range in the `String` of the first

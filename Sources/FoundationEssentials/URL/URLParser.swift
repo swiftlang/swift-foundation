@@ -181,6 +181,8 @@ package protocol UIDNAHook {
 internal func _uidnaHook() -> UIDNAHook.Type? {
     UIDNAHookICU.self
 }
+#elseif hasFeature(Embedded)
+// Embedded Swift doesn't support dynamic replacement, and we do not have ICU.
 #else
 dynamic package func _uidnaHook() -> UIDNAHook.Type? {
     nil
@@ -252,6 +254,7 @@ internal struct RFC3986Parser {
     }
 
     static func shouldPercentEncodeHost(_ host: some StringProtocol, forScheme scheme: (some StringProtocol)?) -> Bool {
+#if !hasFeature(Embedded)
         guard _uidnaHook() != nil else {
             // Always percent-encode the host if we can't access UIDNA encoding functions
             return true
@@ -265,6 +268,10 @@ internal struct RFC3986Parser {
         }
         let lowercased = scheme.lowercased().utf8
         return schemesToPercentEncodeHost.contains { $0.elementsEqual(lowercased) }
+#else
+        // Always percent-encode the host if we can't access UIDNA encoding functions
+        return true
+#endif
     }
 
     private static func percentEncodeIPLiteralHost(_ host: some StringProtocol) -> String? {
@@ -300,17 +307,37 @@ internal struct RFC3986Parser {
         return host.addingPercentEncoding(forURLComponent: .host, skipAlreadyEncoded: skipAlreadyEncoded)
     }
 
+    /// Whether IDNA encoding and decoding are available.
+    /// Embedded builds do not have ICU (and cannot use the existential metatype the hook is looked up through), so there is never a hook.
+    static var supportsIDNA: Bool {
+#if hasFeature(Embedded)
+        false
+#else
+        _uidnaHook() != nil
+#endif
+    }
+    
     static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
+#if hasFeature(Embedded)
+        // There is no IDNA hook in embedded mode.
+        return nil
+#else
         return _uidnaHook()?.encode(host)
+#endif
     }
 
     static func IDNADecodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
+#if hasFeature(Embedded)
+        // There is no IDNA hook in embedded mode.
+        return String(host)
+#else
         guard let uidnaHook = _uidnaHook() else { return String(host) }
         return uidnaHook.decode(host)
+#endif
     }
 
     private static func percentEncodePath(_ path: some StringProtocol, skipAlreadyEncoded: Bool = false) -> String {

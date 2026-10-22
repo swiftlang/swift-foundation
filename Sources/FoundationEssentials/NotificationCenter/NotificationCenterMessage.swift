@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSNotification
 internal import _ForSwiftFoundation
@@ -136,6 +138,13 @@ extension NotificationCenter {
 
 extension NotificationCenter {
     internal var asyncObserverQueue: _NotificationCenterActorQueueManager {
+#if FOUNDATION_FRAMEWORK
         self._getActorQueueManager() as! _NotificationCenterActorQueueManager
+#else
+        // No need to cast on this platform, the type comes from the Swift API
+        self._getActorQueueManager()
+#endif
     }
 }
+
+#endif // !hasFeature(Embedded)

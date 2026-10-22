@@ -1355,6 +1355,8 @@ public struct URL: Equatable, Sendable, Hashable {
 
 #if !NO_FILESYSTEM
 
+#if !hasFeature(Embedded)
+
     /// A standardized version of the path of a file URL.
     ///
     /// If the `isFileURL` is false, this method returns `self`.
@@ -1375,6 +1377,7 @@ public struct URL: Equatable, Sendable, Hashable {
     public mutating func resolveSymlinksInPath() {
         self = self.resolvingSymlinksInPath()
     }
+#endif // !hasFeature(Embedded)
 
 #if FOUNDATION_FRAMEWORK // These APIs will eventually be available in swift-foundation.
 
@@ -1624,7 +1627,7 @@ extension URL {
             }
             return isAbsolute
         }
-        #if !NO_FILESYSTEM
+        #if !NO_FILESYSTEM && !hasFeature(Embedded)
         // Expand the tilde, but only for "~/" (no user)
         // Treat a lone "~" as a potential file name and don't expand it
         if filePath.utf8.starts(with: [UInt8(ascii: "~"), UInt8(ascii: "/")]) {
@@ -1764,7 +1767,7 @@ extension URL {
     }
 }
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !hasFeature(Embedded)
 extension URL {
     /// The working directory of the current process.
     /// Calling this property will issue a `getcwd` syscall.
@@ -2040,6 +2043,7 @@ extension URL: _CustomPlaygroundQuickLookable {
 }
 #endif // FOUNDATION_FRAMEWORK
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension URL: Codable {
     private enum CodingKeys: Int, CodingKey {
@@ -2068,6 +2072,7 @@ extension URL: Codable {
         }
     }
 }
+#endif
 
 #if FOUNDATION_FRAMEWORK
 //===----------------------------------------------------------------------===//

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if FOUNDATION_FRAMEWORK
 
 internal import ReflectionInternal
@@ -240,3 +242,5 @@ extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
 }
 
 #endif // FOUNDATION_FRAMEWORK
+
+#endif // !hasFeature(Embedded)

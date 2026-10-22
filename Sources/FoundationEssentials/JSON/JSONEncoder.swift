@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
@@ -1456,7 +1458,7 @@ extension EncodingError {
     ///
     ///
     /// - parameter value: The value that was invalid to encode.
-    /// - parameter path: The path of `CodingKey`s taken to encode this value.
+    /// - parameter codingPath: The path of `CodingKey`s taken to encode this value.
     /// - returns: An `EncodingError` with the appropriate path and debug description.
     fileprivate static func _invalidFloatingPointValue<T : FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
         let valueDescription: String
@@ -1587,3 +1589,5 @@ fileprivate extension JSONEncoder.KeyEncodingStrategy {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)

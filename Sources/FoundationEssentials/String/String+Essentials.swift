@@ -43,13 +43,16 @@ extension String {
         /// or `.orderedDescending` if the strings are equivalent but not strictly equal,
         /// for stability when sorting (e.g. "aaa" > "AAA" with `.caseInsensitive` specified)
         public static let forcedOrdering = CompareOptions(rawValue: 512)
+        
         /// The search string is treated as an ICU-compatible regular expression;
         /// if set, no other options can apply except `.caseInsensitive` and `.anchored`
+        @_unavailableInEmbedded
         public static let regularExpression = CompareOptions(rawValue: 1024)
     }
 #endif // FOUNDATION_FRAMEWORK
 }
 
+#if !NO_UNI_CHAR_DATA
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension String {
     func _capitalized() -> String {
@@ -81,3 +84,4 @@ extension String {
         return new
     }
 }
+#endif

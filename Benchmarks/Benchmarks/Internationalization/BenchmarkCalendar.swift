@@ -294,6 +294,21 @@ func calendarBenchmarks() {
     }
     gmtCalendr.timeZone = gmtTimeZone // use gmt-based time zone so the result doesn't get overshadowed by TimeZone API
 
+    // Adding and rolling a year are the paths that consult the era table, so they are measured separately from the day and time paths above.
+    Benchmark("GregorianCalendar-date-byAdding-year", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let next = gmtCalendr.date(byAdding: .year, value: 1, to: date)
+            blackHole(next)
+        }
+    }
+
+    Benchmark("GregorianCalendar-date-rolling-year", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in testDates {
+            let rolled = gmtCalendr.date(byAdding: .year, value: 1, to: date, wrappingComponents: true)
+            blackHole(rolled)
+        }
+    }
+
     Benchmark("GregorianCalendar-dateComponents-yearMonthBasedComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
         for date in testDates {
             let dc = gmtCalendr.dateComponents([.era, .year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
@@ -536,6 +551,268 @@ func calendarBenchmarks() {
             let nextDate = testDates[i + 1]
             let sameDayComparison = currentCalendar.compare(date, to: nextDate, toGranularity: .month)
             blackHole(sameDayComparison)
+        }
+    }
+
+    // MARK: - HebrewCalendar
+
+    let hebrewCal = Calendar(identifier: .hebrew)
+    let hebrewStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
+    let hanukkahComponents = DateComponents(month: 3, day: 25) // Kislev 25 (civil month 3)
+
+    Benchmark("HebrewCalendar-nextThousandHanukkahs") { benchmark in
+        var count = 1000
+        hebrewCal.enumerateDates(startingAfter: hebrewStart, matching: hanukkahComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("HebrewCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .hebrew)
+            let date = cal.date(byAdding: .day, value: 1, to: hebrewStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("HebrewCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .hebrew)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    let hebrewTestDates = {
+        let date = Date(timeIntervalSince1970: 1474666555.0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 86400), since: date))
+        }
+        return dates
+    }()
+
+    Benchmark("HebrewCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in hebrewTestDates {
+            let dc = hebrewCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("HebrewCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in hebrewTestDates {
+            let comps = hebrewCal.dateComponents([.year, .month, .day], from: date)
+            let rt = hebrewCal.date(from: comps)
+            blackHole(rt)
+        }
+    }
+
+    // MARK: - ChineseCalendar
+
+    let chineseCal = Calendar(identifier: .chinese)
+    let chineseStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
+    let chineseNewYearComponents = DateComponents(month: 1, day: 1)
+
+    Benchmark("ChineseCalendar-nextThousandNewYears") { benchmark in
+        var count = 1000
+        chineseCal.enumerateDates(startingAfter: chineseStart, matching: chineseNewYearComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("ChineseCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .chinese)
+            let date = cal.date(byAdding: .day, value: 1, to: chineseStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("ChineseCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .chinese)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    let chineseTestDates = {
+        let date = Date(timeIntervalSince1970: 1474666555.0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 86400), since: date))
+        }
+        return dates
+    }()
+
+    Benchmark("ChineseCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in chineseTestDates {
+            let dc = chineseCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(dc)
+        }
+    }
+
+    Benchmark("ChineseCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in chineseTestDates {
+            var comps = chineseCal.dateComponents([.year, .month, .day, .era], from: date)
+            comps.isLeapMonth = chineseCal.dateComponents([.month], from: date).isLeapMonth
+            let rt = chineseCal.date(from: comps)
+            blackHole(rt)
+        }
+    }
+
+    // MARK: - Gregorian-family calendars (Buddhist, Japanese, ROC)
+
+    // These three share one era-table engine over `_CalendarGregorian`, so they are benchmarked against the same dates to make the relabeling cost comparable.
+    let gregorianFamilyStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
+
+    let gregorianFamilyTestDates = {
+        let date = Date(timeIntervalSince1970: 1474666555.0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 86400), since: date))
+        }
+        return dates
+    }()
+
+    let buddhistCal = Calendar(identifier: .buddhist)
+    let japaneseCal = Calendar(identifier: .japanese)
+    let rocCal = Calendar(identifier: .republicOfChina)
+
+    let songkranComponents = DateComponents(month: 4, day: 13) // Songkran (Thai New Year)
+    let childrensDayComponents = DateComponents(month: 5, day: 5) // Kodomo no Hi (Children's Day)
+    let doubleTenComponents = DateComponents(month: 10, day: 10) // National Day of the Republic of China
+
+    Benchmark("BuddhistCalendar-nextThousandSongkrans") { benchmark in
+        var count = 1000
+        buddhistCal.enumerateDates(startingAfter: gregorianFamilyStart, matching: songkranComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("BuddhistCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .buddhist)
+            let date = cal.date(byAdding: .day, value: 1, to: gregorianFamilyStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("BuddhistCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .buddhist)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    Benchmark("BuddhistCalendar-dateComponents-eraYearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in gregorianFamilyTestDates {
+            let components = buddhistCal.dateComponents([.era, .year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("BuddhistCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in gregorianFamilyTestDates {
+            let components = buddhistCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTripped = buddhistCal.date(from: components)
+            blackHole(roundTripped)
+        }
+    }
+
+    Benchmark("JapaneseCalendar-nextThousandChildrensDays") { benchmark in
+        var count = 1000
+        japaneseCal.enumerateDates(startingAfter: gregorianFamilyStart, matching: childrensDayComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("JapaneseCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .japanese)
+            let date = cal.date(byAdding: .day, value: 1, to: gregorianFamilyStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("JapaneseCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .japanese)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    // The Japanese era table is the largest in the family, so this is the worst case for the era lookup.
+    Benchmark("JapaneseCalendar-dateComponents-eraYearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in gregorianFamilyTestDates {
+            let components = japaneseCal.dateComponents([.era, .year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("JapaneseCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in gregorianFamilyTestDates {
+            let components = japaneseCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTripped = japaneseCal.date(from: components)
+            blackHole(roundTripped)
+        }
+    }
+
+    Benchmark("ROCCalendar-nextThousandNationalDays") { benchmark in
+        var count = 1000
+        rocCal.enumerateDates(startingAfter: gregorianFamilyStart, matching: doubleTenComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("ROCCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .republicOfChina)
+            let date = cal.date(byAdding: .day, value: 1, to: gregorianFamilyStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("ROCCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .republicOfChina)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    Benchmark("ROCCalendar-dateComponents-eraYearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in gregorianFamilyTestDates {
+            let components = rocCal.dateComponents([.era, .year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("ROCCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in gregorianFamilyTestDates {
+            let components = rocCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTripped = rocCal.date(from: components)
+            blackHole(roundTripped)
         }
     }
 }

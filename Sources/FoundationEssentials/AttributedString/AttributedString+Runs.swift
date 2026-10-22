@@ -122,8 +122,8 @@ extension AttributedString.Runs: Equatable {
         // I.e., the runs of two equal attribute strings may or may not compare equal.
 
         // Shortcut: compare overall UTF-8 counts.
-        let leftUTF8Count = lhs._strBounds.ranges.map(\._utf8OffsetRange.count).reduce(0, +)
-        let rightUTF8Count = rhs._strBounds.ranges.map(\._utf8OffsetRange.count).reduce(0, +)
+        let leftUTF8Count = lhs._strBounds.ranges.map { $0._utf8OffsetRange.count }.reduce(0, +)
+        let rightUTF8Count = rhs._strBounds.ranges.map { $0._utf8OffsetRange.count }.reduce(0, +)
         guard leftUTF8Count == rightUTF8Count else { return false }
 
         // Shortcut: compare run counts.
@@ -348,9 +348,9 @@ extension AttributedString.Runs: BidirectionalCollection {
         }
     }
     
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func distance(from start: Index, to end: Index) -> Int {
-        #if FOUNDATION_FRAMEWORK
+        #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) {
             _distance(from: start, to: end)
         } else {
@@ -376,9 +376,9 @@ extension AttributedString.Runs: BidirectionalCollection {
         return dist
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-    #if FOUNDATION_FRAMEWORK
+    #if FOUNDATION_FRAMEWORK || os(macOS)
         if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
             return _index(i, offsetBy: distance)
         }
@@ -408,7 +408,7 @@ extension AttributedString.Runs: BidirectionalCollection {
         return idx
     }
 
-    @_alwaysEmitIntoClient
+    @export(implementation)
     public func index(_ i: Index, offsetBy distance: Int, limitedBy limit: Index) -> Index? {
         // This is the stdlib's default implementation for RandomAccessCollection types.
         // (It's _far_ more efficient than the O(n) algorithm that used to apply here by default,

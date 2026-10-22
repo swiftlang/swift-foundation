@@ -22,9 +22,13 @@ internal import os
 import WinSDK
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
+#if !NO_CSHIMS
 internal import _FoundationCShims
+#endif
 
 extension StringProtocol {
     fileprivate func _convertingSlashesIfNeeded() -> String {
@@ -342,7 +346,7 @@ extension String {
 
 // MARK: - Filesystem String Extensions
 
-#if !NO_FILESYSTEM
+#if !NO_FILESYSTEM && !hasFeature(Embedded)
     
     internal static func homeDirectoryPath() -> String {
         #if os(Windows)
@@ -388,7 +392,7 @@ extension String {
             return envVar.standardizingPath
         }
         
-        #if !os(WASI) // WASI does not have user concept
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten does not have user concept
         // Next, attempt to find the home directory via getpwuid
         // We use the real UID instead of the EUID here when the EUID is the root user (i.e. a process has called seteuid(0))
         // In this instance, we historically do this to ensure a stable home directory location for processes that call seteuid(0)
@@ -457,7 +461,7 @@ extension String {
         if let envVar = Platform.getEnvSecure("CFFIXED_USER_HOME") {
             return envVar.standardizingPath
         }
-        #if !os(WASI) // WASI does not have user concept
+        #if !os(WASI) && !os(Emscripten) // WASI/Emscripten does not have user concept
         // Next, attempt to find the home directory via getpwnam
         return Platform.homeDirectory(forUserName: user)?.standardizingPath
         #else
@@ -500,7 +504,7 @@ extension String {
         }
         #endif // canImport(Darwin)
 
-        #if !os(WASI)
+        #if !os(WASI) && !os(Emscripten)
         if let envValue = Platform.getEnvSecure("TMPDIR") {
             return normalizedPath(with: envValue)
         }
@@ -748,7 +752,7 @@ extension String {
         return result._standardizingPath
     }
 
-#endif // !NO_FILESYSTEM
+#endif // !NO_FILESYSTEM && !hasFeature(Embedded)
 
 }
 

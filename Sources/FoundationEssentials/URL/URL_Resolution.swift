@@ -117,9 +117,9 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
             } else if v == slash {
                 state = .initial
             } else {
-                writeIndex = buffer[writeIndex...(writeIndex + 1)].initialize(
-                    fromContentsOf: [dot, v]
-                )
+                buffer[writeIndex + 0] = dot
+                buffer[writeIndex + 1] = v
+                writeIndex += 2
                 state = .appendUntilSlash
             }
         case .dotDot:
@@ -131,9 +131,10 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 } else {
                     state = .appendUntilSlash
                 }
-                writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
-                    fromContentsOf: [dot, dot, v]
-                )
+                buffer[writeIndex + 0] = dot
+                buffer[writeIndex + 1] = dot
+                buffer[writeIndex + 2] = v
+                writeIndex += 3
                 continue
             }
             if v == slash {
@@ -141,9 +142,10 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 state = .initial
             } else {
                 // Found a non-".." component like "..a"
-                writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
-                    fromContentsOf: [dot, dot, v]
-                )
+                buffer[writeIndex + 0] = dot
+                buffer[writeIndex + 1] = dot
+                buffer[writeIndex + 2] = v
+                writeIndex += 3
                 state = .appendUntilSlash
             }
         case .slash:
@@ -153,9 +155,9 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 buffer[writeIndex] = slash
                 writeIndex += 1
             } else {
-                writeIndex = buffer[writeIndex...(writeIndex + 1)].initialize(
-                    fromContentsOf: [slash, v]
-                )
+                buffer[writeIndex + 0] = slash
+                buffer[writeIndex + 1] = v
+                writeIndex += 2
                 state = .appendUntilSlash
             }
         case .slashDot:
@@ -164,9 +166,10 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
             } else if v == slash {
                 state = .slash
             } else {
-                writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
-                    fromContentsOf: [slash, dot, v]
-                )
+                buffer[writeIndex + 0] = slash
+                buffer[writeIndex + 1] = dot
+                buffer[writeIndex + 2] = v
+                writeIndex += 3
                 state = .appendUntilSlash
             }
         case .slashDotDot:
@@ -182,9 +185,10 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                         )
                     )
                     if writeIndex == 0 || previousIsDotDot {
-                        writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
-                            fromContentsOf: [slash, dot, dot]
-                        )
+                        buffer[writeIndex + 0] = slash
+                        buffer[writeIndex + 1] = dot
+                        buffer[writeIndex + 2] = dot
+                        writeIndex += 3
                         state = .slash
                     } else if let lastSlash = buffer[..<writeIndex].lastIndex(of: slash) {
                         writeIndex = lastSlash
@@ -194,9 +198,11 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                         state = .skipSlashes
                     }
                 } else {
-                    writeIndex = buffer[writeIndex...(writeIndex + 3)].initialize(
-                        fromContentsOf: [slash, dot, dot, v]
-                    )
+                    buffer[writeIndex + 0] = slash
+                    buffer[writeIndex + 1] = dot
+                    buffer[writeIndex + 2] = dot
+                    buffer[writeIndex + 3] = v
+                    writeIndex += 4
                     state = .appendUntilSlash
                 }
                 continue
@@ -220,9 +226,11 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                     state = .skipSlashes
                 }
             } else {
-                writeIndex = buffer[writeIndex...(writeIndex + 3)].initialize(
-                    fromContentsOf: [slash, dot, dot, v]
-                )
+                buffer[writeIndex + 0] = slash
+                buffer[writeIndex + 1] = dot
+                buffer[writeIndex + 2] = dot
+                buffer[writeIndex + 3] = v
+                writeIndex += 4
                 state = .appendUntilSlash
             }
         case .appendUntilSlash:
@@ -265,9 +273,10 @@ internal func resolveDotSegmentsInPlace<T: UnsignedInteger & FixedWidthInteger>(
                 )
             )
             if writeIndex == 0 || previousIsDotDot {
-                writeIndex = buffer[writeIndex...(writeIndex + 2)].initialize(
-                    fromContentsOf: [slash, dot, dot]
-                )
+                buffer[writeIndex + 0] = slash
+                buffer[writeIndex + 1] = dot
+                buffer[writeIndex + 2] = dot
+                writeIndex += 3
             } else if let previousSlash = buffer[..<writeIndex].lastIndex(of: slash) {
                 writeIndex = previousSlash + 1
             } else {

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -25,6 +27,8 @@ import WinSDK
 internal import _FoundationCShims
 #elseif os(WASI)
 @preconcurrency import WASILibc
+#elseif os(Emscripten)
+@preconcurrency import EmscriptenLibc
 #endif
 
 extension _FileManagerImpl {
@@ -212,3 +216,5 @@ extension _FileManagerImpl {
 #endif
     }
 }
+
+#endif // !hasFeature(Embedded)

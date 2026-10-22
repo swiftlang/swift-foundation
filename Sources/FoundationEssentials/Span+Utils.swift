@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 extension Span<UInt8> {
-    func firstIndex(of byte: UInt8) -> Int? {
+    package func firstIndex(of byte: UInt8) -> Int? {
         guard !isEmpty else {
             return nil
         }
@@ -62,9 +62,27 @@ extension Span<UInt8> {
 
         return true
     }
+    
+    /// Comparison against a prefix StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func starts(with prefix: StaticString) -> Bool {
+        let prefixLength = prefix.utf8CodeUnitCount
+        guard prefixLength > 0 else { return true }
+        guard self.count >= prefixLength else { return false }
+        // Precondition: self.count > 0
+        return withUnsafeBufferPointer { buffer in
+            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
+        }
+    }
+
+    /// Whole-span comparison against a StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func equals(_ other: StaticString) -> Bool {
+        count == other.utf8CodeUnitCount && starts(with: other)
+    }
 
     @inline(__always)
-    var first: UInt8? {
+    package var first: UInt8? {
         guard count > 0 else {
             return nil
         }
@@ -87,10 +105,84 @@ extension Span<UInt8> {
         }
         return false
     }
+
+    package func firstRange(of needle: Span<UInt8>) -> Range<Int>? {
+        let m = needle.count
+        guard m > 0 else {
+            return 0..<0
+        }
+        guard m <= count else {
+            return nil
+        }
+
+        let first = needle[0]
+        for i in 0...(count - m) {
+            guard self[i] == first else {
+                continue
+            }
+
+            var j = 1
+            while j < m, self[i &+ j] == needle[j] {
+                j &+= 1
+            }
+
+            if j == m {
+                return i ..< (i &+ m)
+            }
+        }
+        
+        return nil
+    }
+}
+
+extension OutputRawSpan {
+    @export(implementation)
+    mutating func _append(copying span: RawSpan) {
+        precondition(self.freeCapacity >= span.byteCount, "Insufficient space to copy the provided span (have \(self.freeCapacity) bytes for writing \(span.byteCount) bytes)")
+        self.withUnsafeMutableBytes { buffer, initializedCount in
+            let dest = UnsafeMutableRawBufferPointer(rebasing: buffer.suffix(from: initializedCount))
+            span.withUnsafeBytes { src in
+                dest.copyMemory(from: src)
+                initializedCount += src.count
+            }
+        }
+    }
+
+    mutating func _append<S: Sequence<Element>, Element: ConvertibleToBytes & ConvertibleFromBytes>(copying elements: S) {
+        let early: Void? = elements.withContiguousStorageIfAvailable { buffer in
+            self._append(copying: buffer.span.bytes)
+        }
+
+        if early == nil {
+            self.withUnsafeMutableBytes { buffer, initializedCount in
+                let uninitialized = UnsafeMutableRawBufferPointer(rebasing: buffer.suffix(from: initializedCount))
+                var (iterator, idx) = elements._copyContents(initializing: uninitialized.assumingMemoryBound(to: Element.self))
+                precondition(iterator.next() == nil, "Insufficient space to store contents in OutputRawSpan")
+                initializedCount += idx - uninitialized.startIndex
+            }
+        }
+    }
+
+    mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
+        of type: T.Type,
+        _ body: (inout OutputSpan<T>) throws(E) -> R
+    ) throws(E) -> R {
+        let stride = MemoryLayout<T>.stride
+        return try self.withUnsafeMutableBytes { buffer, initializedCount throws(E) in
+            precondition(initializedCount % stride == 0, "Initialized prefix of \(initializedCount) bytes is not a whole number of \(T.self)")
+            let typedBuffer = buffer.bindMemory(to: T.self)
+            var output = OutputSpan<T>(buffer: typedBuffer, initializedCount: initializedCount / stride)
+            defer {
+                initializedCount = output.finalize(for: typedBuffer) * stride
+                output = OutputSpan<T>()
+            }
+            return try body(&output)
+        }
+    }
 }
 
 extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
-    mutating func _append(copying span: Span<Element>) {
+    package mutating func _append(copying span: Span<Element>) {
         precondition(self.freeCapacity >= span.count, "Insufficient space to copy the provided span (have space for \(self.freeCapacity) but writing \(span.count))")
         guard !span.isEmpty else { return }
         self.withUnsafeMutableBufferPointer { buffer, initializedCount in
@@ -114,6 +206,46 @@ extension OutputSpan where Element : ConvertibleToBytes & ConvertibleFromBytes {
                 precondition(iterator.next() == nil, "Insufficient space to store contents in OutputSpan")
                 initializedCount += idx - uninitialized.startIndex
             }
+        }
+    }
+}
+
+extension OutputSpan<UInt8> {
+    @inline(__always)
+    mutating func _append(copying source: StaticString) {
+        source.withUTF8Buffer { _append(copying: $0.span) }
+    }
+
+    @inline(__always)
+    var last: UInt8? {
+        guard count > 0 else {
+            return nil
+        }
+        return self[count - 1]
+    }
+
+    package mutating func removeSubrange(_ range: Range<Int>) {
+        guard !range.isEmpty else { return }
+
+        precondition(range.lowerBound >= 0, "Range lower bound must be non-negative")
+        precondition(range.upperBound <= count, "Range upper bound out of bounds")
+        do {
+            var bytes = mutableSpan
+            for i in range.upperBound..<bytes.count {
+                bytes[i - range.count] = bytes[i]
+            }
+        }
+        removeLast(range.count)
+    }
+}
+
+
+extension String {
+    package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
+        try self.init(unsafeUninitializedCapacity: capacity) { buffer throws(E) in
+            var outputSpan = OutputSpan(buffer: buffer, initializedCount: 0)
+            try body(&outputSpan)
+            return outputSpan.finalize(for: buffer)
         }
     }
 }
