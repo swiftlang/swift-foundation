@@ -12,12 +12,11 @@
 
 #if !hasFeature(Embedded)
 
-// One class for Coptic, the two Ethiopic calendars, Persian and Indian. `FixedMonthArithmetic` holds the arithmetic of each. `Docs/Fixed_Month_Calendars.md` explains the rules.
-// `@unchecked Sendable` is safe because the properties change only in `init`. `Calendar` makes a copy to change a setting.
-internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable {
+// One class for Coptic, the two Ethiopic calendars, Persian and Indian. `Arithmetic` holds the arithmetic of each. `Docs/Fixed_Month_Calendars.md` explains the rules.
+internal final class _CalendarFixedMonth: _CalendarProtocol, Sendable {
 
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
-        guard let rules = FixedMonthArithmetic(identifier: identifier) else {
+        guard let rules = Arithmetic(identifier: identifier) else {
             preconditionFailure("_CalendarFixedMonth does not handle this identifier")
         }
         self.rules = rules
@@ -26,29 +25,25 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
         self.locale = locale
         if let firstWeekday, (firstWeekday >= 1 && firstWeekday <= 7) {
             _firstWeekday = firstWeekday
+        } else {
+            _firstWeekday = nil
         }
-        if var minimumDaysInFirstWeek {
-            if minimumDaysInFirstWeek < 1 { minimumDaysInFirstWeek = 1 }
-            else if minimumDaysInFirstWeek > 7 { minimumDaysInFirstWeek = 7 }
-            _minimumDaysInFirstWeek = minimumDaysInFirstWeek
-        }
+        _minimumDaysInFirstWeek = minimumDaysInFirstWeek.map(_CalendarUtility.clampedMinimumDaysInFirstWeek)
     }
 
     let identifier: Calendar.Identifier
-    let rules: FixedMonthArithmetic
-    var locale: Locale?
-    var timeZone: TimeZone
+    let rules: Arithmetic
+    let locale: Locale?
+    let timeZone: TimeZone
 
-    var _firstWeekday: Int?
+    let _firstWeekday: Int?
     var firstWeekday: Int {
-        set { _firstWeekday = _CalendarUtility.validatedFirstWeekday(newValue) }
-        get { _CalendarUtility.resolveFirstWeekday(stored: _firstWeekday, locale: locale) }
+        _CalendarUtility.resolveFirstWeekday(stored: _firstWeekday, locale: locale)
     }
 
-    var _minimumDaysInFirstWeek: Int?
+    let _minimumDaysInFirstWeek: Int?
     var minimumDaysInFirstWeek: Int {
-        set { _minimumDaysInFirstWeek = _CalendarUtility.clampedMinimumDaysInFirstWeek(newValue) }
-        get { _CalendarUtility.resolveMinimumDaysInFirstWeek(stored: _minimumDaysInFirstWeek, locale: locale) }
+        _CalendarUtility.resolveMinimumDaysInFirstWeek(stored: _minimumDaysInFirstWeek, locale: locale)
     }
 
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
@@ -66,7 +61,7 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
     // The extended years that the class supports. The class resolves a date to a rata die first, so a year outside this range has no date.
     private static let extendedYearLimit = 5_000_000
 
-    // The largest rata die that the class supports.
+    // The largest day number (rata die, day 1 is 0001-01-01) that the class handles, about 5.5 million years. It is above the last day of the supported years and below `Int32.max`.
     private static let rataDieLimit = 2_000_000_000
 
     private static func isSupported(extendedYear: Int) -> Bool {
@@ -81,10 +76,6 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
     // The class reduces the weekday first, so a weekday of Int.min does not overflow.
     private func relativeWeekday(of weekday: Int) -> Int {
         ((weekday % 7 - firstWeekday) % 7 + 7) % 7
-    }
-
-    private func rataDie(year: Int, month: Int, day: Int) -> Int {
-        rules.startOfYear(year) + rules.daysBeforeMonth(year: year, month: month) + day - 1
     }
 
     private func localMidnight(rataDie: Int, in timeZone: TimeZone) -> Date {
@@ -342,22 +333,11 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
         }
     }
 
-    // The year that starts the era, or nil for Coptic era 0, which has no first year, and for the days before year 1 of Persian and Indian.
-    private func eraStartYear(extendedYear: Int) -> Int? {
-        let (era, _) = rules.eraAndYear(extendedYear: extendedYear)
-        switch rules {
-        case .coptic: return era == 1 ? 1 : nil
-        case .ethiopicAmeteMihret: return era == 1 ? 1 : 1 - rules.ameteAlemOffset
-        case .ethiopicAmeteAlem: return 1
-        case .persian, .indian: return extendedYear >= 1 ? 1 : nil
-        }
-    }
-
     // The first day of the unit that holds the day. Units that start in the middle of a day have none.
     private func startRataDie(of larger: Calendar.Component, fields: DayFields, date: Date) -> Int? {
         switch larger {
         case .era:
-            if let startYear = eraStartYear(extendedYear: fields.year) { return rules.startOfYear(startYear) }
+            if let startYear = rules.eraStartYear(extendedYear: fields.year) { return rules.startOfYear(startYear) }
             // Coptic era 0 has no first day. Its interval starts a fixed distance before era 1, and the days count as whole elapsed days from that moment.
             guard rules == .coptic, let interval = eraInterval(extendedYear: fields.year, in: timeZone) else { return nil }
             return fields.rataDie - Int((date.timeIntervalSince(interval.start) / Double(Calendar._secondsInDay)).rounded(.down))
@@ -493,11 +473,11 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
             guard let (year, month) = carriedMonth(year: extendedYear, month: components.month ?? 1) else { return nil }
             let dayValue = day ?? 1
             guard dayValue > -Self.rataDieLimit, dayValue < Self.rataDieLimit else { return nil }
-            return offset(rataDie(year: year, month: month, day: 1), by: dayValue - 1)
+            return offset(rules.rataDie(year: year, month: month, day: 1), by: dayValue - 1)
 
         case .weekdayOrdinal(let ordinal, let weekday):
             guard ordinal.magnitude <= UInt(Self.fieldLimit), let (year, month) = carriedMonth(year: extendedYear, month: components.month ?? 1) else { return nil }
-            let monthStart = rataDie(year: year, month: month, day: 1)
+            let monthStart = rules.rataDie(year: year, month: month, day: 1)
             let first = relativeWeekday(ofRataDie: monthStart)
             let weekdayOffset = weekday.map { relativeWeekday(of: $0) } ?? 0
             let day = _CalendarUtility.dayOfMonth(weekdayOrdinal: ordinal, weekdayOffset: weekdayOffset, monthStartOffset: first, monthLength: rules.daysInMonth(year: year, month: month))
@@ -512,7 +492,7 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
 
         case .weekOfMonth(let week, let weekday):
             guard week.magnitude <= UInt(Self.fieldLimit), let (year, month) = carriedMonth(year: extendedYear, month: components.month ?? 1) else { return nil }
-            let monthStart = rataDie(year: year, month: month, day: 1)
+            let monthStart = rules.rataDie(year: year, month: month, day: 1)
             let first = relativeWeekday(ofRataDie: monthStart)
             let weekdayOffset = weekday.map { relativeWeekday(of: $0) } ?? 0
             let day = _CalendarUtility.dayOfMonth(weekOfMonth: week, weekdayOffset: weekdayOffset, monthStartOffset: first, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
@@ -657,7 +637,7 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
     // The day of a month that is too short for it moves to the last day of the month.
     private func rebuilt(year: Int, month: Int, day: Int, secondsInDay: Double, forward: Bool, in timeZone: TimeZone) -> Date {
         let clampedDay = min(day, rules.daysInMonth(year: year, month: month))
-        return _CalendarUtility.utcDate(fromRataDie: rataDie(year: year, month: month, day: clampedDay), secondsInDay: secondsInDay, in: timeZone, repeatedTimePolicy: forward ? .former : .latter, skippedTimePolicy: .former)
+        return _CalendarUtility.utcDate(fromRataDie: rules.rataDie(year: year, month: month, day: clampedDay), secondsInDay: secondsInDay, in: timeZone, repeatedTimePolicy: forward ? .former : .latter, skippedTimePolicy: .former)
     }
 
     // Each field wraps inside the larger field that holds it. The fields go from the largest to the smallest, as in a plain add.
@@ -791,241 +771,258 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, @unchecked Sendable
 
 // MARK: - Arithmetic of each calendar
 
-/// The arithmetic of one calendar. Every function works on the extended year, which counts years across all eras.
-/// A rata die is the number of days since 0001-01-01, where that day is day 1.
-internal enum FixedMonthArithmetic: Sendable {
-    case coptic
-    case ethiopicAmeteMihret
-    case ethiopicAmeteAlem
-    case persian
-    case indian
+extension _CalendarFixedMonth {
+    /// The arithmetic of one calendar. Every function works on the extended year, which counts years across all eras.
+    /// A rata die is the number of days since 0001-01-01, where that day is day 1.
+    enum Arithmetic: Sendable {
+        case coptic
+        case ethiopicAmeteMihret
+        case ethiopicAmeteAlem
+        case persian
+        case indian
 
-    init?(identifier: Calendar.Identifier) {
-        switch identifier {
-        case .coptic: self = .coptic
-        case .ethiopicAmeteMihret: self = .ethiopicAmeteMihret
-        case .ethiopicAmeteAlem: self = .ethiopicAmeteAlem
-        case .persian: self = .persian
-        case .indian: self = .indian
-        default: return nil
-        }
-    }
-
-    var monthsInYear: Int {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 13
-        case .persian, .indian: return 12
-        }
-    }
-
-    // MARK: Ranges
-
-    var eraRange: Range<Int> {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret: return 0..<2
-        case .ethiopicAmeteAlem, .persian, .indian: return 0..<1
-        }
-    }
-
-    var yearRange: Range<Int> {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<5_000_001
-        case .persian, .indian: return -5_000_000..<5_000_001
-        }
-    }
-
-    var minimumDayRange: Range<Int> {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<6
-        case .persian: return 1..<30
-        case .indian: return 1..<31
-        }
-    }
-
-    var maximumDayRange: Range<Int> {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<31
-        case .persian, .indian: return 1..<32
-        }
-    }
-
-    var minimumWeekdayOrdinalRange: Range<Int> {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return -1..<2
-        case .persian: return 1..<6
-        case .indian: return -1..<6
-        }
-    }
-
-    var maximumWeekdayOrdinalRange: Range<Int> {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return -1..<6
-        case .persian: return 1..<6
-        case .indian: return -1..<6
-        }
-    }
-
-    // MARK: Eras
-
-    // The difference between the years of the Amete Alem calendar and the years of the Amete Mihret calendar.
-    var ameteAlemOffset: Int { 5500 }
-
-    // Whether the years of era 0 count backward, so that year 1 of era 0 is the year before year 1 of era 1.
-    var yearsCountBackwardInEraZero: Bool { self == .coptic }
-
-    func eraAndYear(extendedYear: Int) -> (era: Int, year: Int) {
-        switch self {
-        case .coptic:
-            return extendedYear > 0 ? (1, extendedYear) : (0, 1 - extendedYear)
-        case .ethiopicAmeteMihret:
-            return extendedYear > 0 ? (1, extendedYear) : (0, extendedYear + ameteAlemOffset)
-        case .ethiopicAmeteAlem, .persian, .indian:
-            return (0, extendedYear)
-        }
-    }
-
-    // The extended year for an era and a year. A missing era is the current one, a missing year is year 1. Returns nil for an era that the calendar does not have.
-    func extendedYear(era: Int?, year: Int?) -> Int? {
-        let year = year ?? 1
-        switch self {
-        case .coptic:
-            switch era ?? 1 {
-            case 1: return year
-            case 0:
-                let (result, overflow) = 1.subtractingReportingOverflow(year)
-                return overflow ? nil : result
+        init?(identifier: Calendar.Identifier) {
+            switch identifier {
+            case .coptic: self = .coptic
+            case .ethiopicAmeteMihret: self = .ethiopicAmeteMihret
+            case .ethiopicAmeteAlem: self = .ethiopicAmeteAlem
+            case .persian: self = .persian
+            case .indian: self = .indian
             default: return nil
             }
-        case .ethiopicAmeteMihret:
-            if (era ?? 1) == 1 { return year }
-            let (result, overflow) = year.subtractingReportingOverflow(ameteAlemOffset)
-            return overflow ? nil : result
-        case .ethiopicAmeteAlem, .persian, .indian:
-            return year
         }
-    }
 
-    // MARK: Quarters
-
-    // The last quarter takes the thirteenth month of the Coptic and Ethiopic calendars.
-    func quarter(ofMonth month: Int) -> Int { min((month - 1) / 3, 3) + 1 }
-    func firstMonth(ofQuarter quarter: Int) -> Int { 3 * (quarter - 1) + 1 }
-    func lastMonth(ofQuarter quarter: Int) -> Int { quarter == 4 ? monthsInYear : 3 * quarter }
-
-    // MARK: Years and months
-
-    // The rata die of the first day of year 0 of the Coptic and Ethiopic calendars.
-    private var epochRataDie: Int {
-        switch self {
-        case .coptic: return 103_240
-        case .ethiopicAmeteMihret: return 2_431
-        case .ethiopicAmeteAlem: return -2_006_444
-        case .persian, .indian: return 0
+        var monthsInYear: Int {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 13
+            case .persian, .indian: return 12
+            }
         }
-    }
 
-    // The rata die of the first day of the year.
-    func startOfYear(_ year: Int) -> Int {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
-            return epochRataDie + 365 * year + _CalendarUtility.floorDiv(year, 4)
-        case .persian:
-            // Each year in the correction table is one day shorter than the 33 year rule says. The year after it starts one day earlier.
-            let corrected = Self.isCorrectedPersianYear(year - 1)
-            return 226_895 + 365 * (year - 1) + _CalendarUtility.floorDiv(8 * year + 21, 33) - (corrected ? 1 : 0)
-        case .indian:
-            let gregorianYear = year + 78
-            return _CalendarAstronomy.gregorianRataDie(gregorianYear, 3, _CalendarGregorian.isLeapYear(gregorianYear) ? 21 : 22)
+        // MARK: Ranges
+
+        var eraRange: Range<Int> {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret: return 0..<2
+            case .ethiopicAmeteAlem, .persian, .indian: return 0..<1
+            }
         }
-    }
 
-    func daysInYear(_ year: Int) -> Int {
-        startOfYear(year + 1) - startOfYear(year)
-    }
-
-    func daysInMonth(year: Int, month: Int) -> Int {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
-            return month < 13 ? 30 : daysInYear(year) - 360
-        case .persian:
-            if month <= 6 { return 31 }
-            return month <= 11 ? 30 : daysInYear(year) - 336
-        case .indian:
-            if month == 1 { return _CalendarGregorian.isLeapYear(year + 78) ? 31 : 30 }
-            return month <= 6 ? 31 : 30
+        var yearRange: Range<Int> {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<5_000_001
+            case .persian, .indian: return -5_000_000..<5_000_001
+            }
         }
-    }
 
-    // The number of days in the year before the month. The month after the last one stands for the end of the year.
-    func daysBeforeMonth(year: Int, month: Int) -> Int {
-        if month > monthsInYear { return daysInYear(year) }
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
-            return 30 * (month - 1)
-        case .persian:
-            return Self.persianDaysBeforeMonth[month - 1]
-        case .indian:
-            if month == 1 { return 0 }
-            let firstMonthLength = daysInMonth(year: year, month: 1)
-            return firstMonthLength + 31 * (min(month, 7) - 2) + (month >= 8 ? 30 * (month - 7) : 0)
+        var minimumDayRange: Range<Int> {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<6
+            case .persian: return 1..<30
+            case .indian: return 1..<31
+            }
         }
-    }
 
-    // The year, month, day and day of the year of a rata die.
-    func fields(rataDie: Int) -> (year: Int, month: Int, day: Int, dayOfYear: Int) {
-        switch self {
-        case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
-            // Four years make a cycle of 1461 days. Within a cycle, the last year is the long one.
-            let days = rataDie - epochRataDie
-            let cycle = _CalendarUtility.floorDiv(days, 1461)
-            let dayOfCycle = days - cycle * 1461
-            let year = 4 * cycle + (dayOfCycle / 365 - dayOfCycle / 1460)
-            let dayIndex = dayOfCycle == 1460 ? 365 : dayOfCycle % 365
-            return (year, dayIndex / 30 + 1, dayIndex % 30 + 1, dayIndex + 1)
-        case .persian:
-            // The 33 year rule gives the year within one of it. The correction table can move the answer by one.
-            var year = Int(_CalendarUtility.floorDiv(Int64(rataDie - 226_895) * 33 + 3, 12_053)) + 1
-            while rataDie < startOfYear(year) { year -= 1 }
-            while rataDie >= startOfYear(year + 1) { year += 1 }
-            let dayIndex = rataDie - startOfYear(year)
-            let monthIndex = dayIndex < 216 ? dayIndex / 31 : (dayIndex - 6) / 30
-            return (year, monthIndex + 1, dayIndex - Self.persianDaysBeforeMonth[monthIndex] + 1, dayIndex + 1)
-        case .indian:
-            // The year starts in March of the Gregorian year that is 78 years later.
-            var year = _CalendarAstronomy.gregorianYear(ofRataDie: rataDie) - 78
-            if rataDie < startOfYear(year) { year -= 1 }
-            let dayIndex = rataDie - startOfYear(year)
-            let firstMonthLength = daysInMonth(year: year, month: 1)
-            if dayIndex < firstMonthLength { return (year, 1, dayIndex + 1, dayIndex + 1) }
-            var remainder = dayIndex - firstMonthLength
-            if remainder < 31 * 5 { return (year, remainder / 31 + 2, remainder % 31 + 1, dayIndex + 1) }
-            remainder -= 31 * 5
-            return (year, remainder / 30 + 7, remainder % 30 + 1, dayIndex + 1)
+        var maximumDayRange: Range<Int> {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<31
+            case .persian, .indian: return 1..<32
+            }
         }
-    }
 
-    private static let persianDaysBeforeMonth = [0, 31, 62, 93, 124, 155, 186, 216, 246, 276, 306, 336]
-
-    // The Persian years where the 33 year rule puts a leap day too early. Sorted, for a binary search.
-    private static let persianCorrectedYears: [Int16] = [
-        1502, 1601, 1634, 1667, 1700, 1733, 1766, 1799, 1832, 1865, 1898, 1931, 1964, 1997, 2030, 2059,
-        2063, 2096, 2129, 2158, 2162, 2191, 2195, 2224, 2228, 2257, 2261, 2290, 2294, 2323, 2327, 2356,
-        2360, 2389, 2393, 2422, 2426, 2455, 2459, 2488, 2492, 2521, 2525, 2554, 2558, 2587, 2591, 2620,
-        2624, 2653, 2657, 2686, 2690, 2719, 2723, 2748, 2752, 2756, 2781, 2785, 2789, 2818, 2822, 2847,
-        2851, 2855, 2880, 2884, 2888, 2913, 2917, 2921, 2946, 2950, 2954, 2979, 2983, 2987,
-    ]
-
-    private static func isCorrectedPersianYear(_ year: Int) -> Bool {
-        guard year >= Int(persianCorrectedYears[0]), year <= Int(persianCorrectedYears[persianCorrectedYears.count - 1]) else { return false }
-        var low = 0
-        var high = persianCorrectedYears.count - 1
-        while low <= high {
-            let middle = (low + high) / 2
-            let value = Int(persianCorrectedYears[middle])
-            if value == year { return true }
-            if value < year { low = middle + 1 } else { high = middle - 1 }
+        var minimumWeekdayOrdinalRange: Range<Int> {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return -1..<2
+            case .persian: return 1..<6
+            case .indian: return -1..<6
+            }
         }
-        return false
+
+        var maximumWeekdayOrdinalRange: Range<Int> {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return -1..<6
+            case .persian: return 1..<6
+            case .indian: return -1..<6
+            }
+        }
+
+        // MARK: Eras
+
+        // The difference between the years of the Amete Alem calendar and the years of the Amete Mihret calendar.
+        var ameteAlemOffset: Int { 5500 }
+
+        // Whether the years of era 0 count backward, so that year 1 of era 0 is the year before year 1 of era 1.
+        var yearsCountBackwardInEraZero: Bool { self == .coptic }
+
+        func eraAndYear(extendedYear: Int) -> (era: Int, year: Int) {
+            switch self {
+            case .coptic:
+                return extendedYear > 0 ? (1, extendedYear) : (0, 1 - extendedYear)
+            case .ethiopicAmeteMihret:
+                return extendedYear > 0 ? (1, extendedYear) : (0, extendedYear + ameteAlemOffset)
+            case .ethiopicAmeteAlem, .persian, .indian:
+                return (0, extendedYear)
+            }
+        }
+
+        // The extended year for an era and a year. A missing era is the current one, a missing year is year 1. Returns nil for an era that the calendar does not have.
+        func extendedYear(era: Int?, year: Int?) -> Int? {
+            let year = year ?? 1
+            switch self {
+            case .coptic:
+                switch era ?? 1 {
+                case 1: return year
+                case 0:
+                    let (result, overflow) = 1.subtractingReportingOverflow(year)
+                    return overflow ? nil : result
+                default: return nil
+                }
+            case .ethiopicAmeteMihret:
+                if (era ?? 1) == 1 { return year }
+                let (result, overflow) = year.subtractingReportingOverflow(ameteAlemOffset)
+                return overflow ? nil : result
+            case .ethiopicAmeteAlem, .persian, .indian:
+                return year
+            }
+        }
+
+        // MARK: Quarters
+
+        // The last quarter takes the thirteenth month of the Coptic and Ethiopic calendars.
+        func quarter(ofMonth month: Int) -> Int { min((month - 1) / 3, 3) + 1 }
+        func firstMonth(ofQuarter quarter: Int) -> Int { 3 * (quarter - 1) + 1 }
+        func lastMonth(ofQuarter quarter: Int) -> Int { quarter == 4 ? monthsInYear : 3 * quarter }
+
+        // MARK: Years and months
+
+        // The rata die of the first day of year 0 of the Coptic and Ethiopic calendars.
+        private var epochRataDie: Int {
+            switch self {
+            case .coptic: return 103_240
+            case .ethiopicAmeteMihret: return 2_431
+            case .ethiopicAmeteAlem: return -2_006_444
+            case .persian, .indian: return 0
+            }
+        }
+
+        // The rata die of the first day of the year.
+        func startOfYear(_ year: Int) -> Int {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
+                return epochRataDie + 365 * year + _CalendarUtility.floorDiv(year, 4)
+            case .persian:
+                // Each year in the correction table is one day shorter than the 33 year rule says. The year after it starts one day earlier.
+                func isCorrected(_ year: Int) -> Bool {
+                    let table = Self.persianCorrectedYears
+                    guard year >= Int(table[0]), year <= Int(table[table.count - 1]) else { return false }
+                    var low = 0
+                    var high = table.count - 1
+                    while low <= high {
+                        let middle = (low + high) / 2
+                        let value = Int(table[middle])
+                        if value == year { return true }
+                        if value < year { low = middle + 1 } else { high = middle - 1 }
+                    }
+                    return false
+                }
+                let corrected = isCorrected(year - 1)
+                return 226_895 + 365 * (year - 1) + _CalendarUtility.floorDiv(8 * year + 21, 33) - (corrected ? 1 : 0)
+            case .indian:
+                let gregorianYear = year + 78
+                return _CalendarAstronomy.gregorianRataDie(gregorianYear, 3, _CalendarGregorian.isLeapYear(gregorianYear) ? 21 : 22)
+            }
+        }
+
+        func daysInYear(_ year: Int) -> Int {
+            startOfYear(year + 1) - startOfYear(year)
+        }
+
+        func daysInMonth(year: Int, month: Int) -> Int {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
+                return month < 13 ? 30 : daysInYear(year) - 360
+            case .persian:
+                if month <= 6 { return 31 }
+                return month <= 11 ? 30 : daysInYear(year) - 336
+            case .indian:
+                if month == 1 { return _CalendarGregorian.isLeapYear(year + 78) ? 31 : 30 }
+                return month <= 6 ? 31 : 30
+            }
+        }
+
+        // The number of days in the year before the month. The month after the last one stands for the end of the year.
+        func daysBeforeMonth(year: Int, month: Int) -> Int {
+            if month > monthsInYear { return daysInYear(year) }
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
+                return 30 * (month - 1)
+            case .persian:
+                return Self.persianDaysBeforeMonth[month - 1]
+            case .indian:
+                if month == 1 { return 0 }
+                let firstMonthLength = daysInMonth(year: year, month: 1)
+                return firstMonthLength + 31 * (min(month, 7) - 2) + (month >= 8 ? 30 * (month - 7) : 0)
+            }
+        }
+
+        func rataDie(year: Int, month: Int, day: Int) -> Int {
+            startOfYear(year) + daysBeforeMonth(year: year, month: month) + day - 1
+        }
+
+        // The year that starts the era, or nil for Coptic era 0, which has no first year, and for the days before year 1 of Persian and Indian.
+        func eraStartYear(extendedYear: Int) -> Int? {
+            let (era, _) = eraAndYear(extendedYear: extendedYear)
+            switch self {
+            case .coptic: return era == 1 ? 1 : nil
+            case .ethiopicAmeteMihret: return era == 1 ? 1 : 1 - ameteAlemOffset
+            case .ethiopicAmeteAlem: return 1
+            case .persian, .indian: return extendedYear >= 1 ? 1 : nil
+            }
+        }
+
+        // The year, month, day and day of the year of a rata die.
+        func fields(rataDie: Int) -> (year: Int, month: Int, day: Int, dayOfYear: Int) {
+            switch self {
+            case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem:
+                // Four years make a cycle of 1461 days. Within a cycle, the last year is the long one.
+                let days = rataDie - epochRataDie
+                let cycle = _CalendarUtility.floorDiv(days, 1461)
+                let dayOfCycle = days - cycle * 1461
+                let year = 4 * cycle + (dayOfCycle / 365 - dayOfCycle / 1460)
+                let dayIndex = dayOfCycle == 1460 ? 365 : dayOfCycle % 365
+                return (year, dayIndex / 30 + 1, dayIndex % 30 + 1, dayIndex + 1)
+            case .persian:
+                // The average length of 33 years (12,053 days) gives the year. Near a year start it can be one year off, so the two loops step to the year that holds the day.
+                var year = Int(_CalendarUtility.floorDiv(Int64(rataDie - 226_895) * 33 + 3, 12_053)) + 1
+                while rataDie < startOfYear(year) { year -= 1 }
+                while rataDie >= startOfYear(year + 1) { year += 1 }
+                let dayIndex = rataDie - startOfYear(year)
+                let monthIndex = dayIndex < 216 ? dayIndex / 31 : (dayIndex - 6) / 30
+                return (year, monthIndex + 1, dayIndex - Self.persianDaysBeforeMonth[monthIndex] + 1, dayIndex + 1)
+            case .indian:
+                // The year starts in March of the Gregorian year that is 78 years later.
+                var year = _CalendarAstronomy.gregorianYear(ofRataDie: rataDie) - 78
+                if rataDie < startOfYear(year) { year -= 1 }
+                let dayIndex = rataDie - startOfYear(year)
+                let firstMonthLength = daysInMonth(year: year, month: 1)
+                if dayIndex < firstMonthLength { return (year, 1, dayIndex + 1, dayIndex + 1) }
+                var remainder = dayIndex - firstMonthLength
+                if remainder < 31 * 5 { return (year, remainder / 31 + 2, remainder % 31 + 1, dayIndex + 1) }
+                remainder -= 31 * 5
+                return (year, remainder / 30 + 7, remainder % 30 + 1, dayIndex + 1)
+            }
+        }
+
+        private static let persianDaysBeforeMonth = [0, 31, 62, 93, 124, 155, 186, 216, 246, 276, 306, 336]
+
+        // The Persian years where the 33 year rule puts a leap day too early. Sorted, for a binary search.
+        private static let persianCorrectedYears: [Int16] = [
+            1502, 1601, 1634, 1667, 1700, 1733, 1766, 1799, 1832, 1865, 1898, 1931, 1964, 1997, 2030, 2059,
+            2063, 2096, 2129, 2158, 2162, 2191, 2195, 2224, 2228, 2257, 2261, 2290, 2294, 2323, 2327, 2356,
+            2360, 2389, 2393, 2422, 2426, 2455, 2459, 2488, 2492, 2521, 2525, 2554, 2558, 2587, 2591, 2620,
+            2624, 2653, 2657, 2686, 2690, 2719, 2723, 2748, 2752, 2756, 2781, 2785, 2789, 2818, 2822, 2847,
+            2851, 2855, 2880, 2884, 2888, 2913, 2917, 2921, 2946, 2950, 2954, 2979, 2983, 2987,
+        ]
     }
 }
 
