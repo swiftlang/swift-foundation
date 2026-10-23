@@ -239,8 +239,7 @@ internal struct _ChineseYear: Sendable {
 /// Field conventions match ICU: era = 60-year cycle number since the 2637 BCE epoch, year = 1...60 within the cycle, month = 1...12 with `isLeapMonth` distinguishing the repeated month.
 /// The extended year is the related Gregorian year + 2637.
 /// `.yearForWeekOfYear` reports the extended year for Chinese and Vietnamese, and 304 less for Dangi.
-// @unchecked Sendable: mutable state is confined to copy-on-write via copy(), matching the other Swift calendar classes.
-internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
+internal final class _CalendarChinese: _CalendarProtocol, Sendable {
 
     init(identifier: Calendar.Identifier, timeZone: TimeZone?, locale: Locale?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
         guard let variant = ChineseCalendarVariant(identifier: identifier) else {
@@ -250,31 +249,23 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         self.identifier = identifier
         self.timeZone = timeZone ?? .default
         self.locale = locale
-        if let firstWeekday, (firstWeekday >= 1 && firstWeekday <= 7) {
-            _firstWeekday = firstWeekday
-        }
-        if var minimumDaysInFirstWeek {
-            if minimumDaysInFirstWeek < 1 { minimumDaysInFirstWeek = 1 }
-            else if minimumDaysInFirstWeek > 7 { minimumDaysInFirstWeek = 7 }
-            _minimumDaysInFirstWeek = minimumDaysInFirstWeek
-        }
+        _firstWeekday = _CalendarUtility.storedFirstWeekday(firstWeekday)
+        _minimumDaysInFirstWeek = minimumDaysInFirstWeek.map(_CalendarUtility.clampedMinimumDaysInFirstWeek)
     }
 
     let identifier: Calendar.Identifier
     let variant: ChineseCalendarVariant
-    var locale: Locale?
-    var timeZone: TimeZone
+    let locale: Locale?
+    let timeZone: TimeZone
 
-    var _firstWeekday: Int?
+    let _firstWeekday: Int?
     var firstWeekday: Int {
-        set { _firstWeekday = _CalendarUtility.validatedFirstWeekday(newValue) }
-        get { _CalendarUtility.resolveFirstWeekday(stored: _firstWeekday, locale: locale) }
+        _CalendarUtility.resolveFirstWeekday(stored: _firstWeekday, locale: locale)
     }
 
-    var _minimumDaysInFirstWeek: Int?
+    let _minimumDaysInFirstWeek: Int?
     var minimumDaysInFirstWeek: Int {
-        set { _minimumDaysInFirstWeek = _CalendarUtility.clampedMinimumDaysInFirstWeek(newValue) }
-        get { _CalendarUtility.resolveMinimumDaysInFirstWeek(stored: _minimumDaysInFirstWeek, locale: locale) }
+        _CalendarUtility.resolveMinimumDaysInFirstWeek(stored: _minimumDaysInFirstWeek, locale: locale)
     }
 
     func copy(changingLocale: Locale?, changingTimeZone: TimeZone?, changingFirstWeekday: Int?, changingMinimumDaysInFirstWeek: Int?) -> _CalendarProtocol {
@@ -298,7 +289,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     // The reported ranges of the year numbers are the ICU limits.
     private static let reportedYearLimit = 5_000_000
 
-    // The class computes the related Gregorian years from -46,999 to 46,999. Past about year 47,000 the astronomy gives months of 28 or 31 days, so a date past them has no answer.
+    // The astronomy is not reliable for years past 47,000 or before -47,000, so we have no answer for a date past them.
     private static let relatedISOYearLimit = 47_000
     private static let extendedYearLowerBound = extendedYearOffset - relatedISOYearLimit
     private static let extendedYearUpperBound = extendedYearOffset + relatedISOYearLimit
@@ -425,10 +416,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             return 1..<year.endRataDie - year.newYearRataDie + 1
         case (.weekOfYear, .month):
             // The week numbers of the year at the first and the last moment of the month.
-            guard let interval = dateInterval(of: .month, for: date),
-                  let first = ordinality(of: .weekOfYear, in: .year, for: interval.start + 0.1),
-                  let last = ordinality(of: .weekOfYear, in: .year, for: interval.end - 0.1) else { return nil }
-            return first..<last + 1
+            return _CalendarUtility.rangeAtEnds(of: .weekOfYear, in: .month, counting: .year, for: date, in: self)
         case (.day, .weekOfMonth):
             // Which days of the month this week covers, as day-of-month values. A week can start before or end after the month, so clip both ends.
             guard let week = dateInterval(of: .weekOfMonth, for: date) else { return nil }
@@ -501,7 +489,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
         case (.weekday, .weekOfYear), (.day, .weekOfYear), (.day, .weekOfMonth), (.weekday, .weekOfMonth):
             // Position of the day inside its week, counting from firstWeekday.
             guard let weekday = dateComponents([.weekday], from: date, in: timeZone).weekday else { return nil }
-            return ((weekday - firstWeekday + 7) % 7) + 1
+            return _CalendarUtility.relativeWeekday(of: weekday, firstWeekday: firstWeekday) + 1
         case (.hour, _), (.minute, _), (.second, _), (.nanosecond, _):
             let (_, _, _, secondsInDay) = fieldsAndTime(for: date, in: timeZone)
             return _CalendarUtility.timeOrdinality(of: smaller, in: larger, secondsInDay: secondsInDay, date: date) { ordinality(of: .day, in: $0, for: date) }
@@ -590,22 +578,12 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     }
 
     private func firstDayOfWeekYear(_ extendedYear: Int) -> Int {
-        let rdNY = yearData(extendedYear: extendedYear).newYearRataDie
-        let nyWeekday = _CalendarUtility.weekday(ofRataDie: rdNY)
-        let rel = (nyWeekday - firstWeekday + 7) % 7
-        let offset: Int
-        if (7 - rel) >= minimumDaysInFirstWeek {
-            offset = -rel
-        } else {
-            offset = 7 - rel
-        }
-        return rdNY + offset
+        _CalendarUtility.firstDayOfWeekYear(yearStart: yearData(extendedYear: extendedYear).newYearRataDie, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
     }
 
-    /// Date at local midnight of (extendedYear, ordinal, day).
-    private func localMidnight(extendedYear: Int, ordinal: Int, day: Int, in timeZone: TimeZone) -> Date {
-        _CalendarUtility.utcDate(fromRataDie: rataDie(extendedYear: extendedYear, ordinal: ordinal, day: day), secondsInDay: 0, in: timeZone,
-                repeatedTimePolicy: .former, skippedTimePolicy: .former)
+    // The interval from the first day of one month to the first day of another, at local midnight.
+    private func interval(fromYear startYear: Int, ordinal startOrdinal: Int, toYear endYear: Int, ordinal endOrdinal: Int, in timeZone: TimeZone) -> DateInterval {
+        _CalendarUtility.interval(fromRataDie: rataDie(extendedYear: startYear, ordinal: startOrdinal, day: 1), toRataDie: rataDie(extendedYear: endYear, ordinal: endOrdinal, day: 1), in: timeZone)
     }
 
     func dateInterval(of component: Calendar.Component, for date: Date) -> DateInterval? {
@@ -618,54 +596,29 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             // One era = one 60-year cycle.
             let (era, _) = Self.eraAndYear(extendedYear: extendedYear)
             guard let startExt = Self.extendedYear(era: era, year: 1) else { return nil }
-            let start = localMidnight(extendedYear: startExt, ordinal: 1, day: 1, in: timeZone)
-            let end = localMidnight(extendedYear: startExt + 60, ordinal: 1, day: 1, in: timeZone)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            return interval(fromYear: startExt, ordinal: 1, toYear: startExt + 60, ordinal: 1, in: timeZone)
         case .year:
-            let start = localMidnight(extendedYear: extendedYear, ordinal: 1, day: 1, in: timeZone)
-            let end = localMidnight(extendedYear: extendedYear + 1, ordinal: 1, day: 1, in: timeZone)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            return interval(fromYear: extendedYear, ordinal: 1, toYear: extendedYear + 1, ordinal: 1, in: timeZone)
         case .yearForWeekOfYear:
             // The year that owns a week, which can differ from the calendar year at either end of a year. ICU returns nil here for the Chinese calendar; we deliberately return a real interval, as the Gregorian and Hebrew calendars do.
             let weekYearComps = dateComponents([.yearForWeekOfYear], from: date, in: timeZone)
             guard let reportedWeekYear = weekYearComps.yearForWeekOfYear else { return nil }
             let weekYear = yearNumber(ofWeekYear: reportedWeekYear)
-            let rdStart = firstDayOfWeekYear(weekYear)
-            let rdEnd = firstDayOfWeekYear(weekYear + 1)
-            let start = _CalendarUtility.utcDate(fromRataDie: rdStart, secondsInDay: 0, in: timeZone,
-                                repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let end = _CalendarUtility.utcDate(fromRataDie: rdEnd, secondsInDay: 0, in: timeZone,
-                              repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            return _CalendarUtility.interval(fromRataDie: firstDayOfWeekYear(weekYear), toRataDie: firstDayOfWeekYear(weekYear + 1), in: timeZone)
         case .month:
-            let start = localMidnight(extendedYear: extendedYear, ordinal: ordinal, day: 1, in: timeZone)
             let (nextYear, nextMonth) = nextOrdinalMonth(extendedYear: extendedYear, ordinal: ordinal)
-            let end = localMidnight(extendedYear: nextYear, ordinal: nextMonth, day: 1, in: timeZone)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            return interval(fromYear: extendedYear, ordinal: ordinal, toYear: nextYear, ordinal: nextMonth, in: timeZone)
         case .weekOfYear, .weekOfMonth:
             let rdHere = rataDie(extendedYear: extendedYear, ordinal: ordinal, day: day)
-            let weekday = _CalendarUtility.weekday(ofRataDie: rdHere)
-            var daysBack = weekday - firstWeekday
-            if daysBack < 0 { daysBack += 7 }
-            let rdStart = rdHere - daysBack
-            let start = _CalendarUtility.utcDate(fromRataDie: rdStart, secondsInDay: 0, in: timeZone,
-                                repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let end = _CalendarUtility.utcDate(fromRataDie: rdStart + 7, secondsInDay: 0, in: timeZone,
-                              repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            let rdStart = rdHere - _CalendarUtility.relativeWeekday(ofRataDie: rdHere, firstWeekday: firstWeekday)
+            return _CalendarUtility.interval(fromRataDie: rdStart, toRataDie: rdStart + 7, in: timeZone)
         case .quarter:
             // See quarterSpan for the quarter model and its leap-month containment quirk.
             guard let span = quarterSpan(extendedYear: extendedYear, ordinal: ordinal) else { return nil }
-            let start = localMidnight(extendedYear: extendedYear, ordinal: span.startOrdinal, day: 1, in: timeZone)
-            let end = localMidnight(extendedYear: span.endExtendedYear, ordinal: span.endOrdinal, day: 1, in: timeZone)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            return interval(fromYear: extendedYear, ordinal: span.startOrdinal, toYear: span.endExtendedYear, ordinal: span.endOrdinal, in: timeZone)
         case .day, .weekday, .weekdayOrdinal, .dayOfYear:
             let rdHere = rataDie(extendedYear: extendedYear, ordinal: ordinal, day: day)
-            let start = _CalendarUtility.utcDate(fromRataDie: rdHere, secondsInDay: 0, in: timeZone,
-                                repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            let end = _CalendarUtility.utcDate(fromRataDie: rdHere + 1, secondsInDay: 0, in: timeZone,
-                              repeatedTimePolicy: .former, skippedTimePolicy: .former)
-            return DateInterval(start: start, duration: end.timeIntervalSince(start))
+            return _CalendarUtility.interval(fromRataDie: rdHere, toRataDie: rdHere + 1, in: timeZone)
         case .hour, .minute, .second, .nanosecond:
             return _CalendarUtility.timeUnitInterval(of: component, for: date, in: timeZone)
         case .isLeapMonth, .isRepeatedDay, .calendar, .timeZone:
@@ -681,11 +634,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
     }
 
     private func makeDate(from components: DateComponents) -> Date? {
-        var secondsInDay: Double = 0
-        if let hour = components.hour { secondsInDay += Double(hour) * 3600 }
-        if let minute = components.minute { secondsInDay += Double(minute) * 60 }
-        if let second = components.second { secondsInDay += Double(second) }
-        if let nanosecond = components.nanosecond { secondsInDay += Double(nanosecond) / 1e9 }
+        let secondsInDay = _CalendarUtility.secondsInDay(of: components)
 
         let timeZone = components.timeZone ?? timeZone
 
@@ -694,7 +643,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             guard isSupported(weekYear: weekYear) else { return nil }
             let weekOfYear = components.weekOfYear ?? 1
             let weekday = components.weekday ?? firstWeekday
-            let dayWithinWeek = ((weekday % 7 - firstWeekday) % 7 + 7) % 7
+            let dayWithinWeek = _CalendarUtility.relativeWeekday(of: weekday, firstWeekday: firstWeekday)
             let (weeksAfterFirst, subtractOverflow) = weekOfYear.subtractingReportingOverflow(1)
             let (daysAfterFirst, multiplyOverflow) = weeksAfterFirst.multipliedReportingOverflow(by: 7)
             let (rataDie, addOverflow) = (firstDayOfWeekYear(yearNumber(ofWeekYear: weekYear)) + dayWithinWeek).addingReportingOverflow(daysAfterFirst)
@@ -716,15 +665,14 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
 
         let monthValue = components.month ?? 1
         let day = components.day ?? 1
-        let fieldLimit: UInt = 100_000_000
+        let fieldLimit = _CalendarUtility.fieldLimit
         guard monthValue.magnitude <= fieldLimit, day.magnitude <= fieldLimit else { return nil }
         // A weekday or an ordinal alone does not name a day, so the day of the month decides.
-        let weekdayOffset = components.weekday.map { (($0 % 7 - firstWeekday) % 7 + 7) % 7 } ?? 0
+        let weekdayOffset = components.weekday.map { _CalendarUtility.relativeWeekday(of: $0, firstWeekday: firstWeekday) } ?? 0
 
         // A month outside 1...12 moves into another year, and leap months do not count. A day outside the month counts on from the start of the month.
         func monthFields() -> (start: Int, length: Int, startOffset: Int)? {
-            let yearsFromMonth = _CalendarUtility.floorDiv(monthValue - 1, 12)
-            let month = monthValue - 1 - yearsFromMonth * 12 + 1
+            guard let (yearsFromMonth, month) = _CalendarUtility.carriedMonth(monthValue, monthsInYear: 12) else { return nil }
             let extendedYear = inputExtendedYear + yearsFromMonth
             guard extendedYear > Self.extendedYearLowerBound && extendedYear < Self.extendedYearUpperBound else { return nil }
             let yearOfMonth = yearData(extendedYear: extendedYear)
@@ -739,7 +687,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
                 return nil
             }
             let start = yearOfMonth.monthStartRataDie(ordinal: ordinal)
-            return (start, yearOfMonth.monthLength(ordinal: ordinal), (_CalendarUtility.weekday(ofRataDie: start) - firstWeekday + 7) % 7)
+            return (start, yearOfMonth.monthLength(ordinal: ordinal), _CalendarUtility.relativeWeekday(ofRataDie: start, firstWeekday: firstWeekday))
         }
 
         // The forms by week of the year and by day of the year ignore the month.
@@ -791,19 +739,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             result.isLeapMonth = label.isLeap
         }
 
-        if components.contains(.hour) || components.contains(.minute)
-            || components.contains(.second) || components.contains(.nanosecond) {
-            let h = Int(secondsInDay / 3600)
-            let remAfterH = secondsInDay - Double(h) * 3600
-            let m = Int(remAfterH / 60)
-            let remAfterM = remAfterH - Double(m) * 60
-            let s = Int(remAfterM)
-            let ns = Int((localSeconds - localSeconds.rounded(.down)) * 1_000_000_000)
-            if components.contains(.hour) { result.hour = h }
-            if components.contains(.minute) { result.minute = m }
-            if components.contains(.second) { result.second = s }
-            if components.contains(.nanosecond) { result.nanosecond = ns }
-        }
+        _CalendarUtility.setTimeFields(components, secondsInDay: secondsInDay, localSeconds: localSeconds, in: &result)
 
         if components.contains(.weekday) {
             result.weekday = _CalendarUtility.weekday(ofRataDie: rataDie)
@@ -823,28 +759,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
                               components.contains(.yearForWeekOfYear)
         if needsWeekFields {
             let weekday = _CalendarUtility.weekday(ofRataDie: rataDie)
-            let dayOfYear = rataDie - y.newYearRataDie + 1
-            let yearLength = y.daysInYear
-            let relativeWeekday = (weekday + 7 - firstWeekday) % 7
-
-            var weekOfYear = _CalendarUtility.weekNumber(desiredDay: dayOfYear, dayOfPeriod: dayOfYear, weekday: weekday, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
-            var yearForWeekOfYear = extendedYear
-            if weekOfYear == 0 {
-                let previousYearLength = yearData(extendedYear: extendedYear - 1).daysInYear
-                let previousDayOfYear = dayOfYear + previousYearLength
-                weekOfYear = _CalendarUtility.weekNumber(
-                    desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday,
-                    firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
-                yearForWeekOfYear -= 1
-            } else if dayOfYear >= yearLength - 5 {
-                var lastRelativeDayOfWeek = (relativeWeekday + yearLength - dayOfYear) % 7
-                if lastRelativeDayOfWeek < 0 { lastRelativeDayOfWeek += 7 }
-                if ((6 - lastRelativeDayOfWeek) >= minimumDaysInFirstWeek)
-                    && ((dayOfYear + 7 - relativeWeekday) > yearLength) {
-                    weekOfYear = 1
-                    yearForWeekOfYear += 1
-                }
-            }
+            let (yearForWeekOfYear, weekOfYear) = _CalendarUtility.weekYearAndWeek(rataDie: rataDie, year: extendedYear) { firstDayOfWeekYear($0) }
 
             let weekOfMonth = _CalendarUtility.weekNumber(
                 desiredDay: day, dayOfPeriod: day, weekday: weekday,
@@ -958,7 +873,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
                 let monthLength = year.monthLength(ordinal: ordinal)
                 let monthStart = year.monthStartRataDie(ordinal: ordinal)
                 let rataDie = monthStart + currentDay - 1
-                let weekdayOffset = (_CalendarUtility.weekday(ofRataDie: rataDie) - firstWeekday + 7) % 7
+                let weekdayOffset = _CalendarUtility.relativeWeekday(ofRataDie: rataDie, firstWeekday: firstWeekday)
                 let yearLength = year.endRataDie - year.newYearRataDie
                 let dayOfYear = rataDie - year.newYearRataDie + 1
                 func elapsed(days: Int, forward: Bool) -> Date { _CalendarUtility.moved(result, byElapsedDays: days, forward: forward, in: timeZone) }
@@ -1071,12 +986,7 @@ internal final class _CalendarChinese: _CalendarProtocol, @unchecked Sendable {
             result = moved
         }
 
-        if let h = components.hour, h != 0 { result += Double(h) * 3600 }
-        if let m = components.minute, m != 0 { result += Double(m) * 60 }
-        if let s = components.second, s != 0 { result += Double(s) }
-        if let ns = components.nanosecond, ns != 0 { result += Double(ns) / 1_000_000_000 }
-
-        return result
+        return _CalendarUtility.adding(timeUnitsOf: components, to: result)
     }
 
     // MARK: Difference
