@@ -526,13 +526,11 @@ private struct LocaleTests {
         ("iw-IL", "he_IL", ["he-IL"]),
         ("en-US-u-fw-mon", "en_US@fw=mon", ["en-US-u-fw-mon"]),
     ])
-    func currentFromLanguageTag(tag: String, identifier: String, languages: [String]) async {
+    func currentFromLanguageTag(tag: String, identifier: String, languages: [String]) {
         let prefs = LocalePreferences(languageTag: tag)
         #expect(prefs.languages == languages)
-        await usingCurrentInternationalizationPreferences {
-            LocaleCache.cache.resetCurrent(to: prefs)
-            #expect(Locale.current.identifier == identifier)
-        }
+        let locale = Locale.localeAsIfCurrent(name: nil, overrides: prefs, disableBundleMatching: true)
+        #expect(locale.identifier == identifier)
     }
 
     @Test(arguments: [
