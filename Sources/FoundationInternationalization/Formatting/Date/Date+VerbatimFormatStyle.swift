@@ -44,11 +44,15 @@ extension Date {
         }
 
         public func format(_ value: Date) -> String {
+#if FOUNDATION_DATE_FORMAT_SWIFT
+            return DatePatternFormatter.cachedFormatter(for: .init(self)).format(value) ?? value.description
+#else
             guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
                 return value.description
             }
 
             return result
+#endif
         }
 
         public func locale(_ locale: Locale) -> Date.VerbatimFormatStyle {
@@ -139,11 +143,15 @@ extension Date.VerbatimFormatStyle {
         }
 
         public func format(_ value: Date) -> AttributedString {
+#if FOUNDATION_DATE_FORMAT_SWIFT
+            return DatePatternFormatter.cachedFormatter(for: .init(base)).attributedFormat(value) ?? AttributedString(value.description)
+#else
             guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString(value.description)
             }
 
             return str._attributedStringFromPositions(attributes)
+#endif
         }
 
         public func locale(_ locale: Locale) -> Self {
