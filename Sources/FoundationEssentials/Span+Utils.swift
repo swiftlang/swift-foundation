@@ -10,28 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-extension Span<UInt8> {
-    package func firstIndex(of byte: UInt8) -> Int? {
-        guard !isEmpty else {
-            return nil
-        }
-
-        var i = 0
-        while i < count {
-            if self[i] == byte {
-                return i
-            }
-            i += 1
-        }
-
-        return nil
-    }
-
-    func lastIndex(of byte: UInt8) -> Int? {
-        lastIndex { $0 == byte }
-    }
-
-    func lastIndex(where predicate: (UInt8) throws -> Bool) rethrows -> Int? {
+extension Span where Element: ~Copyable {
+    func lastIndex(where predicate: (borrowing Element) throws -> Bool) rethrows -> Int? {
         guard !isEmpty else {
             return nil
         }
@@ -46,8 +26,48 @@ extension Span<UInt8> {
 
         return nil
     }
+}
 
-    func elementsEqual(_ other: Span<UInt8>) -> Bool {
+extension Span where Element: Copyable {
+    @inline(__always)
+    package var first: Element? {
+        guard count > 0 else {
+            return nil
+        }
+        return self[0]
+    }
+
+    @inline(__always)
+    var last: Element? {
+        guard count > 0 else {
+            return nil
+        }
+        return self[count - 1]
+    }
+}
+
+extension Span where Element: Equatable & ~Copyable {
+    package func firstIndex(of element: borrowing Element) -> Int? {
+        guard !isEmpty else {
+            return nil
+        }
+
+        var i = 0
+        while i < count {
+            if self[i] == element {
+                return i
+            }
+            i += 1
+        }
+
+        return nil
+    }
+
+    func lastIndex(of element: borrowing Element) -> Int? {
+        lastIndex { $0 == element }
+    }
+
+    func elementsEqual(_ other: Span<Element>) -> Bool {
         guard count == other.count else {
             return false
         }
@@ -62,7 +82,51 @@ extension Span<UInt8> {
 
         return true
     }
-    
+
+    func contains(_ element: borrowing Element) -> Bool {
+        for i in indices {
+            if self[i] == element {
+                return true
+            }
+        }
+        return false
+    }
+
+    package func firstRange(of needle: Span<Element>) -> Range<Int>? {
+        let m = needle.count
+        guard m > 0 else {
+            return 0..<0
+        }
+        guard m <= count else {
+            return nil
+        }
+
+        for i in 0...(count - m) {
+            var j = 0
+            while j < m, self[i &+ j] == needle[j] {
+                j &+= 1
+            }
+
+            if j == m {
+                return i ..< (i &+ m)
+            }
+        }
+
+        return nil
+    }
+
+    func count(of element: borrowing Element) -> Int {
+        var num = 0
+        for i in indices {
+            if self[i] == element {
+                num += 1
+            }
+        }
+        return num
+    }
+}
+
+extension Span where Element == UInt8 {
     /// Comparison against a prefix StaticString literal. The comparison is literal, not Unicode canonical.
     @inline(__always)
     func starts(with prefix: StaticString) -> Bool {
@@ -79,59 +143,6 @@ extension Span<UInt8> {
     @inline(__always)
     func equals(_ other: StaticString) -> Bool {
         count == other.utf8CodeUnitCount && starts(with: other)
-    }
-
-    @inline(__always)
-    package var first: UInt8? {
-        guard count > 0 else {
-            return nil
-        }
-        return self[0]
-    }
-
-    @inline(__always)
-    var last: UInt8? {
-        guard count > 0 else {
-            return nil
-        }
-        return self[count - 1]
-    }
-
-    func contains(_ byte: UInt8) -> Bool {
-        for i in indices {
-            if self[i] == byte {
-                return true
-            }
-        }
-        return false
-    }
-
-    package func firstRange(of needle: Span<UInt8>) -> Range<Int>? {
-        let m = needle.count
-        guard m > 0 else {
-            return 0..<0
-        }
-        guard m <= count else {
-            return nil
-        }
-
-        let first = needle[0]
-        for i in 0...(count - m) {
-            guard self[i] == first else {
-                continue
-            }
-
-            var j = 1
-            while j < m, self[i &+ j] == needle[j] {
-                j &+= 1
-            }
-
-            if j == m {
-                return i ..< (i &+ m)
-            }
-        }
-        
-        return nil
     }
 }
 
@@ -159,6 +170,27 @@ extension OutputRawSpan {
                 var (iterator, idx) = elements._copyContents(initializing: uninitialized.assumingMemoryBound(to: Element.self))
                 precondition(iterator.next() == nil, "Insufficient space to store contents in OutputRawSpan")
                 initializedCount += idx - uninitialized.startIndex
+            }
+        }
+    }
+
+    mutating func _replaceSubrange(_ subrange: Range<Int>, copying span: RawSpan) {
+        precondition(self.freeCapacity >= span.byteCount - subrange.count, "Insufficient space to copy the provided span (have space for \(self.freeCapacity) but writing \(span.byteCount))")
+        precondition(subrange.lowerBound >= 0 && subrange.upperBound <= self.byteCount, "Invalid index")
+        guard subrange.count > 0 || span.byteCount > 0 else { return }
+        self.withUnsafeMutableBytes { buffer, initializedCount in
+            let outputBase = buffer.baseAddress.unsafelyUnwrapped
+
+            let originalSrc = outputBase.advanced(by: subrange.upperBound)
+            if subrange.upperBound < initializedCount && subrange.count != span.byteCount {
+                let originalDst = outputBase.advanced(by: subrange.lowerBound + span.byteCount)
+                originalDst.copyMemory(from: originalSrc, byteCount: initializedCount - subrange.upperBound)
+            }
+
+            span.withUnsafeBytes { src in
+                let newDst = outputBase.advanced(by: subrange.lowerBound)
+                newDst.copyMemory(from: src.baseAddress.unsafelyUnwrapped, byteCount: src.count)
+                initializedCount += src.count - subrange.count
             }
         }
     }
@@ -215,15 +247,19 @@ extension OutputSpan<UInt8> {
     mutating func _append(copying source: StaticString) {
         source.withUTF8Buffer { _append(copying: $0.span) }
     }
+}
 
+extension OutputSpan where Element: Copyable {
     @inline(__always)
-    var last: UInt8? {
+    var last: Element? {
         guard count > 0 else {
             return nil
         }
         return self[count - 1]
     }
+}
 
+extension OutputSpan where Element: ~Copyable {
     package mutating func removeSubrange(_ range: Range<Int>) {
         guard !range.isEmpty else { return }
 
@@ -232,7 +268,7 @@ extension OutputSpan<UInt8> {
         do {
             var bytes = mutableSpan
             for i in range.upperBound..<bytes.count {
-                bytes[i - range.count] = bytes[i]
+                bytes.swapAt(i - range.count, i)
             }
         }
         removeLast(range.count)
