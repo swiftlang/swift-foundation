@@ -291,6 +291,20 @@ private struct GregorianCalendarTests {
         test(Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712, isLeapMonth: false)
     }
 
+    @Test(arguments: [2027, 2028])
+    func testQuarterOfEveryDay(year: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+
+        var day = try #require(calendar.date(from: DateComponents(year: year, month: 1, day: 1, hour: 12)))
+        while calendar.component(.year, from: day) == year {
+            let components = calendar.dateComponents([.month, .quarter], from: day)
+            let month = try #require(components.month)
+            #expect(components.quarter == (month - 1) / 3 + 1, "\(day)")
+            day += 86400
+        }
+    }
+
     // MARK: - Add
 
     @Test func testAdd() {
