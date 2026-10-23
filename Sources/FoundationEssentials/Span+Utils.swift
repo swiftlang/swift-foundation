@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-extension Span {
-    func lastIndex(where predicate: (Element) throws -> Bool) rethrows -> Int? {
+extension Span where Element: ~Copyable {
+    func lastIndex(where predicate: (borrowing Element) throws -> Bool) rethrows -> Int? {
         guard !isEmpty else {
             return nil
         }
@@ -26,9 +26,11 @@ extension Span {
 
         return nil
     }
+}
 
+extension Span where Element: Copyable {
     @inline(__always)
-    var first: Element? {
+    package var first: Element? {
         guard count > 0 else {
             return nil
         }
@@ -44,8 +46,8 @@ extension Span {
     }
 }
 
-extension Span where Element: Equatable {
-    package func firstIndex(of element: Element) -> Int? {
+extension Span where Element: Equatable & ~Copyable {
+    package func firstIndex(of element: borrowing Element) -> Int? {
         guard !isEmpty else {
             return nil
         }
@@ -61,7 +63,7 @@ extension Span where Element: Equatable {
         return nil
     }
 
-    func lastIndex(of element: Element) -> Int? {
+    func lastIndex(of element: borrowing Element) -> Int? {
         lastIndex { $0 == element }
     }
 
@@ -80,42 +82,8 @@ extension Span where Element: Equatable {
 
         return true
     }
-    
-    /// Comparison against a prefix StaticString literal. The comparison is literal, not Unicode canonical.
-    @inline(__always)
-    func starts(with prefix: StaticString) -> Bool {
-        let prefixLength = prefix.utf8CodeUnitCount
-        guard prefixLength > 0 else { return true }
-        guard self.count >= prefixLength else { return false }
-        // Precondition: self.count > 0
-        return withUnsafeBufferPointer { buffer in
-            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
-        }
-    }
 
-    /// Whole-span comparison against a StaticString literal. The comparison is literal, not Unicode canonical.
-    @inline(__always)
-    func equals(_ other: StaticString) -> Bool {
-        count == other.utf8CodeUnitCount && starts(with: other)
-    }
-
-    @inline(__always)
-    package var first: Element? {
-        guard count > 0 else {
-            return nil
-        }
-        return self[0]
-    }
-
-    @inline(__always)
-    var last: Element? {
-        guard count > 0 else {
-            return nil
-        }
-        return self[count - 1]
-    }
-
-    func contains(_ element: Element) -> Bool {
+    func contains(_ element: borrowing Element) -> Bool {
         for i in indices {
             if self[i] == element {
                 return true
@@ -133,13 +101,8 @@ extension Span where Element: Equatable {
             return nil
         }
 
-        let first = needle[0]
         for i in 0...(count - m) {
-            guard self[i] == first else {
-                continue
-            }
-
-            var j = 1
+            var j = 0
             while j < m, self[i &+ j] == needle[j] {
                 j &+= 1
             }
@@ -148,11 +111,11 @@ extension Span where Element: Equatable {
                 return i ..< (i &+ m)
             }
         }
-        
+
         return nil
     }
 
-    func count(of element: Element) -> Int {
+    func count(of element: borrowing Element) -> Int {
         var num = 0
         for i in indices {
             if self[i] == element {
@@ -160,6 +123,26 @@ extension Span where Element: Equatable {
             }
         }
         return num
+    }
+}
+
+extension Span where Element == UInt8 {
+    /// Comparison against a prefix StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func starts(with prefix: StaticString) -> Bool {
+        let prefixLength = prefix.utf8CodeUnitCount
+        guard prefixLength > 0 else { return true }
+        guard self.count >= prefixLength else { return false }
+        // Precondition: self.count > 0
+        return withUnsafeBufferPointer { buffer in
+            Platform.memcmp(buffer.baseAddress.unsafelyUnwrapped, prefix.utf8Start, prefixLength) == 0
+        }
+    }
+
+    /// Whole-span comparison against a StaticString literal. The comparison is literal, not Unicode canonical.
+    @inline(__always)
+    func equals(_ other: StaticString) -> Bool {
+        count == other.utf8CodeUnitCount && starts(with: other)
     }
 }
 
@@ -264,15 +247,19 @@ extension OutputSpan<UInt8> {
     mutating func _append(copying source: StaticString) {
         source.withUTF8Buffer { _append(copying: $0.span) }
     }
+}
 
+extension OutputSpan where Element: Copyable {
     @inline(__always)
-    var last: UInt8? {
+    var last: Element? {
         guard count > 0 else {
             return nil
         }
         return self[count - 1]
     }
+}
 
+extension OutputSpan where Element: ~Copyable {
     package mutating func removeSubrange(_ range: Range<Int>) {
         guard !range.isEmpty else { return }
 
@@ -281,7 +268,7 @@ extension OutputSpan<UInt8> {
         do {
             var bytes = mutableSpan
             for i in range.upperBound..<bytes.count {
-                bytes[i - range.count] = bytes[i]
+                bytes.swapAt(i - range.count, i)
             }
         }
         removeLast(range.count)
