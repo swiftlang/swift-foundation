@@ -22,6 +22,7 @@ target_sources(FoundationEssentials PRIVATE
     Calendar_Cache.swift
     Calendar_Chinese.swift
     Calendar_Enumerate.swift
+    Calendar_FixedMonth.swift
     Calendar_Gregorian.swift
     Calendar_Hebrew.swift
     Calendar_Protocol.swift
