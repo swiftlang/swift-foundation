@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // Identity of one node in a parsed JSON payload: a map-buffer offset. Copyable, Sendable, no ARC reference. Reconstitution needs both the `JSONMap` and a `RawSpan` over the source bytes, which the caller supplies.
 
@@ -41,7 +40,7 @@ extension JSONPrimitiveScope {
     /// Reconstitute the `JSONPrimitive`.
     @inline(__always)
     borrowing func withReconstituted<R: ~Copyable, E: Error>(
-        in map: borrowing JSONMap<UniqueMapRecords>,
+        in map: borrowing JSONMap,
         bytes jsonBytes: borrowing RawSpan,
         _ body: (borrowing JSONPrimitive) throws(E) -> R
     ) throws(E) -> R {
@@ -50,6 +49,5 @@ extension JSONPrimitiveScope {
         return try body(primitive)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

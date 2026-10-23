@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // Identity of one node in a parsed XML property list in a Copyable form with a map-buffer offset. Reconstitution into a full XMLPlistPrimitive needs both the `XMLPlistMap` and a `RawSpan` over the source bytes, which the caller supplies. They must match the original map and span that the scope was derived from originally.
 
@@ -37,7 +36,7 @@ extension XMLPlistPrimitiveScope {
     /// Reconstitute the `XMLPlistPrimitive`.
     @inline(__always)
     borrowing func withReconstituted<R: ~Copyable, E: Error>(
-        in map: borrowing XMLPlistMap<UniqueMapRecords>,
+        in map: borrowing XMLPlistMap,
         bytes sourceBytes: borrowing RawSpan,
         _ body: (borrowing XMLPlistPrimitive) throws(E) -> R
     ) throws(E) -> R {
@@ -46,6 +45,5 @@ extension XMLPlistPrimitiveScope {
         return try body(primitive)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)
