@@ -24,7 +24,7 @@ internal import os
 internal import _FoundationICU
 internal import Synchronization
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 @_dynamicReplacement(for: _localeICUClass())
 private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
     return _LocaleICU.self

@@ -27,7 +27,8 @@ public func _cfStringEncodingConvert(string: String, using encoding: UInt, allow
 }
 
 package func _icuStringEncodingConvert(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
-    return nil
+    // FoundationInternationalization is in the same module.
+    return _icuStringEncodingConvert_impl(string: string, using: encoding, allowLossyConversion: allowLossyConversion)
 }
 #else
 @_spi(SwiftCorelibsFoundation)

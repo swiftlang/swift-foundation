@@ -22,7 +22,7 @@ import ucrt
 internal import _FoundationICU
 internal import Synchronization
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 @_dynamicReplacement(for: _timeZoneICUClass())
 private func _timeZoneICUClass_localized() -> _TimeZoneProtocol.Type? {
     return _TimeZoneICU.self

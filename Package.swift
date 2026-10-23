@@ -266,3 +266,42 @@ var package = Package(
         )
     ]
 )
+
+// Embedded Swift always builds FoundationEssentials and FoundationInternationalization as one module, named Foundation. Embedded Swift has no dynamic replacement, so in embedded mode FoundationEssentials uses the ICU implementations of FoundationInternationalization directly. A Swift SDK cannot change the manifest, so set SWIFT_FOUNDATION_EMBEDDED=1 to use this layout.
+if let embeddedEnv = Context.environment["SWIFT_FOUNDATION_EMBEDDED"], !embeddedEnv.isEmpty {
+    let essentials = package.targets.first { $0.name == "FoundationEssentials" }!
+    let internationalization = package.targets.first { $0.name == "FoundationInternationalization" }!
+
+    // Two targets cannot have the same source files, so remove the separate modules and the tests that use them.
+    package.targets.removeAll {
+        $0.name == "FoundationEssentials" || $0.name == "FoundationInternationalization" || $0.name == "TestSupport" || $0.type == .test
+    }
+    package.targets.append(
+        .target(
+            name: "Foundation",
+            dependencies: [
+                "_FoundationCShims",
+                "_FoundationInternationalizationData",
+                "FoundationMacros",
+                .product(name: "_RopeModule", package: "swift-collections"),
+                .product(name: "DequeModule", package: "swift-collections"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "_FoundationICU", package: "swift-foundation-icu"),
+            ],
+            path: "Sources",
+            exclude: essentials.exclude.map { "FoundationEssentials/\($0)" } + internationalization.exclude.map { "FoundationInternationalization/\($0)" } + [
+                // With explicit source directories, SwiftPM gives the documentation catalogs to the compiler.
+                "FoundationEssentials/FoundationEssentials.docc",
+                "FoundationInternationalization/FoundationInternationalization.docc",
+            ],
+            sources: ["FoundationEssentials", "FoundationInternationalization"],
+            cSettings: essentials.cSettings,
+            // The settings of FoundationInternationalization are a subset of these.
+            swiftSettings: essentials.swiftSettings,
+            linkerSettings: essentials.linkerSettings
+        )
+    )
+    package.products = [
+        .library(name: "Foundation", targets: ["Foundation"]),
+    ]
+}

@@ -17,7 +17,7 @@ import FoundationEssentials
 internal import _FoundationICU
 internal import Synchronization
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 @_dynamicReplacement(for: _calendarICUClass())
 private func _calendarICUClass_localized() -> _CalendarProtocol.Type? {
     return _CalendarICU.self
