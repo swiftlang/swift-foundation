@@ -1587,6 +1587,112 @@ private struct GregorianCalendarTests {
         
         #expect(calendar1.timeZone == tz)
     }
+
+    static let backwardSearchComponentSets: [Set<Calendar.Component>] = [
+        [.year, .month, .day, .weekday],
+        [.year, .month, .day, .weekdayOrdinal],
+        [.year, .month, .day, .weekOfMonth],
+        [.month, .weekdayOrdinal, .weekday],
+        [.month, .weekOfMonth, .weekday],
+        [.month, .day, .weekday],
+        [.weekday, .weekOfYear],
+        [.year, .weekOfYear, .weekday],
+        [.year, .month, .day, .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .dayOfYear, .hour],
+    ]
+
+    @Test(arguments: backwardSearchComponentSets)
+    func testNextDateBackwardFindsMatchingDay(components: Set<Calendar.Component>) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        var day = try #require(calendar.date(from: DateComponents(year: 2027, month: 1, day: 1, hour: 9)))
+        let end = try #require(calendar.date(from: DateComponents(year: 2027, month: 3, day: 31, hour: 9)))
+        while day <= end {
+            let match = calendar.dateComponents(components, from: day)
+            let found = calendar.nextDate(after: day + 86400 * 3, matching: match, matchingPolicy: .nextTimePreservingSmallerComponents, direction: .backward)
+            #expect(found.map { calendar.isDate($0, inSameDayAs: day) } == true, "\(match) from \(day) found \(String(describing: found))")
+            day += 86400
+        }
+    }
+
+    @Test(arguments: 1...12)
+    func testNextDateBackwardMatchingMonthFindsItsStart(month: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // A search for only a month finds the start of the month, like a forward search. This includes December, where the search starts.
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 12)))
+        let expected = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
+        for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
+            #expect(calendar.nextDate(after: start, matching: DateComponents(month: month), matchingPolicy: policy, direction: .backward) == expected)
+        }
+    }
+
+    /// The first day from `start` (excluded) in `direction` for which `matches` is true, at `hour` (or the start of the day), found by checking every day.
+    private func firstDay(from start: Date, direction: Calendar.SearchDirection, hour: Int = 0, in calendar: Calendar, where matches: (DateComponents) -> Bool) throws -> Date {
+        var day = calendar.startOfDay(for: start)
+        for _ in 0..<2000 {
+            let candidate = try #require(calendar.date(byAdding: .hour, value: hour, to: day))
+            if matches(calendar.dateComponents([.month, .day, .weekday, .weekdayOrdinal], from: day)) && (direction == .backward ? candidate < start : candidate > start) {
+                return candidate
+            }
+            day = try #require(calendar.date(byAdding: .day, value: direction == .backward ? -1 : 1, to: day))
+        }
+        throw CalendarEnumerationError.dateOutOfRange(.day, day)
+    }
+
+    @Test(arguments: 1...12)
+    func testNextDateBackwardMatchingMonthAndHourFindsTheMonthsLastDay(month: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // The nearest match is on the last day of the month, because the hour is searched inside the month.
+        let start = try #require(calendar.date(from: DateComponents(year: 2029, month: 7, day: 7, hour: 3, minute: 56)))
+        for hour in [0, 15, 23] {
+            let expected = try firstDay(from: start, direction: .backward, hour: hour, in: calendar) { $0.month == month }
+            for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
+                #expect(calendar.nextDate(after: start, matching: DateComponents(month: month, hour: hour), matchingPolicy: policy, direction: .backward) == expected, "month \(month), hour \(hour), \(policy)")
+            }
+        }
+    }
+
+    @Test(arguments: 29...31)
+    func testNextDateBackwardMatchingDayAndWeekdayDoesNotSkipMonths(day: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // A month that doesn't have the day, or has it on another weekday, must not make the search skip the month before it.
+        // Two cases are still missed and are marked as known issues: a match on the start date before the start time, and a search from February, which has no 31st, back to January.
+        let knownMisses: Set<[Int]> = [[31, 5, 2028, 8, 31], [31, 2, 2028, 4, 5]]
+        var start = try #require(calendar.date(from: DateComponents(year: 2028, month: 12, day: 20, hour: 9)))
+        for _ in 0..<12 {
+            let startComponents = calendar.dateComponents([.year, .month, .day], from: start)
+            let startDay = [try #require(startComponents.year), try #require(startComponents.month), try #require(startComponents.day)]
+            for weekday in 1...7 {
+                let expected = try firstDay(from: start, direction: .backward, in: calendar) { $0.day == day && $0.weekday == weekday }
+                let found = calendar.nextDate(after: start, matching: DateComponents(day: day, weekday: weekday), matchingPolicy: .strict, direction: .backward)
+                withKnownIssue("A known miss in the backward day search") {
+                    #expect(found == expected, "day \(day), weekday \(weekday) from \(start)")
+                } when: {
+                    knownMisses.contains([day, weekday] + startDay)
+                }
+            }
+            start = try #require(calendar.date(byAdding: .day, value: -37, to: start))
+        }
+    }
+
+    @Test(arguments: 1...7)
+    func testNextDateMatchingFifthWeekdayFindsIt(weekday: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // The fifth group of days in a month is short and may not have the weekday. Then the search continues to the next month that has it, in both directions.
+        var start = try #require(calendar.date(from: DateComponents(year: 2021, month: 1, day: 1, hour: 14)))
+        for _ in 0..<12 {
+            for direction in [Calendar.SearchDirection.forward, .backward] {
+                let expected = try firstDay(from: start, direction: direction, in: calendar) { $0.weekday == weekday && $0.weekdayOrdinal == 5 }
+                for policy in [Calendar.MatchingPolicy.strict, .nextTime] {
+                    #expect(calendar.nextDate(after: start, matching: DateComponents(weekday: weekday, weekdayOrdinal: 5), matchingPolicy: policy, direction: direction) == expected, "weekday \(weekday) from \(start), \(direction), \(policy)")
+                }
+            }
+            start = try #require(calendar.date(byAdding: .month, value: 1, to: start))
+        }
+    }
 }
 
 /// The difference across an era change in the calendars that label eras from a table. The start moves into the era of the end first, so the smaller components can be negative.
