@@ -32,6 +32,11 @@ import CRT
 @testable import FoundationEssentials
 #endif
 
+// Package builds for Darwin platforms see only the public interface of the standard library, which hides the `_Unicode` SPI.
+#if !FOUNDATION_FRAMEWORK && !canImport(Darwin)
+@_spi(_Unicode) import Swift
+#endif
+
 @Suite("String")
 private struct StringTests {
     // MARK: - Case mapping
@@ -267,6 +272,184 @@ private struct StringTests {
         test("\r \r\n \r", "\r", anchored: false, backwards: true, 4..<5)
         test("\r \r\n \r", "\r", anchored: true, backwards: true, 4..<5)
     }
+
+    // MARK: - Case, diacritic and width options
+
+    @Test(arguments: [
+        ("A", "a"),
+        ("Z", "z"),
+        ("a", "a"),
+        ("5", "5"),
+        ("ß", "ss"),
+        ("ẞ", "ss"),
+        ("ﬁ", "fi"),
+        ("ﬃ", "ffi"),
+        ("İ", "i\u{307}"),
+        ("ı", "ı"),
+        ("Σ", "σ"),
+        ("ς", "σ"),
+        ("\u{345}", "ι"),
+        ("\u{1FBE}", "ι"),
+        ("ΐ", "ι\u{308}\u{301}"),
+        ("ǰ", "j\u{30C}"),
+        ("\u{212A}", "k"),
+        ("\u{212B}", "å"),
+        ("\u{2126}", "ω"),
+        ("ŉ", "ʼn"),
+        ("ſ", "s"),
+        ("µ", "μ"),
+        ("Ā", "ā"),
+        ("Ꭰ", "Ꭰ"),
+        ("ꭰ", "Ꭰ"),
+        ("Ა", "ა"),
+        ("Ａ", "ａ"),
+        ("\u{10400}", "\u{10428}"),
+        ("\u{1E900}", "\u{1E922}"),
+        ("\u{301}", "\u{301}"),
+        ("中", "中"),
+        ("😀", "😀"),
+    ] as [(UnicodeScalar, String)])
+    func caseFoldMapping(_ scalar: UnicodeScalar, expected: String) {
+        #expect(Array(scalar._caseFoldMapping.unicodeScalars) == Array(expected.unicodeScalars))
+    }
+
+    @Test(arguments: [
+        ("a", "a"),
+        ("é", "e"),
+        ("É", "E"),
+        ("ệ", "e"),
+        ("ǖ", "u"),
+        ("ő", "o"),
+        ("Å", "A"),
+        ("\u{212B}", "A"),
+        ("\u{212A}", "K"),
+        ("\u{2126}", "Ω"),
+        ("ǰ", "j"),
+        ("ΐ", "ι"),
+        ("ώ", "ω"),
+        ("\u{344}", "\u{308}"),
+        ("\u{37E}", ";"),
+        ("Ӂ", "Ж"),
+        ("≠", "="),
+        ("ﬁ", "ﬁ"),
+        ("ß", "ß"),
+        ("\u{301}", "\u{301}"),
+        ("\u{958}", "\u{958}"),
+        ("한", "한"),
+        ("\u{2F800}", "\u{2F800}"),
+    ] as [(UnicodeScalar, UnicodeScalar)])
+    func stripDiacritics(_ scalar: UnicodeScalar, expected: UnicodeScalar) {
+        #expect(scalar._stripDiacritics() == expected)
+    }
+
+    @Test(arguments: [
+        ("A", "A"),
+        ("Ａ", "A"),
+        ("ｚ", "z"),
+        ("０", "0"),
+        ("！", "!"),
+        ("｟", "⦅"),
+        ("｡", "。"),
+        ("ｶ", "カ"),
+        ("ｰ", "ー"),
+        ("ﾞ", "\u{3099}"),
+        ("ﾟ", "\u{309A}"),
+        ("ﾠ", "\u{1160}"),
+        ("ﾡ", "ᄀ"),
+        ("ￜ", "ᅵ"),
+        ("￥", "¥"),
+        ("￦", "₩"),
+        ("￫", "→"),
+        ("￮", "○"),
+        ("￣", "￣"),
+        ("\u{FF00}", "\u{FF00}"),
+        ("\u{FFEF}", "\u{FFEF}"),
+        ("カ", "カ"),
+        ("　", "　"),
+    ] as [(UnicodeScalar, UnicodeScalar)])
+    func toHalfWidth(_ scalar: UnicodeScalar, expected: UnicodeScalar) {
+        #expect(scalar._toHalfWidth() == expected)
+    }
+
+    @Test(arguments: [
+        ("straße", "STRASSE", .caseInsensitive, .orderedSame),
+        ("STRAẞE", "strasse", .caseInsensitive, .orderedSame),
+        ("İ", "i\u{307}", .caseInsensitive, .orderedSame),
+        ("ı", "I", .caseInsensitive, .orderedDescending),
+        ("ﬁ", "FI", .caseInsensitive, .orderedSame),
+        ("ΣΑΣ", "σας", .caseInsensitive, .orderedSame),
+        ("\u{345}", "Ι", .caseInsensitive, .orderedSame),
+        ("\u{212A}", "k", .caseInsensitive, .orderedSame),
+        ("\u{212B}", "å", .caseInsensitive, .orderedSame),
+        ("ŉ", "ʼN", .caseInsensitive, .orderedSame),
+        ("ſ", "S", .caseInsensitive, .orderedSame),
+        ("ꭰ", "Ꭰ", .caseInsensitive, .orderedSame),
+        ("Ა", "ა", .caseInsensitive, .orderedSame),
+        ("ABC", "abd", .caseInsensitive, .orderedAscending),
+        ("ABC", "abc", [.caseInsensitive, .literal], .orderedSame),
+        ("straße", "STRASSE", [.caseInsensitive, .literal], .orderedSame),
+        ("café", "cafe", .diacriticInsensitive, .orderedSame),
+        ("ệ", "e", .diacriticInsensitive, .orderedSame),
+        ("Å", "A", .diacriticInsensitive, .orderedSame),
+        ("\u{212B}", "A", .diacriticInsensitive, .orderedSame),
+        ("ǰ", "j", .diacriticInsensitive, .orderedSame),
+        ("e\u{323}\u{302}", "e", .diacriticInsensitive, .orderedSame),
+        ("ﬁ", "fi", .diacriticInsensitive, .orderedDescending),
+        ("café", "cafe", [.diacriticInsensitive, .literal], .orderedSame),
+        ("ＡＢＣ", "ABC", .widthInsensitive, .orderedSame),
+        ("ｶ", "カ", .widthInsensitive, .orderedSame),
+        ("ﾡ", "ᄀ", .widthInsensitive, .orderedSame),
+        ("￥", "¥", .widthInsensitive, .orderedSame),
+        ("￣", "¯", .widthInsensitive, .orderedDescending),
+        ("ﾊ", "ﾊﾟ", .widthInsensitive, .orderedAscending),
+        ("ＡＢＣ", "abc", [.widthInsensitive, .caseInsensitive], .orderedSame),
+        ("Ｃａｆé", "CAFE", [.widthInsensitive, .caseInsensitive, .diacriticInsensitive], .orderedSame),
+    ] as [(String, String, String.CompareOptions, ComparisonResult)])
+    func compareWithOptions(_ string: String, _ other: String, options: String.CompareOptions, expected: ComparisonResult) {
+        #expect(string.compare(other, options: options) == expected)
+    }
+
+    @Test(arguments: [
+        ("Straße", "SS", .caseInsensitive, 4..<5),
+        ("Straße", "ss", [.caseInsensitive, .backwards], 4..<5),
+        ("ΟΔΟΣ", "οδος", .caseInsensitive, 0..<4),
+        ("ꭰꭱ", "Ꭱ", .caseInsensitive, 1..<2),
+        ("ABC", "b", [.caseInsensitive, .literal], 1..<2),
+        ("Ｈｅｌｌｏ wörld", "WORLD", [.caseInsensitive, .diacriticInsensitive], 6..<11),
+        ("Ｈｅｌｌｏ wörld", "hello", [.caseInsensitive, .widthInsensitive, .anchored], 0..<5),
+        ("naïve café", "CAFE", [.caseInsensitive, .diacriticInsensitive, .literal], 6..<10),
+        ("abc", "ＡＢＣ", .widthInsensitive, nil),
+    ] as [(String, String, String.CompareOptions, Range<Int>?)])
+    func rangeOfStringWithOptions(_ string: String, _ stringToFind: String, options: String.CompareOptions, expected: Range<Int>?) throws {
+        let result = try string[...]._range(of: stringToFind[...], options: options)
+        let offsets = result.map { string.distance(from: string.startIndex, to: $0.lowerBound) ..< string.distance(from: string.startIndex, to: $0.upperBound) }
+        #expect(offsets == expected)
+    }
+
+#if !FOUNDATION_FRAMEWORK && !canImport(Darwin)
+    // The mapping tables must use the same Unicode version as the standard library. This test fails when the two disagree.
+    @Test func scalarMappingsMatchStandardLibrary() {
+        var caseFoldingMismatches: [UInt32] = []
+        var diacriticStrippingMismatches: [UInt32] = []
+        for value in UInt32(0) ... 0x10FFFF {
+            guard let scalar = UnicodeScalar(value) else {
+                continue
+            }
+            if Array(scalar._caseFoldMapping.unicodeScalars) != Array(scalar.properties._caseFolded.unicodeScalars) {
+                caseFoldingMismatches.append(value)
+            }
+            var expectedBase = scalar
+            if scalar._isCanonicalDecomposable, let base = Array(String(scalar)._nfd).first, base.value < 0x0510 {
+                expectedBase = base
+            }
+            if scalar._stripDiacritics() != expectedBase {
+                diacriticStrippingMismatches.append(value)
+            }
+        }
+        #expect(caseFoldingMismatches == [])
+        #expect(diacriticStrippingMismatches == [])
+    }
+#endif
 
     @Test func testTryFromUTF16() {
         func test(_ utf16Buffer: [UInt16], expected: String?, sourceLocation: SourceLocation = #_sourceLocation) {
