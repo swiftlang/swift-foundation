@@ -217,6 +217,61 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
+    // In ISO 8601, a month that starts on a Friday, Saturday, or Sunday has a week 0. Searching with the components of a day in week 0 must find that day quickly.
+    @Test(arguments: [2, 3, 5, 8, 11])
+    func testNextDateMatchingMonthAndWeekOfMonthZeroStaysInTheYear(month: Int) throws {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .gmt
+        // In 2026 these months start on a Friday, Saturday, or Sunday, so the 1st is in week 0. Week 0 starts in the previous month, and the search must not skip to the next year.
+        let monthStart = try #require(calendar.date(from: DateComponents(year: 2026, month: month, day: 1)))
+        let start = try #require(calendar.date(byAdding: .day, value: -2, to: monthStart))
+        let found = calendar.nextDate(after: start, matching: DateComponents(month: month, weekOfMonth: 0), matchingPolicy: .strict)
+        #expect(found == monthStart)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func testNextDateMatchingWeekOfMonthZero() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+
+        let target = try #require(calendar.date(from: DateComponents(year: 2027, month: 5, day: 2, hour: 9)))
+        let full: Set<Calendar.Component> = [.year, .month, .day, .hour, .minute, .second, .nanosecond,
+            .weekday, .weekdayOrdinal, .quarter, .weekOfMonth, .weekOfYear, .dayOfYear]
+        let components = calendar.dateComponents(full, from: target)
+        #expect(components.weekOfMonth == 0)
+
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 9)))
+        #expect(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents) == target)
+
+        // Searching for week 0 alone finds the first days of the nearest month that has a week 0: November 2026 forward from October, and April 2028 backward from June.
+        let weekZero = calendar.nextDate(after: start, matching: DateComponents(weekOfMonth: 0), matchingPolicy: .strict)
+        #expect(weekZero == calendar.date(from: DateComponents(year: 2026, month: 11, day: 1)))
+        let lastWeekZero = calendar.nextDate(after: try #require(calendar.date(from: DateComponents(year: 2028, month: 6, day: 5))), matching: DateComponents(weekOfMonth: 0), matchingPolicy: .strict, direction: .backward)
+        #expect(lastWeekZero == calendar.date(from: DateComponents(year: 2028, month: 4, day: 1)))
+    }
+
+    @Test(.timeLimit(.minutes(1)), arguments: [1, 4])
+    func testNextDateMatchesComponentsOfEveryDay(minimumDaysInFirstWeek: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = minimumDaysInFirstWeek
+        // `.yearForWeekOfYear` and `.quarter` are left out: they don't find every day yet, for reasons not related to week 0.
+        let full: Set<Calendar.Component> = [.year, .month, .day, .hour,
+            .weekday, .weekdayOrdinal, .weekOfMonth, .weekOfYear, .dayOfYear]
+
+        var day = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 9)))
+        let end = try #require(calendar.date(from: DateComponents(year: 2028, month: 12, day: 31, hour: 9)))
+        while day <= end {
+            let components = calendar.dateComponents(full, from: day)
+            let found = calendar.nextDate(after: day - 86400 * 3, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents)
+            #expect(found == day, "\(components)")
+            day += 86400
+        }
+    }
+
     @Test func testDateFromComponentsWeekOfMonth() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {

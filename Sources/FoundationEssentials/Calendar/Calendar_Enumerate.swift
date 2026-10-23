@@ -681,7 +681,12 @@ extension Calendar {
             var adjusted = comps
             adjusted.year = component(.year, from: date)
             // TODO: can year ever be nil here?
-            if let adjustedDate = self.date(from: adjusted) {
+            if var adjustedDate = self.date(from: adjusted) {
+                // The date for a week of the month is the start of that week, which can be in the previous month (week 0 always is). A match can't be before the month starts, so compare with the start of the month.
+                if let month = adjusted.month, component(.month, from: adjustedDate) != month,
+                   let monthStart = self.date(from: DateComponents(era: adjusted.era, year: adjusted.year, month: month)), adjustedDate < monthStart {
+                    adjustedDate = monthStart
+                }
                 if direction == .forward && date > adjustedDate {
                     adjusted.year = adjusted.year! + 1
                 } else if direction == .backward && date < adjustedDate {
@@ -1791,14 +1796,23 @@ extension Calendar {
             //
             // Week 1 of June 2018 starts on Friday; any day before that is week 5 of May.
             // We can jump by a week interval if we're not looking for WoM == 2 or we're not close.
-            var advanceDaily = weekOfMonth == 1 // we're looking for WoM == 1
+            //
+            // Week 0 has the same problem. When `minimumDaysInFirstWeek` puts the first days of a month in week 0 (for example, in ISO 8601 a month that starts on a Friday, Saturday, or Sunday), those days never start on `firstWeekday`, so a weekly jump never lands in them.
+            var advanceDaily: Bool
             if direction == .backward {
-                // Last week/earlier this week is week 1.
-                advanceDaily = advanceDaily && dateWeekOfMonth <= 2
+                if weekOfMonth == 1 {
+                    // Last week/earlier this week is week 1.
+                    advanceDaily = dateWeekOfMonth <= 2
+                } else if weekOfMonth == 0 {
+                    // From week 1, the previous week is this month's week 0, if the month has one. Week 0 starts on the 1st, and the weekly jump below never lands there.
+                    advanceDaily = dateWeekOfMonth == 1 && dateInterval(of: .month, for: result).map { component(.weekOfMonth, from: $0.start) == 0 } == true
+                } else {
+                    advanceDaily = false
+                }
             } else {
-                // We need to be careful if it's the last week of the month. We can't assume what number week that would be, so figure it out.
+                // We need to be careful if it's the last week of the month. We can't assume what number week that would be, so figure it out. Weeks start at 0 when the month has a week 0, so use the upper bound minus one, not the count.
                 let range = range(of: .weekOfMonth, in: .month, for: result) ?? 0..<Int.max
-                advanceDaily = advanceDaily && dateWeekOfMonth == (range.endIndex - range.startIndex)
+                advanceDaily = weekOfMonth <= 1 && dateWeekOfMonth == range.upperBound - 1
             }
 
             // TODO: This should be set to something in all paths before being used below. It would be nice to refactor this to avoid the force unwrap
