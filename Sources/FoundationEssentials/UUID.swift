@@ -301,15 +301,17 @@ extension UUID : Codable {
 
 @available(FoundationPreview 6.5, *)
 extension UUID {
+    // These two UUIDs are temporarily renamed due to conflicts with extensions on UUID using Swift.min/Swift.max. These additions cause ambiguity and therefore a source break.
+    
     /// The `nil` (or minimum) UUID, where all bits are set to zero.
     ///
     /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.9), the nil UUID is a special form where all 128 bits are zero. It can be used to represent the absence of a UUID value.
-    public static let min = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+    internal /* public */ static let min = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
     /// The max UUID, where all bits are set to one.
     ///
     /// As defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.10), the max UUID is a special form where all 128 bits are one. It can be used as a sentinel value, for example to represent "the largest possible UUID" in a sorted range.
-    public static let max = UUID(uuid: (0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF))
+    internal /* public */ static let max = UUID(uuid: (0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF))
 }
 
 // MARK: - Span
@@ -317,7 +319,7 @@ extension UUID {
 @available(FoundationPreview 6.5, *)
 extension UUID {
     /// A `RawSpan` view of the UUID's 16 bytes.
-    public var bytes: RawSpan {
+    @_disfavoredOverload public var bytes: RawSpan {
         @_lifetime(borrow self)
         borrowing get {
             _storage.span.bytes
