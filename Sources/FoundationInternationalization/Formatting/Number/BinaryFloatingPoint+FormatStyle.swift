@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -65,5 +63,3 @@ extension BinaryFloatingPoint {
         self = Self(parsed)
     }
 }
-
-#endif // !hasFeature(Embedded)

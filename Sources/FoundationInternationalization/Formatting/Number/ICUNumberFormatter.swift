@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -95,11 +93,11 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
             var container = AttributeContainer()
 
             if let part = NumberPartAttribute(unumberFormatField: field) {
-                container.numberPart = part
+                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.self] = part
             }
 
             if let symbol = NumberSymbolAttribute(unumberFormatField: field) {
-                container.numberSymbol = symbol
+                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.self] = symbol
             }
 
             attrstr[range].mergeAttributes(container)
@@ -411,15 +409,15 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sen
             var container = AttributeContainer()
 
             if let part = NumberPartAttribute(unumberFormatField: field) {
-                container.numberPart = part
+                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.self] = part
             }
 
             if let symbol = NumberSymbolAttribute(unumberFormatField: field) {
-                container.numberSymbol = symbol
+                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.self] = symbol
             }
 
             if let comp = ByteCountAttribute(unumberFormatField: field, unit: unit) {
-                container.byteCount = comp
+                container[AttributeScopes.FoundationAttributes.ByteCountAttribute.self] = comp
             }
 
             attrstr[range].mergeAttributes(container)
@@ -469,15 +467,15 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
             var container = AttributeContainer()
 
             if let part = NumberPartAttribute(unumberFormatField: field) {
-                container.numberPart = part
+                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.self] = part
             }
 
             if let symbol = NumberSymbolAttribute(unumberFormatField: field) {
-                container.numberSymbol = symbol
+                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.self] = symbol
             }
 
             if let comp = MeasurementAttribute(unumberFormatField: field) {
-                container.measurement = comp
+                container[AttributeScopes.FoundationAttributes.MeasurementAttribute.self] = comp
             }
 
             attrstr[range].mergeAttributes(container)
@@ -512,7 +510,7 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
         case asProvided
     }
 
-    enum UnitWidth: String, Codable {
+    enum UnitWidth: String {
         case wide = "unit-width-full-name"
         case abbreviated = "unit-width-short"
         case narrow = "unit-width-narrow"
@@ -548,4 +546,7 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
     }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ICUMeasurementNumberFormatter.UnitWidth : Codable {}
 #endif // !hasFeature(Embedded)

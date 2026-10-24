@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -113,7 +111,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                 return nil
             }
 
-            return Decimal(string: str)
+            return Decimal(asciiDecimalString: str)
         }
     }
 
@@ -144,15 +142,11 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
 
     // MARK: - Cache utilities
 
-    enum NumberFormatType : Hashable, Codable {
+    enum NumberFormatType : Hashable {
         case number(NumberFormatStyleConfiguration.Collection)
         case percent(NumberFormatStyleConfiguration.Collection)
         case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
-
-        private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
-        private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
-        private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
     }
 
     private struct Signature : Hashable {
@@ -354,4 +348,11 @@ private func setCapitalizationContext(_ context: FormatStyleCapitalizationContex
     // status ignored, nothing to do on failure
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ICULegacyNumberFormatter.NumberFormatType : Codable {
+    private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
+}
 #endif // !hasFeature(Embedded)

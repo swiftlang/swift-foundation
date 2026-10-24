@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -123,7 +121,7 @@ import FoundationEssentials
 /// print("\(localizedPercentage!)") // 0.551
 /// ```
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Hashable, Sendable {
+public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Hashable, Sendable {
     /// The locale of the format style.
     ///
     /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
@@ -246,7 +244,7 @@ public struct FloatingPointFormatStyle<Value: BinaryFloatingPoint>: Codable, Has
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointFormatStyle {
     /// A format style that converts between floating-point percentage values and their textual representations.
-    public struct Percent : Codable, Hashable, Sendable {
+    public struct Percent : Hashable, Sendable {
         /// The locale of the format style.
         ///
         /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
@@ -356,7 +354,7 @@ extension FloatingPointFormatStyle {
 
     /// A format style that converts between floating-point currency values and their textual representations.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Codable, Hashable, Sendable {
+    public struct Currency : Hashable, Sendable {
         /// The locale of the format style.
         ///
         /// Use the `FormatStyle.locale(_:)` modifier to create a copy of this format style with a different locale.
@@ -708,15 +706,12 @@ extension FloatingPointFormatStyle {
     /// `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use these
     /// attributes to determine which runs of the attributed string represent different parts of
     /// the formatted value.
-    public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
-        enum Style : Codable, Hashable, Sendable {
+    public struct Attributed : Hashable, FormatStyle, Sendable {
+        enum Style : Hashable, Sendable {
             case floatingPoint(FloatingPointFormatStyle)
             case currency(FloatingPointFormatStyle.Currency)
             case percent(FloatingPointFormatStyle.Percent)
             
-            private typealias FloatingPointCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
 
             var formatter: ICUNumberFormatterBase? {
                 switch self {
@@ -795,8 +790,30 @@ extension FloatingPointFormatStyle {
     }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension FloatingPointFormatStyle : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension FloatingPointFormatStyle.Percent : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension FloatingPointFormatStyle.Currency : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension FloatingPointFormatStyle.Attributed : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension FloatingPointFormatStyle.Attributed.Style : Codable {
+    private typealias FloatingPointCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+}
+#endif // !hasFeature(Embedded)
+
 // MARK: Regex
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension FloatingPointFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
@@ -874,5 +891,4 @@ extension RegexComponent where Self == FloatingPointFormatStyle<Double>.Percent 
         FloatingPointFormatStyle.Percent(locale: locale)
     }
 }
-
 #endif // !hasFeature(Embedded)

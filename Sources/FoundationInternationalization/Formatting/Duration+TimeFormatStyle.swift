@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -33,8 +31,8 @@ extension Duration {
     public struct TimeFormatStyle : FormatStyle, Sendable {
 
         /// The units to display a Duration with and configurations for the units.
-        public struct Pattern : Hashable, Codable, Sendable {
-            enum Fields: Hashable, Codable {
+        public struct Pattern : Hashable, Sendable {
+            enum Fields: Hashable {
                 case hourMinute(roundSeconds: FloatingPointRoundingRule)
                 case hourMinuteSecond(fractionalSecondsLength: Int, roundFractionalSeconds: FloatingPointRoundingRule)
                 case minuteSecond(fractionalSecondsLength: Int, roundFractionalSeconds: FloatingPointRoundingRule)
@@ -410,7 +408,9 @@ extension Duration.TimeFormatStyle {
 
                 let attrSubstring: AttributedString
                 if let attr = attr {
-                    attrSubstring = AttributedString(substring, attributes: .init().durationField(attr))
+                    var attributes = AttributeContainer()
+                    attributes[AttributeScopes.FoundationAttributes.DurationFieldAttribute.self] = attr
+                    attrSubstring = AttributedString(substring, attributes: attributes)
                 } else {
                     attrSubstring = AttributedString(substring)
                 }
@@ -516,4 +516,10 @@ extension Duration.TimeFormatStyle : DiscreteFormatStyle {
     }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.TimeFormatStyle.Pattern : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.TimeFormatStyle.Pattern.Fields : Codable {}
 #endif // !hasFeature(Embedded)

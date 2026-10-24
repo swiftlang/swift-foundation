@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -310,5 +308,3 @@ extension Duration {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)

@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -125,7 +123,7 @@ import FoundationEssentials
 /// let localizedInteger = match?.1 // 123456
 /// ```
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Sendable {
+public struct IntegerFormatStyle<Value: BinaryInteger>: Hashable, Sendable {
     public typealias Configuration = NumberFormatStyleConfiguration
 
     /// The locale of the format style.
@@ -261,7 +259,7 @@ public struct IntegerFormatStyle<Value: BinaryInteger>: Codable, Hashable, Senda
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerFormatStyle {
     /// A format style that converts between integer percentage values and their textual representations.
-    public struct Percent : Codable, Hashable, Sendable {
+    public struct Percent : Hashable, Sendable {
         public typealias Configuration = NumberFormatStyleConfiguration
 
         /// The locale of the format style.
@@ -370,7 +368,7 @@ extension IntegerFormatStyle {
 
     /// A format style that converts between integer currency values and their textual representations.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct Currency : Codable, Hashable, Sendable {
+    public struct Currency : Hashable, Sendable {
         public typealias Configuration = CurrencyFormatStyleConfiguration
 
         /// The locale of the format style.
@@ -917,15 +915,11 @@ extension IntegerFormatStyle {
     /// Use the ``IntegerFormatStyle/attributed`` modifier on a ``FloatingPointFormatStyle`` to create a format style of this type.
     ///
     /// The attributed strings that this format style creates contain attributes from the `AttributeScopes.FoundationAttributes.NumberFormatAttributes` attribute scope. Use these attributes to determine which runs of the attributed string represent different parts of the formatted value.
-    public struct Attributed : Codable, Hashable, FormatStyle, Sendable {
-        enum Style : Codable, Hashable {
+    public struct Attributed : Hashable, FormatStyle, Sendable {
+        enum Style : Hashable {
             case integer(IntegerFormatStyle)
             case percent(IntegerFormatStyle.Percent)
             case currency(IntegerFormatStyle.Currency)
-            
-            private typealias IntegerCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
         }
 
         var style: Style
@@ -1001,8 +995,30 @@ extension IntegerFormatStyle {
     }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension IntegerFormatStyle : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension IntegerFormatStyle.Percent : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension IntegerFormatStyle.Currency : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension IntegerFormatStyle.Attributed : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension IntegerFormatStyle.Attributed.Style : Codable {
+    private typealias IntegerCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+}
+#endif // !hasFeature(Embedded)
+
 // MARK: Pattern Matching
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension IntegerFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Value
@@ -1091,5 +1107,4 @@ extension RegexComponent where Self == IntegerFormatStyle<Int>.Currency {
         IntegerFormatStyle.Currency(code: code.identifier, locale: locale)
     }
 }
-
 #endif // !hasFeature(Embedded)

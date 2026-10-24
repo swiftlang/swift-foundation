@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -23,10 +21,10 @@ extension Duration {
 
     /// A `FormatStyle` that displays a duration as a list of duration units, such as "2 hours, 43 minutes, 26 seconds" in English.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct UnitsFormatStyle : FormatStyle, Sendable {
+    public struct UnitsFormatStyle : Hashable, Sendable {
 
         /// Specifies the width of the unit and the spacing of the value and the unit.
-        public struct UnitWidth : Codable, Hashable, Sendable {
+        public struct UnitWidth : Hashable, Sendable {
             var width: Measurement<UnitDuration>.FormatStyle.UnitWidth
             var patternStyle: UATimeUnitStyle
             
@@ -47,24 +45,6 @@ extension Duration {
             /// Shows the shortest unit name, such as "3h" for a 3-hour duration in the en_US locale.
             public static var narrow: UnitWidth { .init(width: .narrow, patternStyle: UATIMEUNITSTYLE_NARROW) }
             
-            private enum CodingKeys: CodingKey {
-                case width
-                case patternStyle
-            }
-            
-            public init(from decoder: any Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                self.width = try container.decode(Measurement<UnitDuration>.FormatStyle.UnitWidth.self, forKey: .width)
-                let rawValue = try container.decode(UATimeUnitStyle.RawValue.self, forKey: .patternStyle)
-                self.patternStyle = UATimeUnitStyle(rawValue)
-            }
-            
-            public func encode(to encoder: any Encoder) throws {
-                var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(self.width, forKey: .width)
-                try container.encode(self.patternStyle.rawValue, forKey: .patternStyle)
-            }
-            
             public func hash(into hasher: inout Hasher) {
                 hasher.combine(width)
                 hasher.combine(patternStyle.rawValue)
@@ -72,9 +52,9 @@ extension Duration {
         }
 
         /// Units that a duration can be displayed as with `UnitsFormatStyle`.
-        public struct Unit : Codable, Hashable, Sendable {
+        public struct Unit : Hashable, Sendable {
             // Sorted from largest to smallest
-            enum _Unit : Int, Codable, Hashable, Comparable, CaseIterable {
+            enum _Unit : Int, Hashable, Comparable, CaseIterable {
                 static func < (lhs: Duration.UnitsFormatStyle.Unit._Unit, rhs: Duration.UnitsFormatStyle.Unit._Unit) -> Bool {
                     // It's more intuitive to represent comparison by the unit duration, i.e. .weeks > .hours
                     // But the raw value is ordered the other way; reverse the comparison
@@ -140,7 +120,7 @@ extension Duration {
         }
 
         /// Specifies how zero value units are handled.
-        public struct ZeroValueUnitsDisplayStrategy : Codable, Hashable, Sendable {
+        public struct ZeroValueUnitsDisplayStrategy : Hashable, Sendable {
             var length: Int
 
             /// Excludes zero-value units from the formatted string.
@@ -153,7 +133,7 @@ extension Duration {
         /// Specifies how a duration is displayed if it cannot be represented exactly with the allowed units.
         ///
         /// For example, you can change this option to show a duration of 1 hour and 15 minutes as "1.25 hr", "1 hr", or "1.5 hr" with different lengths and rounding rules when hour is the only allowed unit.
-        public struct FractionalPartDisplayStrategy : Codable, Hashable, Sendable {
+        public struct FractionalPartDisplayStrategy : Hashable, Sendable {
             public var minimumLength: Int
             public var maximumLength: Int
             public var roundingRule: FloatingPointRoundingRule
@@ -270,6 +250,8 @@ extension Duration {
 
         // MARK: - `FormatStyle` conformance
 
+        // TODO: Embedded Swift does not have `String.replace(_:with:)` or `AttributedString.range(of:options:locale:)`, which put the formatted fields into the ICU list pattern. Replace that find and replace with code that works in Embedded Swift, then enable the formatting in embedded mode.
+        #if !hasFeature(Embedded)
         /// Creates a locale-aware string representation from a duration value.
         /// - Parameter duration: The value to format.
         /// - Returns: A string representation of the duration.
@@ -282,6 +264,7 @@ extension Duration {
             }
             return result
         }
+        #endif
 
         // The number format does not contain rounding settings because it's handled on the value itself
         func _createNumberFormatStyle(useFractionalLimitsIfAvailable: Bool) -> FloatingPointFormatStyle<Double> {
@@ -368,6 +351,8 @@ extension Duration {
             return result
         }
 
+        // See the TODO at `format(_:)`.
+        #if !hasFeature(Embedded)
         func _getListPattern(_ type: UATimeUnitListPattern) -> String {
             let listPattern = _withFixedUCharBuffer(size: 128) { buffer, size, status in
                 uatmufmt_getListPattern(locale.identifier, unitWidth.patternStyle, type, buffer, size, &status)
@@ -419,6 +404,7 @@ extension Duration {
             }
             return pattern
         }
+        #endif
 
         static func removingZeroUnits(units: [Unit], values: [Double]) -> (units: [Unit], values: [Double]) {
             var nonZeroUnits = [Unit]()
@@ -480,6 +466,8 @@ extension Duration {
             return new
         }
 
+        // See the TODO at `format(_:)`.
+        #if !hasFeature(Embedded)
         /// Returns a `Duration.UnitsFormatStyle.Attributed` style to format a duration as an attributed string using the configuration of this format style. Units in the string are annotated with the `durationField` and `measurement` attribute keys and the `DurationFieldAttribute` and `MeasurementAttribute` attribute values.
         ///
         /// For example, formatting a duration of 2 hours, 43 minutes, 26.25 second in `en_US` locale yeilds the following conceptually
@@ -496,8 +484,14 @@ extension Duration {
         public var attributed: Attributed {
             Attributed(innerStyle: self)
         }
+        #endif
     }
 }
+
+// See the TODO at `Duration.UnitsFormatStyle.format(_:)`.
+#if !hasFeature(Embedded)
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.UnitsFormatStyle : FormatStyle {}
 
 // `FormatStyle` static membership lookup
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
@@ -772,5 +766,39 @@ extension Duration.UnitsFormatStyle : DiscreteFormatStyle {
         return (smallestInterval, forceRoundingToFull)
     }
 }
+#endif // !hasFeature(Embedded)
 
+#if !hasFeature(Embedded)
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.UnitsFormatStyle.UnitWidth : Codable {
+    private enum CodingKeys: CodingKey {
+        case width
+        case patternStyle
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.width = try container.decode(Measurement<UnitDuration>.FormatStyle.UnitWidth.self, forKey: .width)
+        let rawValue = try container.decode(UATimeUnitStyle.RawValue.self, forKey: .patternStyle)
+        self.patternStyle = UATimeUnitStyle(rawValue)
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.width, forKey: .width)
+        try container.encode(self.patternStyle.rawValue, forKey: .patternStyle)
+    }
+}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.UnitsFormatStyle.Unit : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.UnitsFormatStyle.Unit._Unit : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension Duration.UnitsFormatStyle.FractionalPartDisplayStrategy : Codable {}
 #endif // !hasFeature(Embedded)

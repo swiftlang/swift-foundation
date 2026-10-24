@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_LIST_FORMAT_ICU
 
 #if canImport(FoundationEssentials)
@@ -88,5 +86,3 @@ internal final class ICUListFormatter : @unchecked Sendable {
 }
 
 #endif // FOUNDATION_LIST_FORMAT_ICU
-
-#endif // !hasFeature(Embedded)

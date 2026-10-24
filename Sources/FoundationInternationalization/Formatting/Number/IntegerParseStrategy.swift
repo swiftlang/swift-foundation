@@ -10,15 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
 
 /// A parse strategy for creating integer values from formatted strings.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-public struct IntegerParseStrategy<Format> : Codable, Hashable where Format : FormatStyle, Format.FormatInput : BinaryInteger {
+public struct IntegerParseStrategy<Format> : Hashable where Format : FormatStyle, Format.FormatInput : BinaryInteger {
     /// The format style this strategy uses when parsing strings.
     public var formatStyle: Format
     /// A Boolean value that indicates whether parsing allows any discrepencies in the expected format.
@@ -120,4 +118,7 @@ public extension IntegerParseStrategy {
     }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension IntegerParseStrategy : Codable {}
 #endif // !hasFeature(Embedded)
