@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -23,7 +21,7 @@ extension Date {
     /// Use `Date.IntervalFormatStyle` to create user-readable strings of date intervals.
     /// The format style provides customization to show specific date and time components.
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct IntervalFormatStyle : Codable, Hashable, Sendable {
+    public struct IntervalFormatStyle : Hashable, Sendable {
 
         /// The type that defines date interval styles that vary in length or in their included components.
         public typealias DateStyle = Date.FormatStyle.DateStyle
@@ -203,4 +201,7 @@ extension Range where Bound == Date {
     
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.IntervalFormatStyle : Codable {}
 #endif // !hasFeature(Embedded)

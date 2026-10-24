@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -53,7 +51,7 @@ extension URL {
     ///
     /// ```
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct ParseStrategy : Codable, Hashable, Sendable {
+    public struct ParseStrategy : Hashable, Sendable {
         /// The strategy to parse the `scheme` component.
         var scheme: ComponentParseStrategy<String>
         /// The strategy to parse the `user` component.
@@ -163,6 +161,30 @@ extension URL {
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension URL.ParseStrategy {
+#if hasFeature(Embedded)
+    /// The strategy used to parse one component of a URL.
+    ///
+    /// Use this type with the ``URL/ParseStrategy`` initializer and static accessors, or its modifier methods, to specify behavior for parsing components of a URL. This allows you to reject URL candidate strings that lack required components — such as a scheme, host, or path — or to fill in default values while parsing.
+    public enum ComponentParseStrategy<Component : Hashable & Sendable> : Hashable, CustomStringConvertible, Sendable {
+        /// Denotes that the component is required to exists in order to consider the URL valid
+        case required
+        /// Denotes that the component is optional
+        case optional
+        /// If the component is missing, assume it has the attached default value
+        case defaultValue(Component)
+
+        public var description: String {
+            switch self {
+            case .required:
+                return "required"
+            case .optional:
+                return "optional"
+            case .defaultValue(let value):
+                return "assumeValueIfMissing(\(String(describing: value))"
+            }
+        }
+    }
+#else
     /// The strategy used to parse one component of a URL.
     ///
     /// Use this type with the ``URL/ParseStrategy`` initializer and static accessors, or its modifier methods, to specify behavior for parsing components of a URL. This allows you to reject URL candidate strings that lack required components — such as a scheme, host, or path — or to fill in default values while parsing.
@@ -189,6 +211,7 @@ extension URL.ParseStrategy {
             }
         }
     }
+#endif // hasFeature(Embedded)
 }
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
@@ -399,7 +422,7 @@ extension URL {
     ///   - value: A representation of a URL. The type of the representation is specified
     ///     by `ParseStrategy.ParseInput`.
     ///   - strategy: The parse strategy to parse `value` whose `ParseInput` is `URL`.
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
     public init<T: Foundation.ParseStrategy>(_ value: T.ParseInput, strategy: T) throws where T.ParseOutput == Self {
         self = try strategy.parse(value)
     }
@@ -411,6 +434,7 @@ extension URL {
 }
 
 // MARK: - Regex
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension URL.ParseStrategy : CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
@@ -441,7 +465,9 @@ extension URL.ParseStrategy : CustomConsumingRegexComponent {
         return (upperBound: result.upperBound, output: url)
     }
 }
+#endif // !hasFeature(Embedded)
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension RegexComponent where Self == URL.ParseStrategy {
     public static func url(scheme: URL.ParseStrategy.ComponentParseStrategy<String> = .required,
@@ -463,5 +489,9 @@ extension RegexComponent where Self == URL.ParseStrategy {
             fragment: fragment)
     }
 }
+#endif // !hasFeature(Embedded)
 
+#if !hasFeature(Embedded)
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.ParseStrategy : Codable {}
 #endif // !hasFeature(Embedded)

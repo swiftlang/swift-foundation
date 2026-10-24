@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -23,7 +21,7 @@ import FoundationEssentials
 extension URL {
     /// A structure that converts between URL instances and their textual representations.
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
-    public struct FormatStyle : Codable, Hashable, Sendable {
+    public struct FormatStyle : Hashable, Sendable {
         /// The strategy to display the `scheme` component.
         var scheme: ComponentDisplayOption
         /// The strategy to display the `user` component.
@@ -77,7 +75,7 @@ extension URL.FormatStyle {
     /// An enumeration of the components of a URL, for use in creating format style options that depend on a component's value.
     ///
     /// You use this type with style-modifying methods like ``URL/FormatStyle/ComponentDisplayOption/displayWhen(_:matches:)`` in ``URL/FormatStyle/ComponentDisplayOption`` and ``URL/FormatStyle/HostDisplayOption/omitWhen(_:matches:)`` in ``URL/FormatStyle/HostDisplayOption``.
-    public enum Component : Int, Codable, Hashable, Sendable, CustomStringConvertible {
+    public enum Component : Int, Hashable, Sendable, CustomStringConvertible {
         // These raw values MUST match _CFURLRequiredComponents
         /// The URL format style scheme component.
         case scheme   = 0b00000001 // 1 << 0
@@ -109,16 +107,17 @@ extension URL.FormatStyle {
             }
         }
 
-        internal func getComponentValue<T>(from url: URL) -> T? {
+        /// The component value as a string; the port is formatted as a decimal number.
+        internal func getComponentValue(from url: URL) -> String? {
             switch self {
-            case .scheme: return url.scheme as? T
-            case .user: return url.user as? T
-            case .password: return url.password as? T
-            case .host: return url.host as? T
-            case .port: return url.port as? T
-            case .path: return url.path as? T
-            case .query: return url.query as? T
-            case .fragment: return url.fragment as? T
+            case .scheme: return url.scheme
+            case .user: return url.user
+            case .password: return url.password
+            case .host: return url.host
+            case .port: return url.port.map { String($0) }
+            case .path: return url.path
+            case .query: return url.query
+            case .fragment: return url.fragment
             }
         }
 
@@ -140,7 +139,7 @@ extension URL.FormatStyle {
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension URL.FormatStyle {
     /// Specifies the condition to display a component
-    internal struct ComponentDisplayCondition : Codable, Hashable, CustomStringConvertible, Sendable {
+    internal struct ComponentDisplayCondition : Hashable, CustomStringConvertible, Sendable {
         let component: URL.FormatStyle.Component
         let requirements: Set<String>
 
@@ -151,8 +150,8 @@ extension URL.FormatStyle {
 
     /// Specifies the display option for a component, including whether to display or omit the
     /// component and the condition to do so.
-    public struct ComponentDisplayOption : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Int, Codable, Hashable {
+    public struct ComponentDisplayOption : Hashable, CustomStringConvertible, Sendable {
+        enum Option : Int, Hashable {
             case omitted
             case displayed
         }
@@ -203,13 +202,10 @@ extension URL.FormatStyle {
     }
 
     /// Specifies the display option for displaying the host component
-    public struct HostDisplayOption : Codable, Hashable, CustomStringConvertible, Sendable {
-        enum Option : Codable, Hashable, Sendable {
+    public struct HostDisplayOption : Hashable, CustomStringConvertible, Sendable {
+        enum Option : Hashable, Sendable {
             case omitted
             case displayed
-
-            private typealias OmittedCodingKeys = EmptyCodingKeys
-            private typealias DisplayedCodingKeys = EmptyCodingKeys
         }
 
         var option: Option
@@ -398,13 +394,7 @@ extension URL.FormatStyle : FormatStyle {
         guard let condition = condition else {
             return true
         }
-        if condition.component == .port {
-            guard let port: Int = condition.component.getComponentValue(from: url) else {
-                return false
-            }
-            return condition.requirements.contains(String(port))
-        }
-        guard let value: String = condition.component.getComponentValue(from: url) else {
+        guard let value = condition.component.getComponentValue(from: url) else {
             return false
         }
         return condition.requirements.contains(value)
@@ -700,7 +690,7 @@ extension URL {
     ///
     /// - Parameter format: The format style to apply when formatting the URL.
     /// - Returns: A formatted string representation of the URL.
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
     public func formatted<F: Foundation.FormatStyle>(_ format: F) -> F.FormatOutput where F.FormatInput == URL {
         format.format(self)
     }
@@ -757,4 +747,28 @@ public extension ParseableFormatStyle where Self == URL.FormatStyle {
     static var url: Self { .init() }
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle.Component : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle.ComponentDisplayCondition : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle.ComponentDisplayOption : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle.ComponentDisplayOption.Option : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle.HostDisplayOption : Codable {}
+
+@available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
+extension URL.FormatStyle.HostDisplayOption.Option : Codable{
+    private typealias OmittedCodingKeys = EmptyCodingKeys
+    private typealias DisplayedCodingKeys = EmptyCodingKeys
+}
 #endif // !hasFeature(Embedded)

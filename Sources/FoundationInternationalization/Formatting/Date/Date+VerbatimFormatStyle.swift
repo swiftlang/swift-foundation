@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -165,6 +163,7 @@ extension Date.VerbatimFormatStyle {
 
 // MARK: MatchingCollectionConsumer
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
@@ -172,6 +171,7 @@ extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
         try parseStrategy.consuming(input, startingAt: index, in: bounds)
     }
 }
+#endif // !hasFeature(Embedded)
 
 // MARK: DiscreteFormatStyle Conformance
 
@@ -230,5 +230,3 @@ extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
         base.input(after: input)
     }
 }
-
-#endif // !hasFeature(Embedded)

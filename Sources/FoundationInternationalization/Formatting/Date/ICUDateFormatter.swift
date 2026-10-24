@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -318,11 +316,13 @@ extension ICUDateFormatter.DateFormatInfo {
                 return cachedPattern
             } else {
                 var pattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols, locale: format.locale, calendar: format.calendar)
+#if FOUNDATION_FRAMEWORK
                 if let datePatternOverride {
                     // substitute date part from pattern with customDatePattern
                     let datePattern = ICUPatternGenerator.localizedPattern(symbols: format.symbols.dateFields, locale: format.locale, calendar: format.calendar)
                     pattern.replace(datePattern, with: datePatternOverride)
                 }
+#endif
                 
                 state[key] = pattern
                 return pattern
@@ -661,5 +661,3 @@ extension String {
             .joined()
     }
 }
-
-#endif // !hasFeature(Embedded)

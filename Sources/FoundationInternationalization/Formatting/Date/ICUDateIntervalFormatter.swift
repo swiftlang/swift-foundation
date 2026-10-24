@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -91,5 +89,3 @@ final class ICUDateIntervalFormatter : @unchecked Sendable {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)

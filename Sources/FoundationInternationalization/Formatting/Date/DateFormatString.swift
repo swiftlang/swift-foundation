@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -43,7 +41,16 @@ extension String {
             return String(repeating: "'", count: 2 * count)
         }
 
-        return "'\(self.replacing("'", with: "''"))'"
+        var result = "'"
+        for character in self {
+            if character == "'" {
+                result += "''"
+            } else {
+                result.append(character)
+            }
+        }
+        result += "'"
+        return result
     }
 }
 
@@ -208,5 +215,3 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)

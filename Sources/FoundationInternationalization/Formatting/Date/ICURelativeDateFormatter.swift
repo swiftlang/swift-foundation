@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -88,5 +86,3 @@ internal final class ICURelativeDateFormatter : @unchecked Sendable {
     }
 
 }
-
-#endif // !hasFeature(Embedded)
