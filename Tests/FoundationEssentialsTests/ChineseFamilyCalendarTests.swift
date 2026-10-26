@@ -622,22 +622,22 @@ private struct ChineseFamilyCalendarTests {
 
     @Test(arguments: [1800, 2026, 2300])
     func chineseDayBoundaryIsEight(_ year: Int) {
-        #expect(ChineseCalendarVariant.chinese.utcOffsetHours(atMoment: Double(_CalendarAstronomy.gregorianRataDie(year, 1, 1))) == 8.0)
+        #expect(ChineseCalendarVariant.chinese.utcOffsetHours(atMoment: Double(_CalendarAstronomy.gregorianRataDie(year, 1, 1))) == 8)
     }
 
     @Test func dayBoundaryOffsets() {
         func rataDie(_ year: Int, _ month: Int, _ day: Int) -> Double { Double(_CalendarAstronomy.gregorianRataDie(year, month, day)) }
         // The Dangi calendar: UTC+8, then UTC+7 for 1897, UTC+8 until 1911, UTC+9 from 1912.
-        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1896, 6, 1)) == 8.0)
-        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1897, 6, 1)) == 7.0)
-        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1898, 6, 1)) == 8.0)
-        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1911, 6, 1)) == 8.0)
-        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1912, 6, 1)) == 9.0)
-        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(2026, 1, 1)) == 9.0)
+        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1896, 6, 1)) == 8)
+        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1897, 6, 1)) == 7)
+        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1898, 6, 1)) == 8)
+        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1911, 6, 1)) == 8)
+        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(1912, 6, 1)) == 9)
+        #expect(ChineseCalendarVariant.dangi.utcOffsetHours(atMoment: rataDie(2026, 1, 1)) == 9)
         // The Vietnamese calendar: UTC+8, then UTC+7 from 1968.
-        #expect(ChineseCalendarVariant.vietnamese.utcOffsetHours(atMoment: rataDie(1967, 6, 1)) == 8.0)
-        #expect(ChineseCalendarVariant.vietnamese.utcOffsetHours(atMoment: rataDie(1968, 6, 1)) == 7.0)
-        #expect(ChineseCalendarVariant.vietnamese.utcOffsetHours(atMoment: rataDie(2026, 1, 1)) == 7.0)
+        #expect(ChineseCalendarVariant.vietnamese.utcOffsetHours(atMoment: rataDie(1967, 6, 1)) == 8)
+        #expect(ChineseCalendarVariant.vietnamese.utcOffsetHours(atMoment: rataDie(1968, 6, 1)) == 7)
+        #expect(ChineseCalendarVariant.vietnamese.utcOffsetHours(atMoment: rataDie(2026, 1, 1)) == 7)
     }
 
     // MARK: The baked tables

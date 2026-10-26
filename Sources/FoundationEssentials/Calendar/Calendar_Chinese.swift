@@ -31,29 +31,29 @@ internal enum ChineseCalendarVariant: Sendable {
         }
     }
 
-    /// The number of hours that the day boundary is ahead of UTC. The moment is a count of days since the rata die epoch.
+    /// The number of hours that the day boundary is ahead of UTC, at a time given in days since the rata die epoch.
     ///
     /// Chinese uses UTC+8. Dangi uses UTC+8 before 1897, UTC+7 in 1897, UTC+8 from 1898 to 1911, and UTC+9 from 1912. Vietnamese uses UTC+8 before 1968, then UTC+7.
     /// Each change is at local midnight of the earlier offset, on 1897-01-18, 1898-01-18 and 1912-01-16 (Dangi) and 1968-01-02 (Vietnamese).
     /// The dates come from counting 365 days for every year since 1970.
-    func utcOffsetHours(atMoment moment: Double) -> Double {
+    func utcOffsetHours(atMoment moment: Double) -> Int {
         switch self {
         case .chinese:
-            return 8.0
+            return 8
         case .dangi:
-            if moment < Self.moment(ofYear: 1897, offsetBefore: 8.0) { return 8.0 }
-            if moment < Self.moment(ofYear: 1898, offsetBefore: 7.0) { return 7.0 }
-            if moment < Self.moment(ofYear: 1912, offsetBefore: 8.0) { return 8.0 }
-            return 9.0
+            if moment < Self.moment(ofYear: 1897, offsetBefore: 8) { return 8 }
+            if moment < Self.moment(ofYear: 1898, offsetBefore: 7) { return 7 }
+            if moment < Self.moment(ofYear: 1912, offsetBefore: 8) { return 8 }
+            return 9
         case .vietnamese:
-            return moment < Self.moment(ofYear: 1968, offsetBefore: 8.0) ? 8.0 : 7.0
+            return moment < Self.moment(ofYear: 1968, offsetBefore: 8) ? 8 : 7
         }
     }
 
     private static let rataDieOfEpoch1970 = 719_163.0
 
-    private static func moment(ofYear year: Int, offsetBefore hours: Double) -> Double {
-        rataDieOfEpoch1970 + Double((year - 1970) * 365) - hours / 24.0
+    private static func moment(ofYear year: Int, offsetBefore hours: Int) -> Double {
+        rataDieOfEpoch1970 + Double((year - 1970) * 365) - Double(hours) / 24.0
     }
 
     /// The number added to the related Gregorian year to get the number that `.yearForWeekOfYear` reports.
@@ -67,7 +67,7 @@ internal enum ChineseCalendarVariant: Sendable {
 
 // MARK: - Month-structure rules over the astronomy engine
 //
-// The astronomy returns moments in universal time. These rules use the offset of the variant to find the day that holds a moment. The months do not depend on the calendar's `timeZone`.
+// The astronomy works with times in days since the rata die epoch, in universal time, with a fraction for the time of day. This is the "moment" of Calendrical Calculations. These rules use the offset of the variant to find the day that holds a moment. The months do not depend on the calendar's `timeZone`.
 //
 // These functions compute directly, without caching, which keeps the code minimal. They only run for out-of-range years (before 1901 or after 2100); the in-range path reads the baked table and never calls them, so normal usage is unaffected.
 //
@@ -75,13 +75,13 @@ internal enum ChineseCalendarVariant: Sendable {
 
 fileprivate let chineseSynodicGap = 25
 
-// Local midnight of an RD day, as a universal moment.
+// Local midnight of a rata die, as a time in days since the rata die epoch, in universal time.
 fileprivate func chineseMidnight(_ rataDie: Int, _ variant: ChineseCalendarVariant) -> Double {
-    Double(rataDie) - 1.0 + (24.0 - variant.utcOffsetHours(atMoment: Double(rataDie))) / 24.0
+    Double(rataDie) - 1.0 + Double(24 - variant.utcOffsetHours(atMoment: Double(rataDie))) / 24.0
 }
 
 fileprivate func chineseLocalDay(_ moment: Double, _ variant: ChineseCalendarVariant) -> Int {
-    Int((moment + variant.utcOffsetHours(atMoment: moment) / 24.0).rounded(.down))
+    Int((moment + Double(variant.utcOffsetHours(atMoment: moment)) / 24.0).rounded(.down))
 }
 
 // The day of the winter solstice: the last day before the local midnight at which the solar longitude reaches 270 degrees.
