@@ -88,8 +88,7 @@ extension NotificationCenter {
             }
 
             func remove() {
-                // Take the token out atomically so that only the first of
-                // several concurrent calls unregisters it.
+                // Take the token out atomically so that only the first of several concurrent calls unregisters it.
                 let value = token.withLock { value in
                     defer { value = nil }
                     return value

@@ -364,9 +364,7 @@ private struct NotificationCenterMessageTests {
     }
 
     @Test func concurrentRemoveObserverIsIdempotent() async throws {
-        // Removing the same token from many tasks at once must unregister it
-        // exactly once: a racing second removal must not unregister a new
-        // observer whose registration reused the freed token value.
+        // Removing the same token from many tasks at once must unregister it exactly once: a racing second removal must not unregister a new observer whose registration reused the freed token value.
         let center = NotificationCenter()
 
         for _ in 0..<50 {
@@ -377,8 +375,7 @@ private struct NotificationCenterMessageTests {
                     group.addTask {
                         center.removeObserver(token)
 
-                        // Registering while the removals above are in flight
-                        // can reuse the token value they are racing to clear.
+                        // Registering while the removals above are in flight can reuse the token value they are racing to clear.
                         let newToken = center.addObserver(of: nil, for: AsyncTestMessage.self) { _ in }
                         center.removeObserver(newToken)
                     }
