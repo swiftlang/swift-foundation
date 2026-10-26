@@ -407,20 +407,6 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
             return i + 1
         }
         
-        @_unavailableInEmbedded
-        var description: String {
-            switch self {
-            case .empty:
-                return "[]"
-            case .single(let index):
-                return "[\(index)]"
-            case .pair(let first, let second):
-                return "[\(first), \(second)]"
-            case .array(let indexes):
-                return indexes.description
-            }
-        }
-        
         func withUnsafeBufferPointer<R>(_ body: (UnsafeBufferPointer<Int>) throws -> R) rethrows -> R {
             switch self {
             case .empty:
@@ -439,9 +425,6 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
                 return try indexes.withUnsafeBufferPointer(body)
             }
         }
-        
-        @_unavailableInEmbedded
-        var debugDescription: String { return description }
         
         static func +(lhs: Storage, rhs: Storage) -> Storage {
             var res = lhs
@@ -669,18 +652,21 @@ public struct IndexPath : Equatable, Hashable, MutableCollection, RandomAccessCo
     }
 }
 
-// Array.description and Mirror are unavailable in Embedded Swift.
-#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension IndexPath : CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
-        return _indexes.description
+        return "[" + self.map { String($0) }.joined(separator: ", ") + "]"
     }
     
     public var debugDescription: String {
-        return _indexes.debugDescription
+        return description
     }
-    
+}
+
+// Mirror is unavailable in Embedded Swift.
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension IndexPath : CustomReflectable {
     public var customMirror: Mirror {
         return Mirror(self, unlabeledChildren: self, displayStyle: .collection)
     }

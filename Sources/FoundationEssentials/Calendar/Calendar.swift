@@ -1611,17 +1611,20 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 }
 
-#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+extension Calendar : CustomDebugStringConvertible, CustomStringConvertible {
     public var description: String {
-        return "\(identifier) (\(_calendar)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
+        return "\(identifier.debugDescription) (\(_calendar.debugDescription)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
     }
 
     public var debugDescription: String {
         description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Calendar : CustomReflectable {
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
