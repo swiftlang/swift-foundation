@@ -337,12 +337,9 @@ extension _StringCompareOptionsIterable {
                             strBuf2.advance()
                             useStrBuf2 = true
                         }
+                    }
 
-                        if str1Char != transformed.first {
-                            break
-                        }
-                    } else if str1Char != str2Char {
-                        // The needle character comes from an earlier expansion, such as the second "s" of "ß", so it has no other form to try.
+                    if str1Char != str2Char {
                         break
                     }
                 }
