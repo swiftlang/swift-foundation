@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+internal import BasicContainers
+#endif
+
 #if !hasFeature(Embedded)
 
 typealias XMLPlistMapOffset = Int
@@ -131,14 +135,14 @@ enum XMLPlistError: Swift.Error, Equatable {
 }
 
 /// Flat record buffer describing the structure of a parsed XML property list. Owns its records; an `XMLPlistLegacyDecodingDocument` couples this with the underlying byte buffer (legacy path), while `XMLPlistDecodingDocument` couples it with a `Data` (primitive path).
-internal struct XMLPlistMap<Records: MapRecordStorage & ~Copyable>: ~Copyable {
+internal struct XMLPlistMap: ~Copyable {
     typealias TypeDescriptor = XMLPlistMapTypeDescriptor
     typealias Region = XMLPlistMapRegion
     typealias Value = XMLPlistMapValue
 
-    let records: Records
+    let records: UniqueArray<Int>
 
-    init(records: consuming Records) {
+    init(records: consuming UniqueArray<Int>) {
         self.records = records
     }
 
