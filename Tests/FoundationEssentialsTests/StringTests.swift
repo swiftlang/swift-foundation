@@ -268,6 +268,28 @@ private struct StringTests {
         test("\r \r\n \r", "\r", anchored: true, backwards: true, 4..<5)
     }
 
+#if FOUNDATION_FRAMEWORK
+    // Case folding of non-ASCII characters needs the framework build.
+    @Test(arguments: [
+        ("sx", "ß", String.CompareOptions.caseInsensitive, nil),
+        ("ss", "ß", .caseInsensitive, 0..<2),
+        ("Sx", "ẞ", .caseInsensitive, nil),
+        ("xs", "ß", [.caseInsensitive, .backwards], nil),
+        ("xss", "ß", [.caseInsensitive, .backwards], 1..<3),
+        ("fx", "ﬁ", .caseInsensitive, nil),
+        ("fi", "ﬁ", .caseInsensitive, 0..<2),
+        ("fx", "ﬁ", [.literal, .caseInsensitive], nil),
+        ("FI", "ﬁ", [.literal, .caseInsensitive], 0..<2),
+        ("ß", "sx", .caseInsensitive, nil),
+        ("ß", "ss", .caseInsensitive, 0..<2),
+    ] as [(String, String, String.CompareOptions, Range<Int>?)])
+    func rangeOfStringWithExpandingCaseFold(_ tested: String, _ string: String, _ options: String.CompareOptions, _ expectation: Range<Int>?) throws {
+        let result = try tested[...]._range(of: string[...], options: options)
+        let utf8Result = result.map { tested.utf8.distance(from: tested.startIndex, to: $0.lowerBound) ..< tested.utf8.distance(from: tested.startIndex, to: $0.upperBound) }
+        #expect(utf8Result == expectation)
+    }
+#endif
+
     @Test func testTryFromUTF16() {
         func test(_ utf16Buffer: [UInt16], expected: String?, sourceLocation: SourceLocation = #_sourceLocation) {
             let result = utf16Buffer.withUnsafeBufferPointer {
