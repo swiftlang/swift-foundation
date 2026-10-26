@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !FOUNDATION_FRAMEWORK
 
 internal import Synchronization
@@ -399,7 +397,7 @@ open class FileManager : @unchecked Sendable {
         _impl.string(withFileSystemRepresentation: str, length: len)
     }
     
-    open func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
+    internal func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
         try path.withFileSystemRepresentation(body)
     }
 
@@ -423,5 +421,3 @@ open class FileManager : @unchecked Sendable {
 }
 
 #endif
-
-#endif // !hasFeature(Embedded)

@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSFileManager
 internal import DarwinPrivate.sys.content_protection
@@ -69,6 +67,23 @@ extension mode_t {
 }
 #endif
 
+#if hasFeature(Embedded)
+// Embedded Swift cannot cast to `any BinaryInteger`, so try each concrete integer type.
+private func _exactlyConvertFileAttributeInteger<T: BinaryInteger>(_ value: Any, as type: T.Type) -> T? {
+    if let v = value as? Int { return T(exactly: v) }
+    if let v = value as? UInt { return T(exactly: v) }
+    if let v = value as? Int8 { return T(exactly: v) }
+    if let v = value as? Int16 { return T(exactly: v) }
+    if let v = value as? Int32 { return T(exactly: v) }
+    if let v = value as? Int64 { return T(exactly: v) }
+    if let v = value as? UInt8 { return T(exactly: v) }
+    if let v = value as? UInt16 { return T(exactly: v) }
+    if let v = value as? UInt32 { return T(exactly: v) }
+    if let v = value as? UInt64 { return T(exactly: v) }
+    return nil
+}
+#endif
+
 func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Type) -> T? {
     guard let value else { return nil }
     #if FOUNDATION_FRAMEWORK
@@ -79,9 +94,16 @@ func _readFileAttributePrimitive<T: BinaryInteger>(_ value: Any?, as type: T.Typ
     
     if let exact = value as? T {
         return exact
-    } else if let binInt = value as? (any BinaryInteger), let result = T(exactly: binInt) {
+    }
+    #if hasFeature(Embedded)
+    if let result = _exactlyConvertFileAttributeInteger(value, as: T.self) {
         return result
     }
+    #else
+    if let binInt = value as? (any BinaryInteger), let result = T(exactly: binInt) {
+        return result
+    }
+    #endif
     return nil
 }
 
@@ -95,8 +117,14 @@ func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
     
     if let boolValue = value as? Bool {
         return boolValue
-    } else if let binInt = value as? (any BinaryInteger), let result = Int(exactly: binInt) {
-        switch result {
+    }
+    #if hasFeature(Embedded)
+    let integer = _exactlyConvertFileAttributeInteger(value, as: Int.self)
+    #else
+    let integer = (value as? (any BinaryInteger)).flatMap { Int(exactly: $0) }
+    #endif
+    if let integer {
+        switch integer {
         case 0: return false
         case 1: return true
         default: return nil
@@ -105,7 +133,7 @@ func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
     return nil
 }
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 @_spi(SwiftCorelibsFoundation)
 public protocol _NSNumberInitializer {
     static func initialize(value: Bool) -> Any
@@ -127,11 +155,12 @@ func _writeFileAttributePrimitive<T: BinaryInteger, U: BinaryInteger>(_ value: T
         NSNumber(value: UInt64(value))
     }
     #else
+    #if !hasFeature(Embedded)
     if let ns = _nsNumberInitializer()?.initialize(value: value) {
         return ns
-    } else {
-        return U(value)
     }
+    #endif
+    return U(value)
     #endif
 }
 
@@ -139,11 +168,12 @@ func _writeFileAttributePrimitive(_ value: Bool) -> Any {
     #if FOUNDATION_FRAMEWORK
     NSNumber(value: value)
     #else
+    #if !hasFeature(Embedded)
     if let ns = _nsNumberInitializer()?.initialize(value: value) {
         return ns
-    } else {
-        return value
     }
+    #endif
+    return value
     #endif
 }
 
@@ -1016,5 +1046,3 @@ extension _FileManagerImpl {
 #endif
     }
 }
-
-#endif // !hasFeature(Embedded)

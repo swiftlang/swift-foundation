@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !FOUNDATION_FRAMEWORK
 
 /// A collection of information about the current process.
@@ -117,7 +115,7 @@ extension ProcessInfo {
 /// A structure that contains version information about the currently executing operating system, including major, minor, and patch version numbers.
 ///
 /// Use the ``ProcessInfo`` property ``ProcessInfo/operatingSystemVersion`` to fetch an instance of this type. You can also pass this type to ``ProcessInfo/isOperatingSystemAtLeast(_:)`` to determine whether the current operating system version is the same or later than the given value.
-public struct OperatingSystemVersion: Hashable, Codable, Sendable {
+public struct OperatingSystemVersion: Hashable, Sendable {
     /// The major release number, such as 10 in version 10.9.3.
     public let majorVersion: Int
     /// The minor release number, such as 9 in version 10.9.3.
@@ -139,6 +137,10 @@ public struct OperatingSystemVersion: Hashable, Codable, Sendable {
         self.patchVersion = patchVersion
     }
 }
+
+#if !hasFeature(Embedded)
+extension OperatingSystemVersion : Codable {}
+#endif
 
 // MARK: - Getting Computer Information
 extension ProcessInfo {
@@ -163,5 +165,3 @@ extension ProcessInfo {
 }
 
 #endif // !FOUNDATION_FRAMEWORK
-
-#endif // !hasFeature(Embedded)

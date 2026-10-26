@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import containermanager
 internal import _ForSwiftFoundation
@@ -291,7 +289,7 @@ extension _FileManagerImpl {
                     continue
                 }
                 
-                let trueSubpath = subpath.trimmingPrefix(realFirstPath)
+                let trueSubpath = subpath.starts(with: realFirstPath) ? subpath.dropFirst(realFirstPath.count) : subpath[...]
                 if trueSubpath.first == "/" {
                     results.append(String(trueSubpath.dropFirst()))
                 } else if !trueSubpath.isEmpty {
@@ -602,5 +600,3 @@ extension URL {
         #endif
     }
 }
-
-#endif // !hasFeature(Embedded)

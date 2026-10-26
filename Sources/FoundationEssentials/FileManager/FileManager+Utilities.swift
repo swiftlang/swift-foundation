@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import XPCPrivate
 internal import _ForSwiftFoundation
@@ -299,5 +297,3 @@ extension FileManager {
 #endif
     }
 }
-
-#endif // !hasFeature(Embedded)
