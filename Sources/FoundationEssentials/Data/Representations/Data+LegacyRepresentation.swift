@@ -109,7 +109,7 @@ extension Data {
             } else {
                 let storage = __DataStorage(capacity: capacity)
                 var appendedCount = 0
-                try storage.withUninitializedBytes(extraCapacity: capacity, location: 0, &appendedCount, initializer)
+                try storage.withTrailingUninitializedBytes(extraCapacity: capacity, location: 0, &appendedCount, initializer)
                 if InlineSlice.canStore(count: appendedCount) {
                     self = .slice(InlineSlice(storage, count: appendedCount))
                 } else {
@@ -486,7 +486,7 @@ extension Data {
                             self = .large(LargeSlice(storage, count: newCount))
                         }
                     }
-                    try storage.withUninitializedBytes(extraCapacity: newByteCount, location: inline.count, &appendedCount, initializer)
+                    try storage.withTrailingUninitializedBytes(extraCapacity: newByteCount, location: inline.count, &appendedCount, initializer)
                 }
             }
 
@@ -669,7 +669,7 @@ extension Data {
                             self = .large(LargeSlice(storage, count: size))
                         }
                     }
-                    try storage.withUninitializedBytes(extraCapacity: cnt, location: 0, &size, initializer)
+                    try storage.withTrailingUninitializedBytes(extraCapacity: cnt, location: 0, &size, initializer)
                 }
             case .inline(var inline):
                 precondition(subrange.lowerBound >= 0 && subrange.lowerBound <= inline.count, "index \(subrange.lowerBound) is out of bounds of 0..<\(inline.count)")
