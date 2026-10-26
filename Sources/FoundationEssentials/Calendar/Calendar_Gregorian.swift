@@ -2258,26 +2258,8 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         let dcSecond = components.contains(.second) ? second : nil
         let dcWeekday = components.contains(.weekday) ? weekday : nil
         let dcWeekdayOrdinal = components.contains(.weekdayOrdinal) ? weekdayOrdinal : nil
-        let dcQuarter: Int? = components.contains(.quarter) ? {
-            if let dayOfYear = dayOfYear {
-                let isLeapYear = gregorianYearIsLeap(year)
-                return if !isLeapYear {
-                    if dayOfYear < 90 { 1 }
-                    else if dayOfYear < 181 { 2 }
-                    else if dayOfYear < 273 { 3 }
-                    else if dayOfYear < 366 { 4 }
-                    else { preconditionFailure("Invalid day of year") }
-                } else {
-                    if dayOfYear < 91 { 1 }
-                    else if dayOfYear < 182 { 2 }
-                    else if dayOfYear < 274 { 3 }
-                    else if dayOfYear < 367 { 4 }
-                    else { preconditionFailure("Invalid day of year") }
-                }
-            } else {
-                return 1 // fallback if calculations weren't performed
-            }
-        }() : nil
+        // Quarters are month-based (Jan-Mar = 1, ..., Oct-Dec = 4), matching ICU.
+        let dcQuarter: Int? = components.contains(.quarter) ? (month - 1) / 3 + 1 : nil
         let dcWeekOfMonth = components.contains(.weekOfMonth) ? weekOfMonth : nil
         let dcWeekOfYear = components.contains(.weekOfYear) ? weekOfYear : nil
         let dcYearForWeekOfYear = components.contains(.yearForWeekOfYear) ? yearForWeekOfYear : nil
