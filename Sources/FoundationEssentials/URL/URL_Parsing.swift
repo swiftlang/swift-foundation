@@ -567,6 +567,12 @@ extension URL {
             shouldEncode = true
         }
 
+        // When enabled, strict validation rejects some of the invalid URL strings that CFURL would otherwise allow.
+        @inline(__always)
+        func useStrictValidation() -> Bool {
+            return !useModernParsing && foundation_swift_url_strict_validation_enabled()
+        }
+
         @inline(__always)
         func checkHost() -> Bool {
             guard flags.contains(.hasHost) else { return true }
@@ -577,7 +583,8 @@ extension URL {
                 let innerHost = host.extracting(1..<(host.count - 1))
                 guard let isValid = validateIPLiteral(
                     innerHost: innerHost,
-                    useModernParsing: useModernParsing
+                    useModernParsing: useModernParsing,
+                    useStrictValidation: useStrictValidation()
                 ) else {
                     return false
                 }

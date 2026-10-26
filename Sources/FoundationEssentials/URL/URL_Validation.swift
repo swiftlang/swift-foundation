@@ -69,9 +69,10 @@ internal func containsIPLiteralBracket<T: UnsignedInteger & FixedWidthInteger>(
 @inline(__always)
 internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
     innerHost: borrowing Span<T>,
-    useModernParsing: Bool
+    useModernParsing: Bool,
+    useStrictValidation: Bool
 ) -> Bool? {
-    guard useModernParsing else {
+    guard useModernParsing || useStrictValidation else {
         // For CFURL, allow arbitrary percent-encoding
         return validate(span: innerHost, component: .hostIPvFuture)
     }
@@ -88,6 +89,10 @@ internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
         // The IP portion contained an invalid character that was
         // not the start of a zone ID, so return nil.
         return nil
+    }
+    guard useModernParsing else {
+        // For CFURL, allow arbitrary percent-encoding in the zone ID
+        return validate(span: innerHost, component: .hostIPvFuture)
     }
     // "%25" is the correctly-encoded zone ID delimiter for a URL
     let isValidZoneID = (

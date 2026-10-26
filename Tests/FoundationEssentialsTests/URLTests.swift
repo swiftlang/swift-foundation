@@ -4626,6 +4626,14 @@ private struct URLTests {
         #expect(absoluteURL.absoluteString == "https://example.com/dir/caf%C3%A9")
     }
 
+    #if FOUNDATION_FRAMEWORK
+    @Test func bridgedDataRepresentationFailure() {
+        let data = Data("http://example\0.com".utf8)
+        #expect(_BridgedURL(dataRepresentation: data, relativeTo: nil, isAbsolute: false) == nil)
+        #expect(_BridgedURL(dataRepresentation: data, relativeTo: nil, isAbsolute: true) == nil)
+    }
+    #endif
+
     @Test func dataURLDescriptionTruncation() throws {
         // Short data: URLs are described in full
         let shortDataURL = try #require(URL(string: "data:text/plain,hello"))

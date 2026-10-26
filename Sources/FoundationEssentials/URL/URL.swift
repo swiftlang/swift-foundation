@@ -619,9 +619,13 @@ internal func foundation_swift_nsurl_enabled() -> Bool {
 internal func foundation_swift_url_v2_enabled() -> Bool {
     return _foundation_swift_url_v2_enabled()
 }
+internal func foundation_swift_url_strict_validation_enabled() -> Bool {
+    return _foundation_swift_url_strict_validation_enabled()
+}
 #else
 internal func foundation_swift_url_enabled() -> Bool { return true }
 internal func foundation_swift_url_v2_enabled() -> Bool { return true }
+internal func foundation_swift_url_strict_validation_enabled() -> Bool { return true }
 #endif
 
 #if canImport(os) && !hasFeature(Embedded)
