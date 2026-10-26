@@ -93,11 +93,11 @@ internal class ICUNumberFormatterBase : @unchecked Sendable {
             var container = AttributeContainer()
 
             if let part = NumberPartAttribute(unumberFormatField: field) {
-                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.self] = part
+                container.numberPart = part
             }
 
             if let symbol = NumberSymbolAttribute(unumberFormatField: field) {
-                container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.self] = symbol
+                container.numberSymbol = symbol
             }
 
             attrstr[range].mergeAttributes(container)
@@ -409,14 +409,20 @@ final class ICUByteCountNumberFormatter : ICUNumberFormatterBase, @unchecked Sen
             var container = AttributeContainer()
 
             if let part = NumberPartAttribute(unumberFormatField: field) {
+                // TODO: This is a workaround for an embedded Swift keypath compiler crash
+                // container.numberPart = part
                 container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.self] = part
             }
 
             if let symbol = NumberSymbolAttribute(unumberFormatField: field) {
+                // TODO: This is a workaround for an embedded Swift keypath compiler crash
+                // container.numberSymbol = symbol
                 container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.self] = symbol
             }
 
             if let comp = ByteCountAttribute(unumberFormatField: field, unit: unit) {
+                // TODO: This is a workaround for an embedded Swift keypath compiler crash
+                // container.byteCount = comp
                 container[AttributeScopes.FoundationAttributes.ByteCountAttribute.self] = comp
             }
 
@@ -467,14 +473,20 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
             var container = AttributeContainer()
 
             if let part = NumberPartAttribute(unumberFormatField: field) {
+                // TODO: This is a workaround for an embedded Swift keypath compiler crash
+                // container.numberPart = part
                 container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.NumberPartAttribute.self] = part
             }
 
             if let symbol = NumberSymbolAttribute(unumberFormatField: field) {
+                // TODO: This is a workaround for an embedded Swift keypath compiler crash
+                // container.numberSymbol = symbol
                 container[AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.self] = symbol
             }
 
             if let comp = MeasurementAttribute(unumberFormatField: field) {
+                // TODO: This is a workaround for an embedded Swift keypath compiler crash
+                // container.measurement = comp
                 container[AttributeScopes.FoundationAttributes.MeasurementAttribute.self] = comp
             }
 

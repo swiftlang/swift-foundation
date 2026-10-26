@@ -84,7 +84,7 @@ final class _ProcessInfo: Sendable {
             if let existing = $0.arguments {
                 return existing
             }
-            #if hasFeature(Embedded)
+            #if hasFeature(Embedded) && canImport(Darwin)
             // Embedded Swift's standard library has no CommandLine
             let argv = _NSGetArgv()!.pointee!
             var current = (0 ..< Int(_NSGetArgc()!.pointee)).map { String(cString: argv[$0]!) }
