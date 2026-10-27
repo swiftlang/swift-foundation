@@ -52,6 +52,34 @@ extension Locale {
             }
             self.init(identifier: identifier, componentRanges: componentRanges, keywordRanges: keywordRanges)
         }
+
+        init(components: Locale.Components) {
+            let languageCode = components.languageComponents.languageCode?._normalizedIdentifier ?? ""
+            let script = components.languageComponents.script?._normalizedIdentifier ?? ""
+            let region = components.languageComponents.region?._normalizedIdentifier ?? ""
+            var base = Bytes(capacity: languageCode.utf8.count + script.utf8.count + region.utf8.count + 2)
+            var componentRanges: ComponentRanges = (nil, nil, nil, nil)
+            if !languageCode.isEmpty {
+                base.append(copying: languageCode.utf8Span.span.bytes)
+                componentRanges.language = 0..<base.count
+            }
+            if !script.isEmpty {
+                base.append(._minus)
+                let start = base.count
+                base.append(copying: script.utf8Span.span.bytes)
+                componentRanges.script = start..<base.count
+            }
+            if !region.isEmpty {
+                base.append(._underscore)
+                let start = base.count
+                base.append(copying: region.utf8Span.span.bytes)
+                componentRanges.region = start..<base.count
+            }
+
+            let keywords = KeywordList(components: components)
+            self.init(baseIdentifier: base.span, componentRanges: componentRanges, keywords: keywords)
+        }
+
         /// Creates the canonical form of `string`, with the byte ranges of its parts. The identifier is "" if `string` is empty, too long, or not ASCII.
         package init(canonicalizing source: String) {
             let utf8 = source.utf8
@@ -114,6 +142,109 @@ extension Locale {
 
                 // D. Re-append any key-value strings, now canonical
                 return Self(baseIdentifier: output.span, componentRanges: Self.componentRanges(of: output.span), keywords: keywords)
+            }
+        }
+
+        /// The language code, for example "en".
+        var languageCode: String? {
+            componentRanges.language.map { Self.string(from: identifier.utf8Span.span.extracting($0)) }
+        }
+
+        /// The script code, for example "Hant".
+        var scriptCode: String? {
+            componentRanges.script.map { Self.string(from: identifier.utf8Span.span.extracting($0)) }
+        }
+
+        /// The region code, for example "US".
+        var regionCode: String? {
+            componentRanges.region.map { Self.string(from: identifier.utf8Span.span.extracting($0)) }
+        }
+
+        /// The variant code in uppercase, with "_" between its subtags, for example "POSIX".
+        var variantCode: String? {
+            componentRanges.variant.map { Self.string(from: identifier.utf8Span.span.extracting($0), uppercased: true, hyphenToUnderscore: true) }
+        }
+
+        /// The range of the region in `identifier`. Uses the region code of the "rg" keyword if there is one.
+        var regionOverrideRange: Range<Int>? {
+            // Ignore an "rg" value of 2 or fewer characters.
+            guard let range = keywordValueRange("rg"), range.count > 2 else { return componentRanges.region }
+            // The "rg" value is a region code and a subdivision code. Use only the region code.
+            return range.lowerBound..<(range.lowerBound + 2)
+        }
+
+        /// The region code in uppercase. Uses the region code of the "rg" keyword if there is one.
+        var regionOverride: String? {
+            regionOverrideRange.map { Self.string(from: identifier.utf8Span.span.extracting($0), uppercased: true) }
+        }
+
+        /// Returns the value of `key`, or `nil` if there is no such key.
+        func keywordValue(_ key: String) -> String? {
+            keywordValueRange(key).map { Self.string(from: identifier.utf8Span.span.extracting($0)) }
+        }
+
+        /// Returns the range in `identifier` of the value of `key`, or `nil` if there is no such key.
+        func keywordValueRange(_ key: String) -> Range<Int>? {
+            let identifier = identifier.utf8Span.span
+            let key = key.utf8Span.span
+            for (keyRange, valueRange) in keywordRanges where identifier.extracting(keyRange).elementsEqual(key) {
+                return valueRange
+            }
+            return nil
+        }
+
+        /// The ICU identifier in the form of `language_Script_REGION_VARIANT@key=value;...`.
+        // FIXME: Replace deprecated language, script, region, variant and subdivision codes with their current codes. For example, replace the region "DD" with "DE".
+        var icuIdentifier: String {
+            // The output has the subtags and keywords of the identifier, plus one "_" for a missing region before a variant.
+            let capacity = identifier.utf8.count + 1
+
+            return String(_capacity: capacity) { output in
+                let identifier = identifier.utf8.span
+
+                // Find the subtags of the variant, and sort them in uppercase byte order.
+                var variantSubtags: [Range<Int>] = []
+                if let variant = componentRanges.variant {
+                    var start = variant.lowerBound
+                    for i in variant.lowerBound...variant.upperBound {
+                        let byte = i < variant.upperBound ? identifier[i] : ._underscore
+                        guard byte == ._underscore || byte == ._minus else { continue }
+                        if i > start { variantSubtags.append(start..<i) }
+                        start = i + 1
+                    }
+                    // There are only a few subtags, so an insertion sort is enough.
+                    for a in variantSubtags.indices.dropFirst() {
+                        var b = a
+                        while b > 0, Self.precedesInUppercase(identifier.extracting(variantSubtags[b]), identifier.extracting(variantSubtags[b - 1])) {
+                            variantSubtags.swapAt(b, b - 1)
+                            b -= 1
+                        }
+                    }
+                }
+
+                if let language = componentRanges.language {
+                    output._append(copying: identifier.extracting(language))
+                }
+                if let script = componentRanges.script {
+                    output.append(._underscore)
+                    output._append(copying: identifier.extracting(script))
+                }
+                if let region = componentRanges.region {
+                    output.append(._underscore)
+                    output._append(copying: identifier.extracting(region))
+                } else if componentRanges.variant != nil {
+                    output.append(._underscore)
+                }
+                for subtag in variantSubtags {
+                    output.append(._underscore)
+                    for i in subtag {
+                        output.append(identifier[i]._uppercased)
+                    }
+                }
+                // Copy the "@key=value;..." section, which starts with the "@" before the first key.
+                if let first = keywordRanges.first, let last = keywordRanges.last {
+                    output.append(copying: identifier.extracting((first.key.lowerBound - 1)..<last.value.upperBound))
+                }
             }
         }
 
@@ -457,5 +588,15 @@ extension Locale {
         }
 
         private static let _maxIdentifierLength = 257
+
+        // MARK: - ASCII helpers
+
+        /// Returns whether `lhs` comes before `rhs` in byte order, comparing ASCII letters in uppercase.
+        private static func precedesInUppercase(_ lhs: Span<UInt8>, _ rhs: Span<UInt8>) -> Bool {
+            for i in 0..<min(lhs.count, rhs.count) where lhs[i]._uppercased != rhs[i]._uppercased {
+                return lhs[i]._uppercased < rhs[i]._uppercased
+            }
+            return lhs.count < rhs.count
+        }
     }
 }

@@ -90,6 +90,24 @@ extension Locale.CanonicalizedIdentifier {
             byte.isAlphanumeric || byte == UInt8._minus || byte == UInt8._underscore || byte == UInt8(ascii: "+") || byte == UInt8(ascii: "/")
         }
 
+        /// Creates the key-value pairs of the keywords in `components`, with their ICU names.
+        init(components: Locale.Components) {
+            self.init(capacity: 0)
+            components.forEachICUKeyword { key, value in
+                append(key: key.key.utf8Span.span, value: value.utf8Span.span)
+            }
+        }
+
+        mutating func append(key: Span<UInt8>, value: Span<UInt8>) {
+            let keyStart = bytes.count
+            bytes.append(copying: key.bytes)
+
+            let valueStart = bytes.count
+            bytes.append(copying: value.bytes)
+
+            createPair(keyStart: keyStart, valueStart: valueStart)
+        }
+
         /// Writes the pairs into `output` as "@key=value;...", and returns the ranges of their keys and values in `output`.
         /// Skips a pair whose key is the same as the key before it, so that a repeated key keeps its first value.
         func write(into output: inout OutputSpan<UInt8>) -> Locale.CanonicalizedIdentifier.KeywordRanges {

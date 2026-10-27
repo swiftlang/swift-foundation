@@ -232,6 +232,30 @@ private struct LocaleCanonicalIdentifierTests {
     }
 
     @Test(arguments: [
+        (identifier: "en", language: "en", script: nil as String?, region: nil as String?, variant: nil as String?),
+        (identifier: "en_US", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "en-US", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "pt_br", language: "pt", script: nil, region: "BR", variant: nil),
+        (identifier: "es_419", language: "es", script: nil, region: "419", variant: nil),
+        (identifier: "en_US_POSIX", language: "en", script: nil, region: "US", variant: "POSIX"),
+        (identifier: "ca_ES_VALENCIA", language: "ca", script: nil, region: "ES", variant: "VALENCIA"),
+        (identifier: "EN_us", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "sr_Latn_RS", language: "sr", script: "Latn", region: "RS", variant: nil),
+        (identifier: "eng_US", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "no-NO", language: "nb", script: nil, region: "NO", variant: nil),
+        (identifier: "zh-Hans_CN", language: "zh", script: nil, region: "CN", variant: nil),
+        (identifier: "en_TP", language: "en", script: nil, region: "TL", variant: nil),
+        (identifier: "cs_CS", language: "cs", script: nil, region: "CZ", variant: nil),
+    ])
+    func localeImplCodes(testCase: (identifier: String, language: String, script: String?, region: String?, variant: String?)) {
+        let locale = _LocaleImpl(identifier: testCase.identifier)
+        #expect(locale.languageCode == testCase.language, "language of \"\(testCase.identifier)\"")
+        #expect(locale.scriptCode == testCase.script, "script of \"\(testCase.identifier)\"")
+        #expect(locale.regionCode == testCase.region, "region of \"\(testCase.identifier)\"")
+        #expect(locale.variantCode == testCase.variant, "variant of \"\(testCase.identifier)\"")
+    }
+
+    @Test(arguments: [
         ("zh_TW@COLLATION=pinyin", "zh_TW@collation=pinyin"),
         ("de_DE@currency=DEM;calendar=gregorian", "de_DE@calendar=gregorian;currency=DEM"),
         ("en_US@", "en_US"),
