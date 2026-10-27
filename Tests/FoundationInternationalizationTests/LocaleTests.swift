@@ -513,6 +513,26 @@ private struct LocaleTests {
         #expect(nilLanguage.script == nil)
         #expect(nilLanguage.region == nil)
     }
+    
+    
+    @Test(arguments: [
+        (identifier: "en_US", expected: ""),
+        (identifier: "en_US@calendar=gregorian", expected: "@calendar=gregorian"),
+        (identifier: "en_US@ca=gregory", expected: "@ca=gregory"),
+        (identifier: "en_US@calendar=gregorian;hours=h12;numbers=latn", expected: "@calendar=gregorian;hours=h12;numbers=latn"),
+        (identifier: "en_US@nu=latn;hc=h12;ca=gregory", expected: "@ca=gregory;hc=h12;nu=latn"),
+    ])
+    func keyValueNormalizationSpan(testCase: (identifier: String, expected: String)) {
+        // Read the "@key=value;..." section of the canonical identifier.
+        let canonical = Locale.CanonicalizedIdentifier(canonicalizing: testCase.identifier)
+        var actual = ""
+        // The section starts with the "@" before the first key, and ends with the last value.
+        if let first = canonical.keywordRanges.first, let last = canonical.keywordRanges.last {
+            actual = Locale.CanonicalizedIdentifier.string(from: canonical.identifier.utf8Span.span.extracting((first.key.lowerBound - 1)..<last.value.upperBound))
+        }
+        #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
+    }
+
 }
 
 @Suite("Locale Properties", .tags(.locale))
