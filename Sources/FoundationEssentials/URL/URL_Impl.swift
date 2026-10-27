@@ -833,13 +833,13 @@ extension _URL {
         return replacing(info: info).url
     }
 
-    // Prepends "./" to a relative path whose first segment would
-    // otherwise be mistaken for a scheme (RFC 3986 Section 4.2).
-    private func prependDotSlashIfNeeded(_ path: inout OutputSpan<UInt8>) {
-        precondition(path.freeCapacity >= 2, "prependDotSlashIfNeeded requires 2 spare bytes")
+    // Prepends "./" to a relative path whose first segment would otherwise be mistaken for a scheme (RFC 3986 Section 4.2), or "/." to a path whose leading "//" would otherwise be mistaken for an authority (RFC 3986 Section 3.3).
+    private func prependDotSegmentIfNeeded(_ path: inout OutputSpan<UInt8>) {
+        precondition(path.freeCapacity >= 2, "prependDotSegmentIfNeeded requires 2 spare bytes")
         guard flags.isDisjoint(with: [.hasScheme, .hasHost]) else {
             return
         }
+        let startsWithDoubleSlash = path.span.starts(with: "//")
         let hasColonInFirstSegment = {
             for i in 0..<path.count {
                 let byte = path[i]
@@ -851,16 +851,21 @@ extension _URL {
             }
             return false
         }()
-        guard hasColonInFirstSegment else {
+        guard startsWithDoubleSlash || hasColonInFirstSegment else {
             return
         }
-        // Shift path by 2 and prepend "./"
+        // Shift path by 2 and prepend "/." or "./"
         path.append(repeating: 0, count: 2)
         for i in (2..<path.count).reversed() {
             path[i] = path[i - 2]
         }
-        path[0] = ._dot
-        path[1] = ._slash
+        if startsWithDoubleSlash {
+            path[0] = ._slash
+            path[1] = ._dot
+        } else {
+            path[0] = ._dot
+            path[1] = ._slash
+        }
     }
 
     private static func withEncodedURLPath<R>(
@@ -1341,7 +1346,7 @@ extension _URL {
                         if isDirectory {
                             newPath.append(._slash)
                         }
-                        prependDotSlashIfNeeded(&newPath)
+                        prependDotSegmentIfNeeded(&newPath)
                         return encodingState
                     }
                     return replacing(info: info).url
@@ -1436,7 +1441,7 @@ extension _URL {
                 guard newPath.count != path.count else {
                     return hasEncodedPath ? .unknown : .notEncoded
                 }
-                prependDotSlashIfNeeded(&newPath)
+                prependDotSegmentIfNeeded(&newPath)
                 return hasEncodedPath ? .unknown : .notEncoded
             }
             return replacing(info: newInfo).url
