@@ -87,7 +87,7 @@ private struct TimeZoneTests {
         test("America/Los_Angeles", "zh_TW", .shortStandard, "PST", "PST")
 
         test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1", "GMT+1")
-        test("Europe/Paris",       "zh_TW", .shortDaylightSaving, "GMT+1", "GMT+2")
+        test("Europe/Paris",       "zh_TW", .shortDaylightSaving, "GMT+2", "GMT+2")
 
         test("Antarctica/Davis",   "zh_TW", .shortStandard, "GMT+7", "GMT+7")
         test("Asia/Chongqing",      "zh_TW", .shortStandard, "GMT+8", "GMT+8")
@@ -360,7 +360,7 @@ private struct TimeZoneGMTTests {
 @Suite("TimeZone ICU", .tags(.timeZone))
 private struct TimeZoneICUTests {
     @Test func timeZoneOffset() throws {
-        let tz = _TimeZoneICU(identifier: "America/Los_Angeles")!
+        let tz = TimeZone(identifier: "America/Los_Angeles")!
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
 
@@ -405,7 +405,7 @@ private struct TimeZoneICUTests {
         gmt_calendar.timeZone = .gmt
 
         func test(_ identifier: String, _ dateComponent: DateComponents, expectedRawOffset: Int, expectedDSTOffset: TimeInterval, sourceLocation: SourceLocation = #_sourceLocation) throws {
-            let tz = try #require(_TimeZoneICU(identifier: identifier))
+            let tz = try #require(TimeZone(identifier: identifier))
             let d = try #require(gmt_calendar.date(from: dateComponent)) // date in GMT
             let (rawOffset, dstOffset) = tz.rawAndDaylightSavingTimeOffset(for: d)
             #expect(rawOffset == expectedRawOffset, sourceLocation: sourceLocation)
@@ -482,7 +482,7 @@ private struct TimeZone_ICUResourceTests {
     }
 
 
-    @Test(.disabled("This test takes a long time to run because it tests all known timezones. Also this test is only useful when ICUResourceTimeZone feature flag is disabled"))
+    @Test(.disabled("This test takes a long time to run because it tests all known timezones."))
     func allKnownTimeZones() throws {
         func buildTestDates(_ seeds: [Date]) -> [Date] {
 

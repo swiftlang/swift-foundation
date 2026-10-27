@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - Format
 
@@ -32,7 +31,8 @@ struct BPlistDecodingFormat: PlistDecodingFormat {
         let container = try decoder.document.withPrimitive(for: value) { primitive in
             let primitiveIter = try primitive.dictionaryIterator
             let iter = BPlistDecodingDocument.DictionaryIterator(primitiveIter)
-            return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count)
+            // The legacy binary PropertyListDecoder implementation was non-deterministic in terms of the order of resolving duplicate keys. Here we make it explicitly keep-first to match historical PropertyListSerialization behavior.
+            return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count, duplicateKeys: .keepFirst)
         }
         return KeyedDecodingContainer(container)
     }
@@ -182,6 +182,5 @@ struct BPlistDecodingFormat: PlistDecodingFormat {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

@@ -12,7 +12,7 @@
 
 #if !hasFeature(Embedded)
 
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os.log
 
 extension NotificationCenter {

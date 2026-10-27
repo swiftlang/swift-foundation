@@ -964,4 +964,40 @@ private struct NotificationCenterMessageTests {
             #expect(message?.payloadInt == 1)
         }
     }
+    
+    @Test func asyncMessageSequenceResumesWhenTaskIsAlreadyCancelled() async throws {
+        let center = NotificationCenter()
+        
+        var iterator = center.messages(of: AsyncMessageTestSubject.self, for: .messagePosted).makeAsyncIterator()
+        center.post(AsyncTestMessage(payloadInt: 1, payloadString: "N/A"))
+        
+        let t = Task {
+            while Task.isCancelled == false {
+                do {
+                    try await Task.sleep(for: .milliseconds(50))
+                } catch is CancellationError {}
+            }
+            
+            let message = try await iterator.next()
+            #expect(message == nil)
+        }
+        t.cancel()
+        try await t.value
+    }
+    
+    @Test func asyncMessageSequenceResumesWhenCancelledWhileWaiting() async throws {
+        let center = NotificationCenter()
+        
+        var iterator = center.messages(of: AsyncMessageTestSubject.self, for: .messagePosted).makeAsyncIterator()
+        
+        let t = Task {
+            let message = try await iterator.next()
+            #expect(message == nil)
+        }
+        // There is no deterministic way to wait for `iterator.next()` to pause on continuation.
+        // Just wait for some time.
+        try await Task.sleep(for: .milliseconds(50))
+        t.cancel()
+        try await t.value
+    }
 }

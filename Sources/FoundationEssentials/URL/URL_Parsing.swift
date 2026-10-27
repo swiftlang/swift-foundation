@@ -989,6 +989,10 @@ extension URL {
             func idnaEncodeHost(range: Range<Int>) -> Bool {
                 guard !range.isEmpty else { return true }
                 guard flush() else { return false }
+                #if hasFeature(Embedded)
+                // There is no IDNA hook in embedded mode.
+                return false
+                #else
                 guard let uidnaHook = _uidnaHook() else { return false }
                 let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
                     return uidnaHook.nameToASCII(
@@ -999,6 +1003,7 @@ extension URL {
                 guard success else { return false }
                 updateIndices(currentIndex: range.endIndex)
                 return true
+                #endif
             }
 
             // Returns false if there's not enough room in the output buffer.
@@ -1112,7 +1117,7 @@ extension URL {
                             guard encode(range: copyEnd..<endBracketIndex, component: .hostIPvFuture) else { return false }
                         }
                         copyEnd += 1 // Include trailing "]"
-                    } else if updateRanges && flags.contains(.hasSpecialScheme) && _uidnaHook() != nil {
+                    } else if updateRanges && flags.contains(.hasSpecialScheme) && RFC3986Parser.supportsIDNA {
                         // Support IDNA-encoding for NSURL (updateRanges: true)
                         guard idnaEncodeHost(range: hostRange) else { return false }
                     } else {

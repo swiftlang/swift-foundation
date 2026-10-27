@@ -14,7 +14,7 @@
 
 extension Bytes {
     @inline(__always)
-    mutating func reserveCapacity(_ n: Int) {
+    package mutating func reserveCapacity(_ n: Int) {
         _storage.reserveCapacity(n)
     }
 
@@ -41,17 +41,17 @@ extension Bytes {
 // MARK: - Append
 
 extension Bytes {
-    mutating func append(_ byte: UInt8) {
+    package mutating func append(_ byte: UInt8) {
         self._ensureFreeCapacity(1)
         self._storage.append(byte)
     }
     
-    mutating func append(copying bytes: RawSpan) {
+    package mutating func append(copying bytes: RawSpan) {
         self._ensureFreeCapacity(bytes.byteCount)
         self._storage.append(copying: bytes)
     }
 
-    mutating func append<E, R: ~Copyable>(
+    package mutating func append<E, R: ~Copyable>(
         addingCount count: Int,
         initializingWith body: (inout OutputRawSpan) throws(E) -> R
     ) throws(E) -> R {
@@ -63,17 +63,17 @@ extension Bytes {
 // MARK: - Insert
 
 extension Bytes {
-    mutating func insert(_ byte: UInt8, at index: Int) {
+    package mutating func insert(_ byte: UInt8, at index: Int) {
         self._ensureFreeCapacity(1)
         _storage.insert(byte, at: index)
     }
 
-    mutating func insert(copying bytes: RawSpan, at index: Int) {
+    package mutating func insert(copying bytes: RawSpan, at index: Int) {
         self._ensureFreeCapacity(bytes.byteCount)
         _storage.insert(copying: bytes, at: index)
     }
 
-    mutating func insert<E, R: ~Copyable>(
+    package mutating func insert<E, R: ~Copyable>(
         addingCount count: Int,
         at index: Int,
         initializingWith body: (inout OutputRawSpan) throws(E) -> R
@@ -87,7 +87,7 @@ extension Bytes {
 
 extension Bytes {
     @inline(__always)
-    mutating func edit<E, R: ~Copyable>(
+    package mutating func edit<E, R: ~Copyable>(
         _ body: (inout OutputRawSpan) throws(E) -> R
     ) throws(E) -> R {
         try _storage.edit(body)
@@ -99,12 +99,12 @@ extension Bytes {
 extension Bytes {
     @inline(__always)
     @discardableResult
-    mutating func remove(at index: Int) -> UInt8 {
+    package mutating func remove(at index: Int) -> UInt8 {
         _storage.remove(at: index)
     }
 
     @inline(__always)
-    mutating func removeAll(keepingCapacity: Bool = false) {
+    package mutating func removeAll(keepingCapacity: Bool = false) {
         if keepingCapacity {
             _storage.removeAll()
         } else {
@@ -114,22 +114,22 @@ extension Bytes {
 
     @inline(__always)
     @discardableResult
-    mutating func removeLast() -> UInt8 {
+    package mutating func removeLast() -> UInt8 {
         _storage.removeLast()
     }
 
     @inline(__always)
-    mutating func removeLast(_ n: Int) {
+    package mutating func removeLast(_ n: Int) {
         _storage.removeLast(n)
     }
 
     @inline(__always)
-    mutating func popLast() -> UInt8? {
+    package mutating func popLast() -> UInt8? {
         _storage.popLast()
     }
 
     @inline(__always)
-    mutating func removeSubrange(_ range: some RangeExpression<Int>) {
+    package mutating func removeSubrange(_ range: some RangeExpression<Int>) {
         _storage.removeSubrange(range)
     }
 }
@@ -137,7 +137,7 @@ extension Bytes {
 // MARK: - Replace Subrange
 
 extension Bytes {
-    mutating func replaceSubrange<E>(
+    package mutating func replaceSubrange<E>(
         _ subrange: Range<Int>,
         addingCount newItemCount: Int,
         initializingWith body: (inout OutputRawSpan) throws(E) -> Void
@@ -146,7 +146,7 @@ extension Bytes {
         try self._storage.replaceSubrange(subrange, addingCount: newItemCount, initializingWith: body)
     }
 
-    mutating func replaceSubrange(
+    package mutating func replaceSubrange(
         _ range: Range<Int>, copying span: RawSpan
     ) {
         self._ensureFreeCapacity(span.byteCount - range.count)
@@ -158,7 +158,7 @@ extension Bytes {
 
 extension Bytes {
     @inline(__always)
-    mutating func resetBytes(in range: Range<Int>) {
+    package mutating func resetBytes(in range: Range<Int>) {
         self._storage.resetBytes(in: range)
     }
 }

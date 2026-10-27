@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
 
 import Builtin
 
@@ -863,5 +861,3 @@ extension Data {
 }
 
 #endif
-
-#endif // !hasFeature(Embedded)

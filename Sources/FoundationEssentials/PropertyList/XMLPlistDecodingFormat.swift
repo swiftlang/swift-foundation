@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 /// `PlistDecodingFormat` conformer plugging `XMLPlistDecodingDocument` into the generic `_PlistDecoder<Format>` machinery. Errors thrown by the primitive layer (`XMLPlistError`) are translated to `DecodingError` at the boundary via `_translatePrimitiveError`.
 @available(anyAppleOS 26.0, *)
@@ -31,7 +30,8 @@ struct XMLPlistDecodingFormat: PlistDecodingFormat {
             try decoder.document.withPrimitive(for: value) { primitive in
                 let primitiveIter = try primitive.dictionaryIterator
                 let iter = XMLPlistDecodingDocument.DictionaryIterator(primitiveIter)
-                return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count &* 2)
+                // The legacy XML PropertyListDecoder and PropertyListSerialization implementations historically used keep-last behavior when resolving duplicate keys.
+                return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count &* 2, duplicateKeys: .keepLast)
             }
         }
         return KeyedDecodingContainer(container)
@@ -110,6 +110,5 @@ struct XMLPlistDecodingFormat: PlistDecodingFormat {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

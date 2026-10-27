@@ -10,9 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+internal import _FoundationRefs
+#endif
+
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+internal import BasicContainers
+#endif
+
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // Low-level cursor over a single node in a structurally-parsed XML property list, providing fast random access to its fields.
 
@@ -22,7 +29,7 @@
 
 /// Top-level entry for producing `XMLPlistPrimitive`s from a raw XML property list buffer.
 internal struct XMLPropertyList: ~Escapable, ~Copyable, ~Sendable {
-    let map: XMLPlistMap<UniqueMapRecords>
+    let map: XMLPlistMap
     let sourceBytes: RawSpan
 
     /// Run the iterative XML scanner over `sourceBytes` and produce a property list.
@@ -60,17 +67,17 @@ internal enum XMLPlistTypeMarker: Sendable, Equatable {
 }
 
 internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
-    let map: Ref<XMLPlistMap<UniqueMapRecords>>
+    let map: Ref<XMLPlistMap>
     let sourceBytes: RawSpan
     let mapOffset: XMLPlistMapOffset
 
     @_lifetime(borrow map, copy sourceBytes)
-    init(map: borrowing XMLPlistMap<UniqueMapRecords>, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
+    init(map: borrowing XMLPlistMap, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
         self = .init(mapRef: Ref(map), sourceBytes: sourceBytes, mapOffset: mapOffset)
     }
 
     @_lifetime(copy mapRef, copy sourceBytes)
-    init(mapRef: consuming Ref<XMLPlistMap<UniqueMapRecords>>, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
+    init(mapRef: consuming Ref<XMLPlistMap>, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
         self.map = mapRef
         self.sourceBytes = sourceBytes
         self.mapOffset = mapOffset
@@ -236,14 +243,14 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
     /// Iterator over the children of a `.array` primitive. Walks the inline records via record-length arithmetic.
     internal struct ArrayIterator: ~Escapable, ~Sendable {
-        let map: Ref<XMLPlistMap<UniqueMapRecords>>
+        let map: Ref<XMLPlistMap>
         let sourceBytes: RawSpan
         let count: Int
         var currentOffset: XMLPlistMapOffset
         var elementsRemaining: Int
 
         @_lifetime(copy mapRef, copy sourceBytes)
-        init(mapRef: Ref<XMLPlistMap<UniqueMapRecords>>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
+        init(mapRef: Ref<XMLPlistMap>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
             self.map = mapRef
             self.sourceBytes = sourceBytes
             self.count = count
@@ -277,7 +284,7 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
     /// Iterator over key-value pairs of a `.dict` primitive. Emits pairs in source order. `KeyValuePair` is a bare `(keyOffset, valueOffset)` record; primitive views are constructed on demand so they share a single lifetime tied to the enclosing iterator.
     internal struct DictionaryIterator: ~Escapable, ~Sendable {
-        let map: Ref<XMLPlistMap<UniqueMapRecords>>
+        let map: Ref<XMLPlistMap>
         let sourceBytes: RawSpan
         let count: Int
         var currentOffset: XMLPlistMapOffset
@@ -289,7 +296,7 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
         }
 
         @_lifetime(copy mapRef, copy sourceBytes)
-        init(mapRef: Ref<XMLPlistMap<UniqueMapRecords>>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
+        init(mapRef: Ref<XMLPlistMap>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
             self.map = mapRef
             self.sourceBytes = sourceBytes
             self.count = count
@@ -362,17 +369,43 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
     // MARK: Leaf decoding
 
-    /// Decode this `.integer` primitive as `T`. Accepts leading whitespace, optional sign, decimal or hex. `.real`-typed primitives are accepted by rounding the parsed double to `T` via `T(exactly:)`.
+    // Whether `decimal` is exactly `value`, compared without a Double intermediate.
+    private static func decimal<I: FixedWidthInteger>(_ decimal: Decimal, isExactly value: I) -> Bool {
+        if value < 0 {
+            guard let signed = Int64(exactly: value) else { return false }
+            return decimal == Decimal(signed)
+        }
+        guard let unsigned = UInt64(exactly: value) else { return false }
+        return decimal == Decimal(unsigned)
+    }
+
+    /// Decode this `.integer` primitive as `T`. Accepts leading whitespace, optional sign, decimal or hex. `.real`-typed primitives are accepted only when their text is exactly an integer representable as `T`.
     func decodeInteger<T: FixedWidthInteger & Sendable>(as type: T.Type = T.self) throws -> T {
         switch rawDescriptor {
         case .integer:
             return try decodeXMLInteger(from: try integerBytes, source: documentSpan)
         case .real:
             let d: Double = try decodeXMLReal(from: try realBytes, source: documentSpan)
-            guard let v = T(exactly: d) else {
-                throw XMLPlistError.corruptedValue("integer")
+            let rounded = T(exactly: d)
+
+            // The distance between Doubles is >=2 from ±2^53, so below that every integer is exactly representable and the value strtod produced is the value that appeared in the element text.
+            if d.magnitude < Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) {
+                guard let rounded else {
+                    throw XMLPlistError.corruptedValue("integer")
+                }
+                return rounded
             }
-            return v
+
+            // Above that, strtod may have rounded, so only accept an integer that exactly equals the element text.
+            if let exact = Decimal._decimal(from: try realBytes, matchEntireString: true).asOptional.result {
+                if let rounded, Self.decimal(exact, isExactly: rounded) {
+                    return rounded
+                }
+                if let recovered = T(exactly: exact), Self.decimal(exact, isExactly: recovered) {
+                    return recovered
+                }
+            }
+            throw XMLPlistError.corruptedValue("integer")
         default:
             throw XMLPlistError.typeMismatch(expected: "integer", actual: rawDescriptor)
         }
@@ -419,7 +452,7 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
 // Advance one record in `map.records`.
 @inline(__always)
-internal func _nextMapOffset(after previousValueOffset: XMLPlistMapOffset, in map: borrowing XMLPlistMap<UniqueMapRecords>) -> XMLPlistMapOffset {
+internal func _nextMapOffset(after previousValueOffset: XMLPlistMapOffset, in map: borrowing XMLPlistMap) -> XMLPlistMapOffset {
     let marker = map.records[previousValueOffset]
     switch XMLPlistMapTypeDescriptor(rawValue: marker) {
     case .string, .simpleString, .key, .simpleKey, .real, .integer, .data, .date, .uid:
@@ -651,9 +684,9 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
         }
     }
 
-    mutating func skipIntegerWhitespace() {
+    mutating func skipNumberWhitespace() {
         while let byte1 = self.peek() {
-            // Integer parsing has historically had a very inclusive whitespace check.
+            // <integer> and <real> parsing have historically had a very inclusive whitespace check.
             // We consider some additional values from 0x0 to 0x21 and 0x7E to 0xA1 as whitespace, for compatibility.
             if byte1 < 0x21 || (byte1 > 0x7E && byte1 < 0xA1) {
                 self.advance()
@@ -678,10 +711,10 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
         if first == ._minus {
             self.advance()
             isNegative = true
-            skipIntegerWhitespace()
+            skipNumberWhitespace()
         } else if first == ._plus {
             self.advance()
-            skipIntegerWhitespace()
+            skipNumberWhitespace()
         }
 
         let isHex: Bool
@@ -921,7 +954,8 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
 
     /// Parse the XML-plist real values that `strto*` does not: `nan`, `+/-infinity`, `+/-inf`.
     func parseSpecialReal<T: BinaryFloatingPoint>() throws -> T? {
-        try bytes.withUnsafeBufferPointer { buf -> T? in
+        try bytes.withUnsafeBufferPointer { fullBuf -> T? in
+            let buf = UnsafeBufferPointer(rebasing: fullBuf[index...])
             switch (buf.first, buf.count) {
             case (UInt8(ascii: "n"), 3), (UInt8(ascii: "N"), 3):
                 if (buf[1] == UInt8(ascii: "a") || buf[1] == UInt8(ascii: "A")),
@@ -964,10 +998,10 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
     /// `strto*` accepts hexadecimal values, which are not valid in plist. Reject them up front.
     func rejectHexReal() throws {
         var looksLikeHex = false
-        let count = bytes.count
+        let remaining = bytes.extracting(index...)
         Loop:
-        for i in 0 ..< count {
-            let byte = bytes[i]
+        for i in remaining.indices {
+            let byte = remaining[i]
             switch byte {
             case ._plus, ._minus, ._space, ._tab, ._newline, ._return, UInt8(ascii: "0"):
                 continue
@@ -984,16 +1018,21 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
     }
 
     /// Decode an XML `<real>` payload.
-    func parseReal<T: BinaryFloatingPoint>() throws -> T {
+    mutating func parseReal<T: BinaryFloatingPoint>() throws -> T {
+        // <real> tolerates the same inclusive leading whitespace as <integer>, for compatibility.
+        skipNumberWhitespace()
+
         if let special: T = try parseSpecialReal() {
             return special
         }
         try rejectHexReal()
 
-        return try bytes.withUnsafeBufferPointer { buf -> T in
-            guard let ptr = buf.baseAddress else {
+        return try bytes.withUnsafeBufferPointer { fullBuf -> T in
+            guard let base = fullBuf.baseAddress else {
                 throw XMLPlistError.corruptedValue("real")
             }
+            let ptr = base.advanced(by: index)
+            let count = fullBuf.count &- index
             var parseEndPtr: UnsafeMutablePointer<CChar>?
             let res: T
             if MemoryLayout<T>.size == MemoryLayout<Float>.size {
@@ -1003,7 +1042,7 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
             } else {
                 preconditionFailure("Only Float and Double are supported, not \(T.self)")
             }
-            guard UnsafeRawPointer(ptr.advanced(by: buf.count)) == UnsafeRawPointer(parseEndPtr!) else {
+            guard UnsafeRawPointer(ptr.advanced(by: count)) == UnsafeRawPointer(parseEndPtr!) else {
                 throw XMLPlistError.corruptedValue("real")
             }
             return res
@@ -1145,7 +1184,7 @@ internal func decodeXMLInteger<T: FixedWidthInteger>(from span: borrowing Span<U
     let sourceCopy = copy source
     var reader = XMLPlistSpanReader(bytesCopy, source: sourceCopy)
 
-    reader.skipIntegerWhitespace()
+    reader.skipNumberWhitespace()
     guard !reader.isAtEnd else {
         throw XMLPlistError.corruptedValue("integer")
     }
@@ -1157,7 +1196,7 @@ internal func decodeXMLInteger<T: FixedWidthInteger>(from span: borrowing Span<U
 
 /// Decode an XML `<real>` payload.
 internal func decodeXMLReal<T: BinaryFloatingPoint>(from span: borrowing Span<UInt8>, source: borrowing Span<UInt8>) throws -> T {
-    let reader = XMLPlistSpanReader(copy span, source: copy source)
+    var reader = XMLPlistSpanReader(copy span, source: copy source)
     return try reader.parseReal()
 }
 
@@ -1208,6 +1247,5 @@ internal func _decodeXMLString(from span: borrowing Span<UInt8>, isSimple: Bool,
 
 }
 
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

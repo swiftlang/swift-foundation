@@ -16,7 +16,7 @@
 internal import Foundation_Private.NSNotification
 internal import _ForSwiftFoundation
 #endif
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os.log
 #endif
 
@@ -112,7 +112,7 @@ extension NotificationCenter {
     @available(FoundationPreview 6.2, *)
     public func removeObserver(_ token: ObservationToken) {
         guard token.center == nil || token.center == self else {
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
             NotificationCenter.logger.fault("Unable to remove observer. The provided token does not belong to this notification center. Expected: <\(_typeName(Self.self)) 0x\(String(UInt(bitPattern: ObjectIdentifier(token.center!)), radix: 16))>, got <\(_typeName(Self.self)) 0x\(String(UInt(bitPattern: ObjectIdentifier(self)), radix: 16))>.")
 #endif
             return

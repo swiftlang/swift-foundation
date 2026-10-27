@@ -43,7 +43,7 @@ internal final class __DataStorage : @unchecked Sendable {
     @usableFromInline static let maxSize = Int.max >> 1
     @usableFromInline static let vmOpsThreshold = Platform.pageSize * 4
 
-    #if !DATA_LEGACY_ABI
+    #if !DATA_LEGACY_ABI || hasFeature(Embedded)
     @usableFromInline static let empty = __DataStorage.init(bytes: nil, length: 0)
     #endif
 
@@ -194,7 +194,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @abi(func withUnsafeBytes<R>(in: Range<Int>, apply: (UnsafeRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -220,7 +220,7 @@ internal final class __DataStorage : @unchecked Sendable {
         }
     }
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
     @abi(func withUnsafeMutableBytes<R>(in: Range<Int>, apply: (UnsafeMutableRawBufferPointer) throws -> R) throws -> R)
     @available(macOS, obsoleted: 1.0)
     @available(iOS, obsoleted: 1.0)
@@ -294,7 +294,7 @@ internal final class __DataStorage : @unchecked Sendable {
     var isExternallyOwned: Bool {
         // all __DataStorages will have some sort of capacity, because empty cases hit the .empty enum _Representation
         // anything with 0 capacity means that we have not allocated this pointer and consequently mutation is not ours to make.
-        return _capacity == 0
+        return capacity == 0
     }
     
     @usableFromInline // This is not @inlinable as it is a non-trivial, non-generic function.
@@ -678,7 +678,7 @@ internal final class __DataStorage : @unchecked Sendable {
                 dealloc(bytes_, length)
             }
         } else if !copy {
-            _capacity = length
+            _capacity = 0 // A capacity of 0 signals that the buffer is unowned and must be copied before mutations
             _length = length
             _needToZero = false
             _bytes = bytes

@@ -20,7 +20,7 @@ internal import DequeModule
 #elseif canImport(_FoundationCollections)
 internal import _FoundationCollections
 #endif
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
 internal import os.log
 #endif
 internal import Synchronization
@@ -169,7 +169,7 @@ extension NotificationCenter {
             state.withLock { _state -> Resumption? in
                 if _state.buffer.count + 1 > _state.bufferSize {
                     _state.buffer.removeFirst()
-#if canImport(os)
+#if canImport(os) && !hasFeature(Embedded)
                     NotificationCenter.logger.fault("Notification center message dropped due to buffer limit. Check sequence iterator frequently or increase buffer size. Message: \(String(describing: Message.self))")
 #endif
                 }
@@ -187,6 +187,9 @@ extension NotificationCenter {
             await withTaskCancellationHandler {
                 return await withUnsafeContinuation { (continuation: UnsafeContinuation<Message?, Never>) in
                     state.withLock { _state -> Resumption? in
+                        if _state.observer == nil {
+                            return Resumption(cancelling: [continuation])
+                        }
                         _state.continuations.append(continuation)
                         if _state.buffer.isEmpty {
                             return nil

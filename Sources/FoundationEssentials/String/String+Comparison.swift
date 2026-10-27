@@ -337,10 +337,10 @@ extension _StringCompareOptionsIterable {
                             strBuf2.advance()
                             useStrBuf2 = true
                         }
+                    }
 
-                        if str1Char != transformed.first {
-                            break
-                        }
+                    if str1Char != str2Char {
+                        break
                     }
                 }
 
@@ -633,7 +633,7 @@ extension Substring {
 #endif
 
     func _range(of strToFind: Substring, options: String.CompareOptions) throws -> Range<Index>? {
-        #if !NO_REGEX
+        #if !NO_REGEX && !hasFeature(Embedded)
         if options.contains(.regularExpression) {
             guard let regex = try RegexPatternCache.cache.regex(for: String(strToFind), caseInsensitive: options.contains(.caseInsensitive)) else {
                 return nil

@@ -392,13 +392,11 @@ open class JSONDecoder {
     /// - throws: `DecodingError.dataCorrupted` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     /// - throws: An error if any value throws an error during decoding.
     open func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        #if FOUNDATION_FRAMEWORK || !os(macOS)
-        if #available(anyAppleOS 26.0, *), Self._useJSONPrimitivePath() {
+        if Self._useJSONPrimitivePath() {
             return try _decodePrimitive({
                 try $0.unwrap($1, as: type, for: .root, _CodingKey?.none)
             }, from: data)
         }
-        #endif
         return try _decode({
             try $0.unwrap($1, as: type, for: .root, _CodingKey?.none)
         }, from: data)
@@ -406,13 +404,11 @@ open class JSONDecoder {
     
     @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
     open func decode<T: DecodableWithConfiguration>(_ type: T.Type, from data: Data, configuration: T.DecodingConfiguration) throws -> T {
-        #if FOUNDATION_FRAMEWORK || !os(macOS)
-        if #available(anyAppleOS 26.0, *), Self._useJSONPrimitivePath() {
+        if Self._useJSONPrimitivePath() {
             return try _decodePrimitive({
                 try $0.unwrap($1, as: type, configuration: configuration, for: .root, _CodingKey?.none)
             }, from: data)
         }
-        #endif
         return try _decode({
             try $0.unwrap($1, as: type, configuration: configuration, for: .root, _CodingKey?.none)
         }, from: data)
@@ -432,7 +428,7 @@ open class JSONDecoder {
                 do {
                     // JSON5 is implemented with a separate scanner to allow regular JSON scanning to achieve higher performance without compromising for `allowsJSON5` checks throughout.
                     // Since the resulting JSONMap is identical, the decoder implementation is mostly shared between the two, with only a few branches to handle different methods of parsing strings and numbers. Strings and numbers are not completely parsed until decoding time.
-                    let map: JSONMap<ArrayMapRecords>
+                    let map: JSONMap
                     let numberExtendsToEndOfBuffer: Bool
                     if allowsJSON5 {
                         var scanner = JSON5Scanner(bytes: utf8Buffer, options: self.json5ScannerOptions)
@@ -468,14 +464,13 @@ open class JSONDecoder {
         }
     }
 
-    #if FOUNDATION_FRAMEWORK || !os(macOS)
     /// Feature-flag gate for the new `JSONDecoderImpl` code path. When off, `JSONDecoder` falls back to the legacy `JSONLegacyDecoderImpl`.
     @inline(__always)
     internal static func _useJSONPrimitivePath() -> Bool {
         #if FOUNDATION_FRAMEWORK
         return _foundation_swift_json_deserialization_enabled()
         #else
-        return false
+        return true
         #endif
     }
 
@@ -488,7 +483,7 @@ open class JSONDecoder {
                     let result: T
                     var impl: JSONDecoderImpl
                     do {
-                        let map: JSONMap<UniqueMapRecords>
+                        let map: JSONMap
                         let sourceSpan = unsafe Span<UInt8>(_unsafeStart: ptr.assumingMemoryBound(to: UInt8.self), count: count)
                         if allowsJSON5 {
                             map = try Self._scanJSONMap(JSON5Mode.self, sourceSpan: sourceSpan, assumesTopLevelDict: assumesTopLevelDict)
@@ -517,13 +512,20 @@ open class JSONDecoder {
             let underlyingError: Error? = nil
             #endif
             throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "The given data was not valid JSON.", underlyingError: underlyingError))
+        } catch let error as JSONPrimitiveError {
+            #if FOUNDATION_FRAMEWORK
+            let underlyingError: Error? = error.nsError
+            #else
+            let underlyingError: Error? = nil
+            #endif
+            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "The given data was not valid JSON.", underlyingError: underlyingError))
         } catch {
             throw error
         }
     }
 
     @available(anyAppleOS 26.0, *)
-    private static func _scanJSONMap<Mode: JSONScannerMode>(_ mode: Mode.Type, sourceSpan: Span<UInt8>, assumesTopLevelDict: Bool) throws -> JSONMap<UniqueMapRecords> {
+    private static func _scanJSONMap<Mode: JSONScannerMode>(_ mode: Mode.Type, sourceSpan: Span<UInt8>, assumesTopLevelDict: Bool) throws -> JSONMap {
         var scannerOptions = JSONScannerEventSource<Mode>.Options()
         scannerOptions.assumesTopLevelDictionary = assumesTopLevelDict
         let source = JSONScannerEventSource<Mode>(sourceBytes: sourceSpan, options: scannerOptions)
@@ -531,7 +533,6 @@ open class JSONDecoder {
         let parser = IterativeParsingDriver<JSONScannerEventSource<Mode>, _>(sink: sink)
         return try parser.run(source: source)
     }
-    #endif
 
     // Input: Data of any encoding specified by RFC4627 section 3, with or without BOM.
     // Output: The closure is invoked with a UInt8 buffer containing the valid UTF-8 representation. If the input contained a BOM, that BOM will be excluded in the resulting buffer.
@@ -993,17 +994,19 @@ extension JSONLegacyDecoderImpl: Decoder {
             remainingBuffer = remainingBuffer.dropFirst(4)
         }
 
-        // Process any remaining bytes in the same way.
+        // Process any remaining bytes in the same way, in forward order: an 'e'/'E' must be seen before the exponent digits that follow it.
+        var off = 0
         switch remainingBuffer.count {
         case 3:
-            if let res = check(2) { return res }
+            if let res = check(off) { return res }
+            off &+= 1
             fallthrough
         case 2:
-            if let res = check(1) { return res }
+            if let res = check(off) { return res }
+            off &+= 1
             fallthrough
         case 1:
-            if let res = check(0) { return res }
-            break
+            if let res = check(off) { return res }
         default:
             break
         }
@@ -1960,14 +1963,6 @@ extension EncodingError {
         return .invalidValue(value, EncodingError.Context(codingPath: codingPath, debugDescription: debugDescription))
     }
 }
-
-// This is a workaround for the lack of a "set value only if absent" function for Dictionary.
- extension Optional {
-     fileprivate mutating func _setIfNil(to value: Wrapped) {
-         guard _fastPath(self == nil) else { return }
-         self = value
-     }
- }
 
 internal extension JSONDecoder.KeyDecodingStrategy {
     var isDefault: Bool {

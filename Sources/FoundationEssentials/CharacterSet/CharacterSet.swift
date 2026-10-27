@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 @_exported import Foundation // Clang module
 import CoreFoundation
@@ -868,7 +866,9 @@ public struct CharacterSet : Equatable, Hashable, SetAlgebra {
         #endif
         _storage = __CharacterSetStorage(swift: _CharacterSet(bitmapRepresentation: data))
     }
-    
+
+    // Data(contentsOf:) is not yet available in Embedded Swift.
+    #if !hasFeature(Embedded)
     /// Initialize with the contents of a file.
     ///
     /// Returns `nil` if there was an error reading the file.
@@ -885,6 +885,7 @@ public struct CharacterSet : Equatable, Hashable, SetAlgebra {
         #endif
         _storage = __CharacterSetStorage(swift: _CharacterSet(bitmapRepresentation: data))
     }
+    #endif
 
     #if FOUNDATION_FRAMEWORK
     private init(_bridged characterSet: __shared NSCharacterSet) {
@@ -1444,6 +1445,7 @@ extension NSCharacterSet : _HasCustomAnyHashableRepresentation {
 }
 #endif
 
+#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension CharacterSet : Codable {
     private enum CodingKeys : Int, CodingKey {
@@ -1461,6 +1463,7 @@ extension CharacterSet : Codable {
         try container.encode(self.bitmapRepresentation, forKey: .bitmap)
     }
 }
+#endif
 
 // CharacterSet is only Sendable in macOS 13.0+ (and aligned) releases because _bridgeToObjectiveC() previously returned the internal reference pointer instead of a copy of the reference
 // This could inadvertently vend a pointer to the internal mutable state held by the value type, breaking Sendable safety
@@ -1592,4 +1595,3 @@ extension CFCharacterSet {
 }
 #endif
 
-#endif // !hasFeature(Embedded)

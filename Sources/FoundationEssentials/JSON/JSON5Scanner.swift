@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+internal import BasicContainers
+#endif
 
-internal struct JSON5Scanner {
+internal struct JSON5Scanner: ~Copyable {
     let options: Options
     var reader: DocumentReader
     var depth: Int = 0
@@ -25,8 +27,8 @@ internal struct JSON5Scanner {
         var assumesTopLevelDictionary = false
     }
 
-    struct JSONPartialMapData {
-        var mapData: [Int] = []
+    struct JSONPartialMapData: ~Copyable {
+        var mapData = UniqueArray<Int>()
         var prevMapDataSize = 0
 
         mutating func resizeIfNecessary(with reader: DocumentReader) {
@@ -54,7 +56,7 @@ internal struct JSON5Scanner {
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-            mapData.append(contentsOf: [0, 0])
+            mapData.append(copyingInline: [0, 0])
             return startIdx
         }
 
@@ -64,23 +66,22 @@ internal struct JSON5Scanner {
             mapData.append(JSONMapTypeDescriptor.collectionEnd.rawValue)
 
             let nextValueOffset = mapData.count
-            mapData.withUnsafeMutableBufferPointer {
-                $0[startOffset] = nextValueOffset
-                $0[startOffset &+ 1] = count
-            }
+            var span = mapData.mutableSpan
+            span[startOffset] = nextValueOffset
+            span[startOffset &+ 1] = count
         }
 
         mutating func recordEmptyCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(copyingInline: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
         mutating func record(tagType: JSONMapTypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
+            mapData.append(copyingInline: [tagType.mapMarker, count, dataOffset])
         }
 
         mutating func record(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
@@ -95,7 +96,7 @@ internal struct JSON5Scanner {
         self.reader = DocumentReader(bytes: bytes)
     }
 
-    mutating func scan() throws -> JSONMap<ArrayMapRecords> {
+    mutating func scan() throws -> JSONMap {
         if options.assumesTopLevelDictionary {
             switch try reader.consumeWhitespace(allowingEOF: true) {
             case ._openbrace?:
@@ -120,7 +121,9 @@ internal struct JSON5Scanner {
             throw JSONError.unexpectedCharacter(context: "after top-level value", ascii: char, location: reader.sourceLocation)
         }
 
-        return JSONMap(records: .init(partialMap.mapData))
+        var mapData = UniqueArray<Int>()
+        swap(&mapData, &partialMap.mapData)
+        return JSONMap(records: mapData)
     }
 
     // MARK: Generic Value Scanning
@@ -1037,11 +1040,11 @@ extension JSON5Scanner {
         }
 
         if (!isHex) {
-            // Explicitly exclude a trailing 'e'. JSON5 and strtod both disallow it, but Decimal unfortunately accepts it so we need to prevent it in advance.
+            // Explicitly exclude a trailing 'e' or an exponent sign with no digits after it (`1e+`, `1E-`). JSON5 and strtod both disallow these, but Decimal unfortunately accepts them so we need to prevent them in advance.
             let lastIndex = jsonBytes.index(before: jsonBytes.endIndex)
             let lastByte = jsonBytes[unchecked: lastIndex]
             switch lastByte {
-            case UInt8(ascii: "e"), UInt8(ascii: "E"):
+            case UInt8(ascii: "e"), UInt8(ascii: "E"), UInt8(ascii: "+"), UInt8(ascii: "-"):
                 throw JSONError.unexpectedCharacter(context: "at end of number", ascii: lastByte, location: .sourceLocation(at: lastIndex, fullSource: fullSource))
             default:
                 break
@@ -1224,5 +1227,3 @@ extension UnicodeScalar {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)

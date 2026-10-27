@@ -85,7 +85,7 @@ internal final class __NSSwiftData : NSData {
 
 extension Data {
     internal func _bridgeToObjectiveCImpl() -> AnyObject {
-        #if DATA_LEGACY_ABI
+        #if DATA_LEGACY_ABI && !hasFeature(Embedded)
         switch _representation {
         case .empty: return NSData()
         case .inline(let inline):
@@ -113,7 +113,7 @@ extension Data {
 
         if range.lowerBound == 0 {
             // When the range lower bound is 0, we reuse the existing __DataStorage here to avoid copying the bytes
-            #if DATA_LEGACY_ABI
+            #if DATA_LEGACY_ABI && !hasFeature(Embedded)
             if InlineSlice.canStore(count: range.count) {
                 return Data(representation: .slice(InlineSlice(originalBacking, range: range)))
             } else {
@@ -126,7 +126,7 @@ extension Data {
             // Otherwise, we make an eager copy of the bytes. This ensures that we preserve the existing behavior that NSData --> Data bridging always produces a Data with startIndex == 0. In the future, we can investigate avoiding this copy as well if we determine that allowing bridged Datas to be a slice does not break any existing clients
             let newBacking = __DataStorage(bytes: originalBacking.mutableBytes?.advanced(by: range.lowerBound), length: range.count)
 
-            #if DATA_LEGACY_ABI
+            #if DATA_LEGACY_ABI && !hasFeature(Embedded)
             if InlineSlice.canStore(count: newBacking.length) {
                 return Data(representation: .slice(InlineSlice(newBacking, count: newBacking.length)))
             } else {

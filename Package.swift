@@ -60,11 +60,11 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 name: "swift-collections",
                 path: "\(root)/swift-collections"),
             .package(
-                name: "swift-foundation-icu",
-                path: "\(root)/swift-foundation-icu"),
-            .package(
                 name: "swift-syntax",
-                path: "\(root)/swift-syntax")
+                path: "\(root)/swift-syntax"),
+            .package(
+                name: "swift-foundation-icu",
+                path: "\(root)/swift-foundation-icu")
         ]
 } else {
     // These dependencies should match `update-checkout`
@@ -75,10 +75,10 @@ if let useLocalDepsEnv = Context.environment["SWIFTCI_USE_LOCAL_DEPS"], !useLoca
                 url: "https://github.com/apple/swift-collections",
                 exact: "1.7.3"),
             .package(
-                url: "https://github.com/apple/swift-foundation-icu",
+                url: "https://github.com/swiftlang/swift-syntax",
                 branch: "main"),
             .package(
-                url: "https://github.com/swiftlang/swift-syntax",
+                url: "https://github.com/apple/swift-foundation-icu",
                 branch: "main")
         ]
 }
@@ -92,7 +92,7 @@ let testOnlySwiftSettings: [SwiftSetting] = [
     .define("FOUNDATION_EXIT_TESTS", .when(platforms: [.macOS, .linux, .openbsd, .windows]))
 ]
 
-let package = Package(
+var package = Package(
     name: "swift-foundation",
     platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
     products: [
@@ -109,6 +109,18 @@ let package = Package(
             ] + wasiLibcCSettings
         ),
 
+        // _FoundationRefs (Internal)
+        // Temporary: stands in for the standard library's `Ref` and `MutableRef` in Darwin package builds. It has its own target because some compiler builds assert when compiling `Ref` with strict concurrency checking, which `featureSettings` enables.
+        .target(
+            name: "_FoundationRefs",
+            swiftSettings: [
+                .enableExperimentalFeature("Lifetimes"),
+                .enableExperimentalFeature("AllowUnsafeAttribute"),
+                .enableExperimentalFeature("BuiltinModule"),
+                .swiftLanguageMode(.v5)
+            ]
+        ),
+
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
@@ -123,9 +135,12 @@ let package = Package(
           dependencies: [
             "_FoundationCShims",
             "FoundationMacros",
+            .target(name: "_FoundationRefs", condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "DequeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
+            // Temporary: provides `UniqueArray` in Darwin package builds.
+            .product(name: "BasicContainers", package: "swift-collections", condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
           ],
           exclude: [
             "Bytes/CMakeLists.txt",

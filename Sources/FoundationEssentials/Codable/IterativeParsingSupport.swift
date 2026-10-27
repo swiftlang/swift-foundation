@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 // MARK: - ParseEventFilter protocol
 
@@ -102,37 +101,3 @@ struct NullFilter: ParseEventFilter, ~Copyable {
         // no-op
     }
 }
-
-// MARK: - MapRecordStorage
-
-/// Random-access integer storage for a structural parse map's record buffer. Allows generalization over `[Int]` and `UniqueArray<Int>` storage.
-protocol MapRecordStorage: ~Copyable {
-    subscript(position: Int) -> Int { get }
-}
-
-#if FOUNDATION_FRAMEWORK || !os(macOS)
-@available(anyAppleOS 27.0, *)
-struct UniqueMapRecords: MapRecordStorage, ~Copyable {
-    var storage: UniqueArray<Int>
-
-    init(_ storage: consuming UniqueArray<Int>) {
-        self.storage = storage
-    }
-
-    @inline(__always)
-    subscript(position: Int) -> Int { storage[position] }
-}
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
-
-struct ArrayMapRecords: MapRecordStorage {
-    var storage: [Int]
-
-    init(_ storage: consuming [Int]) {
-        self.storage = storage
-    }
-
-    @inline(__always)
-    subscript(position: Int) -> Int { storage[position] }
-}
-
-#endif // !hasFeature(Embedded)

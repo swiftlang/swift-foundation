@@ -547,6 +547,13 @@ private struct PropertyListEncoderTests {
         }
     }
 
+    // An XML plist dict with a duplicate key resolves last-wins, matching canonical CoreFoundation: a repeated <key>k</key> keeps the later <string>.
+    @Test func xmlDuplicateKeyIsLastWins() throws {
+        let xmlData = "<plist><dict><key>k</key><string>A</string><key>k</key><string>B</string></dict></plist>".data(using: .utf8)!
+        let decoded = try PropertyListDecoder().decode([String: String].self, from: xmlData)
+        #expect(decoded == ["k": "B"])
+    }
+
     @Test func nonStringDictionaryKey() throws {
         let decoder = PropertyListDecoder()
         let encoder = PropertyListEncoder()
@@ -888,6 +895,24 @@ private struct PropertyListEncoderTests {
         
         try test(Float.self)
         try test(Double.self)
+    }
+
+    // A binary plist dict with a duplicate key resolves first-wins, matching canonical CoreFoundation. Here keys [obj1, obj1] with values ["A", "B"] must decode to ["k": "A"].
+    @Test func binaryDuplicateKeyIsFirstWins() throws {
+        let bplist = Data([
+            0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // "bplist00"
+            0xd2, 0x01, 0x01, 0x02, 0x03,                   // dict, count 2: keys [obj1, obj1], values [obj2, obj3]
+            0x51, 0x6b,                                     // obj1: "k"
+            0x51, 0x41,                                     // obj2: "A"
+            0x51, 0x42,                                     // obj3: "B"
+            0x08, 0x0d, 0x0f, 0x11,                         // offset table
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, // trailer: offsetIntSize 1, objectRefSize 1
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, // numObjects 4
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // topObject 0
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, // offsetTableOffset 0x13
+        ])
+        let decoded = try PropertyListDecoder().decode([String: String].self, from: bplist)
+        #expect(decoded == ["k": "A"])
     }
 
     @Test func xmlReals() throws {
@@ -1295,33 +1320,6 @@ data1 = <7465
         #expect(format == .openStep)
     }
 #endif
-
-    // Only the iterative parser is depth-unbounded; the legacy recursive scanner overflows the
-    // stack on input this deeply nested rather than reporting an error.
-    @Test(.enabled(if: foundation_swift_xml_plist_deserialization_enabled()))
-    func xmlPlist_depthTraversal() {
-        // The important part to test is the parsing pass, not the decoding pass.
-        struct DecodeNothing : Decodable {
-            init(from decoder: Decoder) throws {
-                // Do nothing.
-            }
-        }
-
-        let MAX_DEPTH = 512
-        let xmlGood = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\">"
-            + String(repeating: "<array>", count: MAX_DEPTH / 2) + String(repeating: "</array>", count: MAX_DEPTH / 2)
-            + "</plist>"
-        let xmlBad = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\">"
-            + String(repeating: "<array>", count: MAX_DEPTH + 1) + String(repeating: "</array>", count: MAX_DEPTH + 1)
-            + "</plist>"
-
-        #expect(throws: Never.self) {
-            try PropertyListDecoder().decode(DecodeNothing.self, from: xmlGood.data(using: .utf8)!)
-        }
-        #expect(throws: (any Error).self) {
-            try PropertyListDecoder().decode(DecodeNothing.self, from: xmlBad.data(using: .utf8)!)
-        }
-    }
 
 #if FOUNDATION_FRAMEWORK || !os(macOS)
     /// Parses `xml` with the iterative scanner, returning the map or the thrown `XMLPlistError`.

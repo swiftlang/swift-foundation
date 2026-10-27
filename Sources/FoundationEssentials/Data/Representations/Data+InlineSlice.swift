@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
@@ -102,6 +102,7 @@ extension Data {
             if !isKnownUniquelyReferenced(&storage) {
                 storage = storage.mutableCopy(self.range)
             }
+            storage.ensureUniqueBufferReference()
         }
         
         @inlinable // This is @inlinable as trivially computable.

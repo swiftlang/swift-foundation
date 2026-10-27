@@ -19,11 +19,8 @@ extension AttributeScopes {
     
     /// Attribute scopes that Foundation defines.
     public struct FoundationAttributes : AttributeScope {
-        #if !hasFeature(Embedded)
-        // TODO: Should be enabled when URL is supported in Embedded Swift
         /// A property for accessing the link attribute.
         public let link: LinkAttribute
-        #endif
         /// A property for accessing a language identifier attribute.
         public let languageIdentifier: LanguageIdentifierAttribute
         /// A property for accessing a person name component attribute.
@@ -34,11 +31,8 @@ extension AttributeScopes {
         public let dateField: DateFieldAttribute
         /// A property for accessing an alternative presentation attribute.
         public let alternateDescription: AlternateDescriptionAttribute
-        #if !hasFeature(Embedded)
-        // TODO: Should be enabled when URL is supported in Embedded Swift
         /// A property for accessing an image URL attribute.
         public let imageURL: ImageURLAttribute
-        #endif
         /// A property for accessing a replacement index attribute.
         public let replacementIndex : ReplacementIndexAttribute
         public let measurement: MeasurementAttribute
@@ -86,7 +80,6 @@ extension AttributeDynamicLookup {
 
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 extension AttributeScopes.FoundationAttributes {
-    #if !hasFeature(Embedded)
     /// A type for using a link as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -101,7 +94,6 @@ extension AttributeScopes.FoundationAttributes {
             set { }
         }
     }
-    #endif
 
     /// A type for using a language identifier as an attribute.
     @frozen
@@ -282,7 +274,6 @@ extension AttributeScopes.FoundationAttributes {
         public static let name = "NSAlternateDescription"
     }
 
-    #if !hasFeature(Embedded)
     /// A type for using an image URL as an attribute.
     @frozen
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
@@ -292,7 +283,6 @@ extension AttributeScopes.FoundationAttributes {
         /// The name of the image URL attribute.
         public static let name = "NSImageURL"
     }
-    #endif
 
     /// A type for using a replacement index as an attribute.
     ///
@@ -465,14 +455,12 @@ extension AttributeScopes.FoundationAttributes.DurationFieldAttribute.Field: Cod
 extension AttributeScopes.FoundationAttributes.WritingDirectionAttribute: CodableAttributedStringKey {}
 #endif
 
-#if !hasFeature(Embedded)
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.LinkAttribute : Sendable {}
-#endif
 
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
@@ -523,14 +511,12 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute : Sendable {}
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.AlternateDescriptionAttribute : Sendable {}
 
-#if !hasFeature(Embedded)
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)
 @available(tvOS, unavailable, introduced: 15.0)
 @available(watchOS, unavailable, introduced: 8.0)
 @available(*, unavailable)
 extension AttributeScopes.FoundationAttributes.ImageURLAttribute : Sendable {}
-#endif
 
 @available(macOS, unavailable, introduced: 12.0)
 @available(iOS, unavailable, introduced: 15.0)

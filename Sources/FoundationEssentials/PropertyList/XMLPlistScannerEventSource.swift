@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - XMLPlistScannerEventSource
 
@@ -21,7 +20,13 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
     typealias Vocabulary = XMLPlistVocabulary
     
     /// Maximum container nesting depth.
-    private static var maxContainerDepth: Int { 512 }
+    private static var maxContainerDepth: Int {
+    #if canImport(Darwin) && !os(macOS)
+        128
+    #else
+        512
+    #endif
+    }
 
     /// Holds the plist span and the read cursor.
     var reader: XMLPlistSpanReader
@@ -155,7 +160,7 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
             if isEmpty {
                 try channel.emitEmptyUnkeyedContainer()
             } else {
-                guard channel.stackDepth < Self.maxContainerDepth else {
+                guard channel.stackDepth &+ 1 < Self.maxContainerDepth else {
                     throw XMLPlistError.other("Too many nested arrays or dictionaries")
                 }
                 try channel.beginUnkeyedContainer(cacheKey: nil, sourceState: ())
@@ -164,7 +169,7 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
             if isEmpty {
                 try channel.emitEmptyKeyedContainer()
             } else {
-                guard channel.stackDepth < Self.maxContainerDepth else {
+                guard channel.stackDepth &+ 1 < Self.maxContainerDepth else {
                     throw XMLPlistError.other("Too many nested arrays or dictionaries")
                 }
                 try channel.beginKeyedContainer(cacheKey: nil, sourceState: ())
@@ -415,6 +420,5 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
 
     private var xmlCDATAOpeningMarker: StaticString { "<![CDATA[" }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

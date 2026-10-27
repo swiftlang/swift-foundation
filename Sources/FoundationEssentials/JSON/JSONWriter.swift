@@ -21,10 +21,12 @@ internal struct JSONWriter: ~Copyable {
     private let pretty: Bool
     private let sortedKeys: Bool
     private let withoutEscapingSlashes: Bool
+    let nonConformingFloatStrategy: JSONEncoder.NonConformingFloatEncodingStrategy
 
     var bytes = Bytes()
 
-    init(options: JSONEncoder.OutputFormatting) {
+    init(options: JSONEncoder.OutputFormatting, nonConformingFloatStrategy: JSONEncoder.NonConformingFloatEncodingStrategy) {
+        self.nonConformingFloatStrategy = nonConformingFloatStrategy
         pretty = options.contains(.prettyPrinted)
         sortedKeys = options.contains(.sortedKeys)
         withoutEscapingSlashes = options.contains(.withoutEscapingSlashes)
@@ -54,10 +56,8 @@ internal struct JSONWriter: ~Copyable {
             return bool ? 4 : 5
         case .null:
             return 4
-        case .nonPrettyDirectArray(let serialized):
-            return serialized.count
-        case let .directArray(elements, lengths):
-            return containerOverhead(elementCount: lengths.count, level: level) + elements.count
+        case .directArray(let elementCount, let estimatedElementBytes, _):
+            return containerOverhead(elementCount: Int(elementCount), level: level) + Int(estimatedElementBytes)
         case .array(let array):
             var count = containerOverhead(elementCount: array.count, level: level)
             for element in array {
@@ -100,10 +100,8 @@ internal struct JSONWriter: ~Copyable {
             writer(ascii: ._quote)
             serializeBase64Contents(data)
             writer(ascii: ._quote)
-        case .nonPrettyDirectArray(let arrayRepresentation):
-            writer(contentsOf: arrayRepresentation)
-        case let .directArray(bytes, lengths):
-            try serializePreformattedByteArray(bytes, lengths, depth: depth + 1)
+        case .directArray(_, _, let write):
+            try write(&self, depth + 1)
         case .object(let object):
             try serializeObject(object, depth: depth + 1)
         case .null:
@@ -140,24 +138,19 @@ internal struct JSONWriter: ~Copyable {
 
     // Shortcut for strings known not to require escapes, like numbers.
     @inline(__always)
-    mutating func serializeSimpleStringContents(_ str: String) -> Int {
-        let stringStart = self.bytes.count
+    mutating func serializeSimpleStringContents(_ str: String) {
         var mutStr = str
         mutStr.withUTF8 {
             writer(contentsOf: $0)
         }
-        let length = stringStart.distance(to: self.bytes.count)
-        return length
     }
 
     // Shortcut for strings known not to require escapes, like numbers.
     @inline(__always)
-    mutating func serializeSimpleString(_ str: String) -> Int {
+    mutating func serializeSimpleString(_ str: String) {
         writer(ascii: ._quote)
-        defer {
-            writer(ascii: ._quote)
-        }
-        return self.serializeSimpleStringContents(str) + 2 // +2 for quotes.
+        serializeSimpleStringContents(str)
+        writer(ascii: ._quote)
     }
 
     @inline(__always)
@@ -291,14 +284,10 @@ internal struct JSONWriter: ~Copyable {
         return flags
     }
 
-    @discardableResult
-    mutating func serializeString(_ str: String) -> Int {
+    mutating func serializeString(_ str: String) {
         writer(ascii: ._quote)
-        defer {
-            writer(ascii: ._quote)
-        }
-        return self.serializeStringContents(str) + 2 // +2 for quotes.
-
+        serializeStringContents(str)
+        writer(ascii: ._quote)
     }
 
     mutating func serializeArray(_ array: [JSONEncoderValue], depth: Int) throws {
@@ -333,7 +322,7 @@ internal struct JSONWriter: ~Copyable {
         writer(ascii: ._closebracket)
     }
     
-    mutating func serializePreformattedByteArray(_ bytes: Data, _ lengths: [Int], depth: Int) throws {
+    mutating func serializeDirectArray<S: Sequence>(_ array: S, depth: Int, serializeElement: (S.Element, inout JSONWriter) -> Void) throws {
         guard depth < Self.maximumRecursionDepth else {
             throw JSONError.tooManyNestedArraysOrDictionaries()
         }
@@ -344,10 +333,8 @@ internal struct JSONWriter: ~Copyable {
             incIndent()
         }
 
-        var lowerBound: Data.Index = bytes.startIndex
-
         var first = true
-        for length in lengths {
+        for elem in array {
             if first {
                 first = false
             } else if pretty {
@@ -358,11 +345,7 @@ internal struct JSONWriter: ~Copyable {
             if pretty {
                 writeIndent()
             }
-
-            // Do NOT call `serializeString` here! The input strings have already been formatted exactly as they need to be for direct JSON output, including any requisite quotes or escaped characters for strings.
-            let upperBound = lowerBound + length
-            writer(contentsOf: bytes[lowerBound ..< upperBound])
-            lowerBound = upperBound
+            serializeElement(elem, &self)
         }
         if pretty {
             writer(ascii: ._newline)

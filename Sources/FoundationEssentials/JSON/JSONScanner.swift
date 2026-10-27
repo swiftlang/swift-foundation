@@ -10,17 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+internal import BasicContainers
+#endif
 
 #if !NO_JSON_FOUNDATION_SPECIALIZATION
 internal import Synchronization
 #endif
 
-internal class JSONDocument {
-    let map: JSONMap<ArrayMapRecords>
+internal final class JSONDocument {
+    let map: JSONMap
     let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
-    init(map: consuming JSONMap<ArrayMapRecords>, dataBuffer: BufferView<UInt8>) {
+    init(map: consuming JSONMap, dataBuffer: BufferView<UInt8>) {
         self.map = map
         self.dataLock = .init((buffer: dataBuffer, allocation: nil))
         // If the top-level value is a number, ensure a trailing NUL byte is available so strtod can't overrun.
@@ -141,7 +143,7 @@ extension JSONMapValue {
 
 
 
-internal struct JSONScanner {
+internal struct JSONScanner: ~Copyable {
     let options: Options
     var reader: DocumentReader
     var depth: Int = 0
@@ -154,8 +156,8 @@ internal struct JSONScanner {
         var assumesTopLevelDictionary = false
     }
 
-    struct JSONPartialMapData {
-        var mapData: [Int] = []
+    struct JSONPartialMapData: ~Copyable {
+        var mapData = UniqueArray<Int>()
         var prevMapDataSize = 0
 
         mutating func resizeIfNecessary(with reader: DocumentReader) {
@@ -183,7 +185,7 @@ internal struct JSONScanner {
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-            mapData.append(contentsOf: [0, 0])
+            mapData.append(copyingInline: [0, 0])
             return startIdx
         }
 
@@ -193,23 +195,22 @@ internal struct JSONScanner {
             mapData.append(JSONMapTypeDescriptor.collectionEnd.rawValue)
 
             let nextValueOffset = mapData.count
-            mapData.withUnsafeMutableBufferPointer {
-                $0[startOffset] = nextValueOffset
-                $0[startOffset + 1] = count
-            }
+            var span = mapData.mutableSpan
+            span[startOffset] = nextValueOffset
+            span[startOffset &+ 1] = count
         }
 
         mutating func recordEmptyCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(copyingInline: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
         mutating func record(tagType: JSONMapTypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
+            mapData.append(copyingInline: [tagType.mapMarker, count, dataOffset])
         }
 
         mutating func record(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
@@ -224,7 +225,7 @@ internal struct JSONScanner {
         self.reader = DocumentReader(bytes: bytes)
     }
 
-    mutating func scan() throws -> JSONMap<ArrayMapRecords> {
+    mutating func scan() throws -> JSONMap {
         if options.assumesTopLevelDictionary {
             switch try reader.consumeWhitespace(allowingEOF: true) {
             case ._openbrace?:
@@ -256,7 +257,9 @@ internal struct JSONScanner {
             }
         }
 
-        return JSONMap(records: .init(partialMap.mapData))
+        var mapData = UniqueArray<Int>()
+        swap(&mapData, &partialMap.mapData)
+        return JSONMap(records: mapData)
     }
 
     // MARK: Generic Value Scanning
@@ -1267,5 +1270,3 @@ enum JSONError: Swift.Error, Equatable {
     }
 #endif // FOUNDATION_FRAMEWORK
 }
-
-#endif // !hasFeature(Embedded)

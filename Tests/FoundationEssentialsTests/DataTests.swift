@@ -2677,6 +2677,56 @@ private final class DataTests {
         }
         #expect(d.count == 20)
     }
+
+    @Test func noCopyDataMutation() {
+        withUnsafeTemporaryAllocation(byteCount: 100, alignment: MemoryLayout<UInt64>.alignment) { buffer in
+            buffer.initializeMemory(as: UInt8.self, repeating: 2)
+
+            var data = Data(bytesNoCopy: buffer.baseAddress!, count: buffer.count, deallocator: .none)
+            data[0] = 1
+            #expect(data[0] == 1)
+            #expect(buffer[0] == 2)
+        }
+
+        withUnsafeTemporaryAllocation(byteCount: 100, alignment: MemoryLayout<UInt64>.alignment) { buffer in
+            buffer.initializeMemory(as: UInt8.self, repeating: 2)
+
+            var deallocated = false
+            var data = Data(bytesNoCopy: buffer.baseAddress!, count: buffer.count, deallocator: .custom({ _, _ in
+                deallocated = true
+            }))
+            data[0] = 1
+            #expect(data[0] == 1)
+            #expect(buffer[0] == 2)
+            #expect(deallocated)
+        }
+
+        withUnsafeTemporaryAllocation(byteCount: 100, alignment: MemoryLayout<UInt64>.alignment) { buffer in
+            buffer.initializeMemory(as: UInt8.self, repeating: 2)
+
+            var data = Data(bytesNoCopy: buffer.baseAddress!, count: buffer.count, deallocator: .none)
+            var span = data.mutableSpan
+            span[0] = 1
+            #expect(span[0] == 1)
+            #expect(data[0] == 1)
+            #expect(buffer[0] == 2)
+        }
+
+        withUnsafeTemporaryAllocation(byteCount: 100, alignment: MemoryLayout<UInt64>.alignment) { buffer in
+            buffer.initializeMemory(as: UInt8.self, repeating: 2)
+
+            var deallocated = false
+            var data = Data(bytesNoCopy: buffer.baseAddress!, count: buffer.count, deallocator: .custom({ _, _ in
+                deallocated = true
+            }))
+            var span = data.mutableSpan
+            span[0] = 1
+            #expect(span[0] == 1)
+            #expect(data[0] == 1)
+            #expect(buffer[0] == 2)
+            #expect(deallocated)
+        }
+    }
 }
 
 // MARK: - Base64 Encode/Decode Tests

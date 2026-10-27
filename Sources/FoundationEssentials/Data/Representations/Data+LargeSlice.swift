@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if DATA_LEGACY_ABI
+#if DATA_LEGACY_ABI && !hasFeature(Embedded)
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension Data {
@@ -98,6 +98,7 @@ extension Data {
             if !isKnownUniquelyReferenced(&storage) {
                 storage = storage.mutableCopy(range)
             }
+            storage.ensureUniqueBufferReference()
             if !isKnownUniquelyReferenced(&slice) {
                 slice = RangeReference(range)
             }

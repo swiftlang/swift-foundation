@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 extension _CharacterSet {
     struct RangeBacked {
         
@@ -203,5 +201,3 @@ extension _CharacterSet {
         }
     }
 }
-
-#endif // !hasFeature(Embedded)
