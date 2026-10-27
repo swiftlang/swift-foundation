@@ -231,8 +231,6 @@ private struct LocaleCanonicalIdentifierTests {
         #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
     }
 
-#if FOUNDATION_FRAMEWORK
-    // TODO: Enable the tests when once we are done implementing ICU locale canonicalization functions in FoundationEssentials
     @Test(arguments: [
         ("zh_TW@COLLATION=pinyin", "zh_TW@collation=pinyin"),
         ("de_DE@currency=DEM;calendar=gregorian", "de_DE@calendar=gregorian;currency=DEM"),
@@ -246,5 +244,5 @@ private struct LocaleCanonicalIdentifierTests {
         let actual = Locale._canonicalLocaleIdentifier(from: testCase.identifier)
         #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
     }
-#endif
+
 }
