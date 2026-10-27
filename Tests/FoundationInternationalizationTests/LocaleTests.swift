@@ -514,6 +514,24 @@ private struct LocaleTests {
         #expect(nilLanguage.region == nil)
     }
     
+    @Test func keyValueNormalization() {
+        func verify(id: String, expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            #expect(_LocaleImpl(identifier: id).identifier == expected, sourceLocation: sourceLocation)
+        }
+
+        // Check the case and separator normalization of a regular identifier.
+        // `_LocaleImpl` canonicalizes like `_LocaleICU`, which strips the default script for the language.
+        verify(id: "en-latn-us", expected: "en-US")
+        
+        // Keep each key as written. For example, "ca" stays "ca".
+        verify(id: "en_US@calendar=gregorian", expected: "en_US@calendar=gregorian")
+        verify(id: "en_US@ca=gregory",         expected: "en_US@ca=gregory")
+        
+        // Check that `_LocaleImpl` keeps and sorts multiple key-value pairs.
+        verify(id: "en_US@calendar=gregorian;hours=h12;numbers=latn", expected: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+        verify(id: "en_US@nu=latn;hc=h12;ca=gregory",                 expected: "en_US@ca=gregory;hc=h12;nu=latn")
+        verify(id: "en_US@numbers=latn;hours=h12;calendar=gregorian", expected: "en_US@calendar=gregorian;hours=h12;numbers=latn")
+    }
     
     @Test(arguments: [
         (identifier: "en_US", expected: ""),
@@ -533,6 +551,67 @@ private struct LocaleTests {
         #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
     }
 
+    @Test func complexComponentsFromIdentifier() {
+        struct ExpectedResult {
+            let value: String?
+            let showsInComponents: Bool
+            
+            init(_ value: String?, showsInComponents: Bool = true) { self.value = value; self.showsInComponents = showsInComponents }
+        }
+        
+        func verify(id: String, language: ExpectedResult? = nil, script: ExpectedResult? = nil, languageRegion: ExpectedResult? = nil, region: ExpectedResult? = nil, calendar: ExpectedResult? = nil, numberingSystem: ExpectedResult? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
+            let locale = Locale(identifier: id)
+            if let language = language?.value { #expect(locale.language.languageCode?.identifier == language, sourceLocation: sourceLocation) }
+            if let script = script?.value { #expect(locale.language.script?.identifier == script, sourceLocation: sourceLocation) }
+            if let languageRegion = languageRegion?.value { #expect(locale.language.region?.identifier == languageRegion, sourceLocation: sourceLocation) }
+            if let region = region?.value { #expect(locale.region?.identifier == region, sourceLocation: sourceLocation) }
+            if let calendar = calendar?.value { #expect(locale._calendarIdentifier.cldrIdentifier == calendar, sourceLocation: sourceLocation) }
+            if let numberingSystem = numberingSystem?.value { #expect(locale.numberingSystem.identifier == numberingSystem, sourceLocation: sourceLocation) }
+
+            let components = Locale.Components(identifier: id)
+            if let language, language.showsInComponents { #expect(components.languageComponents.languageCode?.identifier == language.value, sourceLocation: sourceLocation) }
+            if let script, script.showsInComponents { #expect(components.languageComponents.script == nil || components.languageComponents.script?.identifier == script.value, sourceLocation: sourceLocation) }
+            if let languageRegion, languageRegion.showsInComponents { #expect(components.languageComponents.region?.identifier == languageRegion.value, sourceLocation: sourceLocation) }
+            if let region, region.showsInComponents { #expect(components.region?.identifier == region.value, sourceLocation: sourceLocation) }
+            if let calendar, calendar.showsInComponents { #expect(components.calendar?.cldrIdentifier == calendar.value, sourceLocation: sourceLocation) }
+            if let numberingSystem, numberingSystem.showsInComponents { #expect(components.numberingSystem?.identifier == numberingSystem.value, sourceLocation: sourceLocation) }
+        }
+        
+        verify(id: "en_US",           language: ExpectedResult("en"), languageRegion: ExpectedResult("US"), region: ExpectedResult("US", showsInComponents: false))
+        verify(id: "en@rg=uszzzz",    language: ExpectedResult("en"), languageRegion: nil,      region: ExpectedResult("US"))
+        verify(id: "en_US@rg=gbzzzz", language: ExpectedResult("en"), languageRegion: ExpectedResult("US"), region: ExpectedResult("GB"))
+        verify(id: "en_GB@rg=uszzzz", language: ExpectedResult("en"), languageRegion: ExpectedResult("GB"), region: ExpectedResult("US"))
+        
+        verify(id: "en_US",                           language: ExpectedResult("en"), languageRegion: ExpectedResult("US"), calendar: ExpectedResult("gregorian", showsInComponents: false))
+        verify(id: "en_US@calendar=gregorian",        language: ExpectedResult("en"), languageRegion: ExpectedResult("US"), calendar: ExpectedResult("gregorian"))
+        verify(id: "en_US@calendar=buddhist",         language: ExpectedResult("en"), languageRegion: ExpectedResult("US"), calendar: ExpectedResult("buddhist"))
+        verify(id: "ar_SA",                           language: ExpectedResult("ar"), languageRegion: ExpectedResult("SA"), calendar: ExpectedResult("islamic-umalqura", showsInComponents: false))
+        verify(id: "ar_SA@calendar=islamic-umalqura", language: ExpectedResult("ar"), languageRegion: ExpectedResult("SA"), calendar: ExpectedResult("islamic-umalqura"))
+        verify(id: "ar_SA@calendar=gregorian",        language: ExpectedResult("ar"), languageRegion: ExpectedResult("SA"), calendar: ExpectedResult("gregorian"))
+
+        // The default numbering system comes from the language, script and region. It is not in the
+        // identifier, so it does not show up in Locale.Components.
+        verify(id: "en_US",   language: ExpectedResult("en"),  numberingSystem: ExpectedResult("latn",    showsInComponents: false)) // default fallback
+        verify(id: "ff_Adlm", language: ExpectedResult("ff"),  numberingSystem: ExpectedResult("adlm",    showsInComponents: false)) // script-specific
+        verify(id: "ar_BH",   language: ExpectedResult("ar"),  numberingSystem: ExpectedResult("arab",    showsInComponents: false)) // region-specific
+        verify(id: "ar_SA",   language: ExpectedResult("ar"),  numberingSystem: ExpectedResult("arab",    showsInComponents: false)) // region-specific
+        verify(id: "ar_AE",   language: ExpectedResult("ar"),  numberingSystem: ExpectedResult("latn",    showsInComponents: false)) // region not listed -> default
+        verify(id: "ckb",     language: ExpectedResult("ckb"), numberingSystem: ExpectedResult("arab",    showsInComponents: false)) // language-only
+        verify(id: "fa",      language: ExpectedResult("fa"),  numberingSystem: ExpectedResult("arabext", showsInComponents: false)) // language-only
+        verify(id: "ccp",     language: ExpectedResult("ccp"), numberingSystem: ExpectedResult("cakm",    showsInComponents: false)) // language-only
+        verify(id: "my",      language: ExpectedResult("my"),  numberingSystem: ExpectedResult("mymr",    showsInComponents: false)) // language-only
+        verify(id: "nqo",     language: ExpectedResult("nqo"), numberingSystem: ExpectedResult("nkoo",    showsInComponents: false)) // language-only
+        verify(id: "dz",      language: ExpectedResult("dz"),  numberingSystem: ExpectedResult("tibt",    showsInComponents: false)) // language-only
+
+        // In each pair, the default for the script must take precedence over the default for the language only.
+        verify(id: "mni",      language: ExpectedResult("mni"), numberingSystem: ExpectedResult("beng", showsInComponents: false))
+        verify(id: "mni_Mtei", language: ExpectedResult("mni"), numberingSystem: ExpectedResult("mtei", showsInComponents: false))
+        verify(id: "sat",      language: ExpectedResult("sat"), numberingSystem: ExpectedResult("olck", showsInComponents: false))
+        verify(id: "sat_Deva", language: ExpectedResult("sat"), numberingSystem: ExpectedResult("deva", showsInComponents: false))
+
+        // If the identifier has a numbering system, `Locale` uses it in place of the default, and it shows up in Components.
+        verify(id: "ff_Adlm@numbers=latn", language: ExpectedResult("ff"), numberingSystem: ExpectedResult("latn"))
+    }
 }
 
 @Suite("Locale Properties", .tags(.locale))
