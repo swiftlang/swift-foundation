@@ -26,7 +26,7 @@ internal import Synchronization
 // Here, _LocaleICU is in the same module when ICU is enabled
 internal func _localeICUClass() -> _LocaleProtocol.Type {
 #if ICU
-    _LocaleICU.self
+    foundation_swift_locale() ? _LocaleImpl.self : _LocaleICU.self
 #else
     _LocaleUnlocalized.self
 #endif
@@ -36,6 +36,15 @@ dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
     // Return _LocaleUnlocalized if FoundationInternationalization isn't loaded. The `Locale` initializers are not failable, so we just fall back to the unlocalized type when needed without failure.
     _LocaleUnlocalized.self
 }
+#endif
+
+#if FOUNDATION_FRAMEWORK
+package func foundation_swift_locale() -> Bool {
+    // FIXME: Remove this flag, `_LocaleICU` and the `_LocaleImpl` forwards when all members are in Swift and the flag is on by default.
+    _foundation_swift_locale_feature_enabled()
+}
+#else
+package func foundation_swift_locale() -> Bool { false }
 #endif
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.

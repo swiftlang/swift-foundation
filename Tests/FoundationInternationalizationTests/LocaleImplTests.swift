@@ -62,6 +62,7 @@ private struct LocaleImplTests {
         (identifier: "en_US", regionCode: "US" as String?),
         (identifier: "en_US@rg=gbzzzz", regionCode: "GB"),
         (identifier: "en@rg=thzzzz", regionCode: "TH"),
+        (identifier: "en-US-u-rg-gbzzzz", regionCode: "GB"),
         (identifier: "en", regionCode: nil),
     ])
     func regionCode(testCase: (identifier: String, regionCode: String?)) {
@@ -206,6 +207,34 @@ private struct LocaleImplTests {
         #expect(locale.region?.identifier == testCase.region, "region of \"\(testCase.identifier)\"")
     }
 
+    @Test(arguments: [
+        (identifier: "en-US-u-ca-chinese", icu: "en_US@calendar=chinese"),
+        (identifier: "zh-cmn-CH-u-co-pinyin", icu: "zh_CH@collation=pinyin"),
+        (identifier: "fr-FR-1606nict-u-ca-gregory-x-test", icu: "fr_FR_1606NICT@calendar=gregorian;x=test"),
+        (identifier: "en-US-t-fr-u-nu-thai", icu: "en_US@numbers=thai;t=fr"),
+        // `_LocaleImpl` drops the attributes of a "u" extension, such as "attr1".
+        (identifier: "en-US-u-attr1-ca-chinese", icu: "en_US@calendar=chinese"),
+        (identifier: "en-u-va-posix", icu: "en__POSIX"),
+    ])
+    func languageTagIdentifier(testCase: (identifier: String, icu: String)) {
+        let locale = _LocaleImpl(identifier: testCase.identifier)
+        #expect(locale.identifier(.icu) == testCase.icu, "input \"\(testCase.identifier)\"")
+    }
+
+    @Test func languageTagFromName() {
+        let locale = _LocaleImpl(name: "en-US-u-ca-japanese", prefs: LocalePreferences(), disableBundleMatching: true)
+        #expect(locale.identifier(.icu) == "en_US@calendar=japanese")
+        #expect(locale.calendarIdentifier == .japanese)
+        #expect(locale.variantCode == nil)
+    }
+
+    @Test func languageTagKeywords() {
+        let locale = _LocaleImpl(identifier: "en-US-u-ca-chinese-nu-thai")
+        #expect(locale.calendarIdentifier == .chinese)
+        #expect(locale.numberingSystem == Locale.NumberingSystem("thai"))
+        #expect(locale.regionCode == "US")
+    }
+
     @Test(arguments: ["de_DD", "de-DD"])
     func deprecatedRegionIsNotReplacedYet(identifier: String) {
         withKnownIssue("Deprecated codes are not replaced by their current codes yet, so DD is not replaced by DE") {
@@ -213,4 +242,13 @@ private struct LocaleImplTests {
         }
     }
 
+    // FIXME: Enable once time zone types are converted.
+    @Test(.disabled("Time zone types in a language tag are not converted yet"), arguments: [
+        (identifier: "en-US-u-tz-usnyc", icu: "en_US@timezone=America/New_York"),
+        (identifier: "en-US-u-ca-chinese-tz-usnyc", icu: "en_US@calendar=chinese;timezone=America/New_York"),
+    ])
+    func languageTagWithTimeZone(testCase: (identifier: String, icu: String)) {
+        let locale = _LocaleImpl(identifier: testCase.identifier)
+        #expect(locale.identifier(.icu) == testCase.icu, "input \"\(testCase.identifier)\"")
+    }
 }

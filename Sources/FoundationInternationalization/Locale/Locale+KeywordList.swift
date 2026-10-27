@@ -22,6 +22,9 @@ extension Locale.CanonicalizedIdentifier {
         /// The range in `bytes` of each key and value, sorted by key in byte order. Pairs with equal keys are in the order they were added.
         var ranges: [(key: Range<Int>, value: Range<Int>)] = []
 
+        /// Whether the language tag has an extension other than the private use.
+        var hasExtension = false
+
         init(capacity: Int) {
             bytes = Bytes(capacity: capacity)
         }
@@ -98,6 +101,91 @@ extension Locale.CanonicalizedIdentifier {
             }
         }
 
+        /// Creates the key-value pairs of the extensions and the private use at the end of a lowercase BCP 47 language tag, sorted by key.
+        /// For example, "u-ca-chinese-t-fr-x-foo" has the pairs "(calendar, chinese)", "(t, fr)" and "(x, foo)".
+        init(languageTagExtensions source: Span<UInt8>) {
+            // Guess the size
+            self.init(capacity: source.count * 2)
+
+            // Read each extension: a singleton, then its subtags until the next singleton.
+            // The private use, "x", is the last part of the tag, so its subtags are the rest of the tag.
+            var index = 0 // the start of the next singleton
+            while index < source.count, Locale.CanonicalizedIdentifier.isSingleton(source, at: index) {
+                let singleton = source[index]
+                let subtagsStart = index + 2
+                if singleton == Locale.CanonicalizedIdentifier.privateUseSingleton {
+                    if subtagsStart < source.count {
+                        append(key: source.extracting(index..<(index + 1)), value: source.extracting(subtagsStart...))
+                    }
+                    return
+                }
+
+                // Find the next singleton. The subtags end before its "-", or at the end of the tag.
+                var nextIndex = subtagsStart
+                while nextIndex < source.count, !Locale.CanonicalizedIdentifier.isSingleton(source, at: nextIndex) {
+                    nextIndex = Locale.CanonicalizedIdentifier.scanSegment(source, fromIndex: nextIndex).endIndex + 1
+                }
+                let subtagsEnd = min(nextIndex - 1, source.count)
+                // Stop at an extension without subtags.
+                guard subtagsStart < subtagsEnd else {
+                    return
+                }
+                hasExtension = true
+
+                if singleton == UInt8(ascii: "u") {
+                    appendUExtensionSubtags(source: source.extracting(subtagsStart..<subtagsEnd))
+                } else {
+                    append(key: source.extracting(index..<(index + 1)), value: source.extracting(subtagsStart..<subtagsEnd))
+                }
+                index = nextIndex
+            }
+        }
+
+        /// Appends the keywords of the subtags of a "u" extension.
+        mutating func appendUExtensionSubtags(source: Span<UInt8>) {
+            // The current keyword: a key and the subtags of its type, such as "ca-islamic-umalqura".
+            var keywordRange: Range<Int>? = nil
+            var index = 0
+            while index < source.count {
+                let end = Locale.CanonicalizedIdentifier.scanSegment(source, fromIndex: index).endIndex
+                let length = end - index
+                if length == 2 && source[index].isAlphanumeric && source[index + 1].isLetter { // it's a Unicode Extension key
+                    if let keywordRange {
+                        appendUExtension(keyword: source.extracting(keywordRange))
+                    }
+                    keywordRange = index..<end
+                } else if let currentKeyword = keywordRange {
+                    // The subtag is part of the type of the current key. Skip it if there is no key yet, because it is an attribute.
+                    keywordRange = currentKeyword.lowerBound..<end
+                }
+                index = end + 1
+            }
+            if let keywordRange {
+                appendUExtension(keyword: source.extracting(keywordRange))
+            }
+        }
+
+        /// Appends a "u" extension keyword: a key of 2 characters, then "-" and its type if it has one. For example, "ca-islamic-umalqura" or "kn".
+        private mutating func appendUExtension(keyword: Span<UInt8>) {
+            let key = keyword.extracting(0..<2)
+            let type = keyword.count > 2 ? keyword.extracting(3...) : keyword.extracting(2...)
+            // Use the key as written if it has no legacy name. For example, "va" stays "va".
+            let legacyKeyName = Locale.legacyKey(forLowercased: key) ?? ""
+            let legacyKey = legacyKeyName.isEmpty ? key : legacyKeyName.utf8Span.span
+
+            guard !type.isEmpty else {
+                // An empty type defaults to true, whose legacy value is "yes"
+                append(key: legacyKey, value: "yes".utf8.span)
+                return
+            }
+
+            if let legacyValue = Locale.legacyValue(forLowercased: type, key: legacyKey) {
+                append(key: legacyKey, value: legacyValue.utf8.span)
+            } else {
+                append(key: legacyKey, value: type)
+            }
+        }
+
         mutating func append(key: Span<UInt8>, value: Span<UInt8>) {
             let keyStart = bytes.count
             bytes.append(copying: key.bytes)
@@ -144,6 +232,16 @@ extension Locale.CanonicalizedIdentifier {
         @_lifetime(borrow self)
         func value(at index: Int) -> Span<UInt8> {
             bytes.span.extracting(ranges[index].value)
+        }
+
+        /// Removes each pair with the key `key` and the value `value`. Returns whether it removed a pair.
+        mutating func removePairs(key: Span<UInt8>, value: Span<UInt8>) -> Bool {
+            var removed = false
+            for i in ranges.indices.reversed() where self.key(at: i).elementsEqual(key) && self.value(at: i).elementsEqual(value) {
+                ranges.remove(at: i)
+                removed = true
+            }
+            return removed
         }
 
         /// Records the bytes from `keyStart` to `valueStart` as a key, and the bytes after them as its value.
