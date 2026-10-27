@@ -1800,13 +1800,14 @@ extension Calendar {
             // Week 0, when a month has one, never starts on `firstWeekday` either.
             var advanceDaily: Bool
             if direction == .backward {
-                if weekOfMonth == 1 {
+                switch weekOfMonth {
+                case 1:
                     // Last week/earlier this week is week 1.
                     advanceDaily = dateWeekOfMonth <= 2
-                } else if weekOfMonth == 0 {
+                case 0:
                     // From week 1, step back day by day if this month has a week 0.
-                    advanceDaily = dateWeekOfMonth == 1 && dateInterval(of: .month, for: result).map { component(.weekOfMonth, from: $0.start) == 0 } == true
-                } else {
+                    advanceDaily = dateWeekOfMonth == 1 && dateInterval(of: .month, for: result).map { component(.weekOfMonth, from: $0.start) } == 0
+                default:
                     advanceDaily = false
                 }
             } else {
