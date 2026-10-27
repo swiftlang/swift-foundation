@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
 internal import Synchronization
@@ -118,10 +114,10 @@ enum XMLPlistTag {
 }
 
 class XMLPlistLegacyDecodingDocument : PlistDecodingDocument, @unchecked Sendable {
-    let map: XMLPlistMap
+    let map: XMLPlistMap<ArrayMapRecords>
     let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
-    init(map: consuming XMLPlistMap, dataBuffer: BufferView<UInt8>) {
+    init(map: consuming XMLPlistMap<ArrayMapRecords>, dataBuffer: BufferView<UInt8>) {
         self.map = map
         self.dataLock = .init((buffer: dataBuffer, allocation: nil))
     }
@@ -679,12 +675,12 @@ extension XMLPlistMapValue: DecodingErrorValueTypeDebugStringConvertible {
     }
 }
 
-internal struct XMLPlistScanner: ~Copyable {
+internal struct XMLPlistScanner {
     var reader : BufferReader
     var partialMapData = PartialMapData()
 
-    struct PartialMapData: ~Copyable {
-        var mapData = UniqueArray<Int>()
+    struct PartialMapData {
+        var mapData : [Int] = []
         var prevMapDataSize = 0
 
         mutating func resizeIfNecessary(with reader: BufferReader) {
@@ -710,7 +706,7 @@ internal struct XMLPlistScanner: ~Copyable {
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-            mapData.append(copyingInline: [0, 0])
+            mapData.append(contentsOf: [0, 0])
             return startIdx
         }
 
@@ -720,22 +716,23 @@ internal struct XMLPlistScanner: ~Copyable {
             mapData.append(XMLPlistMapTypeDescriptor.collectionEnd.mapMarker)
 
             let nextValueOffset = mapData.count
-            var span = mapData.mutableSpan
-            span[startOffset] = nextValueOffset
-            span[startOffset &+ 1] = count
+            mapData.withUnsafeMutableBufferPointer {
+                $0[startOffset] = nextValueOffset
+                $0[startOffset + 1] = count
+            }
         }
 
         mutating func recordEmptyCollection(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(copyingInline: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMapTypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
         mutating func record(tagType: XMLPlistMapTypeDescriptor, count: Int, dataOffset: Int, with reader: BufferReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(copyingInline: [tagType.mapMarker, count, dataOffset])
+            mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
         }
 
         mutating func record(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
@@ -1296,7 +1293,7 @@ internal struct XMLPlistScanner: ~Copyable {
         try checkForCloseTag(.plist)
     }
 
-    mutating func scanXMLPropertyList() throws -> XMLPlistMap {
+    mutating func scanXMLPropertyList() throws -> XMLPlistMap<ArrayMapRecords> {
         while !reader.isAtEnd {
             skipWhitespace()
             guard let shouldBeOpenAngle = reader.read() else {
@@ -1326,9 +1323,7 @@ internal struct XMLPlistScanner: ~Copyable {
                 try skipXMLProcessingInstruction()
             default:
                 try scanXMLElement()
-                var mapData = UniqueArray<Int>()
-                swap(&mapData, &partialMapData.mapData)
-                return XMLPlistMap(records: mapData)
+                return XMLPlistMap(records: .init(partialMapData.mapData))
             }
         }
         throw XMLPlistError.unexpectedEndOfFile()

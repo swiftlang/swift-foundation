@@ -10,16 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import _FoundationRefs
-#endif
-
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // Low-level cursor over a single node in a structurally-parsed XML property list, providing fast random access to its fields.
 
@@ -29,7 +22,7 @@ internal import BasicContainers
 
 /// Top-level entry for producing `XMLPlistPrimitive`s from a raw XML property list buffer.
 internal struct XMLPropertyList: ~Escapable, ~Copyable, ~Sendable {
-    let map: XMLPlistMap
+    let map: XMLPlistMap<UniqueMapRecords>
     let sourceBytes: RawSpan
 
     /// Run the iterative XML scanner over `sourceBytes` and produce a property list.
@@ -67,17 +60,17 @@ internal enum XMLPlistTypeMarker: Sendable, Equatable {
 }
 
 internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
-    let map: Ref<XMLPlistMap>
+    let map: Ref<XMLPlistMap<UniqueMapRecords>>
     let sourceBytes: RawSpan
     let mapOffset: XMLPlistMapOffset
 
     @_lifetime(borrow map, copy sourceBytes)
-    init(map: borrowing XMLPlistMap, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
+    init(map: borrowing XMLPlistMap<UniqueMapRecords>, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
         self = .init(mapRef: Ref(map), sourceBytes: sourceBytes, mapOffset: mapOffset)
     }
 
     @_lifetime(copy mapRef, copy sourceBytes)
-    init(mapRef: consuming Ref<XMLPlistMap>, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
+    init(mapRef: consuming Ref<XMLPlistMap<UniqueMapRecords>>, sourceBytes: RawSpan, mapOffset: XMLPlistMapOffset) {
         self.map = mapRef
         self.sourceBytes = sourceBytes
         self.mapOffset = mapOffset
@@ -243,14 +236,14 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
     /// Iterator over the children of a `.array` primitive. Walks the inline records via record-length arithmetic.
     internal struct ArrayIterator: ~Escapable, ~Sendable {
-        let map: Ref<XMLPlistMap>
+        let map: Ref<XMLPlistMap<UniqueMapRecords>>
         let sourceBytes: RawSpan
         let count: Int
         var currentOffset: XMLPlistMapOffset
         var elementsRemaining: Int
 
         @_lifetime(copy mapRef, copy sourceBytes)
-        init(mapRef: Ref<XMLPlistMap>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
+        init(mapRef: Ref<XMLPlistMap<UniqueMapRecords>>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
             self.map = mapRef
             self.sourceBytes = sourceBytes
             self.count = count
@@ -284,7 +277,7 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
     /// Iterator over key-value pairs of a `.dict` primitive. Emits pairs in source order. `KeyValuePair` is a bare `(keyOffset, valueOffset)` record; primitive views are constructed on demand so they share a single lifetime tied to the enclosing iterator.
     internal struct DictionaryIterator: ~Escapable, ~Sendable {
-        let map: Ref<XMLPlistMap>
+        let map: Ref<XMLPlistMap<UniqueMapRecords>>
         let sourceBytes: RawSpan
         let count: Int
         var currentOffset: XMLPlistMapOffset
@@ -296,7 +289,7 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
         }
 
         @_lifetime(copy mapRef, copy sourceBytes)
-        init(mapRef: Ref<XMLPlistMap>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
+        init(mapRef: Ref<XMLPlistMap<UniqueMapRecords>>, sourceBytes: RawSpan, startOffset: XMLPlistMapOffset, count: Int) {
             self.map = mapRef
             self.sourceBytes = sourceBytes
             self.count = count
@@ -452,7 +445,7 @@ internal struct XMLPlistPrimitive: ~Escapable, ~Sendable {
 
 // Advance one record in `map.records`.
 @inline(__always)
-internal func _nextMapOffset(after previousValueOffset: XMLPlistMapOffset, in map: borrowing XMLPlistMap) -> XMLPlistMapOffset {
+internal func _nextMapOffset(after previousValueOffset: XMLPlistMapOffset, in map: borrowing XMLPlistMap<UniqueMapRecords>) -> XMLPlistMapOffset {
     let marker = map.records[previousValueOffset]
     switch XMLPlistMapTypeDescriptor(rawValue: marker) {
     case .string, .simpleString, .key, .simpleKey, .real, .integer, .data, .date, .uid:
@@ -1000,8 +993,7 @@ struct XMLPlistSpanReader: ~Escapable, ~Sendable {
         var looksLikeHex = false
         let remaining = bytes.extracting(index...)
         Loop:
-        for i in remaining.indices {
-            let byte = remaining[i]
+        for byte in remaining {
             switch byte {
             case ._plus, ._minus, ._space, ._tab, ._newline, ._return, UInt8(ascii: "0"):
                 continue
@@ -1247,5 +1239,6 @@ internal func _decodeXMLString(from span: borrowing Span<UInt8>, isSimple: Bool,
 
 }
 
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

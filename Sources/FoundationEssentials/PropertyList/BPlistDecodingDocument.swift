@@ -12,6 +12,7 @@
 
 #if !hasFeature(Embedded)
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - Document
 
@@ -122,5 +123,6 @@ final class BPlistDecodingDocument: PlistDecodingDocument {
     }
 }
 
+#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

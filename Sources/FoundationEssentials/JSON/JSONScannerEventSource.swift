@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - JSONScannerMode
 
@@ -706,3 +707,4 @@ struct JSONScannerEventSource<Mode: JSONScannerMode>: ParseEventSource<NullFilte
         return JSONError.SourceLocation(line: line, column: col, index: absolute)
     }
 }
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)

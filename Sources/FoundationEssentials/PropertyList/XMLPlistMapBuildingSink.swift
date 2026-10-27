@@ -10,12 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - XMLPlistMapBuildingSink
 
@@ -23,7 +20,7 @@ internal import BasicContainers
 struct XMLPlistMapBuildingSink: ParseEventSink, ~Copyable {
     typealias Vocabulary = XMLPlistVocabulary
     typealias Fragment = Void
-    typealias Output = XMLPlistMap
+    typealias Output = XMLPlistMap<UniqueMapRecords>
 
     /// Bookkeeping for a container that's been opened but not yet finalized.
     private struct OpenContainer {
@@ -232,12 +229,13 @@ struct XMLPlistMapBuildingSink: ParseEventSink, ~Copyable {
 
     // MARK: Result
 
-    consuming func takeResult() throws -> XMLPlistMap {
+    consuming func takeResult() throws -> XMLPlistMap<UniqueMapRecords> {
         precondition(openContainers.count == 0, "XMLPlistMapBuildingSink.takeResult: \(openContainers.count) container(s) still open")
-        return XMLPlistMap(records: mapData)
+        return XMLPlistMap<UniqueMapRecords>(records: UniqueMapRecords(mapData))
     }
 
     func releaseFragment(_ fragment: consuming Void) {}
 }
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)
