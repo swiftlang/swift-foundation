@@ -88,6 +88,9 @@ final class _ProcessInfo: Sendable {
             // Embedded Swift's standard library has no CommandLine
             let argv = _NSGetArgv()!.pointee!
             var current = (0 ..< Int(_NSGetArgc()!.pointee)).map { String(cString: argv[$0]!) }
+            #elseif hasFeature(Embedded)
+            // Until we have CommandLine in embedded
+            var current: [String] = []
             #else
             var current = CommandLine.arguments
             #endif
