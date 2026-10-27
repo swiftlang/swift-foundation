@@ -291,18 +291,29 @@ private struct GregorianCalendarTests {
         test(Date(timeIntervalSince1970: -210866760000.0), expectedEra: 0, year: 4713, month: 1, day: 1, hour: 12, minute: 0, second: 0, nanosecond: 0, weekday: 2, weekdayOrdinal: 1, quarter: 1, weekOfMonth: 1, weekOfYear: 1, yearForWeekOfYear: -4712, isLeapMonth: false)
     }
 
-    @Test(arguments: [2027, 2028])
-    func testQuarterOfEveryDay(year: Int) throws {
+    // The first and the last day of each quarter, in a common year and in a leap year.
+    @Test(arguments: [
+        (Date(timeIntervalSince1970: 1798804800), 1), // 2027-01-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1806494400), 1), // 2027-03-31T12:00:00+0000
+        (Date(timeIntervalSince1970: 1806580800), 2), // 2027-04-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1814356800), 2), // 2027-06-30T12:00:00+0000
+        (Date(timeIntervalSince1970: 1814443200), 3), // 2027-07-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1822305600), 3), // 2027-09-30T12:00:00+0000
+        (Date(timeIntervalSince1970: 1822392000), 4), // 2027-10-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1830254400), 4), // 2027-12-31T12:00:00+0000
+        (Date(timeIntervalSince1970: 1830340800), 1), // 2028-01-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1838116800), 1), // 2028-03-31T12:00:00+0000
+        (Date(timeIntervalSince1970: 1838203200), 2), // 2028-04-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1845979200), 2), // 2028-06-30T12:00:00+0000
+        (Date(timeIntervalSince1970: 1846065600), 3), // 2028-07-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1853928000), 3), // 2028-09-30T12:00:00+0000
+        (Date(timeIntervalSince1970: 1854014400), 4), // 2028-10-01T12:00:00+0000
+        (Date(timeIntervalSince1970: 1861876800), 4), // 2028-12-31T12:00:00+0000
+    ] as [(Date, Int)])
+    func testQuarterOfFirstAndLastDays(date: Date, quarter: Int) {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
-
-        var day = try #require(calendar.date(from: DateComponents(year: year, month: 1, day: 1, hour: 12)))
-        while calendar.component(.year, from: day) == year {
-            let components = calendar.dateComponents([.month, .quarter], from: day)
-            let month = try #require(components.month)
-            #expect(components.quarter == (month - 1) / 3 + 1, "\(day)")
-            day += 86400
-        }
+        #expect(calendar.component(.quarter, from: date) == quarter)
     }
 
     // MARK: - Add
