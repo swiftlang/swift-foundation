@@ -10,12 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 
-
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
 
 // MARK: - JSONMapBuildingSink
 
@@ -23,7 +20,7 @@ internal import BasicContainers
 struct JSONMapBuildingSink: ParseEventSink, ~Copyable {
     typealias Vocabulary = JSONVocabulary
     typealias Fragment = Void
-    typealias Output = JSONMap
+    typealias Output = JSONMap<UniqueMapRecords>
 
     /// The flat record buffer, handed off to the produced `JSONMap` at `takeResult`.
     var mapData: UniqueArray<Int>
@@ -134,9 +131,9 @@ struct JSONMapBuildingSink: ParseEventSink, ~Copyable {
         // Child count against the parent is bumped in `acceptContainer`, which the driver calls after `finalize*` returns.
     }
 
-    consuming func takeResult() throws -> JSONMap {
+    consuming func takeResult() throws -> JSONMap<UniqueMapRecords> {
         precondition(openHeaderSlots.count == 0, "JSONMapBuildingSink.takeResult: \(openHeaderSlots.count) container(s) still open")
-        return JSONMap(records: mapData)
+        return JSONMap(records: UniqueMapRecords(mapData))
     }
 
     func releaseFragment(_ fragment: consuming Void) {
@@ -150,3 +147,4 @@ extension UniqueArray {
         self.append(copying: array.span)
     }
 }
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)

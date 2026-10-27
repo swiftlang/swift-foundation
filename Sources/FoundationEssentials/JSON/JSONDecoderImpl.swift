@@ -10,12 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 /// 2^53: the smallest magnitude at which a `Double` stops representing every integer exactly. Below it, a parsed JSON `Double` can be used directly for an integer decode.
 private var doubleExactIntegerLimit: Double { Double(sign: .plus, exponent: Double.significandBitCount + 1, significand: 1) }
@@ -37,12 +34,12 @@ internal class JSONDecoderImpl {
         private var ownedAllocation: UnsafeMutableRawBufferPointer?
 
         /// The parsed structural map (marker + offset buffer).
-        var map: JSONMap
+        var map: JSONMap<UniqueMapRecords>
 
         /// Options captured at decode start.
         let options: JSONDecoder._Options
 
-        init(userInfo: [CodingUserInfoKey: Any], bytes: UnsafeRawBufferPointer, map: consuming JSONMap, options: JSONDecoder._Options) {
+        init(userInfo: [CodingUserInfoKey: Any], bytes: UnsafeRawBufferPointer, map: consuming JSONMap<UniqueMapRecords>, options: JSONDecoder._Options) {
             self.userInfo = userInfo
             self.bytes = bytes
             self.ownedAllocation = nil
@@ -1057,5 +1054,6 @@ extension JSONDecoderImpl {
     }
 }
 
+#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

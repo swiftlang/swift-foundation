@@ -12,6 +12,7 @@
 
 #if !hasFeature(Embedded)
 
+#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - XMLPlistScannerEventSource
 
@@ -420,5 +421,6 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
 
     private var xmlCDATAOpeningMarker: StaticString { "<![CDATA[" }
 }
+#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)
