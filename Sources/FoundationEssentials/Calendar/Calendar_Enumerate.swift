@@ -2137,7 +2137,7 @@ extension Calendar {
             var advancedPastWholeMonth = false
             var lastFoundDuration: TimeInterval = 0.0
 
-            repeat {
+            while true {
                 guard let foundRange = dateInterval(of: .day, for: result) else {
                     throw CalendarEnumerationError.dateOutOfRange(.day, result)
                 }
@@ -2182,12 +2182,15 @@ extension Calendar {
 
                 result = tempSearchDate
 
+                if dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay) {
+                    break
+                }
+
                 if abs(dateMonth - originalMonth) >= 2 {
                     advancedPastWholeMonth = true
                     break
                 }
-                
-            } while !dayMatches(day: day, dateDay: dateDay, repeatedDay: repeatedDay, dateRepeatedDay: dateIsRepeatedDay)
+            }
 
             // If we blew past a month in its entirety, roll back by a day to the very end of the month.
             if (advancedPastWholeMonth) {
