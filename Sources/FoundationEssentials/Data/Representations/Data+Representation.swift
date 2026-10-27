@@ -90,7 +90,7 @@ extension Data {
             }
             let storage = __DataStorage(capacity: capacity)
             var appendedCount = 0
-            try storage.withUninitializedBytes(extraCapacity: capacity, location: 0, &appendedCount, initializer)
+            try storage.withTrailingUninitializedBytes(extraCapacity: capacity, location: 0, &appendedCount, initializer)
             self.init(storage, count: appendedCount)
         }
 
@@ -154,7 +154,7 @@ extension Data {
                     _slice = _slice.lowerBound..<newUpperBound
                 }
             }
-            try _storage.withUninitializedBytes(extraCapacity: newBytesCount, location: endIndex, &appendedCount, initializer)
+            try _storage.withTrailingUninitializedBytes(extraCapacity: newBytesCount, location: endIndex, &appendedCount, initializer)
         }
         
         @export(implementation) @inline(__always)
