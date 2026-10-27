@@ -40,6 +40,90 @@ struct RawByteSpanComparator: ~Escapable {
 
 extension Locale {
 
+    // TODO: Generate this table from the locale data instead of maintaining it by hand.
+    /// Returns the legacy name of a lowercase "u" extension key. For example, this function returns "calendar" for "ca".
+    static func legacyKey(forLowercased key: Span<UInt8>) -> String? {
+        switch RawByteSpanComparator(key) {
+        case "ca": return "calendar"
+        case "ka": return "colalternate"
+        case "kb": return "colbackwards"
+        case "kf": return "colcasefirst"
+        case "kc": return "colcaselevel"
+        case "kh": return "colhiraganaquaternary"
+        case "co": return "collation"
+        case "kk": return "colnormalization"
+        case "kn": return "colnumeric"
+        case "kr": return "colreorder"
+        case "ks": return "colstrength"
+        case "cu": return "currency"
+        case "hc": return "hours"
+        case "ms": return "measure"
+        case "nu": return "numbers"
+        case "tz": return "timezone"
+        case "vt": return "variabletop"
+        default: return nil
+        }
+    }
+
+    // TODO: Generate this table from the locale data instead of maintaining it by hand.
+    // FIXME: Add time zone types ("usnyc" for "America/New_York") and the other legacy type names.
+    /// Returns the legacy name of a lowercase "u" extension type, for the legacy name of its key. For example, this function returns "gregorian" for "gregory" with "calendar".
+    static func legacyValue(forLowercased type: Span<UInt8>, key: Span<UInt8>) -> String? {
+        switch RawByteSpanComparator(key) {
+        case "calendar":
+            switch RawByteSpanComparator(type) {
+            case "ethioaa": return "ethiopic-amete-alem"
+            case "gregory": return "gregorian"
+            default: return nil
+            }
+        case "colalternate":
+            switch RawByteSpanComparator(type) {
+            case "noignore": return "non-ignorable"
+            default: return nil
+            }
+        case "colbackwards", "colcaselevel", "colhiraganaquaternary", "colnormalization", "colnumeric":
+            switch RawByteSpanComparator(type) {
+            case "true": return "yes"
+            case "false": return "no"
+            default: return nil
+            }
+        case "colcasefirst":
+            switch RawByteSpanComparator(type) {
+            case "false": return "no"
+            default: return nil
+            }
+        case "collation":
+            switch RawByteSpanComparator(type) {
+            case "dict": return "dictionary"
+            case "gb2312": return "gb2312han"
+            case "phonebk": return "phonebook"
+            case "trad": return "traditional"
+            default: return nil
+            }
+        case "colstrength":
+            switch RawByteSpanComparator(type) {
+            case "identic": return "identical"
+            case "level1": return "primary"
+            case "level2": return "secondary"
+            case "level3": return "tertiary"
+            case "level4": return "quaternary"
+            default: return nil
+            }
+        case "measure":
+            switch RawByteSpanComparator(type) {
+            case "uksystem": return "imperial"
+            default: return nil
+            }
+        case "numbers":
+            switch RawByteSpanComparator(type) {
+            case "traditio": return "traditional"
+            default: return nil
+            }
+        default:
+            return nil
+        }
+    }
+
     // Map obsolete/old-style Apple strings to canonical strings
     // Case sensitive
     static func oldAppleLocaleToCanonical(_ key: Span<UInt8>) -> String? {

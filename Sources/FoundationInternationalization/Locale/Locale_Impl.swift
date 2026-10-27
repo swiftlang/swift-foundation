@@ -20,36 +20,48 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     /// The ICU form of the identifier, for example `en_US@calendar=chinese`, and the ranges of its parts.
     let _canonical: Locale.CanonicalizedIdentifier
     let _prefs: LocalePreferences?
-    /// The variant of the components that created this locale. The identifier has it as the "va" keyword, not as a variant.
-    let _componentsVariant: Locale.Variant?
 
     // FIXME: Temporary stub to forward unimplemented functions to _LocaleICU. Remove it when it's no longer used.
     let _icu: _LocaleICU
-    
-    required init(identifier: String, prefs: LocalePreferences? = nil) {
-        _icu = _LocaleICU(identifier: identifier, prefs: prefs)
-        // For historical reasons, store the canonical identifier, not the raw identifier. `_icu` has already canonicalized it.
-        _identifier = _icu.identifier
+
+    // The strings that the locale returns, built once when the locale is created.
+    let _languageCode: String?
+    let _scriptCode: String?
+    /// The variant of the components that created this locale if there is one, else the variant of the identifier.
+    /// The identifier of a locale from components has the variant as the "va" keyword, not as a variant.
+    let _variant: Locale.Variant?
+    /// The region of the "rg" keyword if there is one, else the region of the identifier.
+    let _region: Locale.Region?
+    let _icuIdentifier: String
+
+    private init(identifier: String, canonical: Locale.CanonicalizedIdentifier, icu: _LocaleICU, prefs: LocalePreferences?, componentsVariant: Locale.Variant?) {
+        _icu = icu
+        _identifier = identifier
+        _canonical = canonical
         _prefs = prefs
-        _componentsVariant = nil
-        _canonical = Locale.CanonicalizedIdentifier(canonicalizing: identifier)
+        _languageCode = canonical.languageCode
+        _scriptCode = canonical.scriptCode
+        _variant = componentsVariant ?? canonical.variantCode.map { Locale.Variant($0) }
+        _region = canonical.regionOverride.map { Locale.Region($0) }
+        _icuIdentifier = canonical.icuIdentifier
     }
-    
-    required init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
+
+    required convenience init(identifier: String, prefs: LocalePreferences? = nil) {
+        // For historical reasons, `Locale.identifier` is the canonical identifier, not the identifier as written.
+        // For a BCP 47 language tag with an extension, it keeps the tag form, and `_canonical` has the ICU form.
+        let canonical = Locale.CanonicalizedIdentifier(canonicalizing: identifier)
+        let languageTag = Locale.CanonicalizedIdentifier(languageTag: identifier)
+        self.init(identifier: canonical.identifier, canonical: languageTag ?? canonical, icu: _LocaleICU(identifier: identifier, prefs: prefs), prefs: prefs, componentsVariant: nil)
+    }
+
+    required convenience init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
         // FIXME: Implement bundle matching here with user preferences
-        _icu = _LocaleICU(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-        _identifier = _icu.identifier
-        _prefs = prefs
-        _componentsVariant = nil
-        _canonical = Locale.CanonicalizedIdentifier(canonicalizing: _icu.identifier)
+        let icu = _LocaleICU(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
+        self.init(identifier: icu.identifier, canonical: Locale.CanonicalizedIdentifier(identifier: icu.identifier), icu: icu, prefs: prefs, componentsVariant: nil)
     }
-    
-    required init(components: Locale.Components) {
-        _icu = _LocaleICU(components: components)
-        _identifier = _icu.identifier
-        _canonical = Locale.CanonicalizedIdentifier(components: components)
-        _prefs = nil
-        _componentsVariant = components.variant
+
+    required convenience init(components: Locale.Components) {
+        self.init(identifier: components.icuIdentifier, canonical: Locale.CanonicalizedIdentifier(components: components), icu: _LocaleICU(components: components), prefs: nil, componentsVariant: components.variant)
     }
 
     func copy(newCalendarIdentifier identifier: Calendar.Identifier) -> any _LocaleProtocol {
@@ -105,15 +117,15 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     }
     
     var languageCode: String? {
-        _canonical.languageCode
+        _languageCode
     }
     
     var scriptCode: String? {
-        _canonical.scriptCode
+        _scriptCode
     }
     
     var variantCode: String? {
-        _componentsVariant?.identifier ?? _canonical.variantCode
+        _variant?.identifier
     }
     
 #if FOUNDATION_FRAMEWORK
@@ -238,7 +250,7 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     func identifier(_ type: Locale.IdentifierType) -> String {
         switch type {
         case .icu:
-            _canonical.icuIdentifier
+            _icuIdentifier
         case .bcp47, .cldr:
             _icu.identifier(type)
         }
@@ -253,7 +265,7 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     }
     
     var region: Locale.Region? {
-        _canonical.regionOverride.map { Locale.Region($0) }
+        _region
     }
 
     var timeZone: TimeZone? {
@@ -265,7 +277,7 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     }
     
     var variant: Locale.Variant? {
-        _componentsVariant ?? _canonical.variantCode.map { .init($0) }
+        _variant
     }
     
     var temperatureUnit: LocalePreferences.TemperatureUnit {

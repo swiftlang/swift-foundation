@@ -34,11 +34,24 @@ extension Locale {
         let componentRanges: ComponentRanges
         /// The byte ranges of the keys and values in `identifier`.
         let keywordRanges: KeywordRanges
+        /// The range of the region in `identifier`. It is the region code of the "rg" keyword if there is one.
+        let regionOverrideRange: Range<Int>?
 
         init(identifier: String, componentRanges: ComponentRanges, keywordRanges: KeywordRanges) {
             self.identifier = identifier
             self.componentRanges = componentRanges
             self.keywordRanges = keywordRanges
+
+            // The "rg" value is a region code and a subdivision code, for example "gbzzzz". Use only the region code.
+            // Ignore an "rg" value of 2 or fewer characters.
+            var regionOverrideRange = componentRanges.region
+            for (keyRange, valueRange) in keywordRanges where valueRange.count > 2 {
+                if case "rg" = RawByteSpanComparator(identifier.utf8Span.span.extracting(keyRange)) {
+                    regionOverrideRange = valueRange.lowerBound..<(valueRange.lowerBound + 2)
+                    break
+                }
+            }
+            self.regionOverrideRange = regionOverrideRange
         }
 
         /// Creates a canonical identifier from `baseIdentifier`, a canonical identifier without key-value strings, followed by the key-value pairs in `keywords`.
@@ -78,6 +91,12 @@ extension Locale {
 
             let keywords = KeywordList(components: components)
             self.init(baseIdentifier: base.span, componentRanges: componentRanges, keywords: keywords)
+        }
+
+        /// Creates the canonical form of `identifier`, an ICU identifier or a BCP 47 language tag, with the byte ranges of its parts.
+        /// A language tag with an extension or a private use has the ICU form. For example, `en-US-u-ca-chinese` becomes `en_US@calendar=chinese`.
+        init(identifier: String) {
+            self = Self(languageTag: identifier) ?? Self(canonicalizing: identifier)
         }
 
         /// Creates the canonical form of `string`, with the byte ranges of its parts. The identifier is "" if `string` is empty, too long, or not ASCII.
@@ -145,6 +164,129 @@ extension Locale {
             }
         }
 
+        /// Creates the canonical form of a BCP 47 language tag (which may have an extension or private use).
+        /// For example, `en-US-u-ca-chinese` becomes `en_US@calendar=chinese`.
+        /// Returns `nil` if there is nothing to convert or if it does not follow BCP 47 form.
+        // TODO: Replace a legacy or redundant tag with its preferred tag.
+        init?(languageTag string: String) {
+            let source = string.utf8Span.span
+            guard source.count < Self._maxIdentifierLength else {
+                return nil
+            }
+
+            // Read the tag only if a subtag before a separator has 1 character: the singleton of an extension or the private use.
+            // `init(canonicalizing:)` reads the other identifiers.
+            var hasOneCharacterSubtag = false
+            var subtagLength = 0
+            for i in 0..<source.count {
+                if source[i] == ._at || source[i] >= 0x80 {
+                    return nil
+                }
+                if source[i] == ._minus || source[i] == ._underscore {
+                    if subtagLength == 1 {
+                        hasOneCharacterSubtag = true
+                    }
+                    subtagLength = 0
+                } else {
+                    subtagLength += 1
+                }
+            }
+            guard hasOneCharacterSubtag else {
+                return nil
+            }
+            
+            var lowercased = Bytes(capacity: source.count) // the language tag as bytes in lowercase using "-" as the separator
+            for i in 0..<source.count {
+                let isSeparator = source[i] == ._minus || source[i] == ._underscore
+                lowercased.append(isSeparator ? ._minus : source[i]._lowercased)
+            }
+
+            // Parse the subtags of the base in order: language, extended language, script, region and variants.
+            // Stop at the first subtag that is not one of these, such as the singleton of an extension.
+            //
+            // For "zh-cmn-hant-tw-u-ca-chinese":
+            var languageRange: Range<Int>?         // "zh"
+            var extendedLanguageRange: Range<Int>? // "cmn"
+            var nonLanguageStart: Int?             // "h" for "hant", the start of the script, region and variants
+            var hasVariant = false
+            var baseEnd = 0                        // "w" for "tw"
+
+            var nextPart = Part.language
+            var subtagStart = 0
+            while subtagStart <= lowercased.count {
+                let (end, letterCount, digitCount) = Self.scanSegment(lowercased.span, fromIndex: subtagStart)
+                let length = end - subtagStart
+                let startsWithDigit = length > 0 && lowercased.span[subtagStart].isDigit
+
+                if nextPart == .language {
+                    // A language has 2 to 8 letters. Only a language of 2 or 3 letters can have extended languages.
+                    guard length >= 2, length <= 8, letterCount == length else { break }
+                    languageRange = subtagStart..<end
+                    nextPart = length <= 3 ? .extendedLanguage : .script
+                } else if nextPart == .extendedLanguage, length == 3, letterCount == 3 {
+                    // An extended language has 3 letters, and replaces the language. For example, "zh-cmn" becomes "cmn".
+                    extendedLanguageRange = subtagStart..<end
+                    nextPart = .script
+                } else if nextPart <= .script, length == 4, letterCount == 4 {
+                    // A script has 4 letters
+                    nextPart = .region
+                } else if nextPart <= .region, (length == 2 && letterCount == 2) || (length == 3 && digitCount == 3) {
+                    // A region has 2 letters or 3 digits.
+                    nextPart = .variant
+                } else if letterCount + digitCount == length, (length >= 5 && length <= 8) || (length == 4 && startsWithDigit) {
+                    // A variant has 5 to 8 letters and digits, or 4 that start with a digit.
+                    hasVariant = true
+                    nextPart = .variant
+                } else {
+                    break
+                }
+                if nextPart >= .region, nonLanguageStart == nil {
+                    nonLanguageStart = subtagStart
+                }
+                baseEnd = end
+                subtagStart = end + 1
+            }
+
+            let startsWithPrivateUse = Self.isSingleton(lowercased.span, at: 0) && lowercased.span[0] == Self.privateUseSingleton
+            guard languageRange != nil || startsWithPrivateUse else {
+                // A valid tag either starts with a language ("en-US-u-ca-chinese") or "x" ("x-foo")
+                return nil
+            }
+
+            // Now handle everything after the base identifier as keywords
+            var keywords = KeywordList(languageTagExtensions: lowercased.span.extracting(subtagStart...))
+
+            // Build the base identifier from the language or the last extended language, followed by the other parts.
+            var result = Bytes(capacity: source.count)
+            var hasLanguage = false
+            if let languageRange = extendedLanguageRange ?? languageRange {
+                let isUndetermined = lowercased.span.extracting(languageRange).elementsEqual("und".utf8Span.span)
+                if !isUndetermined || (nonLanguageStart == nil && keywords.hasExtension) {
+                    // For "und" language code, only include it if the whole base identifier is empty AND there are extensions.
+                    // For example, "und-US" -> "_US", but "und-u-ca-gregory" -> "und@calendar=gregorian"
+                    result.append(copying: lowercased.span.extracting(languageRange).bytes)
+                    hasLanguage = true
+                }
+            }
+
+            if let nonLanguageStart {
+                result.append(hasLanguage ? ._minus : ._underscore)
+                result.append(copying: lowercased.span.extracting(nonLanguageStart..<baseEnd).bytes)
+            }
+
+            // Convert "va-posix" to the variant "POSIX" if there is no other variant
+            if !hasVariant, keywords.removePairs(key: "va".utf8Span.span, value: "posix".utf8Span.span) {
+                result.append(copying: "_POSIX".utf8Span.span.bytes)
+            }
+
+            // If the result is empty, there is nothing to convert, so return `nil`.
+            if result.isEmpty && keywords.ranges.isEmpty {
+                return nil
+            }
+
+            self.init(baseIdentifier: result.span, keywords: keywords)
+        }
+
         /// The language code, for example "en".
         var languageCode: String? {
             componentRanges.language.map { Self.string(from: identifier.utf8Span.span.extracting($0)) }
@@ -163,14 +305,6 @@ extension Locale {
         /// The variant code in uppercase, with "_" between its subtags, for example "POSIX".
         var variantCode: String? {
             componentRanges.variant.map { Self.string(from: identifier.utf8Span.span.extracting($0), uppercased: true, hyphenToUnderscore: true) }
-        }
-
-        /// The range of the region in `identifier`. Uses the region code of the "rg" keyword if there is one.
-        var regionOverrideRange: Range<Int>? {
-            // Ignore an "rg" value of 2 or fewer characters.
-            guard let range = keywordValueRange("rg"), range.count > 2 else { return componentRanges.region }
-            // The "rg" value is a region code and a subdivision code. Use only the region code.
-            return range.lowerBound..<(range.lowerBound + 2)
         }
 
         /// The region code in uppercase. Uses the region code of the "rg" keyword if there is one.
@@ -541,6 +675,12 @@ extension Locale {
 
         // MARK: - BCP 47 language tags
 
+        /// Returns whether the subtag at `index` in `tag` is a singleton
+        /// For example, "u" in "u-ca-chinese" and "x" in "x-foo"
+        static func isSingleton(_ tag: Span<UInt8>, at index: Int) -> Bool {
+            tag[index].isAlphanumeric && (index + 1 == tag.count || tag[index + 1] == ._minus)
+        }
+
         /// Returns `endIndex`, the index of the next "-" or "_" from `start`, or the end of `s`, and the number of letters and digits from `start` to `endIndex`.
         static func scanSegment(_ s: Span<UInt8>, fromIndex start: Int) -> (endIndex: Int, letterCount: Int, digitCount: Int) {
             var end = start
@@ -562,6 +702,8 @@ extension Locale {
             case language, extendedLanguage, script, region, variant
             static func < (lhs: Part, rhs: Part) -> Bool { lhs.rawValue < rhs.rawValue }
         }
+
+        static let privateUseSingleton = UInt8(ascii: "x")
 
         /// A 2-byte ASCII tag (language/region code, or old-style special-case code like `"sh"`).
         struct TwoLetterSubtag: ExpressibleByStringLiteral, Equatable {
