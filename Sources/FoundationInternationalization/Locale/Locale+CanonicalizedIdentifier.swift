@@ -377,7 +377,7 @@ extension Locale {
                 }
                 // Copy the "@key=value;..." section, which starts with the "@" before the first key.
                 if let first = keywordRanges.first, let last = keywordRanges.last {
-                    output.append(copying: identifier.extracting((first.key.lowerBound - 1)..<last.value.upperBound))
+                    output._append(copying: identifier.extracting((first.key.lowerBound - 1)..<last.value.upperBound))
                 }
             }
         }
