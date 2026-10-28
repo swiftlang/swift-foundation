@@ -243,6 +243,17 @@ private struct GregorianCalendarTests {
         #expect(calendar.nextDate(after: start, matching: DateComponents(weekOfMonth: 0), matchingPolicy: .strict, direction: direction) == expected)
     }
 
+    // Week 1 of these months starts after a week 0, so it doesn't start on the 1st.
+    @Test(arguments: [
+        (Date(timeIntervalSince1970: 1779580800), Date(timeIntervalSince1970: 1777852800)), // 2026-05-24T00:00:00Z, 2026-05-04T00:00:00Z
+        (Date(timeIntervalSince1970: 1733875200), Date(timeIntervalSince1970: 1733097600)), // 2024-12-11T00:00:00Z, 2024-12-02T00:00:00Z
+    ])
+    func testNextDateBackwardMatchingWeekOfMonthOne(start: Date, expected: Date) {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .gmt
+        #expect(calendar.nextDate(after: start, matching: DateComponents(weekOfMonth: 1), matchingPolicy: .strict, direction: .backward) == expected)
+    }
+
     @Test func testDateFromComponentsWeekOfMonth() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {
