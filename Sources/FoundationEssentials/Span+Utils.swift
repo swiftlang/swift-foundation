@@ -66,14 +66,6 @@ extension Span where Element: Equatable & ~Copyable {
     func lastIndex(of element: borrowing Element) -> Int? {
         lastIndex { $0 == element }
     }
-
-    /// Returns whether this span comes before `other` in byte order.
-    package func lexicographicallyPrecedes(_ other: Span<Element>) -> Bool {
-        for i in 0..<Swift.min(count, other.count) where self[i] != other[i] {
-            return self[i] < other[i]
-        }
-        return count < other.count
-    }
     
     package func elementsEqual(_ other: Span<Element>) -> Bool {
         guard count == other.count else {
@@ -151,6 +143,14 @@ extension Span where Element == UInt8 {
     @inline(__always)
     func equals(_ other: StaticString) -> Bool {
         count == other.utf8CodeUnitCount && starts(with: other)
+    }
+
+    /// Returns whether this span comes before `other` in byte order.
+    package func lexicographicallyPrecedes(_ other: Span<Element>) -> Bool {
+        for i in 0..<Swift.min(count, other.count) where self[i] != other[i] {
+            return self[i] < other[i]
+        }
+        return count < other.count
     }
 }
 
