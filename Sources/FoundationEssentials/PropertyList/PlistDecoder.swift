@@ -150,9 +150,8 @@ open class PropertyListDecoder {
     
     private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
         return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
-#if FOUNDATION_FRAMEWORK || !os(macOS)
             // Enabled by feature flag; falls back to `BPlistLegacyDecodingFormat` when off.
-            if #available(anyAppleOS 26.0, *), foundation_swift_bplist_deserialization_enabled() {
+            if foundation_swift_bplist_deserialization_enabled() {
                 var decoder: _PlistDecoder<BPlistDecodingFormat>
                 do {
                     let parsedMetadata = try BPlistMetadata.parse(from: data.bytes)
@@ -170,7 +169,6 @@ open class PropertyListDecoder {
                 format = .binary
                 return result
             }
-#endif
             var decoder: _PlistDecoder<BPlistLegacyDecodingFormat>
             do {
                 let map = try BPlistScanner.scanBinaryPropertyList(from: utf8Buffer)
@@ -186,9 +184,8 @@ open class PropertyListDecoder {
             format = .binary
             return result
         }, xml: { utf8Buffer in
-#if FOUNDATION_FRAMEWORK || !os(macOS)
             // Enabled by feature flag; falls back to `XMLPlistLegacyDecodingFormat` when off.
-            if #available(anyAppleOS 26.0, *), foundation_swift_xml_plist_deserialization_enabled() {
+            if foundation_swift_xml_plist_deserialization_enabled() {
                 let result = try utf8Buffer.withUnsafeRawPointer { ptr, count in
                     let sourceSpan = unsafe Span<UInt8>(_unsafeStart: ptr.assumingMemoryBound(to: UInt8.self), count: count)
                     let source = XMLPlistScannerEventSource(sourceBytes: sourceSpan)
@@ -218,7 +215,6 @@ open class PropertyListDecoder {
                 format = .xml
                 return result
             }
-#endif
             var decoder: _PlistDecoder<XMLPlistLegacyDecodingFormat>
             do {
                 var scanInfo = XMLPlistScanner(buffer: utf8Buffer)
