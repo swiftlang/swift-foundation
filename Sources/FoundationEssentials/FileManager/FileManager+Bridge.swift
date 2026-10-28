@@ -19,119 +19,124 @@ internal import Foundation_Private.NSFileManager
 @objc(_NSFileManagerBridge)
 @objcMembers
 final class _NSFileManagerBridge : NSObject {
-    private let _impl: _FileManagerImpl
+    private weak var _manager: FileManager?
+    
+    private var fileManager: FileManager {
+        guard let _manager else {
+            fatalError("_NSFileManagerBridge called without a valid reference to a FileManager")
+        }
+        return _manager
+    }
     
     @objc(initWithFileManager:)
     init(implementing manager: FileManager) {
-        var impl = _FileManagerImpl()
-        impl._manager = manager
-        self._impl = impl
+        self._manager = manager
         super.init()
     }
     
     func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
-        _impl.urls(for: directory, in: domainMask)
+        _FileManagerImpl.urls(fileManager, for: directory, in: domainMask)
     }
 
     func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
-        try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
+        try _FileManagerImpl.url(fileManager, for: directory, in: domain, appropriateFor: url, create: shouldCreate)
     }
     
     func getRelationship(_ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>, ofDirectoryAt directoryURL: URL, toItemAt otherURL: URL) throws {
-        try _impl.getRelationship(outRelationship, ofDirectoryAt: directoryURL, toItemAt: otherURL)
+        try _FileManagerImpl.getRelationship(fileManager, outRelationship, ofDirectoryAt: directoryURL, toItemAt: otherURL)
     }
 
     func getRelationship(_ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>, of directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask, toItemAt url: URL) throws {
-        try _impl.getRelationship(outRelationship, of: directory, in: domainMask, toItemAt: url)
+        try _FileManagerImpl.getRelationship(fileManager, outRelationship, of: directory, in: domainMask, toItemAt: url)
     }
 
     func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
-        try _impl.createDirectory(at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
+        try _FileManagerImpl.createDirectory(fileManager, at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
     func createSymbolicLink(at url: URL, withDestinationURL destURL: URL) throws {
-        try _impl.createSymbolicLink(at: url, withDestinationURL: destURL)
+        try _FileManagerImpl.createSymbolicLink(fileManager, at: url, withDestinationURL: destURL)
     }
 
     func setAttributes(_ attributes: [FileAttributeKey : Any], ofItemAtPath path: String) throws {
-        try _impl.setAttributes(attributes, ofItemAtPath: path)
+        try _FileManagerImpl.setAttributes(fileManager, attributes, ofItemAtPath: path)
     }
 
     func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
-        try _impl.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
+        try _FileManagerImpl.createDirectory(fileManager, atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
     func contentsOfDirectory(atPath path: String) throws -> [String] {
-        try _impl.contentsOfDirectory(atPath: path)
+        try _FileManagerImpl.contentsOfDirectory(fileManager, atPath: path)
     }
 
     func subpathsOfDirectory(atPath path: String) throws -> [String] {
-        try _impl.subpathsOfDirectory(atPath: path)
+        try _FileManagerImpl.subpathsOfDirectory(fileManager, atPath: path)
     }
 
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
-        try _impl.attributesOfItem(atPath: path)
+        try _FileManagerImpl.attributesOfItem(fileManager, atPath: path)
     }
 
     func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
-        try _impl.attributesOfFileSystem(forPath: path)
+        try _FileManagerImpl.attributesOfFileSystem(fileManager, forPath: path)
     }
 
     func createSymbolicLink(atPath path: String, withDestinationPath destPath: String) throws {
-        try _impl.createSymbolicLink(atPath: path, withDestinationPath: destPath)
+        try _FileManagerImpl.createSymbolicLink(fileManager, atPath: path, withDestinationPath: destPath)
     }
 
     func destinationOfSymbolicLink(atPath path: String) throws -> String {
-        try _impl.destinationOfSymbolicLink(atPath: path)
+        try _FileManagerImpl.destinationOfSymbolicLink(fileManager, atPath: path)
     }
 
     func copyItem(atPath srcPath: String, toPath dstPath: String, options: NSFileManagerCopyOptions) throws {
-        try _impl.copyItem(atPath: srcPath, toPath: dstPath, options: options)
+        try _FileManagerImpl.copyItem(fileManager, atPath: srcPath, toPath: dstPath, options: options)
     }
 
     func moveItem(atPath srcPath: String, toPath dstPath: String, options: NSFileManagerMoveOptions) throws {
-        try _impl.moveItem(atPath: srcPath, toPath: dstPath, options: options)
+        try _FileManagerImpl.moveItem(fileManager, atPath: srcPath, toPath: dstPath, options: options)
     }
 
     func linkItem(atPath srcPath: String, toPath dstPath: String) throws {
-        try _impl.linkItem(atPath: srcPath, toPath: dstPath)
+        try _FileManagerImpl.linkItem(fileManager, atPath: srcPath, toPath: dstPath)
     }
 
     func removeItem(atPath path: String) throws {
-        try _impl.removeItem(atPath: path)
+        try _FileManagerImpl.removeItem(fileManager, atPath: path)
     }
 
     func copyItem(at srcURL: URL, to dstURL: URL, options: NSFileManagerCopyOptions) throws {
-        try _impl.copyItem(at: srcURL, to: dstURL, options: options)
+        try _FileManagerImpl.copyItem(fileManager, at: srcURL, to: dstURL, options: options)
     }
 
     func moveItem(at srcURL: URL, to dstURL: URL, options: NSFileManagerMoveOptions) throws {
-        try _impl.moveItem(at: srcURL, to: dstURL, options: options)
+        try _FileManagerImpl.moveItem(fileManager, at: srcURL, to: dstURL, options: options)
     }
 
     func linkItem(at srcURL: URL, to dstURL: URL) throws {
-        try _impl.linkItem(at: srcURL, to: dstURL)
+        try _FileManagerImpl.linkItem(fileManager, at: srcURL, to: dstURL)
     }
 
     func removeItem(at URL: URL) throws {
-        try _impl.removeItem(at: URL)
+        try _FileManagerImpl.removeItem(fileManager, at: URL)
     }
 
     var currentDirectoryPath: String? {
-        _impl.currentDirectoryPath
+        _FileManagerImpl.currentDirectoryPath(fileManager)
     }
 
     func changeCurrentDirectoryPath(_ path: String) -> Bool {
-        _impl.changeCurrentDirectoryPath(path)
+        _FileManagerImpl.changeCurrentDirectoryPath(fileManager, path)
     }
 
     func fileExists(atPath path: String) -> Bool {
-        _impl.fileExists(atPath: path)
+        _FileManagerImpl.fileExists(fileManager, atPath: path)
     }
 
     func fileExists(atPath path: String, isDirectory: UnsafeMutablePointer<ObjCBool>?) -> Bool {
         var dir = false
-        guard _impl.fileExists(atPath: path, isDirectory: &dir) else {
+        guard _FileManagerImpl.fileExists(fileManager, atPath: path, isDirectory: &dir) else {
             return false
         }
         if let isDirectory {
@@ -141,39 +146,39 @@ final class _NSFileManagerBridge : NSObject {
     }
 
     func isReadableFile(atPath path: String) -> Bool {
-        _impl.isReadableFile(atPath: path)
+        _FileManagerImpl.isReadableFile(fileManager, atPath: path)
     }
 
     func isWritableFile(atPath path: String) -> Bool {
-        _impl.isWritableFile(atPath: path)
+        _FileManagerImpl.isWritableFile(fileManager, atPath: path)
     }
 
     func isExecutableFile(atPath path: String) -> Bool {
-        _impl.isExecutableFile(atPath: path)
+        _FileManagerImpl.isExecutableFile(fileManager, atPath: path)
     }
 
     func isDeletableFile(atPath path: String) -> Bool {
-        _impl.isDeletableFile(atPath: path)
+        _FileManagerImpl.isDeletableFile(fileManager, atPath: path)
     }
 
     func contentsEqual(atPath path1: String, andPath path2: String) -> Bool {
-        _impl.contentsEqual(atPath: path1, andPath: path2)
+        _FileManagerImpl.contentsEqual(fileManager, atPath: path1, andPath: path2)
     }
 
     func displayName(atPath path: String) -> String {
-        _impl.displayName(atPath: path)
+        _FileManagerImpl.displayName(fileManager, atPath: path)
     }
     
     func contents(atPath path: String) -> Data? {
-        _impl.contents(atPath: path)
+        _FileManagerImpl.contents(fileManager, atPath: path)
     }
 
     func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey : Any]? = nil) -> Bool {
-        _impl.createFile(atPath: path, contents: data, attributes: attr)
+        _FileManagerImpl.createFile(fileManager, atPath: path, contents: data, attributes: attr)
     }
 
     func string(withFileSystemRepresentation str: UnsafePointer<CChar>, length len: Int) -> String {
-        _impl.string(withFileSystemRepresentation: str, length: len)
+        _FileManagerImpl.string(fileManager, withFileSystemRepresentation: str, length: len)
     }
     
     func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
@@ -181,15 +186,15 @@ final class _NSFileManagerBridge : NSObject {
     }
 
     var homeDirectoryForCurrentUser: URL {
-        _impl.homeDirectoryForCurrentUser
+        _FileManagerImpl.homeDirectoryForCurrentUser(fileManager)
     }
 
     var temporaryDirectory: URL {
-        _impl.temporaryDirectory
+        _FileManagerImpl.temporaryDirectory(fileManager)
     }
     
     func homeDirectory(forUser userName: String?) -> URL? {
-        _impl.homeDirectory(forUser: userName)
+        _FileManagerImpl.homeDirectory(fileManager, forUser: userName)
     }
 }
 

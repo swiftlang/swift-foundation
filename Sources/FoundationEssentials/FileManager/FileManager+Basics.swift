@@ -50,19 +50,8 @@ extension LARGE_INTEGER /* : @retroactive Equatable */ {
 #endif
 
 internal struct _FileManagerImpl {
-    weak var _manager: FileManager?
-    
-    var fileManager: FileManager {
-        guard let _manager else {
-            fatalError("_FileManagerImpl called without a valid reference to a FileManager")
-        }
-        return _manager
-    }
-    
-    init() {}
-    
     #if FOUNDATION_FRAMEWORK
-    func displayName(atPath path: String) -> String {
+    static func displayName(_ fileManager: FileManager, atPath path: String) -> String {
         // We lie to filePath:directoryHint: to avoid the extra stat. Since this URL isn't used as a base URL for another URL, it shouldn't make any difference.
         let url = URL(filePath: path, directoryHint: .notDirectory)
         
@@ -74,11 +63,12 @@ internal struct _FileManagerImpl {
     }
     #endif
     
-    func contents(atPath path: String) -> Data? {
+    static func contents(_ fileManager: FileManager, atPath path: String) -> Data? {
         try? Data(contentsOfFile: path)
     }
     
-    func contentsEqual(
+    static func contentsEqual(
+        _ fileManager: FileManager,
         atPath path: String,
         andPath other: String
     ) -> Bool {
@@ -164,7 +154,7 @@ internal struct _FileManagerImpl {
 
                         let lhs: String = String(decodingCString: pszLHS!, as: UTF16.self)
                         let rhs: String = String(decodingCString: pszRHS!, as: UTF16.self)
-                        guard contentsEqual(atPath: lhs, andPath: rhs) else { return false }
+                        guard Self.contentsEqual(fileManager, atPath: lhs, andPath: rhs) else { return false }
                     }
 
                     return true
@@ -296,7 +286,7 @@ internal struct _FileManagerImpl {
                 let myItemPath = "\(path)/\(item)"
                 let otherItemPath = "\(other)/\(item)"
                 // Ok to call to self here because it's the same function
-                if !self.contentsEqual(atPath: myItemPath, andPath: otherItemPath) {
+                if !Self.contentsEqual(fileManager, atPath: myItemPath, andPath: otherItemPath) {
                     return false
                 }
             }
@@ -307,7 +297,7 @@ internal struct _FileManagerImpl {
 #endif
     }
     
-    func fileSystemRepresentation(withPath path: String) -> UnsafePointer<CChar>? {
+    static func fileSystemRepresentation(_ fileManager: FileManager, withPath path: String) -> UnsafePointer<CChar>? {
         path.withFileSystemRepresentation { ptr -> UnsafePointer<CChar>? in
             guard let ptr else {
                 return nil
@@ -321,7 +311,7 @@ internal struct _FileManagerImpl {
     }
     
     // SPI
-    func getFileSystemRepresentation(_ buffer: UnsafeMutablePointer<CChar>, maxLength: UInt, with path: String) -> Bool {
+    static func getFileSystemRepresentation(_ fileManager: FileManager, _ buffer: UnsafeMutablePointer<CChar>, maxLength: UInt, with path: String) -> Bool {
         guard !path.isEmpty else {
             return false
         }
@@ -339,7 +329,8 @@ internal struct _FileManagerImpl {
         }
     }
     
-    func string(
+    static func string(
+        _ fileManager: FileManager,
         withFileSystemRepresentation str: UnsafePointer<CChar>,
         length len: Int
     ) -> String {

@@ -271,7 +271,8 @@ extension FileAttributeKey {
 }
 
 extension _FileManagerImpl {
-    func createFile(
+    static func createFile(
+        _ fileManager: FileManager,
         atPath path: String,
         contents data: Data?,
         attributes attr: [FileAttributeKey : Any]? = nil
@@ -312,7 +313,7 @@ extension _FileManagerImpl {
         return true
     }
     
-    func removeItem(at url: URL) throws {
+    static func removeItem(_ fileManager: FileManager, at url: URL) throws {
         guard url.isFileURL else {
             throw CocoaError.errorWithFilePath(.fileReadUnsupportedScheme, url)
         }
@@ -322,14 +323,15 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, url)
         }
         
-        try removeItem(atPath: path)
+        try Self.removeItem(fileManager, atPath: path)
     }
     
-    func removeItem(atPath path: String) throws {
+    static func removeItem(_ fileManager: FileManager, atPath path: String) throws {
         try _FileOperations.removeFile(path, with: fileManager)
     }
     
-    func copyItem(
+    static func copyItem(
+        _ fileManager: FileManager,
         at srcURL: URL,
         to dstURL: URL,
         options: NSFileManagerCopyOptions
@@ -350,10 +352,11 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, dstURL)
         }
         
-        try copyItem(atPath: srcPath, toPath: dstPath, options: options)
+        try Self.copyItem(fileManager, atPath: srcPath, toPath: dstPath, options: options)
     }
     
-    func copyItem(
+    static func copyItem(
+        _ fileManager: FileManager,
         atPath srcPath: String,
         toPath dstPath: String,
         options: NSFileManagerCopyOptions
@@ -361,7 +364,8 @@ extension _FileManagerImpl {
         try _FileOperations.copyFile(srcPath, to: dstPath, with: fileManager, options: options)
     }
     
-    func moveItem(
+    static func moveItem(
+        _ fileManager: FileManager,
         at srcURL: URL,
         to dstURL: URL,
         options: NSFileManagerMoveOptions
@@ -382,10 +386,11 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, dstURL)
         }
         
-        try moveItem(atPath: srcPath, toPath: dstPath, options: options)
+        try Self.moveItem(fileManager, atPath: srcPath, toPath: dstPath, options: options)
     }
     
-    func moveItem(
+    static func moveItem(
+        _ fileManager: FileManager,
         atPath srcPath: String,
         toPath dstPath: String,
         options: NSFileManagerMoveOptions
@@ -398,7 +403,7 @@ extension _FileManagerImpl {
         )
     }
     
-    private func _fileExists(_ path: String) -> (exists: Bool, isDirectory: Bool) {
+    private static func _fileExists(_ fileManager: FileManager, _ path: String) -> (exists: Bool, isDirectory: Bool) {
 #if os(Windows)
         guard !path.isEmpty else { return (false, false) }
         return (try? path.withNTPathRepresentation { pwszPath in
@@ -431,22 +436,23 @@ extension _FileManagerImpl {
 #endif
     }
     
-    func fileExists(atPath path: String) -> Bool {
-        _fileExists(path).exists
+    static func fileExists(_ fileManager: FileManager, atPath path: String) -> Bool {
+        Self._fileExists(fileManager, path).exists
     }
     
-    func fileExists(
+    static func fileExists(
+        _ fileManager: FileManager,
         atPath path: String,
         isDirectory: inout Bool
     ) -> Bool {
-        let result = _fileExists(path)
+        let result = Self._fileExists(fileManager, path)
         guard result.exists else { return false }
         isDirectory = result.isDirectory
         return true
     }
 
 #if !os(Windows)
-    private func _fileAccessibleForMode(_ path: String, _ mode: Int32) -> Bool {
+    private static func _fileAccessibleForMode(_ fileManager: FileManager, _ path: String, _ mode: Int32) -> Bool {
         path.withFileSystemRepresentation { ptr in
             guard let ptr else { return false }
             return access(ptr, mode) == 0
@@ -454,18 +460,18 @@ extension _FileManagerImpl {
     }
 #endif
 
-    func isReadableFile(atPath path: String) -> Bool {
+    static func isReadableFile(_ fileManager: FileManager, atPath path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             return GetFileAttributesExW($0, GetFileExInfoStandard, &faAttributes)
         }) ?? false
 #else
-        _fileAccessibleForMode(path, R_OK)
+        Self._fileAccessibleForMode(fileManager, path, R_OK)
 #endif
     }
     
-    func isWritableFile(atPath path: String) -> Bool {
+    static func isWritableFile(_ fileManager: FileManager, atPath path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
@@ -475,22 +481,22 @@ extension _FileManagerImpl {
             return faAttributes.dwFileAttributes & FILE_ATTRIBUTE_READONLY != FILE_ATTRIBUTE_READONLY
         }) ?? false
 #else
-        _fileAccessibleForMode(path, W_OK)
+        Self._fileAccessibleForMode(fileManager, path, W_OK)
 #endif
     }
     
-    func isExecutableFile(atPath path: String) -> Bool {
+    static func isExecutableFile(_ fileManager: FileManager, atPath path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
             // Use SHGetFileInfo instead of GetBinaryType because the latter returns the wrong answer for x86 binaries running under emulation on ARM systems.
             return (SHGetFileInfoW($0, 0, nil, 0, SHGFI_EXETYPE) & 0xFFFF) != 0
         }) ?? false
 #else
-        _fileAccessibleForMode(path, X_OK)
+        Self._fileAccessibleForMode(fileManager, path, X_OK)
 #endif
     }
     
-    func isDeletableFile(atPath path: String) -> Bool {
+    static func isDeletableFile(_ fileManager: FileManager, atPath path: String) -> Bool {
         var parent = path.deletingLastPathComponent()
         if parent.isEmpty {
             parent = fileManager.currentDirectoryPath
@@ -520,7 +526,7 @@ extension _FileManagerImpl {
     }
 
 #if !os(Windows) && !os(WASI) && !os(OpenBSD) && !os(Emscripten)
-    private func _extendedAttribute(_ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
+    private static func _extendedAttribute(_ fileManager: FileManager, _ key: UnsafePointer<CChar>, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> Data? {
         #if canImport(Darwin)
         var size = getxattr(path, key, nil, 0, 0, followSymlinks ? 0 : XATTR_NOFOLLOW)
         #elseif os(FreeBSD)
@@ -554,7 +560,7 @@ extension _FileManagerImpl {
         return Data(bytesNoCopy: buffer, count: size, deallocator: .free)
     }
     
-    private func _extendedAttributes(at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> [String : Data]? {
+    private static func _extendedAttributes(_ fileManager: FileManager, at path: UnsafePointer<CChar>, followSymlinks: Bool) throws -> [String : Data]? {
         #if canImport(Darwin)
         var size = listxattr(path, nil, 0, 0)
         #elseif os(FreeBSD)
@@ -587,7 +593,7 @@ extension _FileManagerImpl {
             }
             #endif
             
-            if let value = try _extendedAttribute(current, at: path, followSymlinks: false) {
+            if let value = try Self._extendedAttribute(fileManager, current, at: path, followSymlinks: false) {
                 extendedAttrs[currentKey] = value
             }
         }
@@ -595,7 +601,7 @@ extension _FileManagerImpl {
     }
 #endif
 
-    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
+    static func attributesOfItem(_ fileManager: FileManager, atPath path: String) throws -> [FileAttributeKey : Any] {
 #if os(Windows)
         return try path.withNTPathRepresentation { pwszPath in
             let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nil)
@@ -682,7 +688,7 @@ extension _FileManagerImpl {
             var attributes = statAtPath.fileAttributes
             try? Self._catInfo(for: URL(filePath: path, directoryHint: .isDirectory), statInfo: statAtPath, into: &attributes)
             #if !os(WASI) && !os(OpenBSD) && !os(Emscripten)
-            if let extendedAttrs = try? _extendedAttributes(at: fsRep, followSymlinks: false) {
+            if let extendedAttrs = try? Self._extendedAttributes(fileManager, at: fsRep, followSymlinks: false) {
                 attributes[._extendedAttributes] = extendedAttrs
             }
             #endif
@@ -702,7 +708,7 @@ extension _FileManagerImpl {
 #endif
     }
     
-    func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
+    static func attributesOfFileSystem(_ fileManager: FileManager, forPath path: String) throws -> [FileAttributeKey : Any] {
 #if os(Windows)
         return try path.withNTPathRepresentation { pwszPath in
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
@@ -839,7 +845,8 @@ extension _FileManagerImpl {
 #endif
     }
     
-    func setAttributes(
+    static func setAttributes(
+        _ fileManager: FileManager,
         _ attributes: [FileAttributeKey : Any],
         ofItemAtPath path: String
     ) throws {

@@ -233,9 +233,7 @@ extension FileManager {
 }
 
 open class FileManager : @unchecked Sendable {
-    // Sendable note: _impl may only be mutated in `init`
-    private var _impl: _FileManagerImpl
-    private let _lock = Mutex(State(delegate: nil))
+    private let _lock = Mutex(State())
     private let isDefault: Bool
     
     private static let _default = FileManager(default: true)
@@ -243,6 +241,20 @@ open class FileManager : @unchecked Sendable {
         _default
     }
     
+    #if hasFeature(Embedded) && _pointerBitWidth(_32)
+    private struct State {}
+
+    // Embedded Swift does not support `weak` on 32-bit targets, so a delegate cannot be stored.
+    open var delegate: (any FileManagerDelegate)? {
+        get {
+            nil
+        }
+        @_unavailableInEmbedded
+        set {
+            fatalError("FileManager.delegate cannot be set in Embedded Swift on 32-bit targets")
+        }
+    }
+    #else
     private struct State {
         weak var delegate: (any FileManagerDelegate)?
     }
@@ -256,145 +268,142 @@ open class FileManager : @unchecked Sendable {
             _lock.withLock { $0.delegate = newValue }
         }
     }
+    #endif
     
     public init() {
         isDefault = false
-        _impl = _FileManagerImpl()
-        _impl._manager = self
     }
     
     private init(default: Bool) {
         isDefault = `default`
-        _impl = _FileManagerImpl()
-        _impl._manager = self
     }
 
     open func setAttributes(_ attributes: [FileAttributeKey : Any], ofItemAtPath path: String) throws {
-        try _impl.setAttributes(attributes, ofItemAtPath: path)
+        try _FileManagerImpl.setAttributes(self, attributes, ofItemAtPath: path)
     }
 
     open func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
-        try _impl.createDirectory(at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
+        try _FileManagerImpl.createDirectory(self, at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
     open func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [FileAttributeKey : Any]? = nil) throws {
-        try _impl.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
+        try _FileManagerImpl.createDirectory(self, atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
     open func contentsOfDirectory(atPath path: String) throws -> [String] {
-        try _impl.contentsOfDirectory(atPath: path)
+        try _FileManagerImpl.contentsOfDirectory(self, atPath: path)
     }
 
     open func subpathsOfDirectory(atPath path: String) throws -> [String] {
-        try _impl.subpathsOfDirectory(atPath: path)
+        try _FileManagerImpl.subpathsOfDirectory(self, atPath: path)
     }
     
     open func urls(for directory: FileManager.SearchPathDirectory, in domainMask: FileManager.SearchPathDomainMask) -> [URL] {
-        _impl.urls(for: directory, in: domainMask)
+        _FileManagerImpl.urls(self, for: directory, in: domainMask)
     }
     
     open func url(for directory: FileManager.SearchPathDirectory, in domain: FileManager.SearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
-        try _impl.url(for: directory, in: domain, appropriateFor: url, create: shouldCreate)
+        try _FileManagerImpl.url(self, for: directory, in: domain, appropriateFor: url, create: shouldCreate)
     }
 
     open func attributesOfItem(atPath path: String) throws -> [FileAttributeKey : Any] {
-        try _impl.attributesOfItem(atPath: path)
+        try _FileManagerImpl.attributesOfItem(self, atPath: path)
     }
 
     open func attributesOfFileSystem(forPath path: String) throws -> [FileAttributeKey : Any] {
-        try _impl.attributesOfFileSystem(forPath: path)
+        try _FileManagerImpl.attributesOfFileSystem(self, forPath: path)
     }
 
     open func createSymbolicLink(atPath path: String, withDestinationPath destPath: String) throws {
-        try _impl.createSymbolicLink(atPath: path, withDestinationPath: destPath)
+        try _FileManagerImpl.createSymbolicLink(self, atPath: path, withDestinationPath: destPath)
     }
     
     open func createSymbolicLink(at url: URL, withDestinationURL destURL: URL) throws {
-        try _impl.createSymbolicLink(at: url, withDestinationURL: destURL)
+        try _FileManagerImpl.createSymbolicLink(self, at: url, withDestinationURL: destURL)
     }
 
     open func destinationOfSymbolicLink(atPath path: String) throws -> String {
-        try _impl.destinationOfSymbolicLink(atPath: path)
+        try _FileManagerImpl.destinationOfSymbolicLink(self, atPath: path)
     }
 
     open func copyItem(atPath srcPath: String, toPath dstPath: String) throws {
-        try _impl.copyItem(atPath: srcPath, toPath: dstPath, options: [])
+        try _FileManagerImpl.copyItem(self, atPath: srcPath, toPath: dstPath, options: [])
     }
 
     open func moveItem(atPath srcPath: String, toPath dstPath: String) throws {
-        try _impl.moveItem(atPath: srcPath, toPath: dstPath, options: [])
+        try _FileManagerImpl.moveItem(self, atPath: srcPath, toPath: dstPath, options: [])
     }
 
     open func linkItem(atPath srcPath: String, toPath dstPath: String) throws {
-        try _impl.linkItem(atPath: srcPath, toPath: dstPath)
+        try _FileManagerImpl.linkItem(self, atPath: srcPath, toPath: dstPath)
     }
 
     open func removeItem(atPath path: String) throws {
-        try _impl.removeItem(atPath: path)
+        try _FileManagerImpl.removeItem(self, atPath: path)
     }
 
     open func copyItem(at srcURL: URL, to dstURL: URL) throws {
-        try _impl.copyItem(at: srcURL, to: dstURL, options: [])
+        try _FileManagerImpl.copyItem(self, at: srcURL, to: dstURL, options: [])
     }
 
     open func moveItem(at srcURL: URL, to dstURL: URL) throws {
-        try _impl.moveItem(at: srcURL, to: dstURL, options: [])
+        try _FileManagerImpl.moveItem(self, at: srcURL, to: dstURL, options: [])
     }
 
     open func linkItem(at srcURL: URL, to dstURL: URL) throws {
-        try _impl.linkItem(at: srcURL, to: dstURL)
+        try _FileManagerImpl.linkItem(self, at: srcURL, to: dstURL)
     }
 
     open func removeItem(at URL: URL) throws {
-        try _impl.removeItem(at: URL)
+        try _FileManagerImpl.removeItem(self, at: URL)
     }
 
     open var currentDirectoryPath: String {
-        _impl.currentDirectoryPath ?? ""
+        _FileManagerImpl.currentDirectoryPath(self) ?? ""
     }
 
     open func changeCurrentDirectoryPath(_ path: String) -> Bool {
-        _impl.changeCurrentDirectoryPath(path)
+        _FileManagerImpl.changeCurrentDirectoryPath(self, path)
     }
 
     open func fileExists(atPath path: String) -> Bool {
-        _impl.fileExists(atPath: path)
+        _FileManagerImpl.fileExists(self, atPath: path)
     }
 
     open func fileExists(atPath path: String, isDirectory: inout Bool) -> Bool {
-        _impl.fileExists(atPath: path, isDirectory: &isDirectory)
+        _FileManagerImpl.fileExists(self, atPath: path, isDirectory: &isDirectory)
     }
 
     open func isReadableFile(atPath path: String) -> Bool {
-        _impl.isReadableFile(atPath: path)
+        _FileManagerImpl.isReadableFile(self, atPath: path)
     }
 
     open func isWritableFile(atPath path: String) -> Bool {
-        _impl.isWritableFile(atPath: path)
+        _FileManagerImpl.isWritableFile(self, atPath: path)
     }
 
     open func isExecutableFile(atPath path: String) -> Bool {
-        _impl.isExecutableFile(atPath: path)
+        _FileManagerImpl.isExecutableFile(self, atPath: path)
     }
 
     open func isDeletableFile(atPath path: String) -> Bool {
-        _impl.isDeletableFile(atPath: path)
+        _FileManagerImpl.isDeletableFile(self, atPath: path)
     }
 
     open func contentsEqual(atPath path1: String, andPath path2: String) -> Bool {
-        _impl.contentsEqual(atPath: path1, andPath: path2)
+        _FileManagerImpl.contentsEqual(self, atPath: path1, andPath: path2)
     }
     
     open func contents(atPath path: String) -> Data? {
-        _impl.contents(atPath: path)
+        _FileManagerImpl.contents(self, atPath: path)
     }
 
     open func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey : Any]? = nil) -> Bool {
-        _impl.createFile(atPath: path, contents: data, attributes: attr)
+        _FileManagerImpl.createFile(self, atPath: path, contents: data, attributes: attr)
     }
 
     open func string(withFileSystemRepresentation str: UnsafePointer<CChar>, length len: Int) -> String {
-        _impl.string(withFileSystemRepresentation: str, length: len)
+        _FileManagerImpl.string(self, withFileSystemRepresentation: str, length: len)
     }
     
     internal func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
@@ -402,21 +411,21 @@ open class FileManager : @unchecked Sendable {
     }
 
     open var temporaryDirectory: URL {
-        _impl.temporaryDirectory
+        _FileManagerImpl.temporaryDirectory(self)
     }
     
     @available(iOS, unavailable)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
     open var homeDirectoryForCurrentUser: URL {
-        _impl.homeDirectoryForCurrentUser
+        _FileManagerImpl.homeDirectoryForCurrentUser(self)
     }
 
     @available(iOS, unavailable)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
     open func homeDirectory(forUser userName: String) -> URL? {
-        _impl.homeDirectory(forUser: userName)
+        _FileManagerImpl.homeDirectory(self, forUser: userName)
     }
 }
 
