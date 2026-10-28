@@ -29,7 +29,7 @@ Methods and properties that extend the FoundationEssentials format style type.
 
 - ``number-90oqn``  <!-- static var number: Decimal.FormatStyle { get } -->
 
-### Applying percentage styles for integers``
+### Applying percentage styles for integers
 
 - ``percent-5w7qa`` <!-- static var percent: IntegerFormatStyle<Int>.Percent { get } -->
 - ``percent-25orb`` <!-- static var percent: IntegerFormatStyle<UInt>.Percent { get } -->
@@ -43,18 +43,18 @@ Methods and properties that extend the FoundationEssentials format style type.
 - ``percent-jfh6``  <!-- static var percent: IntegerFormatStyle<UInt64>.Percent { get } -->
 
 
-### Applying percentage styles for floating-point values``
+### Applying percentage styles for floating-point values
 
 - ``percent-5bvv7`` <!-- static var percent: FloatingPointFormatStyle<Float>.Percent { get } -->
 - ``percent-23opr`` <!-- static var percent: FloatingPointFormatStyle<Double>.Percent { get } -->
 - ``percent-13e3d`` <!-- static var percent: FloatingPointFormatStyle<Float16>.Percent { get } -->
 
-### Applying percentage styles for decimals``
+### Applying percentage styles for decimals
 
 - ``percent-7bdy8`` <!-- static var percent: Decimal.FormatStyle.Percent { get } -->
 - ``Decimal/FormatStyle/Percent``
 
-### Applying date and time styles 
+### Applying date and time styles
 
 - ``time(pattern:)``
 - ``dateTime``
@@ -71,8 +71,7 @@ Methods and properties that extend the FoundationEssentials format style type.
 - ``units(allowed:width:maximumUnitCount:zeroValueUnits:valueLength:fractionalPart:)``
 - ``units(allowed:width:maximumUnitCount:zeroValueUnits:valueLengthLimits:fractionalPart:)``
 
-
-### Applying currency styles 
+### Applying currency styles
 
 - ``currency(code:)-yeeu``                                                                   <!-- static func currency(code: String) -> Self -->
 - ``currency(code:)-9j47r``                                                                  <!-- static func currency<V>(code: String) -> Self where Self == IntegerFormatStyle<V>.Currency, V : BinaryInteger -->
@@ -87,8 +86,3 @@ Methods and properties that extend the FoundationEssentials format style type.
 
 - ``byteCount(style:allowedUnits:spellsOutZero:includesActualByteCount:)``
 - ``ByteCountFormatStyle``
-
-### Applying URL format styles
-
-- ``url``
-
