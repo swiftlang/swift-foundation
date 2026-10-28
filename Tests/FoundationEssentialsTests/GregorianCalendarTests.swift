@@ -235,6 +235,19 @@ private struct GregorianCalendarTests {
     }
 
     // MARK: - DateComponents from date
+    @Test func quarterAtQuarterBoundaries() throws {
+        let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+        // Last and first day of every quarter, in a non-leap and a leap year
+        let cases = [(1, 1, 1), (3, 31, 1), (4, 1, 2), (6, 30, 2), (7, 1, 3), (9, 30, 3), (10, 1, 4), (12, 31, 4)]
+        for year in [2023, 2024] {
+            for (month, day, expected) in cases {
+                let date = try #require(calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12)))
+                let quarter = calendar.dateComponents([.quarter], from: date).quarter
+                #expect(quarter == expected, "\(year)-\(month)-\(day)")
+            }
+        }
+    }
+
     @Test func testDateComponentsFromDate() {
         let calendar = _CalendarGregorian(identifier: .gregorian, timeZone: TimeZone(secondsFromGMT: 0)!, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 5, gregorianStartDate: nil)
         func test(_ date: Date, _ timeZone: TimeZone, expectedEra era: Int, year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, nanosecond: Int, weekday: Int, weekdayOrdinal: Int, quarter: Int, weekOfMonth: Int, weekOfYear: Int, yearForWeekOfYear: Int, isLeapMonth: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
