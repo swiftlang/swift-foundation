@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 /// `PlistDecodingFormat` conformer plugging `XMLPlistDecodingDocument` into the generic `_PlistDecoder<Format>` machinery. Errors thrown by the primitive layer (`XMLPlistError`) are translated to `DecodingError` at the boundary via `_translatePrimitiveError`.
 @available(anyAppleOS 26.0, *)
@@ -111,6 +110,5 @@ struct XMLPlistDecodingFormat: PlistDecodingFormat {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)
