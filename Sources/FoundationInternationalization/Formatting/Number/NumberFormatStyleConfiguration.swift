@@ -358,6 +358,7 @@ public enum NumberFormatStyleConfiguration {
             case automatic
             case scientific
             case compactName
+            case printfScientific
         }
         var option: Option
 
@@ -386,6 +387,9 @@ public enum NumberFormatStyleConfiguration {
         /// - note: We do not support parsing a number string containing localized prefixes or suffixes.
         public static var compactName: Self { .init(option: .compactName) }
 
+        /// Scientific notation with a signed exponent of at least two digits, as printf's `%e` formats it (e.g. `1.5E+06`).
+        package static var printfScientific: Self { .init(option: .printfScientific) }
+
         public var description: String {
             switch option {
             case .scientific:
@@ -394,6 +398,8 @@ public enum NumberFormatStyleConfiguration {
                 return "automatic"
             case .compactName:
                 return "compact name"
+            case .printfScientific:
+                return "printf scientific"
             }
         }
     }
@@ -963,6 +969,8 @@ extension NumberFormatStyleConfiguration.Notation {
             stem = ""
         case .compactName:
             stem = "compact-short"
+        case .printfScientific:
+            stem = "scientific/*ee/sign-always"
         }
         return stem
     }
