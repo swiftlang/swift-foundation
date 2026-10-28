@@ -217,7 +217,7 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
-    // In ISO 8601, a month that starts on a Friday, Saturday, or Sunday has a week 0, which starts on the 1st.
+    // With the `.iso8601` calendar (firstWeekday 2, minimumDaysInFirstWeek 4), a month that starts on a Friday, Saturday, or Sunday has a week 0, which starts on the 1st.
     @Test(arguments: [
         (Date(timeIntervalSince1970: 1769731200), 2, Date(timeIntervalSince1970: 1769904000)), // 2026-01-30T00:00:00Z, 2026-02-01T00:00:00Z
         (Date(timeIntervalSince1970: 1772150400), 3, Date(timeIntervalSince1970: 1772323200)), // 2026-02-27T00:00:00Z, 2026-03-01T00:00:00Z
