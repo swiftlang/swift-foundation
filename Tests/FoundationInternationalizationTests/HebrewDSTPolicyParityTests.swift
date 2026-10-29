@@ -82,10 +82,6 @@ private struct HebrewDSTPolicyParityTests {
             return
         }
 
-        let hebrew = _CalendarHebrew(
-            identifier: .hebrew, timeZone: la, locale: nil,
-            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
-        )
         let gregorian = _CalendarGregorian(
             identifier: .gregorian, timeZone: la, locale: nil,
             firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
@@ -97,7 +93,7 @@ private struct HebrewDSTPolicyParityTests {
         dc.year = probe.year; dc.month = probe.month; dc.day = probe.day; dc.timeZone = .gmt
         let date = try #require(cal.date(from: dc))
         let days = Int64(date.timeIntervalSinceReferenceDate / 86400)
-        let rd = days + _CalendarHebrew.rataDieAtDateReference
+        let rd = days + Int64(_CalendarUtility.rataDieAtDateReference)
 
         let secondsInDay = Double(probe.hour) * 3600 + Double(probe.minute) * 60
 
@@ -110,10 +106,7 @@ private struct HebrewDSTPolicyParityTests {
 
         for repeated in policies {
             for skipped in policies {
-                let hebrewDate = hebrew.utcDate(
-                    fromRataDie: rd, secondsInDay: secondsInDay, in: la,
-                    repeatedTimePolicy: repeated, skippedTimePolicy: skipped
-                )
+                let hebrewDate = _CalendarUtility.utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: la, repeatedTimePolicy: repeated, skippedTimePolicy: skipped)
 
                 let gregDate = try gregorian.date(
                     from: gregDC, inTimeZone: la,
