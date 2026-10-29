@@ -931,6 +931,44 @@ private struct FileManagerTests {
         }
     }
 
+    @Test(.enabled(if: isDarwin || isWindows, "This platform does not record a creation date"))
+    func setAttributesCreationDate() async throws {
+        try await FilePlayground {
+            "testFile"
+            Directory("testDir") {}
+        }.test {
+            let testDate = Date(timeIntervalSince1970: 1234567890)
+            for path in ["testFile", "testDir"] {
+                try $0.setAttributes([.creationDate: testDate], ofItemAtPath: path)
+                let creationDate = try #require(try $0.attributesOfItem(atPath: path)[.creationDate] as? Date)
+                #expect(creationDate == testDate, "Creation date of '\(path)' should be set correctly")
+            }
+
+            // On Windows both dates are applied by a single SetFileTime call, so make sure that setting them together doesn't drop either one.
+            let creationTestDate = Date(timeIntervalSince1970: 1000000000)
+            let modificationTestDate = Date(timeIntervalSince1970: 1100000000)
+            try $0.setAttributes([.creationDate: creationTestDate, .modificationDate: modificationTestDate], ofItemAtPath: "testFile")
+            let attributes = try $0.attributesOfItem(atPath: "testFile")
+            #expect(attributes[.creationDate] as? Date == creationTestDate)
+            #expect(attributes[.modificationDate] as? Date == modificationTestDate)
+        }
+    }
+
+    @Test(.enabled(if: isDarwin || isWindows, "This platform does not record a creation date"))
+    func malformedCreationDateAttribute() async throws {
+        let sentinelDate = Date(timeIntervalSince1970: 100)
+        try await FilePlayground {
+            File("foo", attributes: [.creationDate: sentinelDate])
+        }.test {
+            #expect(try $0.attributesOfItem(atPath: "foo")[.creationDate] as? Date == sentinelDate)
+            for value in [Double.infinity, -Double.infinity, Double.nan] {
+                // Malformed creation dates should be dropped instead of throwing or crashing
+                try $0.setAttributes([.creationDate : Date(timeIntervalSince1970: value)], ofItemAtPath: "foo")
+            }
+            #expect(try $0.attributesOfItem(atPath: "foo")[.creationDate] as? Date == sentinelDate)
+        }
+    }
+
     @Test func malformedModificationDateAttribute() async throws {
         let sentinelDate = Date(timeIntervalSince1970: 100)
         try await FilePlayground {
