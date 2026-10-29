@@ -217,6 +217,43 @@ private struct GregorianCalendarTests {
         test(.init(weekOfYear: 43, yearForWeekOfYear: 2935), expected: Date(timeIntervalSince1970: 30477945600.0))
     }
 
+    // With the `.iso8601` calendar (firstWeekday 2, minimumDaysInFirstWeek 4), a month that starts on a Friday, Saturday, or Sunday has a week 0, which starts on the 1st.
+    @Test(arguments: [
+        (Date(timeIntervalSince1970: 1769731200), 2, Date(timeIntervalSince1970: 1769904000)), // 2026-01-30T00:00:00Z, 2026-02-01T00:00:00Z
+        (Date(timeIntervalSince1970: 1772150400), 3, Date(timeIntervalSince1970: 1772323200)), // 2026-02-27T00:00:00Z, 2026-03-01T00:00:00Z
+        (Date(timeIntervalSince1970: 1777420800), 5, Date(timeIntervalSince1970: 1777593600)), // 2026-04-29T00:00:00Z, 2026-05-01T00:00:00Z
+        (Date(timeIntervalSince1970: 1785369600), 8, Date(timeIntervalSince1970: 1785542400)), // 2026-07-30T00:00:00Z, 2026-08-01T00:00:00Z
+        (Date(timeIntervalSince1970: 1793318400), 11, Date(timeIntervalSince1970: 1793491200)), // 2026-10-30T00:00:00Z, 2026-11-01T00:00:00Z
+    ] as [(Date, Int, Date)])
+    func testNextDateMatchingMonthAndWeekOfMonthZero(start: Date, month: Int, expected: Date) {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .gmt
+        #expect(calendar.nextDate(after: start, matching: DateComponents(month: month, weekOfMonth: 0), matchingPolicy: .strict) == expected)
+    }
+
+    @Test(arguments: [
+        (Date(timeIntervalSince1970: 1791504000), Calendar.SearchDirection.forward, Date(timeIntervalSince1970: 1793491200)), // 2026-10-09T00:00:00Z, 2026-11-01T00:00:00Z
+        (Date(timeIntervalSince1970: 1843776000), Calendar.SearchDirection.backward, Date(timeIntervalSince1970: 1838160000)), // 2028-06-05T00:00:00Z, 2028-04-01T00:00:00Z
+    ])
+    func testNextDateMatchingWeekOfMonthZero(start: Date, direction: Calendar.SearchDirection, expected: Date) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        #expect(calendar.nextDate(after: start, matching: DateComponents(weekOfMonth: 0), matchingPolicy: .strict, direction: direction) == expected)
+    }
+
+    // Week 1 of these months starts after a week 0, so it doesn't start on the 1st.
+    @Test(arguments: [
+        (Date(timeIntervalSince1970: 1779580800), Date(timeIntervalSince1970: 1777852800)), // 2026-05-24T00:00:00Z, 2026-05-04T00:00:00Z
+        (Date(timeIntervalSince1970: 1733875200), Date(timeIntervalSince1970: 1733097600)), // 2024-12-11T00:00:00Z, 2024-12-02T00:00:00Z
+    ])
+    func testNextDateBackwardMatchingWeekOfMonthOne(start: Date, expected: Date) {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.timeZone = .gmt
+        #expect(calendar.nextDate(after: start, matching: DateComponents(weekOfMonth: 1), matchingPolicy: .strict, direction: .backward) == expected)
+    }
+
     @Test func testDateFromComponentsWeekOfMonth() {
         let cal = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 1, minimumDaysInFirstWeek: 1, gregorianStartDate: nil)
         func test(_ dateComponents: DateComponents, expected: Date, sourceLocation: SourceLocation = #_sourceLocation) {

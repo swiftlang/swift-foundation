@@ -681,7 +681,12 @@ extension Calendar {
             var adjusted = comps
             adjusted.year = component(.year, from: date)
             // TODO: can year ever be nil here?
-            if let adjustedDate = self.date(from: adjusted) {
+            if var adjustedDate = self.date(from: adjusted) {
+                // A week of the month resolves to the start of that week, which can be in the previous month. A match can't be before the month starts.
+                if let month = adjusted.month, component(.month, from: adjustedDate) != month,
+                   let monthStart = self.date(from: DateComponents(era: adjusted.era, year: adjusted.year, month: month)), adjustedDate < monthStart {
+                    adjustedDate = monthStart
+                }
                 if direction == .forward && date > adjustedDate {
                     adjusted.year = adjusted.year! + 1
                 } else if direction == .backward && date < adjustedDate {
@@ -1748,14 +1753,26 @@ extension Calendar {
         return result
     }
 
+    /// The part of the week of the month containing `date` that is in the same month as `date`. `month` keeps the month interval between calls.
+    private func monthPartOfWeek(for date: Date, month: inout DateInterval?) throws -> DateInterval {
+        if month.map({ !($0.start <= date && date < $0.end) }) ?? true {
+            month = dateInterval(of: .month, for: date)
+        }
+        // Around a day skipped by the time zone, the calendar can return a week that doesn't contain `date`.
+        guard let week = dateInterval(of: .weekOfMonth, for: date), let month,
+              week.start <= date, date < week.end, month.start <= date, date < month.end else {
+            throw CalendarEnumerationError.dateOutOfRange(.weekOfMonth, date)
+        }
+        return DateInterval(start: max(week.start, month.start), end: min(week.end, month.end))
+    }
+
     internal func dateAfterMatchingWeekOfMonth(startingAt: Date, components: DateComponents, direction: SearchDirection) throws -> Date? {
         guard let weekOfMonth = components.weekOfMonth else {
             // Nothing to do
             return nil
         }
 
-        var dateWeekOfMonth = component(.weekOfMonth, from: startingAt)
-        guard weekOfMonth != dateWeekOfMonth else {
+        guard weekOfMonth != component(.weekOfMonth, from: startingAt) else {
             // Already matches
             return nil
         }
@@ -1772,76 +1789,14 @@ extension Calendar {
         // After this point, result is at least startDate
         var result = startingAt
 
+        // The first week of a month (0 or 1) can start on any day, so step through the parts of weeks rather than whole weeks.
+        var month: DateInterval?
+        var part = try monthPartOfWeek(for: result, month: &month)
         repeat {
-            guard let foundRange = dateInterval(of: .weekOfMonth, for: result) else {
-                throw CalendarEnumerationError.dateOutOfRange(.weekOfMonth, result)
-            }
-            // We need to advance or rewind to the next week.
-            // This is simple when we can jump by a whole week interval, but there are complications around WoM == 1 because it can start on any day of the week. Jumping forward/backward by a whole week can miss it.
-            //
-            // A week 1 which starts on any day but Sunday contains days from week 5 of the previous month, e.g.
-            //
-            //        June 2018
-            //   Su Mo Tu We Th Fr Sa
-            //                   1  2
-            //    3  4  5  6  7  8  9
-            //   10 11 12 13 14 15 16
-            //   17 18 19 20 21 22 23
-            //   24 25 26 27 28 29 30
-            //
-            // Week 1 of June 2018 starts on Friday; any day before that is week 5 of May.
-            // We can jump by a week interval if we're not looking for WoM == 2 or we're not close.
-            var advanceDaily = weekOfMonth == 1 // we're looking for WoM == 1
-            if direction == .backward {
-                // Last week/earlier this week is week 1.
-                advanceDaily = advanceDaily && dateWeekOfMonth <= 2
-            } else {
-                // We need to be careful if it's the last week of the month. We can't assume what number week that would be, so figure it out.
-                let range = range(of: .weekOfMonth, in: .month, for: result) ?? 0..<Int.max
-                advanceDaily = advanceDaily && dateWeekOfMonth == (range.endIndex - range.startIndex)
-            }
-
-            // TODO: This should be set to something in all paths before being used below. It would be nice to refactor this to avoid the force unwrap
-            var tempSearchDate: Date!
-            if !advanceDaily {
-                // We can jump directly to next/last week. There's just one further wrinkle here when doing so backwards: due to DST, it's possible that this week is longer/shorter than last week.
-                // That means that if we rewind by womInv (the length of this week), we could completely skip last week, or end up not at its first instant.
-                //
-                // We can avoid this by not rewinding by womInv, but by going directly to the start.
-                if direction == .backward {
-                    // Any instant before foundRange.start is last week
-                    let lateLastWeek = foundRange.start - 1
-                    if let interval = dateInterval(of: .weekOfMonth, for: lateLastWeek) {
-                        tempSearchDate = interval.start
-                    } else {
-                        // Fall back to below case
-                        advanceDaily = true
-                    }
-                } else {
-                    // Skipping forward doesn't have these DST concerns, since foundRange already represents the length of this week.
-                    tempSearchDate = foundRange.start + foundRange.duration
-                }
-            }
-
-            // This is a separate condition because it represents a "possible" fallthrough from above.
-            if advanceDaily {
-                var today = foundRange.start
-                while component(.day, from: today) != 1 {
-                    if let next = date(byAdding: .day, value: direction == .backward ? -1 : 1, to: today) {
-                        today = next
-                    } else {
-                        break
-                    }
-                }
-
-                tempSearchDate = today
-            }
-
-            dateWeekOfMonth = component(.weekOfMonth, from: tempSearchDate)
-            
-            try verifyAdvancingResult(tempSearchDate, previous: result, direction: direction)
-            result = tempSearchDate
-        } while weekOfMonth != dateWeekOfMonth
+            part = try monthPartOfWeek(for: direction == .backward ? part.start - 1 : part.end, month: &month)
+            try verifyAdvancingResult(part.start, previous: result, direction: direction)
+            result = part.start
+        } while component(.weekOfMonth, from: result) != weekOfMonth
 
         return result
     }
