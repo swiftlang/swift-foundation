@@ -10,7 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct JSON5Scanner {
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+internal import BasicContainers
+#endif
+
+internal struct JSON5Scanner: ~Copyable {
     let options: Options
     var reader: DocumentReader
     var depth: Int = 0
@@ -23,8 +27,8 @@ internal struct JSON5Scanner {
         var assumesTopLevelDictionary = false
     }
 
-    struct JSONPartialMapData {
-        var mapData: [Int] = []
+    struct JSONPartialMapData: ~Copyable {
+        var mapData = UniqueArray<Int>()
         var prevMapDataSize = 0
 
         mutating func resizeIfNecessary(with reader: DocumentReader) {
@@ -52,7 +56,7 @@ internal struct JSON5Scanner {
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-            mapData.append(contentsOf: [0, 0])
+            mapData.append(copyingInline: [0, 0])
             return startIdx
         }
 
@@ -62,23 +66,22 @@ internal struct JSON5Scanner {
             mapData.append(JSONMapTypeDescriptor.collectionEnd.rawValue)
 
             let nextValueOffset = mapData.count
-            mapData.withUnsafeMutableBufferPointer {
-                $0[startOffset] = nextValueOffset
-                $0[startOffset &+ 1] = count
-            }
+            var span = mapData.mutableSpan
+            span[startOffset] = nextValueOffset
+            span[startOffset &+ 1] = count
         }
 
         mutating func recordEmptyCollection(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(copyingInline: [tagType.mapMarker, nextValueOffset, 0, JSONMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
         mutating func record(tagType: JSONMapTypeDescriptor, count: Int, dataOffset: Int, with reader: DocumentReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
+            mapData.append(copyingInline: [tagType.mapMarker, count, dataOffset])
         }
 
         mutating func record(tagType: JSONMapTypeDescriptor, with reader: DocumentReader) {
@@ -93,7 +96,7 @@ internal struct JSON5Scanner {
         self.reader = DocumentReader(bytes: bytes)
     }
 
-    mutating func scan() throws -> JSONMap<ArrayMapRecords> {
+    mutating func scan() throws -> JSONMap {
         if options.assumesTopLevelDictionary {
             switch try reader.consumeWhitespace(allowingEOF: true) {
             case ._openbrace?:
@@ -118,7 +121,9 @@ internal struct JSON5Scanner {
             throw JSONError.unexpectedCharacter(context: "after top-level value", ascii: char, location: reader.sourceLocation)
         }
 
-        return JSONMap(records: .init(partialMap.mapData))
+        var mapData = UniqueArray<Int>()
+        swap(&mapData, &partialMap.mapData)
+        return JSONMap(records: mapData)
     }
 
     // MARK: Generic Value Scanning

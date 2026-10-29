@@ -337,10 +337,10 @@ extension _StringCompareOptionsIterable {
                             strBuf2.advance()
                             useStrBuf2 = true
                         }
+                    }
 
-                        if str1Char != transformed.first {
-                            break
-                        }
+                    if str1Char != str2Char {
+                        break
                     }
                 }
 

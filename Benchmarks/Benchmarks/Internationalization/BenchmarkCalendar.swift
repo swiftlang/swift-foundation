@@ -803,6 +803,92 @@ func calendarBenchmarks() {
         }
     }
 
+    // MARK: - Fixed month calendars (Coptic, Ethiopic, Persian, Indian)
+
+    // These five share one class. Coptic and Persian differ the most in their rules, so they stand for all five.
+    let arithmeticStart = Date(timeIntervalSince1970: 1474666555.0) // 2016-09-23T14:35:55-0700
+
+    let arithmeticTestDates = {
+        let date = Date(timeIntervalSince1970: 1474666555.0)
+        var dates = [Date]()
+        dates.reserveCapacity(10000)
+        for i in 0...10000 {
+            dates.append(Date(timeInterval: Double(i * 86400), since: date))
+        }
+        return dates
+    }()
+
+    let copticCal = Calendar(identifier: .coptic)
+    let persianCal = Calendar(identifier: .persian)
+    let copticMonthThirteenComponents = DateComponents(month: 13, day: 5)
+    let persianNewYearComponents = DateComponents(month: 1, day: 1)
+
+    Benchmark("CopticCalendar-nextThousandMonthThirteenths") { benchmark in
+        var count = 1000
+        copticCal.enumerateDates(startingAfter: arithmeticStart, matching: copticMonthThirteenComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("CopticCalendar-allocationsForFixedCalendar", configuration: allocationsConfiguration) { benchmark in
+        for _ in benchmark.scaledIterations {
+            let cal = Calendar(identifier: .coptic)
+            let date = cal.date(byAdding: .day, value: 1, to: arithmeticStart)
+            blackHole(date)
+        }
+    }
+
+    Benchmark("CopticCalendar-copyOnWritePerformance", configuration: allocationsConfiguration) { benchmark in
+        var cal = Calendar(identifier: .coptic)
+        for i in benchmark.scaledIterations {
+            cal.firstWeekday = (i % 2) + 1
+            blackHole(cal.firstWeekday)
+        }
+    }
+
+    Benchmark("CopticCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = copticCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("CopticCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = copticCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTrip = copticCal.date(from: components)
+            blackHole(roundTrip)
+        }
+    }
+
+    Benchmark("PersianCalendar-nextThousandNewYears") { benchmark in
+        var count = 1000
+        persianCal.enumerateDates(startingAfter: arithmeticStart, matching: persianNewYearComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("PersianCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = persianCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("PersianCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = persianCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTrip = persianCal.date(from: components)
+            blackHole(roundTrip)
+        }
+    }
+
     // MARK: - Gregorian-family calendars (Buddhist, Japanese, ROC)
 
     // These three share one era-table engine over `_CalendarGregorian`, so they are benchmarked against the same dates to make the relabeling cost comparable.

@@ -109,6 +109,18 @@ var package = Package(
             ] + wasiLibcCSettings
         ),
 
+        // _FoundationRefs (Internal)
+        // Temporary: stands in for the standard library's `Ref` and `MutableRef` in Darwin package builds. It has its own target because some compiler builds assert when compiling `Ref` with strict concurrency checking, which `featureSettings` enables.
+        .target(
+            name: "_FoundationRefs",
+            swiftSettings: [
+                .enableExperimentalFeature("Lifetimes"),
+                .enableExperimentalFeature("AllowUnsafeAttribute"),
+                .enableExperimentalFeature("BuiltinModule"),
+                .swiftLanguageMode(.v5)
+            ]
+        ),
+
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
@@ -123,9 +135,12 @@ var package = Package(
           dependencies: [
             "_FoundationCShims",
             "FoundationMacros",
+            .target(name: "_FoundationRefs", condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "DequeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
+            // Temporary: provides `UniqueArray` in Darwin package builds.
+            .product(name: "BasicContainers", package: "swift-collections", condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
           ],
           exclude: [
             "Bytes/CMakeLists.txt",
