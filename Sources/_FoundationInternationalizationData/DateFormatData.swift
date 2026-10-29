@@ -15,8 +15,6 @@
 // Fallback: root
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_DATE_FORMAT_SWIFT
-
 // Strings are 4-byte entries: the low byte is the UTF-8 length. Text of up
 // to 3 bytes follows in the next bytes; longer text is at the offset in the
 // upper 3 bytes, in `pool`. 0 means no value.
@@ -9015,5 +9013,3 @@ internal enum _DateFormatData {
     ]
 
 }
-
-#endif // FOUNDATION_DATE_FORMAT_SWIFT

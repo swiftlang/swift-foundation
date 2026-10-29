@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_DATE_FORMAT_SWIFT
-
 // Reads the tables in DateFormatData.swift, which stay `internal` to this
 // module so they compile into read-only data. The slot orders and sub-blocks
 // here match the generators in utils/.
@@ -374,5 +372,3 @@ struct Keywords {
         return end == utf8.endIndex ? nil : String(baseName[..<end])
     }
 }
-
-#endif // FOUNDATION_DATE_FORMAT_SWIFT

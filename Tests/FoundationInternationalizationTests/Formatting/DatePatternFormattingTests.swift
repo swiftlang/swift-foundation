@@ -21,10 +21,32 @@ import Testing
 @testable import Foundation
 #endif
 
+fileprivate typealias Field = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field
+
+// Apple's ICU data and ICU 78 behavior, which the SwiftPM build's ICU 76 doesn't have.
+fileprivate let hasAppleData: Bool = {
+#if FOUNDATION_FRAMEWORK
+    true
+#else
+    foundation_date_format_feature_enabled()
+#endif
+}()
+
+fileprivate func attributed(_ pieces: [(String, Field?)]) -> AttributedString {
+    var result = AttributedString()
+    for (text, field) in pieces {
+        var piece = AttributedString(text)
+        if let field {
+            piece.dateField = field
+        }
+        result += piece
+    }
+    return result
+}
+
 /// Filling in date patterns, checked through `Date.VerbatimFormatStyle`.
 @Suite("Date pattern formatting")
 private struct DatePatternFormattingTests {
-    typealias Field = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field
 
     // 2026-09-18 14:05:09.306 UTC, a Friday.
     let date = Date(timeIntervalSince1970: 1_789_740_309.306)
@@ -390,18 +412,6 @@ private struct DatePatternFormattingTests {
 
     // MARK: - Field attributes
 
-    func attributed(_ pieces: [(String, Field?)]) -> AttributedString {
-        var result = AttributedString()
-        for (text, field) in pieces {
-            var piece = AttributedString(text)
-            if let field {
-                piece.dateField = field
-            }
-            result += piece
-        }
-        return result
-    }
-
     @Test func fieldAttributes() {
         #expect(style("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", timeZone: "America/Los_Angeles").attributedStyle.format(date) == attributed([
             ("2026", .year), ("-", nil), ("09", .month), ("-", nil), ("18", .day), ("T", nil),
@@ -481,15 +491,6 @@ private struct DatePatternFormattingTests {
         #expect(style(pattern, locale: locale).format(Date(timeIntervalSince1970: seconds)) == expected)
     }
 
-    // Apple's ICU data and ICU 78 behavior, which the SwiftPM build's ICU 76 doesn't have.
-    static let hasAppleData: Bool = {
-#if FOUNDATION_FRAMEWORK || FOUNDATION_DATE_FORMAT_SWIFT
-        true
-#else
-        false
-#endif
-    }()
-
     // From the Apple blocks in ICU's DateFormatTest TestQuarters, TestNarrowNames, and TestAmPmLengths23114.
     @Test(.enabled(if: hasAppleData), arguments: [
         ("es_MX", "QQQQ y", 0.0, "1er. trimestre 1970"),
@@ -532,8 +533,8 @@ private struct DatePatternFormattingTests {
     // Apple's ICU doesn't pass these yet.
     // TODO: Remove `hasSymbolLoadingFix` once rdar://188932615 and rdar://188036385 are fixed.
     static let hasSymbolLoadingFix: Bool = {
-#if FOUNDATION_FRAMEWORK && !FOUNDATION_DATE_FORMAT_SWIFT
-        false
+#if FOUNDATION_FRAMEWORK
+        foundation_date_format_feature_enabled()
 #else
         true
 #endif
@@ -647,64 +648,6 @@ private struct DatePatternFormattingTests {
         #expect(style(pattern, locale: locale).format(date) == expected)
     }
 
-#if FOUNDATION_DATE_FORMAT_SWIFT
-    // MARK: - Languages without data
-
-    // A language with no data uses root, unless the data was built with a fallback locale.
-    @Test(arguments: [
-        ("xx", "Thu M01 CE AM 1 1970"),
-        ("xx_YY", "Thu M01 CE AM 1 1970"),
-        ("de_XX", "Donnerstag Januar n. Chr. AM 1 1970"),
-        // CLDR languages that ICU doesn't build.
-        ("la", "Thu M01 CE AM 1 1970"),
-        ("kaa", "Thu M01 CE AM 1 1970"),
-        ("kaa_Latn", "Thu M01 CE AM 1 1970"),
-        ("cu_Glag", "Thu M01 CE AM 1 1970"),
-    ])
-    func languagesWithoutData(locale: String, expected: String) {
-        let info = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale, timeZoneIdentifier: "UTC", calendarIdentifier: .gregorian, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .unknown, pattern: "EEEE MMMM G a d y")
-        #expect(DatePatternFormatter(info).format(Date(timeIntervalSince1970: 0)) == expected)
-    }
-
-    // MARK: - Unsupported
-
-    func info(_ pattern: String, calendar: Calendar.Identifier = .gregorian) -> ICUDateFormatter.DateFormatInfo {
-        ICUDateFormatter.DateFormatInfo(localeIdentifier: "en_US", timeZoneIdentifier: "UTC", calendarIdentifier: calendar, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .unknown, pattern: pattern)
-    }
-
-    // The data has only Gregorian names.
-    @Test(arguments: [Calendar.Identifier.japanese, .hebrew, .islamicUmmAlQura, .buddhist, .chinese])
-    func unsupportedCalendars(calendar: Calendar.Identifier) {
-        let formatter = DatePatternFormatter(info("G y MMMM d", calendar: calendar))
-        #expect(formatter.format(date) == "\(calendar.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED")
-        #expect(formatter.attributedFormat(date) == AttributedString("\(calendar.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED"))
-    }
-
-    @Test func iso8601Calendar() {
-        #expect(DatePatternFormatter(info("G y MMMM d", calendar: .iso8601)).format(date) == "AD 2026 September 18")
-    }
-
-    @Test(arguments: ["z", "zzzz", "v", "vvvv", "V", "VVV", "VVVV", "B", "BBBB", "ddd"])
-    func unsupportedFields(field: String) {
-        #expect(DatePatternFormatter(info("d \(field)")).format(date) == "18 \(field)_IS_UNSUPPORTED")
-    }
-
-    // The text takes the field's attribute, and isn't titlecased.
-    @Test func unsupportedFieldAttributes() {
-        let formatter = DatePatternFormatter(ICUDateFormatter.DateFormatInfo(localeIdentifier: "en_US", timeZoneIdentifier: "UTC", calendarIdentifier: .gregorian, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .beginningOfSentence, pattern: "vvvv d"))
-        #expect(formatter.attributedFormat(date) == attributed([("vvvv_IS_UNSUPPORTED", .timeZone), (" ", nil), ("18", .day)]))
-    }
-
-    @Test func quotedUnsupportedLetters() {
-        #expect(DatePatternFormatter(info("'zvVB ddd' d")).format(date) == "zvVB ddd 18")
-    }
-
-    @Test func unsupportedCalendarThroughStyle() {
-        let style = Date.VerbatimFormatStyle(format: "\(era: .abbreviated) \(year: .defaultDigits)", locale: Locale(identifier: "ja_JP"), timeZone: .gmt, calendar: Calendar(identifier: .japanese))
-        #expect(style.format(date) == "japanese_CALENDAR_IS_UNSUPPORTED")
-    }
-#endif
-
     // MARK: - Capitalization
 
     // 2008-07-02 12:00:01.979 UTC, a Wednesday, from ICU's TestContext.
@@ -713,11 +656,10 @@ private struct DatePatternFormattingTests {
     /// Fills in `pattern` with a capitalization context, which `Date.VerbatimFormatStyle` doesn't have, through whichever formatter this build uses.
     func format(_ pattern: String, locale: String, context: FormatStyleCapitalizationContext) -> String? {
         let info = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale, timeZoneIdentifier: "UTC", calendarIdentifier: .gregorian, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: context, pattern: pattern)
-#if FOUNDATION_DATE_FORMAT_SWIFT
-        return DatePatternFormatter(info).format(july022008)
-#else
+        if foundation_date_format_feature_enabled() {
+            return DatePatternFormatter(info).format(july022008)
+        }
         return ICUDateFormatter.cachedFormatter(for: info)?.format(july022008)
-#endif
     }
 
     /// The output for the contexts unknown, middle of sentence, beginning of sentence, list item, and standalone.
@@ -788,10 +730,9 @@ private struct DatePatternFormattingTests {
         #expect(format(pattern, locale: locale, context: .beginningOfSentence) == expected)
     }
 
-#if FOUNDATION_DATE_FORMAT_SWIFT
     // Field ranges follow a titlecase that changes the length, where Apple's ICU leaves them where they were.
     // İ is longer than i in UTF-8 only.
-    @Test(arguments: [
+    @Test(.enabled(if: foundation_date_format_feature_enabled()), arguments: [
         ("hy", "'և' d", "Եվ "),
         ("tr", "'iyi' d", "İyi "),
     ])
@@ -799,5 +740,67 @@ private struct DatePatternFormattingTests {
         let info = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale, timeZoneIdentifier: "UTC", calendarIdentifier: .gregorian, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .beginningOfSentence, pattern: pattern)
         #expect(DatePatternFormatter(info).attributedFormat(july022008) == attributed([(expected, nil), ("2", .day)]))
     }
-#endif
+}
+
+@Suite(.enabled(if: foundation_date_format_feature_enabled()))
+struct SwiftFoundationDatePatternFormattingTests {
+
+    // 2026-09-18 14:05:09.306 UTC, a Friday.
+    let date = Date(timeIntervalSince1970: 1_789_740_309.306)
+
+    // MARK: - Languages without data
+
+    // A language with no data uses root, unless the data was built with a fallback locale.
+    @Test(arguments: [
+        ("xx", "Thu M01 CE AM 1 1970"),
+        ("xx_YY", "Thu M01 CE AM 1 1970"),
+        ("de_XX", "Donnerstag Januar n. Chr. AM 1 1970"),
+        // CLDR languages that ICU doesn't build.
+        ("la", "Thu M01 CE AM 1 1970"),
+        ("kaa", "Thu M01 CE AM 1 1970"),
+        ("kaa_Latn", "Thu M01 CE AM 1 1970"),
+        ("cu_Glag", "Thu M01 CE AM 1 1970"),
+    ])
+    func languagesWithoutData(locale: String, expected: String) {
+        let info = ICUDateFormatter.DateFormatInfo(localeIdentifier: locale, timeZoneIdentifier: "UTC", calendarIdentifier: .gregorian, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .unknown, pattern: "EEEE MMMM G a d y")
+        #expect(DatePatternFormatter(info).format(Date(timeIntervalSince1970: 0)) == expected)
+    }
+
+    // MARK: - Unsupported
+
+    func info(_ pattern: String, calendar: Calendar.Identifier = .gregorian) -> ICUDateFormatter.DateFormatInfo {
+        ICUDateFormatter.DateFormatInfo(localeIdentifier: "en_US", timeZoneIdentifier: "UTC", calendarIdentifier: calendar, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .unknown, pattern: pattern)
+    }
+
+    // The data has only Gregorian names.
+    @Test(arguments: [Calendar.Identifier.japanese, .hebrew, .islamicUmmAlQura, .buddhist, .chinese])
+    func unsupportedCalendars(calendar: Calendar.Identifier) {
+        let formatter = DatePatternFormatter(info("G y MMMM d", calendar: calendar))
+        #expect(formatter.format(date) == "\(calendar.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED")
+        #expect(formatter.attributedFormat(date) == AttributedString("\(calendar.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED"))
+    }
+
+    @Test func iso8601Calendar() {
+        #expect(DatePatternFormatter(info("G y MMMM d", calendar: .iso8601)).format(date) == "AD 2026 September 18")
+    }
+
+    @Test(arguments: ["z", "zzzz", "v", "vvvv", "V", "VVV", "VVVV", "B", "BBBB", "ddd"])
+    func unsupportedFields(field: String) {
+        #expect(DatePatternFormatter(info("d \(field)")).format(date) == "18 \(field)_IS_UNSUPPORTED")
+    }
+
+    // The text takes the field's attribute, and isn't titlecased.
+    @Test func unsupportedFieldAttributes() {
+        let formatter = DatePatternFormatter(ICUDateFormatter.DateFormatInfo(localeIdentifier: "en_US", timeZoneIdentifier: "UTC", calendarIdentifier: .gregorian, firstWeekday: 1, minimumDaysInFirstWeek: 1, capitalizationContext: .beginningOfSentence, pattern: "vvvv d"))
+        #expect(formatter.attributedFormat(date) == attributed([("vvvv_IS_UNSUPPORTED", .timeZone), (" ", nil), ("18", .day)]))
+    }
+
+    @Test func quotedUnsupportedLetters() {
+        #expect(DatePatternFormatter(info("'zvVB ddd' d")).format(date) == "zvVB ddd 18")
+    }
+
+    @Test func unsupportedCalendarThroughStyle() {
+        let style = Date.VerbatimFormatStyle(format: "\(era: .abbreviated) \(year: .defaultDigits)", locale: Locale(identifier: "ja_JP"), timeZone: .gmt, calendar: Calendar(identifier: .japanese))
+        #expect(style.format(date) == "japanese_CALENDAR_IS_UNSUPPORTED")
+    }
 }

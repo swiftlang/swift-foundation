@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_DATE_FORMAT_SWIFT || !FOUNDATION_LIST_FORMAT_ICU
-
 /// The parts of a locale identifier that the data tables use, read from either the `@key=value` or the BCP 47 `-u-` form.
 /// `Locale` keeps an identifier as the caller wrote it, so this also gives each subtag the case the tables use.
 package struct DataLocaleIdentifier {
@@ -196,5 +194,3 @@ package struct DataLocaleIdentifier {
         isLetter(byte) ? byte & ~0x20 : byte
     }
 }
-
-#endif // FOUNDATION_DATE_FORMAT_SWIFT || !FOUNDATION_LIST_FORMAT_ICU

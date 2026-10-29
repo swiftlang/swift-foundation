@@ -14,8 +14,6 @@
 import FoundationEssentials
 #endif
 
-#if FOUNDATION_DATE_FORMAT_SWIFT
-
 #if canImport(_FoundationInternationalizationData)
 internal import _FoundationInternationalizationData
 #endif
@@ -798,5 +796,3 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
         }
     }
 }
-
-#endif // FOUNDATION_DATE_FORMAT_SWIFT

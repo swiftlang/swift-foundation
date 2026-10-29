@@ -291,8 +291,6 @@ struct BuildDateFormatData {
         // Fallback: \(options.fallback ?? "root")
         //===----------------------------------------------------------------------===//
 
-        #if FOUNDATION_DATE_FORMAT_SWIFT
-
         // Strings are 4-byte entries: the low byte is the UTF-8 length. Text of up
         // to 3 bytes follows in the next bytes; longer text is at the offset in the
         // upper 3 bytes, in `pool`. 0 means no value.
@@ -317,7 +315,7 @@ struct BuildDateFormatData {
         out += table("validRegions", "UInt32", validRegions.map(hex), comment: "Regions an rg keyword can name, one bit per code: (first letter - A) * 26 + (second letter - A).", perLine: 8)
 
         out += table("pool", "UInt8", pool.bytes.map { String(format: "0x%02X", $0) }, comment: "Text longer than 3 UTF-8 bytes, stored once.", perLine: 16)
-        out += "}\n\n#endif // FOUNDATION_DATE_FORMAT_SWIFT\n"
+        out += "}\n"
 
         try out.write(toFile: options.outputSwiftPath, atomically: true, encoding: .utf8)
         print("  locales: \(sortedLocales.count), redirects: \(redirects.count) (\(scriptRedirects) for script fallback), names: \(names.count), rows: \(rows.count), pool: \(pool.bytes.count) B", to: &standardError)

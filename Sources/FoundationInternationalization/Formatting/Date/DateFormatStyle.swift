@@ -579,16 +579,17 @@ extension Date {
         /// - Parameter value: The date to format.
         /// - Returns: An attributed string representation of the date.
         public func format(_ value: Date) -> AttributedString {
-#if FOUNDATION_DATE_FORMAT_SWIFT
-            let info: ICUDateFormatter.DateFormatInfo
-            switch innerStyle {
-            case .formatStyle(let formatStyle):
-                info = .init(formatStyle)
-            case .verbatimFormatStyle(let verbatimFormatStyle):
-                info = .init(verbatimFormatStyle)
+            if foundation_date_format_feature_enabled() {
+                let info: ICUDateFormatter.DateFormatInfo
+                switch innerStyle {
+                case .formatStyle(let formatStyle):
+                    info = .init(formatStyle)
+                case .verbatimFormatStyle(let verbatimFormatStyle):
+                    info = .init(verbatimFormatStyle)
+                }
+                return DatePatternFormatter.cachedFormatter(for: info).attributedFormat(value) ?? AttributedString("")
             }
-            return DatePatternFormatter.cachedFormatter(for: info).attributedFormat(value) ?? AttributedString("")
-#else
+
             let fm: ICUDateFormatter?
             switch innerStyle {
             case .formatStyle(let formatStyle):
@@ -602,7 +603,6 @@ extension Date {
             }
 
             return str._attributedStringFromPositions(attributes)
-#endif
         }
 
         /// Modifies the date attributed style to use the specified locale.
@@ -665,14 +665,13 @@ extension Date.FormatStyle {
         /// - Parameter value: The date to format.
         /// - Returns: An attributed string representation of the date.
         public func format(_ value: Date) -> AttributedString {
-#if FOUNDATION_DATE_FORMAT_SWIFT
-            return DatePatternFormatter.cachedFormatter(for: .init(base)).attributedFormat(value) ?? AttributedString("")
-#else
+            if foundation_date_format_feature_enabled() {
+                return DatePatternFormatter.cachedFormatter(for: .init(base)).attributedFormat(value) ?? AttributedString("")
+            }
             guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString("")
             }
             return str._attributedStringFromPositions(attributes)
-#endif
         }
 
         /// Modifies the date attributed style to use the specified locale.
@@ -1021,14 +1020,13 @@ extension Date.FormatStyle : FormatStyle {
     /// - Parameter value: The date to format.
     /// - Returns: A string representation of the date.
     public func format(_ value: Date) -> String {
-#if FOUNDATION_DATE_FORMAT_SWIFT
-        return DatePatternFormatter.cachedFormatter(for: .init(self)).format(value) ?? ""
-#else
+        if foundation_date_format_feature_enabled() {
+            return DatePatternFormatter.cachedFormatter(for: .init(self)).format(value) ?? ""
+        }
         guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
             return ""
         }
         return result
-#endif
     }
 
     /// Modifies the date format style to use the specified locale.
