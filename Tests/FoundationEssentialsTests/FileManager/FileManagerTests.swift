@@ -585,6 +585,19 @@ private struct FileManagerTests {
         }
     }
 
+    // The names differ in more than case, so the destination is a different file on case-insensitive volumes too.
+    @Test(arguments: [("a.txt", "é.txt"), ("é.txt", "e.txt"), ("Ж.txt", "я.txt")])
+    func moveItemToExistingNonASCIIName(source: String, destination: String) async throws {
+        try await FilePlayground {
+            File(source)
+            File(destination)
+        }.test(captureDelegateCalls: true) {
+            try $0.moveItem(atPath: source, toPath: destination)
+            let rootDir = URL(fileURLWithPath: $0.currentDirectoryPath).path
+            #expect($0.delegateCaptures.shouldProceedAfterMoveError.contains(.init("\(rootDir)/\(source)", "\(rootDir)/\(destination)", code: .fileWriteFileExists)))
+        }
+    }
+
     @Test func copyItemAtPathToPath() async throws {
         let data = randomData()
         try await FilePlayground {
