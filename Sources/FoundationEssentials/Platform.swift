@@ -354,6 +354,21 @@ extension Platform {
 #endif // !FOUNDATION_FRAMEWORK
 }
 
+#if os(Android)
+// MARK: - Android System Properties
+extension Platform {
+    /// The value of the Android system property `name`, or `nil` if the property isn't set.
+    static func androidSystemProperty(_ name: String) -> String? {
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: Int(PROP_VALUE_MAX)) { buffer in
+            guard let base = buffer.baseAddress, __system_property_get(name, base) > 0 else {
+                return nil
+            }
+            return String(cString: base)
+        }
+    }
+}
+#endif
+
 // MARK: - Executable Path
 extension Platform {
     static func getFullExecutablePath() -> String? {
