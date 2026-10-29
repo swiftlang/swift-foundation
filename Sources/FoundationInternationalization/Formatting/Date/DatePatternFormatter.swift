@@ -18,6 +18,8 @@ import FoundationEssentials
 internal import _FoundationInternationalizationData
 #endif
 
+internal import Synchronization
+
 /// Formats dates with a pattern such as `"MMM d, y"`, in place of `ICUDateFormatter`.
 final class DatePatternFormatter : Sendable {
     let pattern: String
@@ -100,11 +102,27 @@ final class DatePatternFormatter : Sendable {
         }
     }
 
-    private static let cache = FormatterCache<ICUDateFormatter.DateFormatInfo, DatePatternFormatter>()
+    // TODO: Look into restructuring the code so it doesn't need this cache.
+    private static let cache = Mutex<[ICUDateFormatter.DateFormatInfo: DatePatternFormatter]>([:])
 
     /// A formatter for `info`, reused across calls.
     static func cachedFormatter(for info: ICUDateFormatter.DateFormatInfo) -> DatePatternFormatter {
-        cache.formatter(for: info) { DatePatternFormatter(info) }
+        if let existing = cache.withLock({ $0[info] }) {
+            return existing
+        }
+        // Build the formatter outside the lock, as FormatterCache does.
+        let formatter = DatePatternFormatter(info)
+        return cache.withLock {
+            if let existing = $0[info] {
+                return existing
+            }
+            // Patterns vary without limit, so stay bounded as FormatterCache does.
+            if $0.count > 100 {
+                $0.removeAll()
+            }
+            $0[info] = formatter
+            return formatter
+        }
     }
 
     func format(_ date: Date) -> String? {
