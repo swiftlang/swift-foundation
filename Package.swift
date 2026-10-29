@@ -4,6 +4,9 @@
 import PackageDescription
 import CompilerPluginSupport
 
+// Embedded Swift builds Foundation as one module, named Foundation. See the end of this file.
+let embeddedLayout = !(Context.environment["SWIFT_FOUNDATION_EMBEDDED"] ?? "").isEmpty
+
 // Availability Macros
 
 let availabilityTags: [_Availability] = [
@@ -17,6 +20,8 @@ enum _OSAvailability: String {
     case alwaysAvailable = "macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26" // This should match the package's deployment target
     // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
     case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000, visionOS 10000"
+    // Embedded Swift links Foundation into each program, so its availability is the embedded deployment target, not an OS release.
+    case embedded = "macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2" // This should match the embedded deployment target
 }
 struct _Availability {
     let name: String
@@ -29,7 +34,8 @@ struct _Availability {
 }
 let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
     availabilityTags.map {
-        .enableExperimentalFeature("AvailabilityMacro=\($0.name) \(version):\($0.osAvailability.rawValue)")
+        let osAvailability: _OSAvailability = embeddedLayout && $0.osAvailability == .alwaysAvailable ? .embedded : $0.osAvailability
+        return .enableExperimentalFeature("AvailabilityMacro=\($0.name) \(version):\(osAvailability.rawValue)")
     }
 }
 
@@ -266,3 +272,45 @@ var package = Package(
         )
     ]
 )
+
+// Embedded Swift always builds FoundationEssentials and FoundationInternationalization as one module, named Foundation. Embedded Swift has no dynamic replacement, so in embedded mode FoundationEssentials uses the ICU implementations of FoundationInternationalization directly. A Swift SDK cannot change the manifest, so set SWIFT_FOUNDATION_EMBEDDED=1 to use this layout.
+if embeddedLayout {
+    let essentials = package.targets.first { $0.name == "FoundationEssentials" }!
+    let internationalization = package.targets.first { $0.name == "FoundationInternationalization" }!
+    // The OS availability annotations describe which Foundation.framework release has an API. Embedded Swift links Foundation into each program, so every API is available at the embedded deployment target, and every `#available` check for Foundation's own code is true.
+    let embeddedSwiftSettings: [SwiftSetting] = (essentials.swiftSettings ?? []) + [.unsafeFlags(["-Xfrontend", "-disable-availability-checking"])]
+
+    // Two targets cannot have the same source files, so remove the separate modules and the tests that use them.
+    package.targets.removeAll {
+        $0.name == "FoundationEssentials" || $0.name == "FoundationInternationalization" || $0.name == "TestSupport" || $0.type == .test
+    }
+    package.targets.append(
+        .target(
+            name: "Foundation",
+            dependencies: [
+                "_FoundationCShims",
+                "_FoundationInternationalizationData",
+                "FoundationMacros",
+                .product(name: "_RopeModule", package: "swift-collections"),
+                .product(name: "DequeModule", package: "swift-collections"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "_FoundationICU", package: "swift-foundation-icu"),
+            ],
+            path: "Sources",
+            exclude: essentials.exclude.map { "FoundationEssentials/\($0)" } + internationalization.exclude.map { "FoundationInternationalization/\($0)" } + [
+                // With explicit source directories, SwiftPM gives the documentation catalogs to the compiler.
+                "FoundationEssentials/FoundationEssentials.docc",
+                "FoundationInternationalization/FoundationInternationalization.docc",
+            ],
+            sources: ["FoundationEssentials", "FoundationInternationalization"],
+            cSettings: essentials.cSettings,
+            // The settings of FoundationInternationalization are a subset of these.
+            swiftSettings: embeddedSwiftSettings,
+            linkerSettings: essentials.linkerSettings
+        )
+    )
+    package.platforms = [.macOS("15"), .iOS("18"), .tvOS("18"), .watchOS("11"), .visionOS("2")]
+    package.products = [
+        .library(name: "Foundation", targets: ["Foundation"]),
+    ]
+}

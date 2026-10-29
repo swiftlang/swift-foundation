@@ -16,9 +16,9 @@ import FoundationEssentials
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
     /// A parse strategy for creating decimal values from formatted strings.
-    public struct ParseStrategy<Format> : Foundation.ParseStrategy, Codable, Hashable where Format : Foundation.FormatStyle, Format.FormatInput == Decimal {
+    public struct ParseStrategy<Format> : Foundation.ParseStrategy, Hashable where Format : Foundation.FormatStyle, Format.FormatInput == Decimal {
         /// The format style describing the expected format of the string to parse.
         public var formatStyle: Format
         /// A Boolean value that indicates whether the parse strategy permits some discrepancies when parsing.
@@ -30,7 +30,7 @@ extension Decimal {
     }
 #else
     /// A parse strategy for creating decimal values from formatted strings.
-    public struct ParseStrategy<Format> : FoundationEssentials.ParseStrategy, Codable, Hashable where Format : FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
+    public struct ParseStrategy<Format> : FoundationEssentials.ParseStrategy, Hashable where Format : FoundationEssentials.FormatStyle, Format.FormatInput == Decimal {
         /// The format style describing the expected format of the string to parse.
         public var formatStyle: Format
         /// A Boolean value that indicates whether the parse strategy permits some discrepancies when parsing.
@@ -93,7 +93,7 @@ extension Decimal.ParseStrategy {
     public func parse(_ value: String) throws -> Format.FormatInput {
         if let result = parse(value, startingAt: value.startIndex, in: value.startIndex..<value.endIndex) {
             return result.1
-        } else if let d = Decimal(string: value) {
+        } else if let d = Decimal(asciiDecimalString: value) {
             return d
         } else {
             let exampleString1 = formatStyle.format(3.14)
@@ -107,12 +107,17 @@ extension Decimal.ParseStrategy {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal.ParseStrategy : Sendable where Format : Sendable {}
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Decimal.ParseStrategy : Codable {}
+#endif // !hasFeature(Embedded)
+
 // MARK: - Decimal extension entry point
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public extension Decimal {
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
     /// Initialize an instance by parsing `value` with the given `strategy`.
     init<S: Foundation.ParseStrategy>(_ value: S.ParseInput, strategy: S) throws where S.ParseOutput == Self {
         self = try strategy.parse(value)
@@ -179,5 +184,3 @@ public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Curre
         self.lenient = lenient
     }
 }
-
-

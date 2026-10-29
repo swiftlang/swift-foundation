@@ -311,7 +311,7 @@ extension Locale.Region {
 
     /// Categories of a region. See https://www.unicode.org/reports/tr35/tr35-35/tr35-info.html#Territory_Data
     @available(FoundationPreview 6.2, *)
-    public struct Category: Codable, Sendable, Hashable, CustomDebugStringConvertible {
+    public struct Category: Sendable, Hashable, CustomDebugStringConvertible {
         public var debugDescription: String {
             switch inner {
             case .world:
@@ -387,6 +387,7 @@ extension Locale.Region {
         /// Category representing a grouping, regions that has a well defined membership.
         public static let grouping: Category = Category(.grouping)
 
+#if !hasFeature(Embedded)
         public init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
             let inner: Inner
@@ -423,6 +424,7 @@ extension Locale.Region {
 
             }
         }
+#endif
     }
 
     /// An array of regions matching the specified categories.
@@ -493,6 +495,11 @@ extension Locale.Region {
         return Locale.Region(code)
     }
 }
+
+#if !hasFeature(Embedded)
+@available(FoundationPreview 6.2, *)
+extension Locale.Region.Category : Codable {}
+#endif
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Collation {

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -277,3 +279,5 @@ public struct KeyPathComparator<Compared>: SortComparator {
         hasher.combine(comparator)
     }
 }
+
+#endif // !hasFeature(Embedded)

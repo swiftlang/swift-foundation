@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 internal import _FoundationCShims
 internal import Synchronization
 
@@ -86,7 +84,16 @@ final class _ProcessInfo: Sendable {
             if let existing = $0.arguments {
                 return existing
             }
+            #if hasFeature(Embedded) && canImport(Darwin)
+            // Embedded Swift's standard library has no CommandLine
+            let argv = _NSGetArgv()!.pointee!
+            var current = (0 ..< Int(_NSGetArgc()!.pointee)).map { String(cString: argv[$0]!) }
+            #elseif hasFeature(Embedded)
+            // Until we have CommandLine in embedded
+            var current: [String] = []
+            #else
             var current = CommandLine.arguments
+            #endif
             // Replace the process path
             if let fullPath = Platform.getFullExecutablePath() {
                 // Swift's CommandLine.arguments can be empty
@@ -657,5 +664,3 @@ extension _ProcessInfo {
 }
 
 #endif // !NO_PROCESS
-
-#endif // !hasFeature(Embedded)

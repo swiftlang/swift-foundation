@@ -37,20 +37,12 @@ internal import CoreFoundation_Private.CFNotificationCenter
 #endif
 
 
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if (FOUNDATION_FRAMEWORK && canImport(_FoundationICU)) || hasFeature(Embedded)
 internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
     _TimeZoneICU.self
 }
 internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMTICU.self
-}
-#else
-#if hasFeature(Embedded)
-package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
-    nil
-}
-package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
-    _TimeZoneGMT.self
 }
 #else
 dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
@@ -59,7 +51,6 @@ dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
 dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMT.self
 }
-#endif
 #endif
 
 #if os(Windows)

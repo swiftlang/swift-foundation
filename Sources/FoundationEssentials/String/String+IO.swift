@@ -30,7 +30,8 @@ public func _cfMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding
 }
 
 package func _icuMakeStringFromBytes(_ bytes: UnsafeBufferPointer<UInt8>, encoding: String.Encoding) -> String? {
-    return nil
+    // FoundationInternationalization is in the same module.
+    return _icuMakeStringFromBytes_impl(bytes, encoding: encoding)
 }
 #else
 @_spi(SwiftCorelibsFoundation)

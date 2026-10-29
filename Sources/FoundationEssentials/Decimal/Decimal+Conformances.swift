@@ -22,6 +22,7 @@ extension Decimal : CustomStringConvertible {
     /// - Parameters:
     ///   - string: A string containing a formatted decimal value.
     ///   - locale: A locale that indicates the formatting conventions used by `string`.
+    // TODO: Replace with `@available(Unicode)` when the standard library defines the Unicode availability domain (https://github.com/swiftlang/swift/pull/85324).
     @_unavailableInEmbedded
     public init?(string: __shared String, locale: __shared Locale? = nil) {
         let decimalSeparator = locale?.decimalSeparator ?? "."
@@ -29,6 +30,20 @@ extension Decimal : CustomStringConvertible {
             from: string.utf8Span.span,
             prevalidatedUTF8: true,
             decimalSeparator: decimalSeparator.utf8Span,
+            matchEntireString: false
+        ) else {
+            return nil
+        }
+        self = value
+    }
+
+    /// Creates and initializes a decimal by parsing a string that uses "." as the decimal separator.
+    ///
+    /// This gives the same result as `init?(string:locale:)` with a `nil` locale, but it does not need the Unicode data tables, so it is also available in Embedded Swift.
+    package init?(asciiDecimalString string: __shared String) {
+        guard let (value, _, _) = try? Decimal.__decimal(
+            from: string.utf8Span.span,
+            asciiDecimalSeparator: UInt8(ascii: "."),
             matchEntireString: false
         ) else {
             return nil

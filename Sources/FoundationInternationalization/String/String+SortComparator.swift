@@ -17,7 +17,7 @@ import FoundationEssentials
 extension String {
     /// Compares `String`s using one of a fixed set of standard comparison
     /// algorithms.
-    public struct StandardComparator: SortComparator, Codable, Sendable {
+    public struct StandardComparator: SortComparator, Sendable {
         public typealias Compared = String
 #if FOUNDATION_FRAMEWORK
         // https://github.com/apple/swift-foundation/issues/284
@@ -86,12 +86,6 @@ extension String {
             return options == other.options && isLocalized == other.isLocalized
         }
 
-        enum CodingKeys: String, CodingKey {
-            case options
-            case isLocalized
-            case order
-        }
-
         /// The `String.CompareOptions` used in the
         /// `String.compare(_:,options:)`invocation that performs an
         /// equivalent comparison.
@@ -119,28 +113,6 @@ extension String {
             self.order = order
         }
 
-        public init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            let rawOptions = try container.decode(
-                UInt.self, forKey: .options)
-            options = String.CompareOptions(rawValue: rawOptions)
-            isLocalized = try container.decode(Bool.self, forKey: .isLocalized)
-            order = try container.decode(SortOrder.self, forKey: .order)
-            // Check if the decoded value is one of the valid cases.
-            // If in future, more flexibility is afforded to standard
-            // string comparators, this restriction can be removed.
-            if Self.validAlgorithms[self] == nil {
-                throw DecodingError.dataCorrupted(
-                    DecodingError.Context(
-                        codingPath: container.codingPath,
-                        debugDescription: """
-                        Attempted to decode \
-                        \(String(describing: Self.self)) in invalid \
-                        configuration.
-                        """))
-            }
-        }
-
         public func compare(_ lhs: String, _ rhs: String) -> ComparisonResult {
 #if FOUNDATION_FRAMEWORK
             // https://github.com/apple/swift-foundation/issues/284
@@ -161,24 +133,11 @@ extension String {
             hasher.combine(isLocalized)
             hasher.combine(order)
         }
-
-        public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(options.rawValue, forKey: .options)
-            try container.encode(isLocalized, forKey: .isLocalized)
-            try container.encode(order, forKey: .order)
-        }
     }
 
     /// A `String` comparison performed using the given comparison options
     /// and locale.
-    public struct Comparator: SortComparator, Codable, Sendable {
-        enum CodingKeys: String, CodingKey {
-            case options
-            case locale
-            case order
-        }
-
+    public struct Comparator: SortComparator, Sendable {
         /// The options to use for comparison.
         public let options: String.CompareOptions
 
@@ -230,14 +189,6 @@ extension String {
 #endif
         }
 
-        public init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            let rawOptions = try container.decode(UInt.self, forKey: .options)
-            options = String.CompareOptions(rawValue: rawOptions)
-            locale = try container.decode(Locale?.self, forKey: .locale)
-            order = try container.decode(SortOrder.self, forKey: .order)
-        }
-
         public func compare(_ lhs: String, _ rhs: String) -> ComparisonResult {
 #if FOUNDATION_FRAMEWORK
             return lhs.compare(rhs, options: options, locale: locale).withOrder(order)
@@ -252,13 +203,6 @@ extension String {
             hasher.combine(options.rawValue)
             hasher.combine(locale)
             hasher.combine(order)
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(options.rawValue, forKey: .options)
-            try container.encode(locale, forKey: .locale)
-            try container.encode(order, forKey: .order)
         }
     }
 }
@@ -289,3 +233,66 @@ extension SortComparator where Self == String.Comparator {
     }
 }
 
+#if !hasFeature(Embedded)
+@available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
+extension String.StandardComparator : Codable {
+    enum CodingKeys: String, CodingKey {
+        case options
+        case isLocalized
+        case order
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let rawOptions = try container.decode(
+            UInt.self, forKey: .options)
+        options = String.CompareOptions(rawValue: rawOptions)
+        isLocalized = try container.decode(Bool.self, forKey: .isLocalized)
+        order = try container.decode(SortOrder.self, forKey: .order)
+        // Check if the decoded value is one of the valid cases.
+        // If in future, more flexibility is afforded to standard
+        // string comparators, this restriction can be removed.
+        if Self.validAlgorithms[self] == nil {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription: """
+                    Attempted to decode \
+                    \(String(describing: Self.self)) in invalid \
+                    configuration.
+                    """))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(options.rawValue, forKey: .options)
+        try container.encode(isLocalized, forKey: .isLocalized)
+        try container.encode(order, forKey: .order)
+    }
+}
+
+@available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
+extension String.Comparator : Codable {
+    enum CodingKeys: String, CodingKey {
+        case options
+        case locale
+        case order
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let rawOptions = try container.decode(UInt.self, forKey: .options)
+        options = String.CompareOptions(rawValue: rawOptions)
+        locale = try container.decode(Locale?.self, forKey: .locale)
+        order = try container.decode(SortOrder.self, forKey: .order)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(options.rawValue, forKey: .options)
+        try container.encode(locale, forKey: .locale)
+        try container.encode(order, forKey: .order)
+    }
+}
+#endif // !hasFeature(Embedded)

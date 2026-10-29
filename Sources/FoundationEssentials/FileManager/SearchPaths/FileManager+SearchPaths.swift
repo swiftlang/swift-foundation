@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSFileManager
 #endif
@@ -115,5 +113,3 @@ func _DarwinSearchPaths(for directory: FileManager.SearchPathDirectory, in domai
     return Array(basic)
 }
 #endif
-
-#endif // !hasFeature(Embedded)

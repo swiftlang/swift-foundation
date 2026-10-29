@@ -18,7 +18,7 @@ internal import Foundation_Private
 
 internal import _FoundationICU
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 @_dynamicReplacement(for: _uidnaHook())
 private func _uidnaHook_localized() -> UIDNAHook.Type? {
     return UIDNAHookICU.self

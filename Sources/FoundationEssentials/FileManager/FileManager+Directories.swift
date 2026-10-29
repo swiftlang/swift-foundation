@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import containermanager
 internal import _ForSwiftFoundation
@@ -52,13 +50,13 @@ func _mkpath_np(_ path: UnsafePointer<CChar>, _ omode: mode_t, _ firstdir: Unsaf
 #endif
 
 extension _FileManagerImpl {
-    var homeDirectoryForCurrentUser: URL {
+    static func homeDirectoryForCurrentUser(_ fileManager: FileManager) -> URL {
         URL(filePath: String.homeDirectoryPath(), directoryHint: .isDirectory)
     }
     
-    func homeDirectory(forUser userName: String?) -> URL? {
+    static func homeDirectory(_ fileManager: FileManager, forUser userName: String?) -> URL? {
         guard let userName else {
-            return homeDirectoryForCurrentUser
+            return homeDirectoryForCurrentUser(fileManager)
         }
         guard let path = String.homeDirectoryPath(forUser: userName) else {
             return nil
@@ -66,12 +64,12 @@ extension _FileManagerImpl {
         return URL(filePath: path, directoryHint: .isDirectory)
     }
     
-    var temporaryDirectory: URL {
+    static func temporaryDirectory(_ fileManager: FileManager) -> URL {
         URL(filePath: String.temporaryDirectoryPath, directoryHint: .isDirectory)
     }
 
     #if !FOUNDATION_FRAMEWORK
-    private func itemReplacementDirectory(appropriateFor reference: URL) throws -> URL {
+    private static func itemReplacementDirectory(_ fileManager: FileManager, appropriateFor reference: URL) throws -> URL {
         guard reference.isFileURL else {
             throw CocoaError.errorWithFilePath(.fileWriteUnsupportedScheme, reference)
         }
@@ -92,7 +90,7 @@ extension _FileManagerImpl {
 
         var attempt = 0
         while true {
-            let replacementDirectory = containerDirectory.appending(component: itemReplacementDirectoryName(forAttempt: attempt), directoryHint: .isDirectory)
+            let replacementDirectory = containerDirectory.appending(component: Self.itemReplacementDirectoryName(fileManager, forAttempt: attempt), directoryHint: .isDirectory)
             do {
                 try fileManager.createDirectory(at: replacementDirectory, withIntermediateDirectories: false)
                 return replacementDirectory
@@ -106,7 +104,7 @@ extension _FileManagerImpl {
         }
     }
 
-    private func itemReplacementDirectoryName(forAttempt attempt: Int) -> String {
+    private static func itemReplacementDirectoryName(_ fileManager: FileManager, forAttempt attempt: Int) -> String {
         let processName = ProcessInfo.processInfo.processName.filter { $0.isLetter || $0.isNumber }
         if attempt == 0 {
             return "(A Document Being Saved By \(processName))"
@@ -115,7 +113,8 @@ extension _FileManagerImpl {
     }
     #endif
     
-    func url(
+    static func url(
+        _ fileManager: FileManager,
         for directory: FileManager.SearchPathDirectory,
         in domain: FileManager.SearchPathDomainMask,
         appropriateFor url: URL?,
@@ -134,7 +133,7 @@ extension _FileManagerImpl {
             // The only place we need to do this is for certain operations, namely the replacing item API.
             return try fileManager._URLForReplacingItem(at: url)
             #else
-            return try itemReplacementDirectory(appropriateFor: url)
+            return try Self.itemReplacementDirectory(fileManager, appropriateFor: url)
             #endif
         }
         #if FOUNDATION_FRAMEWORK
@@ -180,7 +179,8 @@ extension _FileManagerImpl {
         return url
     }
     
-    func urls(
+    static func urls(
+        _ fileManager: FileManager,
         for directory: FileManager.SearchPathDirectory,
         in domainMask: FileManager.SearchPathDomainMask
     ) -> [URL] {
@@ -188,7 +188,7 @@ extension _FileManagerImpl {
     }
     
     #if FOUNDATION_FRAMEWORK
-    func containerURL(forSecurityApplicationGroupIdentifier groupIdentifier: String) -> URL? {
+    static func containerURL(_ fileManager: FileManager, forSecurityApplicationGroupIdentifier groupIdentifier: String) -> URL? {
         groupIdentifier.withCString {
             guard let path = container_create_or_lookup_app_group_path_by_app_group_identifier($0, nil)  else {
                 return nil
@@ -200,7 +200,7 @@ extension _FileManagerImpl {
     }
 #endif
     
-    func contentsOfDirectory(atPath path: String) throws -> [String] {
+    static func contentsOfDirectory(_ fileManager: FileManager, atPath path: String) throws -> [String] {
         #if os(macOS)
         // CFURLEnumerator/CarbonCore does not operate on /dev paths
         if !path.standardizingPath.starts(with: "/dev") {
@@ -234,7 +234,7 @@ extension _FileManagerImpl {
         return result
     }
     
-    func subpathsOfDirectory(atPath path: String) throws -> [String] {
+    static func subpathsOfDirectory(_ fileManager: FileManager, atPath path: String) throws -> [String] {
 #if os(Windows)
         try path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
@@ -256,7 +256,7 @@ extension _FileManagerImpl {
                 }
                 defer { LocalFree(pwszSubPath) }
 
-                results.append(contentsOf: try subpathsOfDirectory(atPath: String(decodingCString: pwszSubPath!, as: UTF16.self)).map {
+                results.append(contentsOf: try Self.subpathsOfDirectory(fileManager, atPath: String(decodingCString: pwszSubPath!, as: UTF16.self)).map {
                     var pwszFullPath: PWSTR? = nil
                     _ = PathAllocCombine(item.fileName, $0, PATHCCH_ALLOW_LONG_PATHS, &pwszFullPath)
                     defer { LocalFree(pwszFullPath) }
@@ -291,7 +291,7 @@ extension _FileManagerImpl {
                     continue
                 }
                 
-                let trueSubpath = subpath.trimmingPrefix(realFirstPath)
+                let trueSubpath = subpath.starts(with: realFirstPath) ? subpath.dropFirst(realFirstPath.count) : subpath[...]
                 if trueSubpath.first == "/" {
                     results.append(String(trueSubpath.dropFirst()))
                 } else if !trueSubpath.isEmpty {
@@ -303,7 +303,8 @@ extension _FileManagerImpl {
 #endif
     }
 
-    func createDirectory(
+    static func createDirectory(
+        _ fileManager: FileManager,
         at url: URL,
         withIntermediateDirectories createIntermediates: Bool,
         attributes: [FileAttributeKey : Any]? = nil
@@ -320,7 +321,8 @@ extension _FileManagerImpl {
         try fileManager.createDirectory(atPath: path, withIntermediateDirectories: createIntermediates, attributes: attributes)
     }
 
-    func createDirectory(
+    static func createDirectory(
+        _ fileManager: FileManager,
         atPath path: String,
         withIntermediateDirectories createIntermediates: Bool,
         attributes: [FileAttributeKey : Any]? = nil
@@ -341,7 +343,7 @@ extension _FileManagerImpl {
                         let lastError = GetLastError()
                         if lastError == ERROR_ALREADY_EXISTS {
                             var isDir: Bool = false
-                            if fileExists(atPath: directoryPath, isDirectory: &isDir), isDir {
+                            if Self.fileExists(fileManager, atPath: directoryPath, isDirectory: &isDir), isDir {
                                 return // Directory now exists, success
                             }
                         } else if lastError == ERROR_PATH_NOT_FOUND {
@@ -354,7 +356,7 @@ extension _FileManagerImpl {
                                     let lastError = GetLastError()
                                     if lastError == ERROR_ALREADY_EXISTS {
                                         var isDir: Bool = false
-                                        if fileExists(atPath: directoryPath, isDirectory: &isDir), isDir {
+                                        if Self.fileExists(fileManager, atPath: directoryPath, isDirectory: &isDir), isDir {
                                             return // Directory now exists, success
                                         }
                                     }
@@ -485,7 +487,8 @@ extension _FileManagerImpl {
     }
     
 #if FOUNDATION_FRAMEWORK
-    func getRelationship(
+    static func getRelationship(
+        _ fileManager: FileManager,
         _ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>,
         ofDirectoryAt directoryURL: URL,
         toItemAt otherURL: URL
@@ -530,7 +533,8 @@ extension _FileManagerImpl {
         return
     }
     
-    func getRelationship(
+    static func getRelationship(
+        _ fileManager: FileManager,
         _ outRelationship: UnsafeMutablePointer<FileManager.URLRelationship>,
         of directory: FileManager.SearchPathDirectory,
         in domainMask: FileManager.SearchPathDomainMask,
@@ -549,7 +553,7 @@ extension _FileManagerImpl {
     }
 #endif
     
-    func changeCurrentDirectoryPath(_ path: String) -> Bool {
+    static func changeCurrentDirectoryPath(_ fileManager: FileManager, _ path: String) -> Bool {
 #if os(Windows)
         return (try? path.withNTPathRepresentation {
             // It seems setting CWD with the long name prefix causes issues with calls to GetFullPathNameW, path which are just '\'
@@ -567,7 +571,7 @@ extension _FileManagerImpl {
 #endif
     }
     
-    var currentDirectoryPath: String? {
+    static func currentDirectoryPath(_ fileManager: FileManager) -> String? {
 #if os(Windows)
         // Make an initial call to GetCurrentDirectoryW to get a buffer size estimate.
         // This is solely to minimize the number of allocations and number of bytes allocated versus starting with a hardcoded value like MAX_PATH.
@@ -602,5 +606,3 @@ extension URL {
         #endif
     }
 }
-
-#endif // !hasFeature(Embedded)

@@ -990,10 +990,11 @@ extension URL {
                 guard !range.isEmpty else { return true }
                 guard flush() else { return false }
                 #if hasFeature(Embedded)
-                // There is no IDNA hook in embedded mode.
-                return false
+                // FoundationInternationalization is in the same module.
+                let uidnaHook = UIDNAHookICU.self
                 #else
                 guard let uidnaHook = _uidnaHook() else { return false }
+                #endif
                 let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
                     return uidnaHook.nameToASCII(
                         input: utf16Span,
@@ -1003,7 +1004,6 @@ extension URL {
                 guard success else { return false }
                 updateIndices(currentIndex: range.endIndex)
                 return true
-                #endif
             }
 
             // Returns false if there's not enough room in the output buffer.

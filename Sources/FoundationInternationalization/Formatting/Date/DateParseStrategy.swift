@@ -106,6 +106,7 @@ public extension ParseStrategy {
 
 // MARK: Regex
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.ParseStrategy : CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
@@ -130,7 +131,9 @@ extension Date.ParseStrategy : CustomConsumingRegexComponent {
         return fmt.parse(input, in: index..<bounds.upperBound)
     }
 }
+#endif // !hasFeature(Embedded)
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension RegexComponent where Self == Date.ParseStrategy {
 
@@ -179,3 +182,4 @@ extension RegexComponent where Self == Date.ParseStrategy {
 
 
 }
+#endif // !hasFeature(Embedded)

@@ -75,7 +75,7 @@ extension _CalendarProtocol {
     package var isBridged: Bool { false }
     
     package var gregorianStartDate: Date? { nil }
-    package var debugDescription: String { "\(identifier)" }
+    package var debugDescription: String { identifier.debugDescription }
     
     /// Combines exactly the state that `Calendar`'s `==` compares, so calendars that compare equal always hash equally. That means the resolved `firstWeekday`, not the stored one.
     package func hash(into hasher: inout Hasher) {
