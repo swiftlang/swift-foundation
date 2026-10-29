@@ -27,7 +27,7 @@ internal import Synchronization
 #if !FOUNDATION_FRAMEWORK
 @_dynamicReplacement(for: _localeICUClass())
 private func _localeICUClass_localized() -> any _LocaleProtocol.Type {
-    return _LocaleICU.self
+    foundation_swift_locale() ? _LocaleImpl.self : _LocaleICU.self
 }
 #endif
 

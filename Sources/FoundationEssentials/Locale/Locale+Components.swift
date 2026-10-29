@@ -93,38 +93,37 @@ extension Locale {
             self.languageComponents = Language.Components(languageCode: languageCode, script: script, region: languageRegion)
         }
 
-        // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
-        // Must include every component stored by a `Locale.Components`, and be kept in sync with `init(identifier:)`.
-        package var icuIdentifier: String {
-
-            var keywords = [(ICULegacyKey, String)]()
-            if let id = calendar?.cldrIdentifier { keywords.append((Calendar.Identifier.legacyKeywordKey, id)) }
-            if let id = collation?._normalizedIdentifier { keywords.append((Locale.Collation.legacyKeywordKey, id)) }
-            if let id = currency?._normalizedIdentifier { keywords.append((Locale.Currency.legacyKeywordKey, id)) }
-            if let id = numberingSystem?._normalizedIdentifier { keywords.append((Locale.NumberingSystem.legacyKeywordKey, id)) }
-            if let id = firstDayOfWeek?.rawValue { keywords.append((Locale.Weekday.legacyKeywordKey, id)) }
-            if let id = hourCycle?.rawValue { keywords.append((Locale.HourCycle.legacyKeywordKey, id)) }
-            if let id = measurementSystem?._normalizedIdentifier { keywords.append((Locale.MeasurementSystem.legacyKeywordKey, id)) }
+        /// Calls `body` with each ICU keyword of the components, like `(calendar, gregorian)`.
+        /// Include every component that `Locale.Components` stores, other than the language components. Keep this in sync with `init(identifier:)`.
+        package func forEachICUKeyword(_ body: (ICULegacyKey, String) -> Void) {
+            if let id = calendar?.cldrIdentifier { body(Calendar.Identifier.legacyKeywordKey, id) }
+            if let id = collation?._normalizedIdentifier { body(Locale.Collation.legacyKeywordKey, id) }
+            if let id = currency?._normalizedIdentifier { body(Locale.Currency.legacyKeywordKey, id) }
+            if let id = numberingSystem?._normalizedIdentifier { body(Locale.NumberingSystem.legacyKeywordKey, id) }
+            if let id = firstDayOfWeek?.rawValue { body(Locale.Weekday.legacyKeywordKey, id) }
+            if let id = hourCycle?.rawValue { body(Locale.HourCycle.legacyKeywordKey, id) }
+            if let id = measurementSystem?._normalizedIdentifier { body(Locale.MeasurementSystem.legacyKeywordKey, id) }
             // No need for redundant region keyword
             if let region = region, region != languageComponents.region {
                 // rg keyword value is actually a subdivision code
-                keywords.append((Locale.Region.legacyKeywordKey, Locale.Subdivision.subdivision(for: region)._normalizedIdentifier))
+                body(Locale.Region.legacyKeywordKey, Locale.Subdivision.subdivision(for: region)._normalizedIdentifier)
             }
-            if let id = subdivision?._normalizedIdentifier { keywords.append((Locale.Subdivision.legacyKeywordKey, id)) }
-            if let id = timeZone?.identifier { keywords.append((TimeZone.legacyKeywordKey, id)) }
-            if let id = variant?._normalizedIdentifier { keywords.append((Locale.Variant.legacyKeywordKey, id)) }
+            if let id = subdivision?._normalizedIdentifier { body(Locale.Subdivision.legacyKeywordKey, id) }
+            if let id = timeZone?.identifier { body(TimeZone.legacyKeywordKey, id) }
+            if let id = variant?._normalizedIdentifier { body(Locale.Variant.legacyKeywordKey, id) }
+        }
 
+        // Returns an ICU-style identifier like "de_DE@calendar=gregorian"
+        // Must include every component stored by a `Locale.Components`, and be kept in sync with `init(identifier:)`.
+        package var icuIdentifier: String {
             var locID = languageComponents.identifier
-            let keywordCounts = keywords.count
-            if keywordCounts > 0 {
-                locID.append("@")
-            }
-
-            for (i, (key, val)) in keywords.enumerated() {
-                locID.append("\(key.key)=\(val)")
-                if i != keywordCounts - 1 {
-                    locID.append(";")
-                }
+            var isFirstKeyword = true
+            forEachICUKeyword { key, value in
+                locID.append(isFirstKeyword ? "@" : ";")
+                isFirstKeyword = false
+                locID.append(key.key)
+                locID.append("=")
+                locID.append(value)
             }
             return locID
         }
