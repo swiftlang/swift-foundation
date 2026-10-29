@@ -579,6 +579,17 @@ extension Date {
         /// - Parameter value: The date to format.
         /// - Returns: An attributed string representation of the date.
         public func format(_ value: Date) -> AttributedString {
+            if foundation_date_format_feature_enabled() {
+                let info: ICUDateFormatter.DateFormatInfo
+                switch innerStyle {
+                case .formatStyle(let formatStyle):
+                    info = .init(formatStyle)
+                case .verbatimFormatStyle(let verbatimFormatStyle):
+                    info = .init(verbatimFormatStyle)
+                }
+                return DatePatternFormatter.cachedFormatter(for: info).attributedFormat(value) ?? AttributedString("")
+            }
+
             let fm: ICUDateFormatter?
             switch innerStyle {
             case .formatStyle(let formatStyle):
@@ -590,7 +601,7 @@ extension Date {
             guard let fm, let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString("")
             }
-            
+
             return str._attributedStringFromPositions(attributes)
         }
 
@@ -654,6 +665,9 @@ extension Date.FormatStyle {
         /// - Parameter value: The date to format.
         /// - Returns: An attributed string representation of the date.
         public func format(_ value: Date) -> AttributedString {
+            if foundation_date_format_feature_enabled() {
+                return DatePatternFormatter.cachedFormatter(for: .init(base)).attributedFormat(value) ?? AttributedString("")
+            }
             guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString("")
             }
@@ -1006,6 +1020,9 @@ extension Date.FormatStyle : FormatStyle {
     /// - Parameter value: The date to format.
     /// - Returns: A string representation of the date.
     public func format(_ value: Date) -> String {
+        if foundation_date_format_feature_enabled() {
+            return DatePatternFormatter.cachedFormatter(for: .init(self)).format(value) ?? ""
+        }
         guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
             return ""
         }

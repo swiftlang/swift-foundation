@@ -13,6 +13,9 @@
 ##===----------------------------------------------------------------------===##
 
 add_library(_FoundationInternationalizationData STATIC
+    DataLocaleIdentifier.swift
+    DateFormatData.swift
+    DateFormatLookup.swift
     ListFormatData.swift
     ListFormatLookup.swift)
 
