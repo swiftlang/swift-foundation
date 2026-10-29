@@ -524,6 +524,8 @@ extension _ProcessInfo {
     private static let cfsQuotaURL = URL(filePath: "/sys/fs/cgroup/cpu/cpu.cfs_quota_us", directoryHint: .notDirectory)
     private static let cfsPeriodURL = URL(filePath: "/sys/fs/cgroup/cpu/cpu.cfs_period_us", directoryHint: .notDirectory)
     private static let cpuSetURL = URL(filePath: "/sys/fs/cgroup/cpuset/cpuset.cpus", directoryHint: .notDirectory)
+    private static let cpuMaxURL = URL(filePath: "/sys/fs/cgroup/cpu.max", directoryHint: .notDirectory)
+    private static let cpuSetEffectiveURL = URL(filePath: "/sys/fs/cgroup/cpuset.cpus.effective", directoryHint: .notDirectory)
 
     private static func firstLineOfFile(_ url: URL) throws -> Substring {
         let data = try Data(contentsOf: url)
@@ -534,7 +536,7 @@ extension _ProcessInfo {
         }
     }
 
-    private static func countCoreIds(cores: Substring) -> Int? {
+    static func countCoreIds(cores: Substring) -> Int? {
         let ids = cores.split(separator: "-", maxSplits: 1)
         guard let first = ids.first.flatMap({ Int($0, radix: 10) }),
               let last = ids.last.flatMap({ Int($0, radix: 10) }),
@@ -545,18 +547,21 @@ extension _ProcessInfo {
         return 1 + last - first
     }
 
-    private static func coreCount(cpuset cpusetURL: URL) -> Int? {
+    static func coreCount(cpuset cpusetURL: URL) -> Int? {
         guard let cpuset = try? firstLineOfFile(cpusetURL).split(separator: ","),
               !cpuset.isEmpty
         else { return nil }
-        if let first = cpuset.first, let count = countCoreIds(cores: first) {
-            return count
-        } else {
-            return nil
+        var total = 0
+        for entry in cpuset {
+            guard let count = countCoreIds(cores: entry) else {
+                return nil
+            }
+            total += count
         }
+        return total
     }
 
-    private static func coreCount(quota quotaURL: URL,  period periodURL: URL) -> Int? {
+    static func coreCount(quota quotaURL: URL,  period periodURL: URL) -> Int? {
         guard let quota = try? Int(firstLineOfFile(quotaURL)),
               quota > 0
         else { return nil }
@@ -567,10 +572,29 @@ extension _ProcessInfo {
         return (quota - 1 + period) / period // always round up if fractional CPU quota requested
     }
 
+    static func coreCount(cpuMax cpuMaxURL: URL) -> Int? {
+        guard let line = try? firstLineOfFile(cpuMaxURL) else { return nil }
+        let fields = line.split(whereSeparator: \.isWhitespace)
+        guard fields.count == 2,
+              let period = Int(fields[1]),
+              period > 0
+        else { return nil }
+        guard fields[0] != "max",
+              let quota = Int(fields[0]),
+              quota > 0
+        else { return nil }
+
+        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
+    }
+
     private static func fsCoreCount() -> Int? {
         if let quota = coreCount(quota: cfsQuotaURL, period: cfsPeriodURL) {
             return quota
+        } else if let quota = coreCount(cpuMax: cpuMaxURL) {
+            return quota
         } else if let cpusetCount = coreCount(cpuset: cpuSetURL) {
+            return cpusetCount
+        } else if let cpusetCount = coreCount(cpuset: cpuSetEffectiveURL) {
             return cpusetCount
         } else {
             return nil
