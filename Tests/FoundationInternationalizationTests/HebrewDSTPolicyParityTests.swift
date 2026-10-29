@@ -158,4 +158,12 @@ private struct HebrewDSTPolicyParityTests {
             "[\(probe.label)] hebrew=\(hebDate) greg=\(gregDate) diff=\(hebDate.timeIntervalSince(gregDate))s"
         )
     }
+
+    // 2026-03-07 02:30 in Los Angeles plus one day lands in the hour that 2026-03-08 skips. The result is after the gap, 03:30, like the Gregorian calendar.
+    @Test func dayAddOntoASkippedHour() throws {
+        var hebrew = Calendar(identifier: .hebrew)
+        hebrew.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let result = hebrew.date(byAdding: .day, value: 1, to: Date(timeIntervalSinceReferenceDate: 794_572_200))
+        #expect(result == Date(timeIntervalSinceReferenceDate: 794_658_600))
+    }
 }

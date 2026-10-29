@@ -729,14 +729,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         }
 
         // Step 3: day-level additions (day, week units, weekday etc.) collapse into a single
-        // day-count delta applied via offset-delta DST-aware arithmetic.
-        var daysToAdd = 0
-        if let d = components.day { daysToAdd += d }
-        if let doy = components.dayOfYear { daysToAdd += doy }
-        if let wom = components.weekOfMonth { daysToAdd += wom * 7 }
-        if let woy = components.weekOfYear { daysToAdd += woy * 7 }
-        if let wo = components.weekdayOrdinal { daysToAdd += wo * 7 }
-        if let w = components.weekday { daysToAdd += w }
+        // day-count delta that keeps the local time.
+        guard var daysToAdd = _CalendarUtility.dayCount(of: components) else { return nil }
 
         // `.yearForWeekOfYear`: advance by N week-year lengths (numWeeksInYearForWeekOfYear × 7).
         if let n = components.yearForWeekOfYear, n != 0 {
@@ -758,13 +752,8 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         }
 
         if daysToAdd != 0 {
-            // DST-aware offset-delta path: keep same local time across DST boundaries.
-            // Use secondsFromGMT (single offset at a UTC instant) to match _CalendarGregorian.
-            let tz = self.timeZone
-            let totalOffset1 = tz.secondsFromGMT(for: result)
-            let candidate = result + Double(daysToAdd) * 86400
-            let totalOffset2 = tz.secondsFromGMT(for: candidate)
-            result = candidate - Double(totalOffset2 - totalOffset1)
+            guard let moved = _CalendarUtility.date(byAddingDays: daysToAdd, to: result, in: timeZone) else { return nil }
+            result = moved
         }
 
         // Step 4: time-of-day additions (plain TimeInterval — no DST adjustment).
@@ -1151,65 +1140,19 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     /// start advanced by that many units (staying at-or-before `end`).
     private func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) -> (Int, Date) {
         if start == end { return (0, start) }
+        if let result = _CalendarUtility.timeUnitDifference(in: component, from: start, to: end) { return result }
+        // Hebrew has a single era; difference is always 0.
+        if component == .era { return (0, start) }
 
-        // Fast path for time components — direct TimeInterval arithmetic.
-        switch component {
-        case .hour:
-            let delta = end.timeIntervalSince(start) / 3600
-            let diff = Int(delta.rounded(.towardZero))
-            return (diff, start.addingTimeInterval(Double(diff) * 3600))
-        case .minute:
-            let delta = end.timeIntervalSince(start) / 60
-            let diff = Int(delta.rounded(.towardZero))
-            return (diff, start.addingTimeInterval(Double(diff) * 60))
-        case .second:
-            let delta = end.timeIntervalSince(start)
-            let diff = Int(delta.rounded(.towardZero))
-            return (diff, start.addingTimeInterval(Double(diff)))
-        case .nanosecond:
-            let delta = end.timeIntervalSince(start) * 1_000_000_000
-            let diff = Int(delta.rounded(.towardZero))
-            return (diff, start.addingTimeInterval(Double(diff) / 1_000_000_000))
-        case .era:
-            // Hebrew has a single era; difference is always 0.
-            return (0, start)
-        default:
-            break
-        }
-
-        // Calendar-level components: bisect-style search using cumulative add from `start`.
-        // IMPORTANT: each trial is `start + n * component`, not iterative `current + 1`.
+        // Each trial is `start + n * component`, not iterative `current + 1`.
         // The cumulative form avoids day-clamp accumulation across month boundaries.
         // Example: from AdarI-30, iterative +1 month → AdarII-29 (clamped) → Nisan-29 (preserved-from-clamp).
         // Cumulative +2 months → Nisan-30 (clamps from original day=30 to Nisan's max=30, fits).
-        // Matches ICU's diff iteration; the iterative form was producing 1-day drift across DST/leap edges.
-        let forward = end > start
-        let step = forward ? 1 : -1
-        var diff = 0
-        var current = start
-        var safety = 0
-
-        while true {
-            let trial = diff + step
-            var dc = DateComponents()
-            dc.setValue(trial, for: component)
-            guard let nextStep = date(byAdding: dc, to: start, wrappingComponents: false) else {
-                break
-            }
-            if nextStep == current {
-                // Component didn't advance (e.g., `.quarter` for Hebrew is a no-op).
-                break
-            }
-            let overshoot = forward ? (nextStep > end) : (nextStep < end)
-            if overshoot { break }
-            current = nextStep
-            diff = trial
-
-            // Safety bound in case of pathological inputs.
-            safety += 1
-            if safety > 1_000_000 { break }
+        return _CalendarUtility.differenceBySearch(from: start, to: end) { count in
+            var components = DateComponents()
+            components.setValue(count, for: component)
+            return date(byAdding: components, to: start, wrappingComponents: false)
         }
-        return (diff, current)
     }
 
 }
