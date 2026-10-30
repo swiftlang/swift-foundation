@@ -15,27 +15,9 @@ import FoundationEssentials
 #endif
 internal import _FoundationICU
 internal import Synchronization
-
-private extension String.Encoding {
-    var _icuConverterName: String? {
-        // TODO: Replace this with forthcoming(?) public property such as https://github.com/swiftlang/swift-foundation/pull/1243
-        // Note: UTF-* and US-ASCII are omitted here because they are supposed to be converted upstream.
-        switch self {
-        case .japaneseEUC: "EUC-JP"
-        case .isoLatin1: "ISO-8859-1"
-        case .shiftJIS: "Shift_JIS"
-        case .isoLatin2: "ISO-8859-2"
-        case .windowsCP1251: "windows-1251"
-        case .windowsCP1252: "windows-1252"
-        case .windowsCP1253: "windows-1253"
-        case .windowsCP1254: "windows-1254"
-        case .windowsCP1250: "windows-1250"
-        case .iso2022JP: "ISO-2022-JP"
-        case .macOSRoman: "macintosh"
-        default: nil
-        }
-    }
-}
+#if FOUNDATION_FRAMEWORK
+import CoreFoundation
+#endif
 
 extension ICU {
     final class StringConverter: @unchecked Sendable {
@@ -44,7 +26,13 @@ extension ICU {
         let encoding: String.Encoding
 
         init?(encoding: String.Encoding) {
-            guard let convName = encoding._icuConverterName else {
+#if FOUNDATION_FRAMEWORK
+            // `ianaName` has names only for the encodings that have a `String.Encoding` constant. CF has the names of the others, such as EUC-KR and GB18030. Fallback to that using CF if available.
+            let name = encoding.ianaName ?? (CFStringConvertEncodingToIANACharSetName(CFStringConvertNSStringEncodingToEncoding(encoding.rawValue)) as String?)
+#else
+            let name = encoding.ianaName
+#endif
+            guard let convName = name else {
                 return nil
             }
             var status: UErrorCode = U_ZERO_ERROR
@@ -80,6 +68,84 @@ extension ICU.StringConverter {
                         srcLength,
                         &status
                     )
+                }
+            }
+        }
+    }
+    
+    private final class LossyDecodeState {
+        let substitution: [UChar]
+        let maxInvalidByteCount: Int
+        var invalidByteCount = 0
+
+        init(substitution: [UChar], maxInvalidByteCount: Int) {
+            self.substitution = substitution
+            self.maxInvalidByteCount = maxInvalidByteCount
+        }
+    }
+
+    /// Decodes the data, and puts `substitution` in place of each byte that is not valid or has no mapping in the encoding. Returns the string and the number of bad bytes, or nil if the conversion fails.
+    /// If there are more than `maxInvalidByteCount` bad bytes, the conversion stops there and the result is nil. Use this when a result with more bad bytes is not useful, so that a large input does not make a large string that is not used.
+    func lossyDecode(bytes: RawSpan, substitution: String, maxInvalidByteCount: Int = .max) -> (string: String, invalidByteCount: Int)? {
+        return _converter.withLock { converter in
+            let state = LossyDecodeState(substitution: Array(substitution.utf16), maxInvalidByteCount: maxInvalidByteCount)
+            let callback: UConverterToUCallback = { context, args, _, length, reason, err in
+                guard reason == UCNV_UNASSIGNED || reason == UCNV_ILLEGAL || reason == UCNV_IRREGULAR, let context, let err else { return }
+                let state = Unmanaged<LossyDecodeState>.fromOpaque(context).takeUnretainedValue()
+                state.invalidByteCount += Int(length)
+                guard state.invalidByteCount <= state.maxInvalidByteCount else {
+                    // Leave a failure status, so that ucnv_toUnicode stops.
+                    err.pointee = U_ILLEGAL_CHAR_FOUND
+                    return
+                }
+                err.pointee = U_ZERO_ERROR
+                guard !state.substitution.isEmpty else { return }
+                // One substitution for each bad byte. ICU can report more than one byte at a time.
+                state.substitution.withUnsafeBufferPointer { substitution in
+                    for _ in 0..<length where err.pointee.isSuccess {
+                        ucnv_cbToUWriteUChars(args, substitution.baseAddress, Int32(substitution.count), 0, err)
+                    }
+                }
+            }
+
+            // The converter is shared, so put back its callback when done. Otherwise the next conversion would use this callback after `state` is gone.
+            var oldAction: UConverterToUCallback?
+            var oldContext: UnsafeRawPointer?
+            var status = U_ZERO_ERROR
+            ucnv_setToUCallBack(converter, callback, Unmanaged.passUnretained(state).toOpaque(), &oldAction, &oldContext, &status)
+            guard status.isSuccess else {
+                return nil
+            }
+            defer {
+                var status = U_ZERO_ERROR
+                ucnv_setToUCallBack(converter, oldAction, oldContext, nil, nil, &status)
+                ucnv_resetToUnicode(converter)
+            }
+
+            // Keep `state` alive while the callback can get its pointer.
+            return withExtendedLifetime(state) { () -> (string: String, invalidByteCount: Int)? in
+                bytes.withUnsafeBytes { src -> (string: String, invalidByteCount: Int)? in
+                    guard let sourceStart = src.baseAddress?.assumingMemoryBound(to: CChar.self) else {
+                        return ("", 0)
+                    }
+                    // ucnv_toUnicode moves `source` forward as it converts, so each chunk continues where the last one stopped.
+                    var source: UnsafePointer<CChar>? = sourceStart
+                    let sourceLimit = sourceStart + src.count
+
+                    let string = _withPerpetuallyResizingUCharBuffer { outputSpan, status in
+                        outputSpan.withUnsafeMutableBufferPointer { buffer, initializedCount in
+                            let targetStart = buffer.baseAddress! + initializedCount
+                            var target: UnsafeMutablePointer<UChar>? = targetStart
+                            ucnv_toUnicode(converter, &target, buffer.baseAddress! + buffer.count, &source, sourceLimit, nil, .true, &status)
+                            initializedCount += target! - targetStart
+                        }
+                    }
+                    
+                    guard let string else {
+                        return nil
+                    }
+                    
+                    return (string, state.invalidByteCount)
                 }
             }
         }
