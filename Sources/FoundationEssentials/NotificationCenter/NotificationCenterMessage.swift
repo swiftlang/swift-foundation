@@ -20,6 +20,8 @@ internal import _ForSwiftFoundation
 internal import os.log
 #endif
 
+internal import Synchronization
+
 @available(FoundationPreview 6.2, *)
 extension NotificationCenter {
     /// An optional identifier to associate a given message with a given type.
@@ -77,18 +79,22 @@ extension NotificationCenter {
         }
 
         fileprivate final class _NSNotificationObserverTokenWrapper: Hashable, @unchecked Sendable {
-            internal var token: _NSNotificationObserverToken?
+            private let token: Mutex<_NSNotificationObserverToken?>
             fileprivate weak var center: NotificationCenter?
 
             init(center: NotificationCenter, token: _NSNotificationObserverToken) {
-                self.token = token
+                self.token = Mutex(token)
                 self.center = center
             }
-            
+
             func remove() {
-                if let value = token {
+                // Take the token out atomically so that only the first of several concurrent calls unregisters it.
+                let value = token.withLock { value in
+                    defer { value = nil }
+                    return value
+                }
+                if let value {
                     self.center?._removeObserver(value)
-                    token = nil
                 }
             }
 
@@ -97,11 +103,11 @@ extension NotificationCenter {
             }
 
             static func == (lhs: ObservationToken._NSNotificationObserverTokenWrapper, rhs: ObservationToken._NSNotificationObserverTokenWrapper) -> Bool {
-                return lhs.token == rhs.token
+                return lhs.token.withLock { $0 } == rhs.token.withLock { $0 }
             }
 
             func hash(into hasher: inout Hasher) {
-                hasher.combine(token)
+                hasher.combine(token.withLock { $0 })
             }
         }
     }
