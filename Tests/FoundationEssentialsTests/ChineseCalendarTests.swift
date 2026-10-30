@@ -30,6 +30,105 @@ private struct ChineseCalendarTests {
         Date(timeIntervalSinceReferenceDate: Double(rataDie - 730_486) * 86400.0 + 43_200.0)
     }
 
+    private static func cachedYear(_ key: Int, newYear: Int? = nil) -> _ChineseYear {
+        _ChineseYear(relatedISOYear: key, newYearRataDie: newYear ?? key,
+                     monthLengthBits: 0x555, monthCount: 12, leapMonthNumber: 0)
+    }
+
+    @Test(arguments: [(1776, 1814), (-24, -62)])
+    func cacheRetainsAlternatingYears(first: Int, second: Int) {
+        var cache = ChineseYearCache()
+        var misses = 0
+        for key in Array(repeating: [first, second], count: 256).joined() {
+            if let year = cache.year(relatedISOYear: key) {
+                #expect(year.relatedISOYear == key)
+                #expect(year.newYearRataDie == key)
+                #expect(year.monthLengthBits == 0x555)
+            } else {
+                misses += 1
+                cache.insert(Self.cachedYear(key))
+            }
+        }
+        #expect(misses == 2)
+    }
+
+    @Test(arguments: [1, -1])
+    func cacheRetainsNeighboringYearWalk(direction: Int) {
+        var cache = ChineseYearCache()
+        var misses = 0
+        for step in 0..<64 {
+            let year = 1776 + direction * step
+            for key in [year, year - direction] {
+                if let cached = cache.year(relatedISOYear: key) {
+                    #expect(cached.relatedISOYear == key)
+                    #expect(cached.newYearRataDie == key)
+                } else {
+                    misses += 1
+                    cache.insert(Self.cachedYear(key))
+                }
+            }
+        }
+        #expect(misses == 65)
+    }
+
+    @Test func cacheEvictsLeastRecentlyUsedYear() {
+        var cache = ChineseYearCache()
+        cache.insert(Self.cachedYear(1776))
+        cache.insert(Self.cachedYear(1814))
+        cache.insert(Self.cachedYear(2148))
+        #expect(cache.year(relatedISOYear: 1776)?.newYearRataDie == 1776)
+        cache.insert(Self.cachedYear(2200))
+        #expect(cache.year(relatedISOYear: 1814) == nil)
+        #expect(cache.year(relatedISOYear: 1776)?.newYearRataDie == 1776)
+        #expect(cache.year(relatedISOYear: 2148)?.newYearRataDie == 2148)
+        #expect(cache.year(relatedISOYear: 2200)?.newYearRataDie == 2200)
+    }
+
+    // The initial order is 2148, 1814, 1776, exercising publication in all positions.
+    @Test(arguments: [2148, 1814, 1776])
+    func cachePublicationDoesNotDuplicateKeys(key: Int) {
+        var cache = ChineseYearCache()
+        let keys = [1776, 1814, 2148]
+        for year in keys {
+            cache.insert(Self.cachedYear(year))
+        }
+        cache.insert(Self.cachedYear(key, newYear: 100))
+        cache.insert(Self.cachedYear(key, newYear: 200))
+        for year in keys {
+            let cached = cache.year(relatedISOYear: year)
+            #expect(cached?.relatedISOYear == year)
+            #expect(cached?.newYearRataDie == (year == key ? 200 : year))
+            #expect(cached?.monthLengthBits == 0x555)
+        }
+    }
+
+    // Fixed structures from upstream 31de29bf's uncached engine. The same ISO
+    // year can have different month lengths or even a different New Year by variant.
+    @Test func fallbackYearCacheIsolatedFromOtherVariants() {
+        let fixtures: [(Int, [(ChineseCalendarVariant, Int, UInt16, UInt8, UInt8)])] = [
+            (2101, [(.chinese, 767038, 2395, 13, 7),
+                    (.dangi, 767038, 1371, 13, 7),
+                    (.vietnamese, 767038, 2411, 13, 7)]),
+            (2148, [(.chinese, 784226, 1746, 12, 0),
+                    (.dangi, 784226, 1746, 12, 0),
+                    (.vietnamese, 784196, 3497, 13, 1)]),
+            (2200, [(.chinese, 803214, 1460, 12, 0),
+                    (.dangi, 803214, 1450, 12, 0),
+                    (.vietnamese, 803214, 1460, 12, 0)]),
+        ]
+        for (iso, variants) in fixtures {
+            for _ in 0..<3 {
+                for (variant, newYear, bits, count, leap) in variants + variants.reversed() {
+                    let year = _CalendarChinese.year(relatedISOYear: iso, variant)
+                    #expect(year.newYearRataDie == newYear)
+                    #expect(year.monthLengthBits == bits)
+                    #expect(year.monthCount == count)
+                    #expect(year.leapMonthNumber == leap)
+                }
+            }
+        }
+    }
+
     @Test func knownDates() {
         let c = Self.chineseCalendar()
         // (gregorian y-m-d, era, year, month, isLeap, day)
@@ -83,6 +182,90 @@ private struct ChineseCalendarTests {
         let leaps: [(Int, UInt8)] = [(1775, 10), (1776, 0), (1900, 8), (2147, 11), (2148, 0)]
         for (iso, want) in leaps {
             #expect(_CalendarChinese.year(relatedISOYear: iso, .chinese).leapMonthNumber == want, "leap \(iso)")
+        }
+    }
+
+    @Test(arguments: [
+        (1776, 2, 19, 74, 33),
+        (1795, 1, 21, 74, 52),
+        (1814, 1, 21, 75, 11),
+        (1871, 2, 19, 76, 8),
+        (1890, 1, 21, 76, 27),
+        (2148, 2, 20, 80, 45),
+    ])
+    func historicalNewYearsAcrossTimeZones(gregorianYear: Int, month: Int, day: Int, era: Int, year: Int) throws {
+        let date = Self.date(rataDie: _CalendarAstronomy.gregorianRataDie(gregorianYear, month, day))
+        for _ in 0..<3 {
+            for offset in [-8 * 3600, 0, 8 * 3600] {
+                let timeZone = try #require(TimeZone(secondsFromGMT: offset))
+                let calendar = _CalendarChinese(identifier: .chinese, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+                let components = calendar.dateComponents([.era, .year, .month, .day, .isLeapMonth], from: date, in: timeZone)
+                #expect(components.era == era)
+                #expect(components.year == year)
+                #expect(components.month == 1)
+                #expect(components.day == 1)
+                #expect(components.isLeapMonth == false)
+
+                let midnight = calendar.dateComponents([.era, .year, .month, .day], from: date - 12 * 3600, in: timeZone)
+                let expectedEra = offset < 0 && year == 1 ? era - 1 : era
+                let expectedYear = offset < 0 ? (year == 1 ? 60 : year - 1) : year
+                #expect(midnight.era == expectedEra)
+                #expect(midnight.year == expectedYear)
+                #expect(midnight.month == (offset < 0 ? 12 : 1))
+                if offset < 0 {
+                    #expect(midnight.day == 29 || midnight.day == 30)
+                } else {
+                    #expect(midnight.day == 1)
+                }
+            }
+        }
+    }
+
+    // Fixed results from the uncached astronomy/table implementation, including
+    // negative years and both seams. Interleaving conversions must preserve them.
+    private static let interleavedYearFixtures: [(Int, Int, UInt16, UInt8, UInt8)] = [
+        (-2000, -730812, 3785, 12, 0),
+        (-5, -2145, 2733, 12, 0),
+        (-4, -1790, 1386, 12, 0),
+        (-3, -1436, 2921, 13, 4),
+        (-2, -1052, 2985, 12, 0),
+        (-1, -697, 1874, 12, 0),
+        (0, -343, 6949, 13, 2),
+        (1, 41, 2853, 12, 0),
+        (2, 395, 6733, 13, 7),
+        (3, 779, 2390, 12, 0),
+        (4, 1133, 2741, 12, 0),
+        (1604, 585514, 5421, 13, 7),
+        (1605, 585898, 1366, 12, 0),
+        (1900, 693626, 5842, 13, 8),
+        (1901, 694010, 1874, 12, 0),
+        (2100, 766684, 1195, 12, 0),
+        (2101, 767038, 2395, 13, 7),
+        (2148, 784226, 1746, 12, 0),
+    ]
+
+    @Test func interleavedYearStructuresAndConversions() async {
+        await withTaskGroup(of: Void.self) { group in
+            for worker in 0..<6 {
+                group.addTask {
+                    let timeZone = TimeZone(secondsFromGMT: (worker % 3 - 1) * 8 * 3600)!
+                    let calendar = _CalendarChinese(identifier: .chinese, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
+                    for _ in 0..<3 {
+                        for index in Self.interleavedYearFixtures.indices {
+                            let (iso, newYear, bits, count, leap) = Self.interleavedYearFixtures[(index + worker) % Self.interleavedYearFixtures.count]
+                            let year = _CalendarChinese.year(relatedISOYear: iso, .chinese)
+                            #expect(year.relatedISOYear == iso)
+                            #expect(year.newYearRataDie == newYear)
+                            #expect(year.monthLengthBits == bits)
+                            #expect(year.monthCount == count)
+                            #expect(year.leapMonthNumber == leap)
+                            let date = Self.date(rataDie: newYear + 70)
+                            let components = calendar.dateComponents([.era, .year, .month, .day, .isLeapMonth, .hour, .minute, .second], from: date, in: timeZone)
+                            #expect(calendar.date(from: components) == date)
+                        }
+                    }
+                }
+            }
         }
     }
 

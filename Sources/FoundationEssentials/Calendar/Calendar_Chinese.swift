@@ -12,6 +12,8 @@
 
 #if !hasFeature(Embedded)
 
+internal import Synchronization
+
 // Engine for the Chinese, Dangi and Vietnamese calendars: a baked table for 1901 to 2100, astronomy for the other years. `Docs/Chinese_Family_Calendars.md` explains the variants.
 
 // MARK: - Variants
@@ -172,6 +174,46 @@ fileprivate func chineseMonthLabel(startingAt start: Int, gregorianYear: Int, _ 
 }
 
 // MARK: - Year structure
+
+/// A fully associative three-entry LRU for years outside the baked table.
+internal struct ChineseYearCache: Sendable {
+    private var mostRecent: _ChineseYear?
+    private var middle: _ChineseYear?
+    private var leastRecent: _ChineseYear?
+
+    mutating func year(relatedISOYear: Int) -> _ChineseYear? {
+        if mostRecent?.relatedISOYear == relatedISOYear {
+            return mostRecent
+        }
+        if middle?.relatedISOYear == relatedISOYear {
+            let hit = middle
+            middle = mostRecent
+            mostRecent = hit
+            return hit
+        }
+        if leastRecent?.relatedISOYear == relatedISOYear {
+            let hit = leastRecent
+            leastRecent = middle
+            middle = mostRecent
+            mostRecent = hit
+            return hit
+        }
+        return nil
+    }
+
+    mutating func insert(_ year: _ChineseYear) {
+        if mostRecent?.relatedISOYear == year.relatedISOYear {
+            mostRecent = year
+            return
+        }
+        // Re-publishing the middle entry preserves the distinct least recent entry.
+        if middle?.relatedISOYear != year.relatedISOYear {
+            leastRecent = middle
+        }
+        middle = mostRecent
+        mostRecent = year
+    }
+}
 
 internal struct _ChineseYear: Sendable {
     let relatedISOYear: Int
@@ -1203,10 +1245,13 @@ extension _CalendarChinese {
         return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: _CalendarAstronomy.gregorianRataDie(relatedISOYear, 1, 19) + Int((entry >> 17) & 0x3F), monthLengthBits: UInt16(entry & 0x1FFF), monthCount: leap == 0 ? 12 : 13, leapMonthNumber: leap)
     }
 
+    // Retain three Chinese fallback years; Dangi and Vietnamese use different day boundaries.
+    private static let yearCache = Mutex(ChineseYearCache())
+
     /// Month structure for the Chinese year whose New Year falls in Gregorian `relatedISOYear`.
     ///
     /// In the baked range (1901...2100) this is a direct table decode.
-    /// Outside it the astronomy gives the structure, without a cache. The code finds this year's New Year and the next year's, and walks the new moons between them to get the first day of each month.
+    /// Outside it the astronomy gives the structure, memoized for the Chinese variant. The code finds this year's New Year and the next year's, and walks the new moons between them to get the first day of each month.
     /// It records the 29 or 30 day lengths as bits, and marks the leap month, which is the month with no major solar term.
     /// The years next to the table edges start and end on the New Year days of the table, so the computed years join the baked years with no gap and no overlap.
     static func year(relatedISOYear: Int, _ variant: ChineseCalendarVariant) -> _ChineseYear {
@@ -1214,7 +1259,12 @@ extension _CalendarChinese {
         if idx >= 0 && idx < tableYearCount {
             return decodeTableYear(relatedISOYear: relatedISOYear, variant)
         }
-        // Out-of-range: compute the month structure from astronomy. No caching; see the note on the rule functions above.
+        if case .chinese = variant,
+           let cached = yearCache.withLock({ $0.year(relatedISOYear: relatedISOYear) }) {
+            return cached
+        }
+        // Astronomy is deliberately outside the lock. Concurrent misses can compute
+        // the same immutable value independently; only lookup and publication serialize.
         // Join the baked table with no gap and no overlap at its edges.
         let ny: Int
         if relatedISOYear == firstTableYear + tableYearCount {
@@ -1247,7 +1297,11 @@ extension _CalendarChinese {
             let label = chineseMonthLabel(startingAt: s, gregorianYear: _CalendarAstronomy.gregorianYear(ofRataDie: s), variant)
             if label.isLeap { leapMonthNumber = UInt8(label.month) }
         }
-        return _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
+        let result = _ChineseYear(relatedISOYear: relatedISOYear, newYearRataDie: ny, monthLengthBits: monthLengthBits, monthCount: UInt8(starts.count), leapMonthNumber: leapMonthNumber)
+        if case .chinese = variant {
+            yearCache.withLock { $0.insert(result) }
+        }
+        return result
     }
 
     static func year(containingRataDie rataDie: Int, _ variant: ChineseCalendarVariant) -> _ChineseYear {
