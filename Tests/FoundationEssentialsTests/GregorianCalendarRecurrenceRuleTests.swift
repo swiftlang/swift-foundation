@@ -376,8 +376,7 @@ private struct GregorianCalendarRecurrenceRuleTests {
     }
 
     @Test func monthlyRecurrenceWithNthFromLastWeekdaySkipsShortMonths() {
-        // A month with fewer occurrences of a weekday than the requested
-        // from-last ordinal has no match and must be skipped, not hang.
+        // A month with fewer occurrences of a weekday than the requested from-last ordinal has no match and is skipped.
         let start = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00-0000
         let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, weekdays: [.nth(-5, .wednesday)])
         let results = Array(rule.recurrences(of: start).prefix(3))
