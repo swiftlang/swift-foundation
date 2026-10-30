@@ -38,8 +38,8 @@ package struct PluralRules: Sendable, Hashable {
     ///
     /// The lookup ignores keywords after `@`, and removes trailing subtags until it finds rules, so `pt_BR` gets the rules of `pt`. A locale with no rules gets the rules of the fallback locale chosen when the data was built, by default one where every number is `other`.
     package init(localeIdentifier: String, type: PluralRuleType) {
-        let normalized = Self.normalizedIdentifier(localeIdentifier)
-        let span = normalized.utf8Span.span
+        let baseName = DataLocaleIdentifier.baseName(of: localeIdentifier)
+        let span = baseName.utf8Span.span
         var length = span.count
         while true {
             if let ruleSet = Self.searchLocale(span.extracting(0 ..< length), type: type) {
@@ -116,37 +116,6 @@ package struct PluralRules: Sendable, Hashable {
     }
 
     // MARK: - Locale lookup
-
-    /// The identifier in the form the data uses: no keywords, `_` separators, a lowercase language, a title-case script, and an uppercase region.
-    private static func normalizedIdentifier(_ identifier: String) -> String {
-        let utf8 = identifier.utf8
-        var result: [UInt8] = []
-        result.reserveCapacity(utf8.count)
-        let subtags = utf8[..<(utf8.firstIndex(of: UInt8(ascii: "@")) ?? utf8.endIndex)].split(omittingEmptySubsequences: false) { $0 == UInt8(ascii: "_") || $0 == UInt8(ascii: "-") }
-        for (subtagIndex, subtag) in subtags.enumerated() {
-            if subtagIndex > 0 { result.append(UInt8(ascii: "_")) }
-            for (position, byte) in subtag.enumerated() where Unicode.ASCII.isASCII(byte) {
-                if subtagIndex == 0 {
-                    result.append(lowercasedASCII(byte))
-                } else if subtagIndex == 1 && subtag.count == 4 {
-                    result.append(position == 0 ? uppercasedASCII(byte) : lowercasedASCII(byte))
-                } else if subtag.count == 2 {
-                    result.append(uppercasedASCII(byte))
-                } else {
-                    result.append(byte)
-                }
-            }
-        }
-        return String(decoding: result, as: UTF8.self)
-    }
-
-    private static func uppercasedASCII(_ byte: UInt8) -> UInt8 {
-        (UInt8(ascii: "a") ... UInt8(ascii: "z")).contains(byte) ? byte - UInt8(ascii: "a") + UInt8(ascii: "A") : byte
-    }
-
-    private static func lowercasedASCII(_ byte: UInt8) -> UInt8 {
-        (UInt8(ascii: "A") ... UInt8(ascii: "Z")).contains(byte) ? byte - UInt8(ascii: "A") + UInt8(ascii: "a") : byte
-    }
 
     private static func searchLocale(_ target: Span<UInt8>, type: PluralRuleType) -> Int? {
         var low = 0
