@@ -1587,6 +1587,93 @@ private struct GregorianCalendarTests {
         
         #expect(calendar1.timeZone == tz)
     }
+
+    @Test(arguments: [
+        (DateComponents(weekday: 6, weekOfYear: 1), Date(timeIntervalSince1970: 1799053200), Date(timeIntervalSince1970: 1798761600)), // from 2027-01-04T09:00:00+0000, expected 2027-01-01T00:00:00+0000
+        (DateComponents(year: 2027, weekday: 6, weekOfYear: 1), Date(timeIntervalSince1970: 1799053200), Date(timeIntervalSince1970: 1798761600)), // from 2027-01-04T09:00:00+0000, expected 2027-01-01T00:00:00+0000
+        (DateComponents(year: 2027, month: 1, day: 1, hour: 9, weekday: 6, weekdayOrdinal: 1, weekOfMonth: 1, weekOfYear: 1), Date(timeIntervalSince1970: 1799053200), Date(timeIntervalSince1970: 1798794000)), // from 2027-01-04T09:00:00+0000, expected 2027-01-01T09:00:00+0000
+        (DateComponents(year: 2027, month: 1, day: 2, weekday: 7), Date(timeIntervalSince1970: 1799139600), Date(timeIntervalSince1970: 1798848000)), // from 2027-01-05T09:00:00+0000, expected 2027-01-02T00:00:00+0000
+        (DateComponents(month: 1, weekday: 7, weekOfMonth: 1), Date(timeIntervalSince1970: 1799139600), Date(timeIntervalSince1970: 1798848000)), // from 2027-01-05T09:00:00+0000, expected 2027-01-02T00:00:00+0000
+        (DateComponents(month: 1, day: 2, weekday: 7), Date(timeIntervalSince1970: 1799139600), Date(timeIntervalSince1970: 1798848000)), // from 2027-01-05T09:00:00+0000, expected 2027-01-02T00:00:00+0000
+        (DateComponents(month: 1, weekday: 3, weekdayOrdinal: 1), Date(timeIntervalSince1970: 1799398800), Date(timeIntervalSince1970: 1799107200)), // from 2027-01-08T09:00:00+0000, expected 2027-01-05T00:00:00+0000
+        (DateComponents(year: 2027, month: 1, day: 7, weekdayOrdinal: 1), Date(timeIntervalSince1970: 1799571600), Date(timeIntervalSince1970: 1799280000)), // from 2027-01-10T09:00:00+0000, expected 2027-01-07T00:00:00+0000
+        (DateComponents(year: 2027, month: 1, day: 29, weekOfMonth: 5), Date(timeIntervalSince1970: 1801472400), Date(timeIntervalSince1970: 1801180800)), // from 2027-02-01T09:00:00+0000, expected 2027-01-29T00:00:00+0000
+    ] as [(DateComponents, Date, Date)])
+    func testNextDateBackwardFindsMatchingDay(components: DateComponents, start: Date, expected: Date) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // Each search starts three days after the expected day and looks for that day's own components.
+        #expect(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTimePreservingSmallerComponents, direction: .backward) == expected)
+    }
+
+    @Test(arguments: [
+        (1, Date(timeIntervalSince1970: 1767225600)), // 2026-01-01T00:00:00+0000
+        (2, Date(timeIntervalSince1970: 1769904000)), // 2026-02-01T00:00:00+0000
+        (3, Date(timeIntervalSince1970: 1772323200)), // 2026-03-01T00:00:00+0000
+        (4, Date(timeIntervalSince1970: 1775001600)), // 2026-04-01T00:00:00+0000
+        (5, Date(timeIntervalSince1970: 1777593600)), // 2026-05-01T00:00:00+0000
+        (6, Date(timeIntervalSince1970: 1780272000)), // 2026-06-01T00:00:00+0000
+        (7, Date(timeIntervalSince1970: 1782864000)), // 2026-07-01T00:00:00+0000
+        (8, Date(timeIntervalSince1970: 1785542400)), // 2026-08-01T00:00:00+0000
+        (9, Date(timeIntervalSince1970: 1788220800)), // 2026-09-01T00:00:00+0000
+        (10, Date(timeIntervalSince1970: 1790812800)), // 2026-10-01T00:00:00+0000
+        (11, Date(timeIntervalSince1970: 1793491200)), // 2026-11-01T00:00:00+0000
+        (12, Date(timeIntervalSince1970: 1796083200)), // 2026-12-01T00:00:00+0000
+    ] as [(month: Int, expected: Date)], [Calendar.MatchingPolicy.strict, .nextTime])
+    func testNextDateBackwardMatchingMonthFindsItsStart(row: (month: Int, expected: Date), policy: Calendar.MatchingPolicy) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // A search for only a month finds the start of the month, like a forward search. This includes December, where the search starts.
+        let start = Date(timeIntervalSince1970: 1798718400) // 2026-12-31T12:00:00+0000
+        #expect(calendar.nextDate(after: start, matching: DateComponents(month: row.month), matchingPolicy: policy, direction: .backward) == row.expected)
+    }
+
+    @Test(arguments: [
+        (1, 0, Date(timeIntervalSince1970: 1864512000)), // 2029-01-31T00:00:00+0000
+        (2, 15, Date(timeIntervalSince1970: 1866985200)), // 2029-02-28T15:00:00+0000
+        (4, 23, Date(timeIntervalSince1970: 1872284400)), // 2029-04-30T23:00:00+0000
+        (6, 0, Date(timeIntervalSince1970: 1877472000)), // 2029-06-30T00:00:00+0000
+        (9, 15, Date(timeIntervalSince1970: 1853938800)), // 2028-09-30T15:00:00+0000
+        (11, 23, Date(timeIntervalSince1970: 1859238000)), // 2028-11-30T23:00:00+0000
+    ] as [(month: Int, hour: Int, expected: Date)], [Calendar.MatchingPolicy.strict, .nextTime])
+    func testNextDateBackwardMatchingMonthAndHourFindsTheMonthsLastDay(row: (month: Int, hour: Int, expected: Date), policy: Calendar.MatchingPolicy) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // The nearest match is on the last day of the month, because the hour is searched inside the month.
+        let start = Date(timeIntervalSince1970: 1878090960) // 2029-07-07T03:56:00+0000
+        #expect(calendar.nextDate(after: start, matching: DateComponents(month: row.month, hour: row.hour), matchingPolicy: policy, direction: .backward) == row.expected)
+    }
+
+    @Test(arguments: [
+        (30, 5, Date(timeIntervalSince1970: 1860915600), Date(timeIntervalSince1970: 1859155200)), // from 2028-12-20T09:00:00+0000, expected 2028-11-30T00:00:00+0000
+        (30, 6, Date(timeIntervalSince1970: 1860915600), Date(timeIntervalSince1970: 1845936000)), // from 2028-12-20T09:00:00+0000, expected 2028-06-30T00:00:00+0000
+        (30, 7, Date(timeIntervalSince1970: 1860915600), Date(timeIntervalSince1970: 1853884800)), // from 2028-12-20T09:00:00+0000, expected 2028-09-30T00:00:00+0000
+        (31, 2, Date(timeIntervalSince1970: 1860915600), Date(timeIntervalSince1970: 1848614400)), // from 2028-12-20T09:00:00+0000, expected 2028-07-31T00:00:00+0000
+        (31, 7, Date(timeIntervalSince1970: 1860915600), Date(timeIntervalSince1970: 1816992000)), // from 2028-12-20T09:00:00+0000, expected 2027-07-31T00:00:00+0000
+        (29, 3, Date(timeIntervalSince1970: 1851325200), Date(timeIntervalSince1970: 1851120000)), // from 2028-08-31T09:00:00+0000, expected 2028-08-29T00:00:00+0000
+        (31, 2, Date(timeIntervalSince1970: 1838538000), Date(timeIntervalSince1970: 1832889600)), // from 2028-04-05T09:00:00+0000, expected 2028-01-31T00:00:00+0000: February has no 31st
+    ] as [(Int, Int, Date, Date)])
+    func testNextDateBackwardMatchingDayAndWeekdayDoesNotSkipMonths(day: Int, weekday: Int, start: Date, expected: Date) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // A month that doesn't have the day, or has it on another weekday, must not make the search skip the month before it.
+        #expect(calendar.nextDate(after: start, matching: DateComponents(day: day, weekday: weekday), matchingPolicy: .strict, direction: .backward) == expected)
+    }
+
+    @Test(arguments: [
+        (1, Date(timeIntervalSince1970: 1609509600), Date(timeIntervalSince1970: 1606608000)), // from 2021-01-01T14:00:00+0000, expected 2020-11-29T00:00:00+0000
+        (2, Date(timeIntervalSince1970: 1609509600), Date(timeIntervalSince1970: 1606694400)), // from 2021-01-01T14:00:00+0000, expected 2020-11-30T00:00:00+0000
+        (3, Date(timeIntervalSince1970: 1609509600), Date(timeIntervalSince1970: 1609200000)), // from 2021-01-01T14:00:00+0000, expected 2020-12-29T00:00:00+0000
+        (4, Date(timeIntervalSince1970: 1609509600), Date(timeIntervalSince1970: 1609286400)), // from 2021-01-01T14:00:00+0000, expected 2020-12-30T00:00:00+0000
+        (6, Date(timeIntervalSince1970: 1609509600), Date(timeIntervalSince1970: 1604016000)), // from 2021-01-01T14:00:00+0000, expected 2020-10-30T00:00:00+0000
+        (7, Date(timeIntervalSince1970: 1609509600), Date(timeIntervalSince1970: 1604102400)), // from 2021-01-01T14:00:00+0000, expected 2020-10-31T00:00:00+0000
+    ] as [(Int, Date, Date)])
+    func testNextDateBackwardMatchingFifthWeekdayFindsIt(weekday: Int, start: Date, expected: Date) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        // The fifth group of days in a month is short and may not have the weekday. Then the search continues to the month before that has it.
+        #expect(calendar.nextDate(after: start, matching: DateComponents(weekday: weekday, weekdayOrdinal: 5), matchingPolicy: .strict, direction: .backward) == expected)
+    }
 }
 
 /// The difference across an era change in the calendars that label eras from a table. The start moves into the era of the end first, so the smaller components can be negative.
