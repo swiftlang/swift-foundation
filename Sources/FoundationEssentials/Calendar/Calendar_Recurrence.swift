@@ -964,11 +964,7 @@ extension Calendar {
                     } else {
                         week = lastWeek + occurence
                     }
-                    // An occurrence that lands outside the weeks present in
-                    // this interval has no matching date (e.g. the 5th-from-last
-                    // Wednesday of a month with only four Wednesdays). Emitting
-                    // it would hand the matcher a week that never occurs and
-                    // spin forever, so skip it instead.
+                    // An occurrence that lands outside the weeks present in this interval has no matching date (e.g. the 5th-from-last Wednesday of a month with only four Wednesdays), so skip it.
                     guard weekRange.contains(week) else { continue }
                     components.setValue(week, for: weekComponent)
                     components.weekday = weekdayIdx
