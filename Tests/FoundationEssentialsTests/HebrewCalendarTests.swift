@@ -170,4 +170,22 @@ private struct HebrewCalendarTests {
         #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")
     }
 
+    // MARK: - Differences and adds with large values
+
+    // 2,314,814 days lie between these dates, the same as for the Gregorian calendar.
+    @Test func dayDifferenceOfMoreThanAMillionDays() {
+        let difference = makeCalendar().dateComponents([.day], from: Date(timeIntervalSinceReferenceDate: -1e11), to: Date(timeIntervalSinceReferenceDate: 1e11))
+        #expect(difference.day == 2_314_814)
+    }
+
+    // The count of nanoseconds over 317 years is limited to the range of Int32, like the Gregorian calendar.
+    @Test func nanosecondDifferenceOverCenturies() {
+        let difference = makeCalendar().dateComponents([.nanosecond], from: Date(timeIntervalSinceReferenceDate: 0), to: Date(timeIntervalSinceReferenceDate: 1e10))
+        #expect(difference.nanosecond == Int(Int32.max))
+    }
+
+    @Test func weekAddThatOverflowsGivesNil() {
+        #expect(makeCalendar().date(byAdding: DateComponents(weekOfYear: Int.max / 2), to: Date(timeIntervalSinceReferenceDate: 0), wrappingComponents: false) == nil)
+    }
+
 }

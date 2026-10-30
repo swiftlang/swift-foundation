@@ -245,6 +245,29 @@ internal enum _CalendarUtility {
         return total
     }
 
+    /// The difference from `start` to `end` in each of the components, from the largest unit to the smallest. Each unit counts from where the larger units stopped.
+    /// `era` gives the difference in eras and `start` moved by it. `adding` moves a date by a count of one component, or returns nil.
+    /// The search adds each count to the original start, not to the previous result. So when a short month moves the 30th back to the 29th, the next count still starts from the 30th.
+    static func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date, era: (Date, Date) -> (Int, Date), adding: (Calendar.Component, Int, Date) -> Date?) -> DateComponents {
+        var result = DateComponents()
+        var current = start
+        for component in orderedDifferenceComponents(components) {
+            let difference: Int
+            if current == end {
+                difference = 0
+            } else if let (count, moved) = timeUnitDifference(in: component, from: current, to: end) {
+                (difference, current) = (count, moved)
+            } else if component == .era {
+                (difference, current) = era(current, end)
+            } else {
+                let from = current
+                (difference, current) = differenceBySearch(from: from, to: end) { count in adding(component, count, from) }
+            }
+            result.setValue(difference, for: component)
+        }
+        return result
+    }
+
     /// Finds the largest count of a unit that moves `start` toward `end` without going past `end`. Returns the count and `start` moved by that count.
     /// `shifted` moves `start` by a count, or returns nil if the count is too large.
     /// The search doubles the count until it goes past `end`, then halves the gap. The count is 0 if the unit does not move the date.
@@ -397,6 +420,37 @@ internal enum _CalendarUtility {
     }
 
     // MARK: - Shared by the fixed month and the Chinese family calendars
+
+    /// How a set of date components names a day in `date(from:)`.
+    enum DateForm {
+        case day(Int?)
+        case weekdayOrdinal(Int, weekday: Int?)
+        /// `.yearForWeekOfYear` wins over `.year` when the components have both. A `.yearForWeekOfYear` without a `.weekOfYear` means week 0.
+        case weekOfYear(Int?, weekday: Int?)
+        case weekOfMonth(Int, weekday: Int?)
+        case dayOfYear(Int)
+
+        init(_ components: DateComponents) {
+            // A form needs all its fields. A weekday or an ordinal alone does not name a day, so the day of the month decides, as day 1 when it is missing.
+            if let day = components.day {
+                self = .day(day)
+            } else if let ordinal = components.weekdayOrdinal, let weekday = components.weekday {
+                self = .weekdayOrdinal(ordinal, weekday: weekday)
+            } else if let week = components.weekOfYear, let weekday = components.weekday {
+                self = .weekOfYear(week, weekday: weekday)
+            } else if let week = components.weekOfMonth, let weekday = components.weekday {
+                self = .weekOfMonth(week, weekday: weekday)
+            } else if let dayOfYear = components.dayOfYear {
+                self = .dayOfYear(dayOfYear)
+            } else if components.yearForWeekOfYear != nil {
+                self = .weekOfYear(components.weekOfYear, weekday: components.weekday)
+            } else if let week = components.weekOfMonth {
+                self = .weekOfMonth(week, weekday: components.weekday)
+            } else {
+                self = .day(nil)
+            }
+        }
+    }
 
     /// The largest absolute value of a month, day, week or weekday ordinal that the calendars accept from `DateComponents`. A larger value is outside the supported dates, and its day count could overflow.
     static let fieldLimit: UInt = 100_000_000

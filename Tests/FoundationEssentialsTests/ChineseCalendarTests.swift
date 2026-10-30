@@ -301,4 +301,43 @@ private struct ChineseCalendarTests {
         }
         #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")
     }
+
+    // MARK: - The form of date(from:) and the era in a difference
+
+    // Expected values from the system calendar. The fields come from 2023-03-08 (era 78, year 40, day 17) and 2025-03-07 (yearForWeekOfYear 4662, weekOfYear 6, weekday 6). Week settings 1 and 1.
+    @Test func yearForWeekOfYearWinsOverYear() {
+        var components = DateComponents(era: 78, year: 40, hour: 12, weekday: 6, weekOfYear: 6)
+        components.yearForWeekOfYear = 4662
+        #expect(Self.chineseCalendar().date(from: components) == Date(timeIntervalSinceReferenceDate: 763_041_600))
+    }
+
+    @Test func dayWinsOverYearForWeekOfYear() {
+        var components = DateComponents(era: 78, day: 17, hour: 12)
+        components.yearForWeekOfYear = 4662
+        #expect(Self.chineseCalendar().date(from: components) == Date(timeIntervalSinceReferenceDate: -532_353_600))
+    }
+
+    @Test func dayOfYearWinsOverYearForWeekOfYear() {
+        var components = DateComponents(era: 78, hour: 12)
+        components.yearForWeekOfYear = 4662
+        components.dayOfYear = 278
+        #expect(Self.chineseCalendar().date(from: components) == Date(timeIntervalSinceReferenceDate: -509_803_200))
+    }
+
+    // Like the fixed month calendars. The system's Chinese calendar ignores a `.yearForWeekOfYear` that has no `.weekOfYear`.
+    @Test func yearForWeekOfYearWithoutWeekOfYearMeansWeek0() throws {
+        var week0 = DateComponents(hour: 12, weekday: 6)
+        week0.yearForWeekOfYear = 4662
+        var week1 = week0
+        week1.weekOfYear = 1
+        let firstWeek = try #require(Self.chineseCalendar().date(from: week1))
+        #expect(Self.chineseCalendar().date(from: week0) == firstWeek - 7 * 86400)
+    }
+
+    // 1984-03-01 and 2044-02-15 lie in neighboring 60 year cycles. The start moves into the cycle of the end, like the system calendar.
+    @Test(arguments: [(-531_360_000.0, 1_360_800_000.0, 1, -12), (1_360_800_000.0, -531_360_000.0, -1, 12)])
+    func eraDifferenceAcrossA60YearCycle(start: Double, end: Double, era: Int, day: Int) {
+        let difference = Self.chineseCalendar().dateComponents([.era, .year, .month, .day], from: Date(timeIntervalSinceReferenceDate: start), to: Date(timeIntervalSinceReferenceDate: end))
+        #expect(difference == DateComponents(era: era, year: 0, month: 0, day: day))
+    }
 }

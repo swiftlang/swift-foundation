@@ -82,10 +82,6 @@ private struct HebrewDSTPolicyParityTests {
             return
         }
 
-        let hebrew = _CalendarHebrew(
-            identifier: .hebrew, timeZone: la, locale: nil,
-            firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
-        )
         let gregorian = _CalendarGregorian(
             identifier: .gregorian, timeZone: la, locale: nil,
             firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil
@@ -97,7 +93,7 @@ private struct HebrewDSTPolicyParityTests {
         dc.year = probe.year; dc.month = probe.month; dc.day = probe.day; dc.timeZone = .gmt
         let date = try #require(cal.date(from: dc))
         let days = Int64(date.timeIntervalSinceReferenceDate / 86400)
-        let rd = days + _CalendarHebrew.rataDieAtDateReference
+        let rd = days + Int64(_CalendarUtility.rataDieAtDateReference)
 
         let secondsInDay = Double(probe.hour) * 3600 + Double(probe.minute) * 60
 
@@ -110,10 +106,7 @@ private struct HebrewDSTPolicyParityTests {
 
         for repeated in policies {
             for skipped in policies {
-                let hebrewDate = hebrew.utcDate(
-                    fromRataDie: rd, secondsInDay: secondsInDay, in: la,
-                    repeatedTimePolicy: repeated, skippedTimePolicy: skipped
-                )
+                let hebrewDate = _CalendarUtility.utcDate(fromRataDie: rd, secondsInDay: secondsInDay, in: la, repeatedTimePolicy: repeated, skippedTimePolicy: skipped)
 
                 let gregDate = try gregorian.date(
                     from: gregDC, inTimeZone: la,
@@ -164,5 +157,13 @@ private struct HebrewDSTPolicyParityTests {
             hebDate == gregDate,
             "[\(probe.label)] hebrew=\(hebDate) greg=\(gregDate) diff=\(hebDate.timeIntervalSince(gregDate))s"
         )
+    }
+
+    // 2026-03-07 02:30 in Los Angeles plus one day lands in the hour that 2026-03-08 skips. The result is after the gap, 03:30, like the Gregorian calendar.
+    @Test func dayAddOntoASkippedHour() throws {
+        var hebrew = Calendar(identifier: .hebrew)
+        hebrew.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let result = hebrew.date(byAdding: .day, value: 1, to: Date(timeIntervalSinceReferenceDate: 794_572_200))
+        #expect(result == Date(timeIntervalSinceReferenceDate: 794_658_600))
     }
 }
