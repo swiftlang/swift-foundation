@@ -383,38 +383,8 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, Sendable {
 
     // MARK: Date and components
 
-    // How a set of date components names a day.
-    private enum DateForm {
-        case day(Int?)
-        case weekdayOrdinal(Int, weekday: Int?)
-        case weekOfYear(Int?, weekday: Int?)
-        case weekOfMonth(Int, weekday: Int?)
-        case dayOfYear(Int)
-
-        init(_ components: DateComponents) {
-            // A form needs all its fields. A weekday or an ordinal alone does not name a day, so the day of the month decides, as day 1 when it is missing.
-            if let day = components.day {
-                self = .day(day)
-            } else if let ordinal = components.weekdayOrdinal, let weekday = components.weekday {
-                self = .weekdayOrdinal(ordinal, weekday: weekday)
-            } else if let week = components.weekOfYear, let weekday = components.weekday {
-                self = .weekOfYear(week, weekday: weekday)
-            } else if let week = components.weekOfMonth, let weekday = components.weekday {
-                self = .weekOfMonth(week, weekday: weekday)
-            } else if let dayOfYear = components.dayOfYear {
-                self = .dayOfYear(dayOfYear)
-            } else if components.yearForWeekOfYear != nil {
-                self = .weekOfYear(components.weekOfYear, weekday: components.weekday)
-            } else if let week = components.weekOfMonth {
-                self = .weekOfMonth(week, weekday: components.weekday)
-            } else {
-                self = .day(nil)
-            }
-        }
-    }
-
     private func rataDie(from components: DateComponents) -> Int? {
-        let form = DateForm(components)
+        let form = _CalendarUtility.DateForm(components)
 
         // The `.yearForWeekOfYear` of a week-based form is an extended year. Every other form takes its year from the era and the year.
         let extendedYear: Int
@@ -674,36 +644,16 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, Sendable {
     // MARK: Difference
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
-        var result = DateComponents()
-        var current = start
-        for component in _CalendarUtility.orderedDifferenceComponents(components) {
-            let (difference, newCurrent) = difference(inComponent: component, from: current, to: end)
-            result.setValue(difference, for: component)
-            current = newCurrent
-        }
-        return result
-    }
-
-    // The whole number of `component` units from `start` toward `end`, and `start` moved by that many units. Each trial adds to `start`, so a clamped day does not carry over.
-    private func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) -> (Int, Date) {
-        if start == end { return (0, start) }
-        if let result = _CalendarUtility.timeUnitDifference(in: component, from: start, to: end) { return result }
-
-        switch component {
-        case .era:
+        _CalendarUtility.dateComponents(components, from: start, to: end, era: { start, end in
             // Only the count of eras. The start date does not move into the era of the end date.
             let startEra = rules.eraAndYear(extendedYear: dayFields(for: start, in: timeZone).year).era
             let endEra = rules.eraAndYear(extendedYear: dayFields(for: end, in: timeZone).year).era
             return (endEra - startEra, start)
-        default:
-            break
-        }
-
-        return _CalendarUtility.differenceBySearch(from: start, to: end) { count in
+        }, adding: { component, count, date in
             var components = DateComponents()
             components.setValue(count, for: component)
-            return date(byAdding: components, to: start, wrappingComponents: false)
-        }
+            return self.date(byAdding: components, to: date, wrappingComponents: false)
+        })
     }
 }
 

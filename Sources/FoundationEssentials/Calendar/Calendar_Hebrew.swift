@@ -1124,35 +1124,12 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     }
 
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents {
-        var result = DateComponents()
-        var curr = start
-
-        for component in _CalendarUtility.orderedDifferenceComponents(components) {
-            let (diff, newCurr) = difference(inComponent: component, from: curr, to: end)
-            result.setValue(diff, for: component)
-            curr = newCurr
-        }
-        return result
-    }
-
-    /// Returns (diff, newStart) where diff is the integer number of `component` units
-    /// that fit between `start` and `end` (sign matches direction), and newStart is
-    /// start advanced by that many units (staying at-or-before `end`).
-    private func difference(inComponent component: Calendar.Component, from start: Date, to end: Date) -> (Int, Date) {
-        if start == end { return (0, start) }
-        if let result = _CalendarUtility.timeUnitDifference(in: component, from: start, to: end) { return result }
-        // Hebrew has a single era; difference is always 0.
-        if component == .era { return (0, start) }
-
-        // Each trial is `start + n * component`, not iterative `current + 1`.
-        // The cumulative form avoids day-clamp accumulation across month boundaries.
-        // Example: from AdarI-30, iterative +1 month → AdarII-29 (clamped) → Nisan-29 (preserved-from-clamp).
-        // Cumulative +2 months → Nisan-30 (clamps from original day=30 to Nisan's max=30, fits).
-        return _CalendarUtility.differenceBySearch(from: start, to: end) { count in
+        // Hebrew has a single era, so the era difference is always 0.
+        _CalendarUtility.dateComponents(components, from: start, to: end, era: { start, _ in (0, start) }, adding: { component, count, date in
             var components = DateComponents()
             components.setValue(count, for: component)
-            return date(byAdding: components, to: start, wrappingComponents: false)
-        }
+            return self.date(byAdding: components, to: date, wrappingComponents: false)
+        })
     }
 
 }
