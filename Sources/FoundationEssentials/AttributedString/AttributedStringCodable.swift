@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
-#if FOUNDATION_FRAMEWORK
+#if canImport(CollectionsInternal)
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
 internal import _RopeModule
@@ -466,5 +464,3 @@ extension CodableConfiguration where ConfigurationProvider : AttributeScope {
         self.wrappedValue = wrappedValue
     }
 }
-
-#endif // !hasFeature(Embedded)

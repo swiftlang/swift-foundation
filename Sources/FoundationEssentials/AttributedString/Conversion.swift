@@ -14,6 +14,9 @@
 #if FOUNDATION_FRAMEWORK
 import Darwin
 internal import os
+#endif
+
+#if canImport(CollectionsInternal)
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
 internal import _RopeModule

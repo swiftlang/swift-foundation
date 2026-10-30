@@ -76,8 +76,7 @@ internal struct GregorianFamilyCalendarEras: Sendable {
 
     init(_ entries: [GregorianFamilyCalendarEra], erasCanEnd: Bool = false, coversEveryDate: Bool = false) {
         self.entries = entries
-        // Embedded Swift doesn't support key paths.
-        self.maxEraNumber = entries.map { $0.eraNumber }.max() ?? 0
+        self.maxEraNumber = entries.map(\.eraNumber).max() ?? 0
         self.defaultEraNumber = entries.first?.eraNumber ?? 0
         self.newestAnchorYear = entries.first?.anchorYear ?? 0
         self.erasCanEnd = erasCanEnd
