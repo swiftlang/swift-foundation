@@ -118,6 +118,54 @@ private enum TemplateTests {
         assertReplacing(template: "{&count*}", result: "&count=one&count=two&count=three")
     }
 
+    @Test(arguments: [
+        ("", "fred,value"),
+        ("+", "fred,value"),
+        ("#", "#fred,value"),
+        (".", ".fred.value"),
+        ("/", "/fred/value"),
+        (";", ";who=fred;var=value"),
+        ("?", "?who=fred&var=value"),
+        ("&", "&who=fred&var=value"),
+    ], ["", "*"])
+    static func emptyListIsUndefined(expansion: (String, String), modifier: String) throws {
+        let (op, expected) = expansion
+        var values = variables
+        values[.init("list")] = .list([])
+
+        let empty = try #require(URL.Template("{\(op)list\(modifier)}"))
+        #expect(empty.expand(values) == "")
+
+        for names in ["list\(modifier),who,var", "who,list\(modifier),var", "who,var,list\(modifier)"] {
+            let template = try #require(URL.Template("{\(op)\(names)}"))
+            #expect(template.expand(values) == expected)
+        }
+    }
+
+    @Test(arguments: [
+        ("{?list}", "?list="),
+        ("{?list*}", "?list="),
+        ("{;list}", ";list"),
+        ("{;list*}", ";list"),
+        ("{/list}", "/"),
+        ("{/list*}", "/"),
+        ("{#list}", "#"),
+        ("{#list*}", "#"),
+    ])
+    static func listContainingEmptyStringIsDefined(template: String, expected: String) throws {
+        let template = try #require(URL.Template(template))
+        #expect(template.expand([.init("list"): .list([""])]) == expected)
+    }
+
+    @Test
+    static func urlWithEmptyList() throws {
+        let template = try #require(URL.Template("https://example.com{/list,who}{?list,var}"))
+        let url = try #require(URL(template: template, variables: [
+            .init("list"): .list([]), .init("who"): "fred", .init("var"): "value",
+        ]))
+        #expect(url.absoluteString == "https://example.com/fred?var=value")
+    }
+
     @Test
     static func simpleStringExpansion() {
         assertReplacing(template: "{var}", result: "value")
