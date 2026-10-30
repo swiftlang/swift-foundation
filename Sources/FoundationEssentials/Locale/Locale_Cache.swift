@@ -299,19 +299,41 @@ struct LocaleCache : Sendable, ~Copyable {
         return preferredLocaleID
     }
 #else
+    /// The device language tag, such as "sr-Latn-RS", read from Android system properties in the order Android uses for its default locale. `systemProperty` returns the value of a property, or `nil` if it isn't set or is empty.
+    static func androidLanguageTag(systemProperty: (String) -> String?) -> String {
+        // The language the user chose.
+        if let tag = systemProperty("persist.sys.locale") {
+            return tag
+        }
+        // The same choice on a device that was upgraded from Android 5 and kept its language since.
+        if let language = systemProperty("persist.sys.language") {
+            return [language, systemProperty("persist.sys.country"), systemProperty("persist.sys.localevar")].compactMap { $0 }.joined(separator: "-")
+        }
+        // The factory default.
+        if let tag = systemProperty("ro.product.locale") {
+            return tag
+        }
+        return "\(systemProperty("ro.product.locale.language") ?? "en")-\(systemProperty("ro.product.locale.region") ?? "US")"
+    }
+
     func preferences() -> (LocalePreferences, Bool) {
+#if os(Android)
+        // Android keeps the device language in system properties, not in the environment.
+        return (LocalePreferences(languageTag: Self.androidLanguageTag(systemProperty: Platform.androidSystemProperty)), true)
+#else
         var prefs = LocalePreferences()
         prefs.locale = "en_001"
         prefs.languages = ["en-001"]
         return (prefs, true)
+#endif
     }
 
     func preferredLanguages(forCurrentUser: Bool) -> [String] {
-        [Locale.canonicalLanguageIdentifier(from: "en-001")]
+        preferences().0.languages ?? []
     }
 
     func preferredLocale() -> String? {
-        "en_001"
+        preferences().0.locale
     }
 #endif
 

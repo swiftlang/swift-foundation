@@ -95,6 +95,15 @@ package struct LocalePreferences: Hashable, Sendable {
     // Note: When adding new preferences, be sure to include them in the serialized format via the Codable conformance below
 
     package init() { }
+
+#if !FOUNDATION_FRAMEWORK
+    /// Preferences for a BCP 47 language tag, such as "sr-Latn-RS": the locale identifier in ICU form and the tag as the only preferred language.
+    package init(languageTag: String) {
+        let locale = Locale(identifier: languageTag)
+        self.locale = locale.identifier(.icu)
+        self.languages = [locale.identifier(.bcp47)]
+    }
+#endif
     
 #if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
     // The framework init supports customized dateFormats
