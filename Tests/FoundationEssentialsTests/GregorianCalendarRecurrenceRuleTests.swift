@@ -374,6 +374,20 @@ private struct GregorianCalendarRecurrenceRuleTests {
         
         #expect(results == expectedResults)
     }
+
+    @Test func monthlyRecurrenceWithNthFromLastWeekdaySkipsShortMonths() {
+        // A month with fewer occurrences of a weekday than the requested
+        // from-last ordinal has no match and must be skipped, not hang.
+        let start = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00-0000
+        let rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly, weekdays: [.nth(-5, .wednesday)])
+        let results = Array(rule.recurrences(of: start).prefix(3))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 1704240000.0), // 2024-01-03T00:00:00-0000
+            Date(timeIntervalSince1970: 1714521600.0), // 2024-05-01T00:00:00-0000
+            Date(timeIntervalSince1970: 1719964800.0), // 2024-07-03T00:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
     
     @Test func yearlyRecurrenceOnLeapDay() {
         let start   = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00-0000

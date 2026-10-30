@@ -958,14 +958,21 @@ extension Calendar {
                 lazy var lastWeek  = weekRange.upperBound - (positionInWeek(weekdayIdx) > positionInWeek(lastWeekday)  ? 1 : 0)
                 for occurence in occurences {
                     var components = DateComponents()
+                    let week: Int
                     if occurence > 0 {
-                        components.setValue(firstWeek - 1 + occurence, for: weekComponent)
+                        week = firstWeek - 1 + occurence
                     } else {
-                        components.setValue(lastWeek + occurence, for: weekComponent)
+                        week = lastWeek + occurence
                     }
+                    // An occurrence that lands outside the weeks present in
+                    // this interval has no matching date (e.g. the 5th-from-last
+                    // Wednesday of a month with only four Wednesdays). Emitting
+                    // it would hand the matcher a week that never occurs and
+                    // spin forever, so skip it instead.
+                    guard weekRange.contains(week) else { continue }
+                    components.setValue(week, for: weekComponent)
                     components.weekday = weekdayIdx
                     result.append(components)
-                    
                 }
             }
         }
