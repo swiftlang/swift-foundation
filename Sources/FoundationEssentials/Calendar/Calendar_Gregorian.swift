@@ -2175,7 +2175,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         var weekOfYear: Int?
 
         let dayOfYear: Int?
-        if !components.isDisjoint(with: [.dayOfYear, .quarter]) || !components.isDisjoint(with: [.weekOfYear, .yearForWeekOfYear]) {
+        if !components.isDisjoint(with: [.dayOfYear, .weekOfYear, .yearForWeekOfYear]) {
             dayOfYear = try self.dayOfYear(fromYear: year, month: month, day: day)
         } else {
             dayOfYear = nil
