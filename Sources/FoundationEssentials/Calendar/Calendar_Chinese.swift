@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 // Engine for the Chinese, Dangi and Vietnamese calendars: a baked table for 1901 to 2100, astronomy for the other years. `Docs/Chinese_Family_Calendars.md` explains the variants.
 
 // MARK: - Variants
@@ -1265,5 +1263,3 @@ extension _CalendarChinese {
         return y
     }
 }
-
-#endif // !hasFeature(Embedded)

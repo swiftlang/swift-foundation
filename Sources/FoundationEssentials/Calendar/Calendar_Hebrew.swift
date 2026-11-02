@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 internal import Synchronization
 
 /// Pure-Swift implementation of the Hebrew calendar, derived from the
@@ -1774,5 +1772,3 @@ internal enum HebrewArithmetic {
         return total
     }
 }
-
-#endif // !hasFeature(Embedded)

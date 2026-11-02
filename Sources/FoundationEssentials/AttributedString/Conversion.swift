@@ -30,7 +30,7 @@ extension String {
     @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
     @export(implementation)
     public init(_ characters: AttributedString.CharacterView) {
-        #if FOUNDATION_FRAMEWORK || os(macOS)
+        #if FOUNDATION_FRAMEWORK || (os(macOS) && !hasFeature(Embedded))
         guard #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) else {
             // Forward to the slice overload above, which somehow did end up shipping in
             // the original AttributedString release.

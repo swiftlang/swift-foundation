@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !hasFeature(Embedded)
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -1233,3 +1235,5 @@ extension NSSortDescriptor {
 }
 
 #endif
+
+#endif // !hasFeature(Embedded)
