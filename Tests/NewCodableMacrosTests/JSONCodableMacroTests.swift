@@ -919,6 +919,120 @@ struct JSONCodableMacroTests {
         )
     }
 
+    @Test func publicEnumEmitsPublicMembers() {
+        AssertMacroExpansion(
+            """
+            @JSONCodable
+            public enum Shape {
+                case circle(radius: Double)
+                case point
+            }
+            """,
+            expandedSource: """
+            public enum Shape {
+                case circle(radius: Double)
+                case point
+            }
+
+            extension Shape {
+                enum JSONCodingFields: JSONOptimizedCodingField {
+                    case circle
+                    case point
+
+                    @_transparent
+                    var staticString: StaticString {
+                        switch self {
+                        case .circle:
+                            "circle"
+                        case .point:
+                            "point"
+                        }
+                    }
+
+                    static func field(for key: UTF8Span) throws(CodingError.Decoding) -> JSONCodingFields {
+                        switch UTF8SpanComparator(key) {
+                        case "circle":
+                            .circle
+                        case "point":
+                            .point
+                        default:
+                            throw CodingError.unknownKey(key)
+                        }
+                    }
+
+                    enum CircleFields: JSONOptimizedCodingField {
+                        case radius
+
+                        @_transparent
+                        var staticString: StaticString {
+                            switch self {
+                            case .radius:
+                                "radius"
+                            }
+                        }
+
+                        static func field(for key: UTF8Span) throws(CodingError.Decoding) -> CircleFields {
+                            switch UTF8SpanComparator(key) {
+                            case "radius":
+                                .radius
+                            default:
+                                throw CodingError.unknownKey(key)
+                            }
+                        }
+
+                        static func decode(from decoder: inout some JSONDictionaryDecoder & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                            var radius: Double?
+                            var _field: CircleFields?
+                            try decoder.decodeEachField { fieldDecoder throws(CodingError.Decoding) in
+                                _field = try fieldDecoder.decode(CircleFields.self)
+                            } andValue: { valueDecoder throws(CodingError.Decoding) in
+                                switch _field! {
+                                case .radius:
+                                    radius = try valueDecoder.decode(Double.self)
+                                }
+                            }
+                            guard let radius else {
+                                throw CodingError.dataCorrupted(debugDescription: "Missing required fields")
+                            }
+                            return .circle(radius: radius)
+                        }
+                    }
+                }
+            }
+
+            extension Shape: JSONEncodable {
+                public func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                    switch self {
+                    case .circle(let radius):
+                        try encoder.encodeEnumCase(JSONCodingFields.circle, associatedValueCount: 1) { valueEncoder throws(CodingError.Encoding) in
+                            try valueEncoder.encode(field: JSONCodingFields.CircleFields.radius, value: radius)
+                        }
+                    case .point:
+                        try encoder.encodeEnumCase(JSONCodingFields.point)
+                    }
+                }
+            }
+
+            extension Shape: JSONDecodable {
+                public static func decode(from decoder: inout some JSONDecoderProtocol & ~Escapable) throws(CodingError.Decoding) -> Shape {
+                    var _codingField: JSONCodingFields?
+                    return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
+                        _codingField = try fieldDecoder.decode(JSONCodingFields.self)
+                    } associatedValues: { valuesDecoder throws(CodingError.Decoding) in
+                        return switch _codingField! {
+                        case .circle:
+                            try JSONCodingFields.CircleFields.decode(from: &valuesDecoder)
+                        case .point:
+                            .point
+                        }
+                    }
+                }
+            }
+            """,
+            macros: codableTestMacros
+        )
+    }
+
     @Test func enumWithCustomCodingKey() {
         AssertMacroExpansion(
             """
