@@ -406,9 +406,15 @@ open class FileManager : @unchecked Sendable {
         _FileManagerImpl.string(self, withFileSystemRepresentation: str, length: len)
     }
     
-    internal func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
+    #if hasFeature(Embedded)
+    public func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
         try path.withFileSystemRepresentation(body)
     }
+    #else
+    open func withFileSystemRepresentation<R>(for path: String, _ body: (UnsafePointer<CChar>?) throws -> R) rethrows -> R {
+        try path.withFileSystemRepresentation(body)
+    }
+    #endif
 
     open var temporaryDirectory: URL {
         _FileManagerImpl.temporaryDirectory(self)
