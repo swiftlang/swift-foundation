@@ -268,7 +268,65 @@ private struct StringTests {
         test("\r \r\n \r", "\r", anchored: true, backwards: true, 4..<5)
     }
 
+    // The expected ranges are UTF-8 offsets.
+    @Test(arguments: [
+        ("abcabc", "bc", String.CompareOptions(), 1..<3),
+        ("abcabc", "bc", .backwards, 4..<6),
+        ("abcabc", "bc", .anchored, nil),
+        ("abcabc", "ab", .anchored, 0..<2),
+        ("abcabc", "bc", [.anchored, .backwards], 4..<6),
+        ("abc", "abcd", [], nil),
+        // "e" followed by a combining accent is a different character.
+        ("e\u{301}xe", "e", [], 4..<5),
+        ("e\u{301}xe", "e", .backwards, 4..<5),
+        ("e\u{301}xe", "e", .literal, 0..<1),
+        ("a\r\nb", "\r", [], nil),
+        ("a\r\nb", "\n", [], nil),
+        ("a\r\nb", "\r", .literal, 1..<2),
+        ("a\r\nb", "\r\n", [], 1..<3),
+        // U+212A KELVIN SIGN is canonically equivalent to "K".
+        ("\u{212A}", "K", [], 0..<3),
+        ("\u{212A}", "K", .literal, nil),
+        ("x\u{212A}K", "K", [], 1..<4),
+        ("x\u{212A}K", "K", .backwards, 4..<5),
+        ("\u{212A}x", "K", .anchored, 0..<3),
+        ("\u{E9} abc", "abc", [], 3..<6),
+        ("e\u{301}", "\u{E9}", [], 0..<3),
+        ("e\u{301}", "\u{E9}", .literal, nil),
+        ("a\u{E9}", "\u{E9}", .literal, 1..<3),
+        ("xABCx", "abc", .caseInsensitive, 1..<4),
+        ("abcABC", "abc", [.caseInsensitive, .backwards], 3..<6),
+        ("abcABC", "ABC", [.caseInsensitive, .anchored], 0..<3),
+        ("abc", "x", .caseInsensitive, nil),
+        ("a\r\nb", "\r", .caseInsensitive, nil),
+        ("a\r\nb", "\r", [.literal, .caseInsensitive], 1..<2),
+    ] as [(String, String, String.CompareOptions, Range<Int>?)])
+    func rangeOfStringWithOptions(_ tested: String, _ string: String, _ options: String.CompareOptions, _ expectation: Range<Int>?) throws {
+        let result = try tested[...]._range(of: string[...], options: options)
+        let utf8Result = result.map { tested.utf8.distance(from: tested.startIndex, to: $0.lowerBound) ..< tested.utf8.distance(from: tested.startIndex, to: $0.upperBound) }
+        #expect(utf8Result == expectation)
+    }
+
 #if FOUNDATION_FRAMEWORK
+    // Case folding and diacritic stripping of non-ASCII characters need the framework build.
+    @Test(arguments: [
+        ("Stra\u{DF}e", "SS", String.CompareOptions.caseInsensitive, 4..<6),
+        ("x\u{E9}", "E", [.caseInsensitive, .diacriticInsensitive], 1..<3),
+        ("\u{212A}x", "k", .caseInsensitive, 0..<3),
+        ("e\u{301}xE", "e", .caseInsensitive, 4..<5),
+        ("\u{E9}xABC", "abc", .caseInsensitive, 3..<6),
+        ("abc\u{E9}ABC", "abc", [.caseInsensitive, .backwards], 5..<8),
+        // An anchored backwards search finds nothing when the last match does not reach the end.
+        ("ABC\u{E9}", "abc", [.caseInsensitive, .anchored, .backwards], nil),
+        ("Stra\u{DF}e", "STRASSE", [.caseInsensitive, .anchored, .backwards], 0..<7),
+        ("Stra\u{DF}e x", "SS", [.caseInsensitive, .backwards], 4..<6),
+    ] as [(String, String, String.CompareOptions, Range<Int>?)])
+    func rangeOfASCIIStringWithOptionsInNonASCIIText(_ tested: String, _ string: String, _ options: String.CompareOptions, _ expectation: Range<Int>?) throws {
+        let result = try tested[...]._range(of: string[...], options: options)
+        let utf8Result = result.map { tested.utf8.distance(from: tested.startIndex, to: $0.lowerBound) ..< tested.utf8.distance(from: tested.startIndex, to: $0.upperBound) }
+        #expect(utf8Result == expectation)
+    }
+
     // Case folding of non-ASCII characters needs the framework build.
     @Test(arguments: [
         ("sx", "ß", String.CompareOptions.caseInsensitive, nil),
