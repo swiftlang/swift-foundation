@@ -634,53 +634,27 @@ enum _FileOperations {
                                 }
                             }
                         } else {
-                            var stack: [String] = [source]
-                            while let entry = stack.popLast() {
-                                do {
-                                    try entry.withNTPathRepresentation { pwszEntry in
-                                        var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
-                                        guard GetFileAttributesExW(pwszEntry, GetFileExInfoStandard, &faAttributes) else {
-                                            throw CocoaError.moveFileError(GetLastError(), src, dst)
-                                        }
+                            do {
+                                try Self.copyFile(source, to: destination, with: fileManager, options: [])
+                            } catch let copyError as CocoaError {
+                                try? Self.removeFile(destination, with: nil)
+                                throw CocoaError(copyError.code, userInfo: [
+                                    NSFilePathErrorKey: source,
+                                    NSDestinationFilePathErrorKey: destination,
+                                    NSUserStringVariantErrorKey: "Move",
+                                    NSUnderlyingErrorKey: copyError
+                                ])
+                            }
 
-                                        var pwszDestination: PWSTR? = nil
-                                        guard SUCCEEDED(PathAllocCombine(destination, entry, PATHCCH_ALLOW_LONG_PATHS, &pwszDestination)) else {
-                                            throw CocoaError.moveFileError(GetLastError(), src, dst)
-                                        }
-                                        defer { LocalFree(pwszDestination) }
-
-                                        if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == FILE_ATTRIBUTE_REPARSE_POINT {
-                                            let aliasee = try fileManager.destinationOfSymbolicLink(atPath: entry)
-
-                                            // TODO(compnerd) - is there a way to avoid the round-trip of decoding, encoding here?
-                                            let destination = String(decodingCString: pwszDestination!, as: UTF16.self)
-
-                                            var faDestinationAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
-                                            if GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) {
-                                                try removeFile(destination, with: fileManager)
-                                            }
-                                            try fileManager.createSymbolicLink(atPath: destination, withDestinationPath: aliasee)
-                                        } else {
-                                            if faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY {
-                                                guard CreateDirectoryW(pwszDestination, nil) else {
-                                                    throw CocoaError.moveFileError(GetLastError(), src, dst)
-                                                }
-                                                stack.append(entry)
-                                                for entry in _Win32DirectoryContentsSequence(path: entry, appendSlashForDirectory: true) {
-                                                    stack.append(entry.fileName)
-                                                }
-                                            } else {
-                                                guard CopyFileW(pwszEntry, pwszDestination, true) else {
-                                                    throw CocoaError.moveFileError(GetLastError(), src, dst)
-                                                }
-                                            }
-                                        }
-                                    }
-                                } catch let error {
-                                    guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
-                                        throw error
-                                    }
-                                }
+                            do {
+                                try Self.removeFile(source, with: nil)
+                            } catch let removeError as CocoaError {
+                                throw CocoaError(removeError.code, userInfo: [
+                                    NSFilePathErrorKey: source,
+                                    NSDestinationFilePathErrorKey: destination,
+                                    NSUserStringVariantErrorKey: "Move",
+                                    NSUnderlyingErrorKey: removeError
+                                ])
                             }
                         }
                     }
