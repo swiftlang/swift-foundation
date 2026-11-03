@@ -337,8 +337,9 @@ internal enum _CalendarUtility {
     }
 
     /// The weekday of a rata die, from 1 for Sunday to 7 for Saturday. Rata die 1 was a Monday.
-    static func weekday(ofRataDie rataDie: Int) -> Int {
-        (rataDie % 7 + 7) % 7 + 1
+    /// The rata die helpers are generic so that the `Int64` rata dies of the Hebrew calendar do not overflow `Int` on 32 bit platforms.
+    static func weekday<I: FixedWidthInteger>(ofRataDie rataDie: I) -> Int {
+        Int((rataDie % 7 + 7) % 7) + 1
     }
 
     /// The components in the set, from the largest unit to the smallest. A difference computes them in this order.
@@ -360,6 +361,18 @@ internal enum _CalendarUtility {
         if components.contains(.second) { out.append(.second) }
         if components.contains(.nanosecond) { out.append(.nanosecond) }
         return out
+    }
+
+    /// The units that `.weekday` or a time unit cannot be counted in, because they are not larger. In every other unit, its range is its maximum range. Nil for any other unit.
+    static func unitsNotLarger(than smaller: Calendar.Component) -> Calendar.ComponentSet? {
+        switch smaller {
+        case .weekday: return [.second, .minute, .hour, .day, .weekday]
+        case .hour: return [.second, .minute, .hour]
+        case .minute: return [.second, .minute]
+        case .second: return .second
+        case .nanosecond: return .nanosecond
+        default: return nil
+        }
     }
 
     /// The range of a unit that starts again each month, such as the day or the week of the month, inside a larger unit such as the year.
@@ -514,7 +527,7 @@ internal enum _CalendarUtility {
     }
 
     /// The position of a day in its week, from 0 for the first weekday to 6.
-    static func relativeWeekday(ofRataDie rataDie: Int, firstWeekday: Int) -> Int {
+    static func relativeWeekday<I: FixedWidthInteger>(ofRataDie rataDie: I, firstWeekday: Int) -> Int {
         (weekday(ofRataDie: rataDie) - firstWeekday + 7) % 7
     }
 
@@ -524,9 +537,9 @@ internal enum _CalendarUtility {
     }
 
     /// The rata die of the first day of week 1 of a year. Week 1 is the week that holds `yearStart`, or the week after it if fewer than `minimumDaysInFirstWeek` days of that week are in the year.
-    static func firstDayOfWeekYear(yearStart: Int, firstWeekday: Int, minimumDaysInFirstWeek: Int) -> Int {
+    static func firstDayOfWeekYear<I: FixedWidthInteger>(yearStart: I, firstWeekday: Int, minimumDaysInFirstWeek: Int) -> I {
         let daysIntoWeek = relativeWeekday(ofRataDie: yearStart, firstWeekday: firstWeekday)
-        return (7 - daysIntoWeek) >= minimumDaysInFirstWeek ? yearStart - daysIntoWeek : yearStart + 7 - daysIntoWeek
+        return (7 - daysIntoWeek) >= minimumDaysInFirstWeek ? yearStart - I(daysIntoWeek) : yearStart + I(7 - daysIntoWeek)
     }
 
     /// The week year of a day and the number of its week in that week year. `year` is the year of the day, and the week year is `year` or the year before or after it.
@@ -542,12 +555,12 @@ internal enum _CalendarUtility {
     }
 
     /// The local midnight at the start of a rata die. If the time zone skips that midnight, the result is the first time after the skipped hour.
-    static func localMidnight(rataDie: Int, in timeZone: TimeZone) -> Date {
+    static func localMidnight<I: FixedWidthInteger>(rataDie: I, in timeZone: TimeZone) -> Date {
         utcDate(fromRataDie: rataDie, secondsInDay: 0, in: timeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     /// The interval from local midnight of one day to local midnight of another.
-    static func interval(fromRataDie start: Int, toRataDie end: Int, in timeZone: TimeZone) -> DateInterval {
+    static func interval<I: FixedWidthInteger>(fromRataDie start: I, toRataDie end: I, in timeZone: TimeZone) -> DateInterval {
         let startDate = localMidnight(rataDie: start, in: timeZone)
         return DateInterval(start: startDate, duration: localMidnight(rataDie: end, in: timeZone).timeIntervalSince(startDate))
     }

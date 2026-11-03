@@ -160,31 +160,8 @@ internal final class _CalendarFixedMonth: _CalendarProtocol, Sendable {
 
     func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
         if larger == .calendar || larger == .timeZone || larger == .weekdayOrdinal || larger == .nanosecond { return nil }
-        switch smaller {
-        case .weekday:
-            switch larger {
-            case .second, .minute, .hour, .day, .weekday: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .hour:
-            switch larger {
-            case .second, .minute, .hour: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .minute:
-            switch larger {
-            case .second, .minute: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .second:
-            switch larger {
-            case .second: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .nanosecond:
-            return maximumRange(of: smaller)
-        default:
-            break
+        if let notLarger = _CalendarUtility.unitsNotLarger(than: smaller) {
+            return notLarger.contains(Calendar.ComponentSet(single: larger)) ? nil : maximumRange(of: smaller)
         }
         let fields = dayFields(for: date, in: timeZone)
         switch (smaller, larger) {

@@ -316,7 +316,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     /// `yearForWeekOfYear` computations (interval boundaries, multi-year add).
     private func firstDayOfWeekYear(_ year: Int32) -> Int64 {
         let rdTishri1 = HebrewArithmetic.fixedFromHebrew(year: year, month: HebrewArithmetic.TISHRI, day: 1)
-        return Int64(_CalendarUtility.firstDayOfWeekYear(yearStart: Int(rdTishri1), firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek))
+        return _CalendarUtility.firstDayOfWeekYear(yearStart: rdTishri1, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
     }
 
     /// Number of weeks in the given Hebrew year for week-of-year semantics.
@@ -373,7 +373,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             let weekYear = Int32(weekYearInt)
             // Start = first day of week 1 of this yearForWeekOfYear.
             // Duration = (weeks in this year) × 7 days (in local seconds, DST-aware).
-            return _CalendarUtility.interval(fromRataDie: Int(firstDayOfWeekYear(weekYear)), toRataDie: Int(firstDayOfWeekYear(weekYear + 1)), in: tz)
+            return _CalendarUtility.interval(fromRataDie: firstDayOfWeekYear(weekYear), toRataDie: firstDayOfWeekYear(weekYear + 1), in: tz)
         case .quarter:
             // Hebrew quarter mapping matches ICU's internal `mquarter` table, indexed
             // by civil-month-minus-1: [3,3,3,4,4,4,4,1,1,1,2,2,2]. Q4 spans 4 civil
@@ -414,7 +414,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                 return nil
             }
             let rdHere = HebrewArithmetic.fixedFromHebrew(year: year, month: biblicalMonth, day: UInt8(day))
-            let daysBack = _CalendarUtility.relativeWeekday(ofRataDie: Int(rdHere), firstWeekday: firstWeekday)
+            let daysBack = _CalendarUtility.relativeWeekday(ofRataDie: rdHere, firstWeekday: firstWeekday)
 
             // Walk back `daysBack` civil days to the start of this week.
             var sY = year, sM = civilMonth, sD = UInt8(day)
@@ -534,7 +534,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         _CalendarUtility.setTimeFields(components, secondsInDay: secondsInDay, localSeconds: localSeconds, in: &result)
 
         if components.contains(.weekday) {
-            result.weekday = _CalendarUtility.weekday(ofRataDie: Int(rd))
+            result.weekday = _CalendarUtility.weekday(ofRataDie: rd)
         }
 
         if components.contains(.dayOfYear) {
@@ -558,7 +558,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                               components.contains(.yearForWeekOfYear)
         if needsWeekFields {
             // weekday in 1..7 (Sunday = 1, … Saturday = 7).
-            let weekday = _CalendarUtility.weekday(ofRataDie: Int(rd))
+            let weekday = _CalendarUtility.weekday(ofRataDie: rd)
 
             let dayInt = Int(day)
             let dayOfYear = Int(HebrewArithmetic.daysPrecedingCivilMonth(
@@ -959,7 +959,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                                   tz: TimeZone) -> Date? {
         guard targetWeekday >= 1, targetWeekday <= 7 else { return nil }
 
-        let currentWeekday = _CalendarUtility.weekday(ofRataDie: Int(rd))
+        let currentWeekday = _CalendarUtility.weekday(ofRataDie: rd)
 
         let delta: Int64
         if currentWeekday == targetWeekday {
@@ -998,7 +998,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             if cm == 6 && !HebrewArithmetic.isLeapYear(y) { return nil }
             guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
             let firstRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: 1)
-            let firstWeekday = _CalendarUtility.weekday(ofRataDie: Int(firstRd))
+            let firstWeekday = _CalendarUtility.weekday(ofRataDie: firstRd)
             let firstOcc = 1 + ((targetWeekday - firstWeekday + 7) % 7)      // 1..7
             let dim = Int(HebrewArithmetic.lastDayOfMonth(y, month: bib))
             let day = firstOcc + (targetWdOrd - 1) * 7
@@ -1042,7 +1042,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             if cm == 6 && !HebrewArithmetic.isLeapYear(y) { return nil }
             guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
             let firstRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: 1)
-            let firstWeekday = _CalendarUtility.weekday(ofRataDie: Int(firstRd))
+            let firstWeekday = _CalendarUtility.weekday(ofRataDie: firstRd)
             let firstOcc = 1 + ((targetWeekday - firstWeekday + 7) % 7)      // 1..7
             let dim = Int(HebrewArithmetic.lastDayOfMonth(y, month: bib))
             let day = firstOcc + (targetWdOrd - 1) * 7
@@ -1095,7 +1095,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             if cm == 6 && !HebrewArithmetic.isLeapYear(y) { return nil }
             guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
             let firstDayRd = HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: 1)
-            let firstDayWeekday = _CalendarUtility.weekday(ofRataDie: Int(firstDayRd))
+            let firstDayWeekday = _CalendarUtility.weekday(ofRataDie: firstDayRd)
             let periodStart = ((firstDayWeekday - firstWd) % 7 + 7) % 7           // 0..6 (offset of day 1 within its week)
             let correction = (7 - periodStart) >= minDays ? 1 : 0
             let day = 7 * (targetWeekOfMonth - correction) + dayOffsetInWeek - periodStart + 1
