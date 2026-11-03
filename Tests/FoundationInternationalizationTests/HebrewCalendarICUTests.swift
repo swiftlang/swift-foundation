@@ -105,4 +105,57 @@ private struct HebrewCalendarICUTests {
         }
         #expect(divergences == 0, "\(divergences)/\(total) Hebrew dates diverged from ICU")
     }
+
+    @Test func nextDateOnSameWeekdayLaterInDay() throws {
+        var calendar = Calendar(identifier: .hebrew)
+        calendar.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        let start = Date(timeIntervalSince1970: 1_765_537_200) // 2025-12-12 12:00 in Paris
+        let components = DateComponents(hour: 20, minute: 31, second: 41, weekday: 6)
+
+        let result = try #require(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTime))
+
+        #expect(result == Date(timeIntervalSince1970: 1_765_567_901)) // 2025-12-12 20:31:41 in Paris
+    }
+
+    @Test func nextDateInRepeatedHourAfterStart() throws {
+        var calendar = Calendar(identifier: .hebrew)
+        calendar.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        let start = Date(timeIntervalSince1970: 1_729_990_800) // 2024-10-27 01:00 UTC
+        let components = DateComponents(hour: 2, minute: 30, second: 0)
+
+        let result = try #require(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTime))
+
+        #expect(result == Date(timeIntervalSince1970: 1_729_992_600)) // 2024-10-27 01:30 UTC
+    }
+
+    @Test func nextDateInSkippedHourUsesTransition() throws {
+        var calendar = Calendar(identifier: .hebrew)
+        calendar.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        let start = Date(timeIntervalSince1970: 1_837_594_800) // 2028-03-25 12:00 in Paris
+        let components = DateComponents(hour: 2, minute: 26, second: 0)
+
+        let result = try #require(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTime))
+
+        #expect(result == Date(timeIntervalSince1970: 1_837_645_200)) // 2028-03-26 03:00 in Paris
+    }
+
+    @Test func nextDateForDayMissingFromRequestedMonth() throws {
+        var calendar = Calendar(identifier: .hebrew)
+        calendar.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        let start = Date(timeIntervalSince1970: 1_697_407_200) // 5784 Heshvan 1 at midnight in Paris
+        let components = DateComponents(month: 3, day: 30)
+
+        let result = try #require(calendar.nextDate(after: start, matching: components, matchingPolicy: .nextTime))
+
+        #expect(result == Date(timeIntervalSince1970: 1_702_422_000)) // 5784 Tevet 1 at midnight in Paris
+    }
+
+    @Test func nextDateWithNegativeDayDoesNotTrap() {
+        let calendar = Calendar(identifier: .hebrew)
+        let start = Date(timeIntervalSince1970: 1_765_537_200)
+
+        let result = calendar.nextDate(after: start, matching: DateComponents(day: -3), matchingPolicy: .nextTime)
+
+        #expect(result == nil)
+    }
 }

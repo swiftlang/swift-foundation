@@ -335,11 +335,7 @@ extension Calendar {
             mutating func next() -> Element? {
                 guard !finished else { return nil }
                 
-                if usesFastPath {
-                    guard let next = calendar._calendarNextDate(after: searchingDate, matching: matchingComponents, direction: direction) else {
-                        finished = true
-                        return nil
-                    }
+                if usesFastPath, let next = calendar._calendarNextDate(after: searchingDate, matching: matchingComponents, direction: direction) {
                     if let range, !range.contains(next) {
                         finished = true
                         return nil
@@ -534,12 +530,11 @@ extension Calendar {
                                          inSearchingDate searchingDate: Date,
                                          previouslyReturnedMatchDate: Date?) throws -> SearchStepResult {
 
-        // Fast-path: ask the calendar directly.
-        if _supportsNextDateFastPath(for: matchingComponents._populatedComponentSet) && matchingPolicy == .nextTime && repeatedTimePolicy == .first {
+        // Fast-path: ask the calendar directly. Only on the first step: the fast path returns a date strictly after its input, but a later step can already be at the match.
+        if searchingDate == start && _supportsNextDateFastPath(for: matchingComponents._populatedComponentSet) && matchingPolicy == .nextTime && repeatedTimePolicy == .first {
             if let fast = _calendarNextDate(after: searchingDate, matching: matchingComponents, direction: direction) {
                 return SearchStepResult(result: (fast, true), newSearchDate: fast)
             }
-            return SearchStepResult(result: nil, newSearchDate: searchingDate)
         }
 
         // Step A: Call helper method that does the searching
@@ -1660,7 +1655,7 @@ extension Calendar {
         if month != dateMonth {
             // Fast-path: advance to target month directly.
             if !isLeapMonthDesired || !strictMatching {
-                if _supportsNextDateFastPath(for: [.month]) {
+                if direction == .forward, _supportsNextDateFastPath(for: [.month]) {
                     var minimal = DateComponents()
                     minimal.month = month
                     minimal.isLeapMonth = components.isLeapMonth
@@ -1764,8 +1759,8 @@ extension Calendar {
         if components.month == nil, components.weekday != nil {
             var enriched = components
             enriched.month = component(.month, from: startingAt)
-            if _supportsNextDateFastPath(for: enriched._populatedComponentSet) {
-                return _calendarNextDate(after: startingAt, matching: enriched, direction: direction)
+            if direction == .forward, _supportsNextDateFastPath(for: enriched._populatedComponentSet), let fast = _calendarNextDate(after: startingAt, matching: enriched, direction: direction) {
+                return fast
             }
         }
 
@@ -1859,8 +1854,8 @@ extension Calendar {
         }
 
         // Fast-path: ask the calendar directly.
-        if _supportsNextDateFastPath(for: components._populatedComponentSet) {
-            return _calendarNextDate(after: startingAt, matching: components, direction: direction)
+        if direction == .forward, _supportsNextDateFastPath(for: components._populatedComponentSet), let fast = _calendarNextDate(after: startingAt, matching: components, direction: direction) {
+            return fast
         }
 
         // After this point, result is at least startDate
@@ -1970,10 +1965,8 @@ extension Calendar {
         }
 
         // Fast-path: use minimal {weekday}-only components.
-        if _supportsNextDateFastPath(for: [.weekday]) {
-            var minimal = DateComponents()
-            minimal.weekday = weekday
-            return _calendarNextDate(after: startingAt, matching: minimal, direction: direction)
+        if direction == .forward, _supportsNextDateFastPath(for: [.weekday]), let fast = _calendarNextDate(after: startingAt, matching: DateComponents(weekday: weekday), direction: direction) {
+            return fast
         }
 
         // After this point, result is at least startDate
