@@ -304,7 +304,8 @@ private struct ChineseCalendarTests {
 
     // MARK: - The form of date(from:) and the era in a difference
 
-    // Expected values from the system calendar. The fields come from 2023-03-08 (era 78, year 40, day 17) and 2025-03-07 (yearForWeekOfYear 4662, weekOfYear 6, weekday 6). Week settings 1 and 1.
+    // Expected values from the ICU based calendar. The fields come from 2023-03-08 (era 78, year 40, day 17) and 2025-03-07 (yearForWeekOfYear 4662, weekOfYear 6, weekday 6). Week settings 1 and 1.
+    // `.yearForWeekOfYear` is the extended year, as in ICU 76 in swift-foundation-icu. ICU 78 counts it as the Gregorian year, so a system with ICU 78 gives a different date for the first test.
     @Test func yearForWeekOfYearWinsOverYear() {
         var components = DateComponents(era: 78, year: 40, hour: 12, weekday: 6, weekOfYear: 6)
         components.yearForWeekOfYear = 4662

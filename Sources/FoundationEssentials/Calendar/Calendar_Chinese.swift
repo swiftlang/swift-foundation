@@ -375,31 +375,8 @@ internal final class _CalendarChinese: _CalendarProtocol, Sendable {
 
     func range(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date) -> Range<Int>? {
         guard isSupported(date) else { return nil }
-        switch smaller {
-        case .weekday:
-            switch larger {
-            case .second, .minute, .hour, .day, .weekday: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .hour:
-            switch larger {
-            case .second, .minute, .hour: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .minute:
-            switch larger {
-            case .second, .minute: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .second:
-            switch larger {
-            case .second: return nil
-            default: return maximumRange(of: smaller)
-            }
-        case .nanosecond:
-            return larger == .nanosecond ? nil : maximumRange(of: smaller)
-        default:
-            break
+        if let notLarger = _CalendarUtility.unitsNotLarger(than: smaller) {
+            return notLarger.contains(Calendar.ComponentSet(single: larger)) ? nil : maximumRange(of: smaller)
         }
         switch (smaller, larger) {
         case (.month, .year):
@@ -640,7 +617,7 @@ internal final class _CalendarChinese: _CalendarProtocol, Sendable {
         let form = _CalendarUtility.DateForm(components)
         func weekdayOffset(_ weekday: Int?) -> Int { weekday.map { _CalendarUtility.relativeWeekday(of: $0, firstWeekday: firstWeekday) } ?? 0 }
 
-        // In a week-based form, `.yearForWeekOfYear` names the year without an `.era` and wins over `.year`. A week past the end of the year runs on into the next, as in the Gregorian calendar.
+        // In a week form, `.yearForWeekOfYear` names the year without an `.era` and wins over `.year`. A week past the end of the year runs on into the next, as in the Gregorian calendar.
         if case .weekOfYear(let week, let weekday) = form, let weekYear = components.yearForWeekOfYear {
             guard isSupported(weekYear: weekYear) else { return nil }
             let (weeksAfterFirst, subtractOverflow) = (week ?? 0).subtractingReportingOverflow(1)
