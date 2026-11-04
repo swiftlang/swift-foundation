@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
 internal import _FoundationRefs
 #endif
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
 internal import BasicContainers
 #endif
 
