@@ -444,6 +444,20 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
+#if !FOUNDATION_FRAMEWORK
+    /// For use by the `NSCalendar` implementation in swift-corelibs-foundation only.
+    @_spi(SwiftCorelibsFoundation)
+    public init(_identifier identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+        self.init(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+    }
+
+    /// For use by the `NSCalendar` implementation in swift-corelibs-foundation only.
+    @_spi(SwiftCorelibsFoundation)
+    public var _gregorianStartDate: Date? {
+        _calendar.gregorianStartDate
+    }
+#endif
+
     internal init(inner: any _CalendarProtocol) {
         _calendar = inner
     }
