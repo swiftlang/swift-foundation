@@ -203,7 +203,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
 #if FOUNDATION_FRAMEWORK
             // Do not call the usual 'objectForInfoDictionaryKey' method, as it localizes the Info.plist content, which recurisvely calls back into Locale
-            let allowMixed = _generouslyInterpretedInfoDictionaryBoolean(Bundle.main._object(forUnlocalizedInfoDictionaryKey: "CFBundleAllowMixedLocalizations"))
+            let allowMixed = if _foundation_swift_cfbundle_enabled() {
+                Bundle.main.inner.allowMixedLocalizations
+            } else {
+                _generouslyInterpretedInfoDictionaryBoolean(Bundle.main._object(forUnlocalizedInfoDictionaryKey: "CFBundleAllowMixedLocalizations"))
+            }
 #else
             let allowMixed = false
 #endif
