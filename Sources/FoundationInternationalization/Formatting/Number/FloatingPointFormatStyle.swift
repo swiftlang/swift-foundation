@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 
 /// A structure that converts between floating-point values and their textual representations.
 ///
@@ -892,3 +894,5 @@ extension RegexComponent where Self == FloatingPointFormatStyle<Double>.Percent 
     }
 }
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

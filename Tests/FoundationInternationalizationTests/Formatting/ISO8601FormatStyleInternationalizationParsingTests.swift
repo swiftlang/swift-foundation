@@ -19,6 +19,8 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if ICU
+
 @Suite("ISO8601FormatStyle Parsing (Internationalization)")
 private struct ISO8601FormatStyleInternationalizationParsingTests {
     @Test func chileTimeZone() throws {
@@ -30,3 +32,5 @@ private struct ISO8601FormatStyleInternationalizationParsingTests {
         }
     }
 }
+
+#endif // ICU

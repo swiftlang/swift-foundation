@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 
 #if canImport(os) && !hasFeature(Embedded)
@@ -198,3 +199,5 @@ internal func _withStringAsCString(_ input: String, _ body: (UnsafePointer<CChar
         return String(cString: result)
     }
 }
+
+#endif // ICU

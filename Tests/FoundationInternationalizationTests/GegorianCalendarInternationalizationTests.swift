@@ -22,6 +22,7 @@ import Testing
 // Gregorian calendar tests that rely on FoundationInternationalization functionality
 @Suite("Gregorian Calendar (Internationalization)")
 private struct GregorianCalendarInternationalizationTests {
+#if ICU
     @Test func copy() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: 5, minimumDaysInFirstWeek: 3, gregorianStartDate: nil)
         
@@ -2436,6 +2437,7 @@ private struct GregorianCalendarInternationalizationTests {
         test(.weekday, at: date, expected: Date(timeIntervalSince1970: 846399600.0)) // expect: 1996-10-27 07:00:00 +0000
         test(.quarter, at: date, expected: Date(timeIntervalSince1970: 844153200.0)) // expect: 1996-10-01 07:00:00 +0000
     }
+#endif // ICU
     
     @Test func dateFromComponents_componentsTimeZone() {
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
@@ -2473,6 +2475,7 @@ private struct GregorianCalendarInternationalizationTests {
         #expect(gregorianCalendar.date(from: dc_customCalendarNoTimeZone_customTimeZone)! == Date(timeIntervalSinceReferenceDate: 679024975.891)) // 2022-07-09T02:02:55Z
     }
     
+#if ICU
     @Test func dateFromComponents_componentsTimeZoneConversion() {
         let timeZone = TimeZone.gmt
         let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: timeZone, locale: nil, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: nil)
@@ -2549,4 +2552,5 @@ private struct GregorianCalendarInternationalizationTests {
         test(.minute, expected: -120)
         test(.second, expected: -7200)
     }
+#endif // ICU
 }

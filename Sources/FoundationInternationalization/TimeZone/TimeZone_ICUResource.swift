@@ -14,9 +14,8 @@
 import FoundationEssentials
 #endif
 
-#if canImport(_FoundationICU)
+#if ICU
 internal import _FoundationICU
-#endif
 
 extension TimeZone {
     enum Error: Swift.Error {
@@ -768,3 +767,5 @@ internal final class _TimeZoneICUResource: Sendable {
         return zoneOffsets.initialOffsets.dstSavings
     }
 }
+
+#endif // ICU

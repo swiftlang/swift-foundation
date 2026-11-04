@@ -23,6 +23,8 @@ import TestSupport
 @testable import FoundationEssentials
 #endif
 
+#if ICU
+
 @Suite("Calendar ICU", .tags(.calendar))
 private struct CalendarICUTests {
 
@@ -116,3 +118,5 @@ private struct CalendarICUTests {
         #expect(icuResult == gregorianResult, "ICU returned \(String(describing: icuResult)), Gregorian returned \(String(describing: gregorianResult))")
     }
 }
+
+#endif // ICU

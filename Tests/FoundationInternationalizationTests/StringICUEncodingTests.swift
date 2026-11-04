@@ -19,6 +19,8 @@ import Testing
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+#if ICU
+
 @Suite("String (ICU Encoding)")
 private struct StringICUEncodingTests {
     private func _test_roundTripConversion(
@@ -218,3 +220,5 @@ private struct ICUStringConverterLossyDecodeTests {
         #expect(lossyDecode(converter, [0xFF], substitution: "?")?.invalidByteCount == 1)
     }
 }
+
+#endif // ICU

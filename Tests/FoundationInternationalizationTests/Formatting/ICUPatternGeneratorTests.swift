@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("ICUPatternGenerator")
 private struct ICUPatternGeneratorTests {
 
@@ -256,3 +258,5 @@ private struct ICUPatternGeneratorTests {
     }
 #endif
 }
+
+#endif // ICU

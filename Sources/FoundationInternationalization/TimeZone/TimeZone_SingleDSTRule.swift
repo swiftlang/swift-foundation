@@ -16,6 +16,8 @@ internal import Synchronization
 import FoundationEssentials
 #endif
 
+#if ICU
+
 // This type works with Gregorian calendar only
 // It represents just one rule; does not handle historical changes
 internal final class _TimeZoneSingleDSTRule: Sendable {
@@ -623,3 +625,5 @@ internal enum SingleDSTRuleTimeZoneError: Error {
     }
     case illegalArgument(Component, Int)
 }
+
+#endif // ICU

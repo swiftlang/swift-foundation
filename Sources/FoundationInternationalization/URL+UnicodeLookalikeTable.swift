@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 extension URL {
@@ -700,3 +701,5 @@ extension String.UnicodeScalarView {
         return String.UnicodeScalarView(target).elementsEqual(suffix)
     }
 }
+
+#endif // ICU

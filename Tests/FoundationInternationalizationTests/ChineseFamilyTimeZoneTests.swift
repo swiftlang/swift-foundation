@@ -20,6 +20,8 @@ import Testing
 #endif
 
 /// Tests of the Chinese, Dangi and Vietnamese calendars that need a named time zone or the locale data, which the FoundationEssentials tests cannot load.
+#if ICU
+
 @Suite("Chinese Family Time Zones")
 private struct ChineseFamilyTimeZoneTests {
 
@@ -43,3 +45,5 @@ private struct ChineseFamilyTimeZoneTests {
         #expect(changed.hashValue == untouched.hashValue)
     }
 }
+
+#endif // ICU

@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -356,3 +357,5 @@ extension ICULegacyNumberFormatter.NumberFormatType : Codable {
     private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
 }
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

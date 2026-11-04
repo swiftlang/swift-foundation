@@ -101,6 +101,7 @@ target_compile_options(FoundationEssentials PRIVATE
 target_compile_options(FoundationEssentials PRIVATE ${_SwiftFoundation_availability_macros})
 target_compile_options(FoundationEssentials PRIVATE ${_SwiftFoundation_wasi_libc_flags})
 target_compile_options(FoundationEssentials PRIVATE -package-name "SwiftFoundation")
+target_compile_options(FoundationEssentials PRIVATE "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-DICU>")
 
 target_link_libraries(FoundationEssentials PUBLIC
     _FoundationCShims

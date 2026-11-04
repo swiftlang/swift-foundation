@@ -16,6 +16,8 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if ICU
+
 @Suite("ParseStrategy Match")
 private struct ParseStrategyMatchTests {
     let enUS = Locale(identifier: "en_US")
@@ -322,3 +324,5 @@ DEBIT    Mar 31/20    March Payment to BoA         -USD 52,249.98
     }
 
 }
+
+#endif // ICU

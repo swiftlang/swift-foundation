@@ -23,6 +23,8 @@ import FoundationEssentials
 import FoundationInternationalization
 #endif
 
+#if ICU
+
 @Suite("Locale.Region Tests", .tags(.locale))
 struct LocaleRegionTests {
     @Test func regionCategory() async throws {
@@ -58,3 +60,5 @@ struct LocaleRegionTests {
         #expect(Locale.Region("not a region").subRegions(ofCategory: .territory) == [])
     }
 }
+
+#endif // ICU
