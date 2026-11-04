@@ -21,6 +21,7 @@ internal import _ForSwiftFoundation
 internal import os
 #endif
 
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -1761,3 +1762,5 @@ extension Locale {
     }
 
 }
+
+#endif // ICU

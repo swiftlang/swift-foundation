@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Options for parsing string representations of dates to create a `Date` instance.
@@ -183,3 +185,5 @@ extension RegexComponent where Self == Date.ParseStrategy {
 
 }
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

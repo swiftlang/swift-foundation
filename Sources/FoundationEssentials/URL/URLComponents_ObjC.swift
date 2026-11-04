@@ -40,7 +40,7 @@ extension NSURLComponents {
     }
 }
 
-#if canImport(_FoundationICU)
+#if ICU
 @objc extension NSURLComponents {
     /// Used for the implementation of `_CFURLComponentsMatchURLInString`, allowing us to verify the CF tests run correctly.
     static func _matchWith(string: String, requiredComponents: CFOptionFlags, defaultValues: [Int: String], urlPtr: UnsafeMutablePointer<NSURL?>) -> NSRange {
@@ -98,7 +98,7 @@ extension NSURLComponents {
         return string._toRelativeNSRange(range)
     }
 }
-#endif // canImport(_FoundationICU)
+#endif // ICU
 
 @objc(_NSSwiftURLComponents)
 internal class _NSSwiftURLComponents: _NSURLComponentsBridge {

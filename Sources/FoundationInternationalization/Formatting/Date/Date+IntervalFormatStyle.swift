@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 extension Date {
 
     /// A format style that creates string representations of date intervals.
@@ -205,3 +207,5 @@ extension Range where Bound == Date {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.IntervalFormatStyle : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

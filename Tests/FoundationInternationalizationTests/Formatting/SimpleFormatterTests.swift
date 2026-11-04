@@ -21,6 +21,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 #if !FOUNDATION_LIST_FORMAT_ICU
 /// `SimpleFormatter` decomposes patterns into prefix / connector / suffix at
 /// formatter init. The `ListFormatStyle` format tests cover this indirectly;
@@ -61,3 +63,5 @@ private struct SimpleFormatterTests {
     }
 }
 #endif
+
+#endif // ICU

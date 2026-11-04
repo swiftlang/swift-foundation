@@ -17,6 +17,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Date.FormatStyle")
 private struct DateFormatStyleTests {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
@@ -1849,3 +1851,5 @@ private struct TestDateVerbatimStyleDiscreteConformance {
             ])
     }
 }
+
+#endif // ICU

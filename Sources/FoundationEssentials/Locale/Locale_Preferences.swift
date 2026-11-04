@@ -96,7 +96,7 @@ package struct LocalePreferences: Hashable, Sendable {
 
     package init() { }
     
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
     // The framework init supports customized dateFormats
     package init(metricUnits: Bool? = nil,
          languages: [String]? = nil,

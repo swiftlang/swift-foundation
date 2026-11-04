@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 typealias ICUNumberFormatterSkeleton = String
@@ -562,3 +563,5 @@ final class ICUMeasurementNumberFormatter : ICUNumberFormatterBase, @unchecked S
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension ICUMeasurementNumberFormatter.UnitWidth : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

@@ -19,6 +19,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 let week = 604800
 let day = 86400
 let hour = 3600
@@ -1409,3 +1411,5 @@ extension Duration {
         (.zero - abs(self))...abs(self)
     }
 }
+
+#endif // ICU

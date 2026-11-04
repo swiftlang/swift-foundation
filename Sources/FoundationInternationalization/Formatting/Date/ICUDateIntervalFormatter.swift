@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 final class ICUDateIntervalFormatter : @unchecked Sendable {
@@ -89,3 +90,5 @@ final class ICUDateIntervalFormatter : @unchecked Sendable {
         }
     }
 }
+
+#endif // ICU

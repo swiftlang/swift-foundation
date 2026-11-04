@@ -105,6 +105,10 @@ var package = Package(
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
     ],
+    traits: [
+        .default(enabledTraits: ["ICU"]),
+        .trait(name: "ICU", description: "Enables functionality that depends on ICU")
+    ],
     dependencies: dependencies,
     targets: [
         // _FoundationCShims (Internal)
@@ -216,7 +220,7 @@ var package = Package(
                 .target(name: "FoundationEssentials"),
                 .target(name: "_FoundationCShims"),
                 .target(name: "_FoundationInternationalizationData"),
-                .product(name: "_FoundationICU", package: "swift-foundation-icu")
+                .product(name: "_FoundationICU", package: "swift-foundation-icu", condition: .when(traits: ["ICU"]))
             ],
             exclude: [
                 "String/CMakeLists.txt",
@@ -294,7 +298,7 @@ if embeddedLayout {
                 .product(name: "_RopeModule", package: "swift-collections"),
                 .product(name: "DequeModule", package: "swift-collections"),
                 .product(name: "OrderedCollections", package: "swift-collections"),
-                .product(name: "_FoundationICU", package: "swift-foundation-icu"),
+                .product(name: "_FoundationICU", package: "swift-foundation-icu", condition: .when(traits: ["ICU"])),
             ],
             path: "Sources",
             exclude: essentials.exclude.map { "FoundationEssentials/\($0)" } + internationalization.exclude.map { "FoundationInternationalization/\($0)" } + [

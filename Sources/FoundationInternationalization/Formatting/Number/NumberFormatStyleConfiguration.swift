@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 /// The capitalization formatting context used when formatting dates and times.
@@ -1156,3 +1157,5 @@ extension CurrencyFormatStyleConfiguration.Presentation {
         return stem
     }
 }
+
+#endif // ICU
