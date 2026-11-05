@@ -28,22 +28,40 @@ struct BPlistDecodingFormat: PlistDecodingFormat {
     }
 
     static func container<Key>(keyedBy type: Key.Type, for value: BPlistPrimitiveScope, referencing decoder: _PlistDecoder<BPlistDecodingFormat>, codingPathNode: _CodingPathNode) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-        let container = try decoder.document.withPrimitive(for: value) { primitive in
-            let primitiveIter = try primitive.dictionaryIterator
-            let iter = BPlistDecodingDocument.DictionaryIterator(primitiveIter)
-            // The legacy binary PropertyListDecoder implementation was non-deterministic in terms of the order of resolving duplicate keys. Here we make it explicitly keep-first to match historical PropertyListSerialization behavior.
-            return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count, duplicateKeys: .keepFirst)
+        let container = try _translatePrimitiveError(document: decoder.document, scope: value, codingPathNode: codingPathNode, expectation: [String : Any].self) {
+            try decoder.document.withPrimitive(for: value) { primitive in
+                let primitiveIter = try primitive.dictionaryIterator
+                let iter = BPlistDecodingDocument.DictionaryIterator(primitiveIter)
+                // The legacy binary PropertyListDecoder implementation was non-deterministic in terms of the order of resolving duplicate keys. Here we make it explicitly keep-first to match historical PropertyListSerialization behavior.
+                return try _PlistKeyedDecodingContainer<Key, Self>(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: primitiveIter.count, duplicateKeys: .keepFirst)
+            }
         }
         return KeyedDecodingContainer(container)
     }
 
     static func unkeyedContainer(for value: BPlistPrimitiveScope, referencing decoder: _PlistDecoder<BPlistDecodingFormat>, codingPathNode: _CodingPathNode) throws -> UnkeyedDecodingContainer {
-        let range: Range<Int> = try decoder.document.withPrimitive(for: value) { primitive in
-            return try primitive.arraySetRange
+        let range: Range<Int> = try _translatePrimitiveError(document: decoder.document, scope: value, codingPathNode: codingPathNode, expectation: [Any].self) {
+            try decoder.document.withPrimitive(for: value) { primitive in
+                return try primitive.arraySetRange
+            }
         }
         let count = range.count / decoder.document.metadata.objectRefSize
         let iter = BPlistDecodingDocument.ArrayIterator(document: decoder.document, containerScope: value, range: range, position: range.lowerBound)
         return _PlistUnkeyedDecodingContainer(referencing: decoder, codingPathNode: codingPathNode, iterator: iter, count: count)
+    }
+
+    /// Translates a primitive-layer `BPlistError.typeMismatch` into a `DecodingError.typeMismatch` reporting the actual type at `scope`; other `BPlistError`s become `dataCorrupted`.
+    private static func _translatePrimitiveError<T>(document: BPlistDecodingDocument, scope: BPlistPrimitiveScope, codingPathNode: _CodingPathNode, expectation: Any.Type, _ body: () throws -> T) throws -> T {
+        do {
+            return try body()
+        } catch let e as BPlistError {
+            switch e {
+            case .typeMismatch:
+                throw _typeMismatchError(document: document, scope: scope, path: codingPathNode.path, expectation: expectation)
+            case .invalidMarker, .corruptedValue, .corruptTopLevelInfo:
+                throw DecodingError._dataCorrupted(e.debugDescription, for: codingPathNode)
+            }
+        }
     }
 
     static func valueIsNull(_ mapValue: BPlistPrimitiveScope, in map: BPlistDecodingDocument) -> Bool {
