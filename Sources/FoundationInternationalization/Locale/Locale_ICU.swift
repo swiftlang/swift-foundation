@@ -660,7 +660,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     }
 
     // MARK: - Exemplar Character Set
-#if FOUNDATION_FRAMEWORK
     var exemplarCharacterSet: CharacterSet? {
         var status = U_ZERO_ERROR
         let data = ulocdata_open(identifier, &status)
@@ -705,14 +704,15 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 let r = Unicode.Scalar(UInt32(exactly: start)!)!...Unicode.Scalar(UInt32(exactly: end)!)!
                 characterSet.insert(charactersIn: r)
             } else {
-                let s = String(UnicodeScalarType(utf16CodeUnits: buffer.baseAddress!, count: Int(len)))
+                guard let s = String(validating: UnsafeBufferPointer(start: buffer.baseAddress, count: Int(len)), as: UTF16.self) else {
+                    return nil
+                }
                 characterSet.insert(charactersIn: s)
             }
         }
 
         return characterSet
     }
-#endif
 
     // MARK: - LocaleCalendarIdentifier
 

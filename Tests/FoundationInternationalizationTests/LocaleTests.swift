@@ -653,9 +653,10 @@ private struct LocalePropertiesTests {
         #expect("HK" == locale.regionCode)
         #expect("Hant" == locale.scriptCode)
         #expect("POSIX" == Locale(identifier: "en_POSIX").variantCode)
-#if FOUNDATION_FRAMEWORK
         #expect(locale.exemplarCharacterSet != nil)
-#endif
+        #expect(Locale(identifier: "en_US").exemplarCharacterSet?.contains("a") == true)
+        #expect(Locale(identifier: "en_US").exemplarCharacterSet?.contains("я") == false)
+        #expect(Locale(identifier: "ru_RU").exemplarCharacterSet?.contains("я") == true)
         // The calendar we get back from Locale has the locale set, but not the one we create with Calendar(identifier:). So we configure our comparison calendar first.
         var c = Calendar(identifier: .gregorian)
         c.locale = Locale(identifier: "en_US")
