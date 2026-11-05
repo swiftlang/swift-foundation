@@ -457,7 +457,7 @@ extension _FileManagerImpl {
                     return
                 }
                 let parent = path.deletingLastPathComponent()
-                if !parent.isEmpty {
+                if !parent.isEmpty && parent != path {
                     try _create(path: parent, leafFile: false)
                 }
                 try fileManager.withFileSystemRepresentation(for: path) { pathFsRep in
