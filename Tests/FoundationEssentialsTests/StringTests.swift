@@ -1632,6 +1632,7 @@ func withTemporaryFile(contents: Data, block: (_ url: URL) throws -> ()) throws 
 
 // MARK: -
 
+@Suite("String - Character Set")
 struct StringCharacterSetTests {
     @Test func rangeOfCharacterFrom() {
         do {
