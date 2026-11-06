@@ -14,7 +14,10 @@
 
 add_library(_FoundationInternationalizationData STATIC
     ListFormatData.swift
-    ListFormatLookup.swift)
+    ListFormatLookup.swift
+    PluralOperands.swift
+    PluralRules.swift
+    PluralRulesData.swift)
 
 target_compile_options(_FoundationInternationalizationData PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"
