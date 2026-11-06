@@ -110,23 +110,6 @@ class BPlistLegacyDecodingDocument : PlistDecodingDocument {
         }
     }
     
-    /// Fetch an index as an ASCII span. This avoids overhead of intermediate creation of "value" types for a common case of looking for an ASCII key string.
-    /// Returns an empty span if the value was not an ASCII string (either not a string at all, or UTF16BE string).
-    func withASCIIString<T>(at idx: BPlistObjectIndex, body: (Span<UInt8>) throws -> T) rethrows -> T {
-        try dataLock.withLock { state in
-            guard Int(idx) < objectOffsets.count else {
-                throw BPlistError.corruptedValue("object index")
-            }
-            let offset = objectOffsets[Int(idx)]
-            let scanInfo = BPlistScanner(buffer: state.buffer, trailer: trailer)
-            if let region = try scanInfo.scanASCIIStringRegion(at: offset) {
-                return try body(state.buffer[region].span)
-            } else {
-                return try body(Span())
-            }
-        }
-    }
-    
     @inline(__always)
     func value(from reference: BPlistObjectIndex) throws -> Value {
         try loadValue(at: reference)

@@ -95,7 +95,7 @@ final class _ProcessInfo: Sendable {
             var current = CommandLine.arguments
             #endif
             // Replace the process path
-            if let fullPath = Platform.getFullExecutablePath() {
+            if let fullPath = Platform.getFullExecutablePath(standardized: true) {
                 // Swift's CommandLine.arguments can be empty
                 if current.isEmpty {
                     current = [fullPath]
@@ -637,7 +637,7 @@ extension _ProcessInfo {
     }
 
     private static func _getProcessName() -> String {
-        return Platform.getFullExecutablePath()?.lastPathComponent ?? ""
+        return Platform.getFullExecutablePath(standardized: true)?.lastPathComponent ?? ""
     }
 
 #if os(macOS)
