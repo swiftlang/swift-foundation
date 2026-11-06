@@ -83,10 +83,20 @@ private struct PredicateCodableTests {
     struct Object2 : Equatable, PredicateCodableKeyPathProviding {
         var a: Int
         var b: String
-        
+
         static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.Object2> & Sendable] {
             ["Object2.a" : \.a]
         }
+    }
+
+    struct ObjectWithOptional : Equatable, PredicateCodableKeyPathProviding {
+        var child: Object2?
+
+        static var predicateCodableKeyPaths: [String : PartialKeyPath<PredicateCodableTests.ObjectWithOptional> & Sendable] {
+            ["ObjectWithOptional.child" : \.child]
+        }
+
+        static let example = ObjectWithOptional(child: Object2(a: 1, b: "Foo"))
     }
     
     struct MinimalConfig : PredicateCodingConfigurationProviding {
@@ -122,6 +132,16 @@ private struct PredicateCodableTests {
         }()
     }
     
+    struct RecursiveOptionalProvidedKeyPathConfig : PredicateCodingConfigurationProviding {
+        static let config = {
+            var config = PredicateCodableConfiguration.standardConfiguration
+            config.allowType(ObjectWithOptional.self, identifier: "Foundation.PredicateCodableTests.ObjectWithOptional")
+            config.allowType(Object2.self, identifier: "Foundation.PredicateCodableTests.Object2")
+            config.allowKeyPathsForPropertiesProvided(by: ObjectWithOptional.self, recursive: true)
+            return config
+        }()
+    }
+
     struct EmptyConfig : PredicateCodingConfigurationProviding {
         static let config = PredicateCodableConfiguration()
     }
@@ -304,6 +324,15 @@ private struct PredicateCodableTests {
         #expect(try decoded.evaluate(.example) == predicate.evaluate(.example))
     }
     
+    @Test func recursiveProvidedPropertiesThroughOptional() throws {
+        let predicate = #Predicate<ObjectWithOptional> {
+            ($0.child?.a ?? 0) == 1
+        }
+
+        let decoded = try _encodeDecode(predicate, for: RecursiveOptionalProvidedKeyPathConfig.self)
+        #expect(try decoded.evaluate(.example) == predicate.evaluate(.example))
+    }
+
     @Test func defaultAllowlist() throws {
         var predicate = #Predicate<String> {
             $0.isEmpty
