@@ -31,4 +31,5 @@ target_sources(FoundationEssentials PRIVATE
     StringEncodingMappingData.swift
     StringProtocol+Essentials.swift
     StringProtocol+Stub.swift
-    UnicodeScalar.swift)
+    UnicodeScalar.swift
+    UnicodeScalarMappingData.swift)

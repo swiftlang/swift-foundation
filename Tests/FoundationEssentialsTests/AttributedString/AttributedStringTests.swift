@@ -2491,6 +2491,21 @@ E {
         #expect(testString.range(of: "abc", options: [.anchored, .backwards]) == nil)
     }
 
+    @Test(arguments: [
+        ("Die Straße", "STRASSE", 4 ..< 10),
+        ("STRASSE", "straße", 0 ..< 7),
+        ("Großer Ärger", "ärger", 7 ..< 12),
+        ("Привет, МИР", "мир", 8 ..< 11),
+        ("Ärger", "arger", nil),
+    ] as [(String, String, Range<Int>?)])
+    func caseInsensitiveSearchNonASCII(text: String, target: String, expectedOffsets: Range<Int>?) {
+        let testString = AttributedString(text)
+        let offsets = testString.range(of: target, options: [.caseInsensitive]).map {
+            testString.characters.distance(from: testString.startIndex, to: $0.lowerBound) ..< testString.characters.distance(from: testString.startIndex, to: $0.upperBound)
+        }
+        #expect(offsets == expectedOffsets)
+    }
+
     @Test func indexConversion() throws {
         let attrStr = AttributedString("ABCDE")
         let str = "ABCDE"
