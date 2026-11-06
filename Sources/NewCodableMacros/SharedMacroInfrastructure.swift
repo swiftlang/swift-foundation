@@ -1536,9 +1536,10 @@ func makeEnumEncodableExtension(
         """
     }
 
+    let accessLevelPrefix = expansion.accessLevel.inlineDeclPrefix
     let extensionDecl: DeclSyntax = """
     extension \(typeName): \(raw: expansion.encodableProtocolName) {
-        func encode(to encoder: inout \(raw: expansion.encoderType)) throws(CodingError.Encoding) {
+        \(raw: accessLevelPrefix)func encode(to encoder: inout \(raw: expansion.encoderType)) throws(CodingError.Encoding) {
             \(raw: body)
         }
     }
@@ -1556,11 +1557,12 @@ func makeEnumDecodableExtension(
     peerInfo: PeerMacroInfo
 ) -> [ExtensionDeclSyntax] {
     // Generate the main decode method
+    let accessLevelPrefix = expansion.accessLevel.inlineDeclPrefix
     let mainDecl: DeclSyntax
     if cases.isEmpty {
         mainDecl = """
         extension \(typeName): \(raw: expansion.decodableProtocolName) {
-            static func decode(from decoder: inout \(raw: expansion.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
+            \(raw: accessLevelPrefix)static func decode(from decoder: inout \(raw: expansion.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
                 throw CodingError.dataCorrupted(debugDescription: "Cannot decode empty enum")
             }
         }
@@ -1581,7 +1583,7 @@ func makeEnumDecodableExtension(
 
         mainDecl = """
         extension \(typeName): \(raw: expansion.decodableProtocolName) {
-            static func decode(from decoder: inout \(raw: expansion.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
+            \(raw: accessLevelPrefix)static func decode(from decoder: inout \(raw: expansion.decoderType)) throws(CodingError.Decoding) -> \(typeName) {
                 var _codingField: \(raw: expansion.fieldTypeName)?
                 return try decoder.decodeEnumCase { fieldDecoder throws(CodingError.Decoding) in
                     _codingField = try fieldDecoder.decode(\(raw: expansion.fieldTypeName).self)
