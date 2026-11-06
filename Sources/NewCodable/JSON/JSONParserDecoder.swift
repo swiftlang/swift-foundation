@@ -590,12 +590,29 @@ public struct JSONParserDecoder: JSONDecoderProtocol, ~Escapable {
             state.reader.moveReaderIndex(forwardBy: 1)
 
             // Phase 2: decode associated values via struct decoder
-            var innerDecoder: StructDecoder
-            do throws(JSONError) { innerDecoder = try StructDecoder(parserState: state, midContainer: false) } catch { throw .json(error) }
-            let result = try valueDecoder(&innerDecoder) ^^ .decodingError
-            try innerDecoder._finish() ^^ .decodingError
+            let result: T
+            do {
+                // Keep associated fields below the case name in the coding path.
+                var dictionaryNode: InlineArray = [
+                    CodingPathNode.newDictionaryNode(withParent: state.currentTopCodingPathNode)
+                ]
+                var nodeSpan = dictionaryNode.mutableSpan
+                state.currentTopCodingPathNode = nodeSpan.withUnsafeMutableBufferPointer {
+                    $0.baseAddress!
+                }
+                defer {
+                    withExtendedLifetime(nodeSpan) {
+                        state.currentTopCodingPathNode.unwindToParent()
+                    }
+                }
 
-            state.copyRelevantState(from: innerDecoder.parserState)
+                var innerDecoder: StructDecoder
+                do throws(JSONError) { innerDecoder = try StructDecoder(parserState: state, midContainer: false) } catch { throw .json(error) }
+                result = try valueDecoder(&innerDecoder) ^^ .decodingError
+                try innerDecoder._finish() ^^ .decodingError
+
+                state.copyRelevantState(from: innerDecoder.parserState)
+            }
 
             // Parse closing brace of outer object
             let next = try state.reader.consumeWhitespaceAndPeek() ^^ .jsonError
