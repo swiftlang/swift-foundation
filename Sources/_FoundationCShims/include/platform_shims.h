@@ -30,6 +30,11 @@ static inline char** _platform_shims__environ(void) {
 }
 #endif
 
+#if TARGET_OS_ANDROID
+// For `PROP_VALUE_MAX`, which Swift doesn't see through the `Android` module.
+#include <sys/system_properties.h>
+#endif
+
 #if __has_include(<mach/vm_page_size.h>)
 #include <mach/vm_page_size.h>
 static inline vm_size_t _platform_shims_vm_size(void) {
