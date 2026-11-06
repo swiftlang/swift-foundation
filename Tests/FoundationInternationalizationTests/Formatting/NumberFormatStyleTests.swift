@@ -751,6 +751,32 @@ private struct NumberFormatStyleTests {
         let output = FloatingPointFormatStyle.Currency(code: currencyCode, locale: locale).format(1)
         #expect(output == "¤1.00")
     }
+
+    @Test func printfScientific() {
+        let style = FloatingPointFormatStyle<Double>(locale: enUSLocale).notation(.printfScientific)
+
+        // The exponent has a sign and at least two digits
+        #expect(style.format(12345) == "1.2345E+04")
+        #expect(style.format(0.00015) == "1.5E-04")
+        #expect(style.format(1e100) == "1E+100")
+        #expect(style.format(-1500) == "-1.5E+03")
+        #expect(style.format(0) == "0E+00")
+        #expect(style.format(5) == "5E+00")
+
+        // The precision applies to the mantissa
+        #expect(style.precision(.significantDigits(7)).format(1_500_000) == "1.500000E+06")
+        #expect(style.precision(.significantDigits(3)).format(1234.5678) == "1.23E+03")
+        #expect(style.precision(.fractionLength(2)).format(1234.5678) == "1.23E+03")
+
+        // The sign strategy applies to the mantissa only
+        #expect(style.sign(strategy: .always()).format(1.5) == "+1.5E+00")
+        #expect(style.sign(strategy: .never).format(-1.5) == "1.5E+00")
+
+        // Other value types and locales
+        #expect(IntegerFormatStyle<Int>(locale: enUSLocale).notation(.printfScientific).format(8765) == "8.765E+03")
+        #expect(Decimal.FormatStyle(locale: enUSLocale).notation(.printfScientific).format(Decimal(string: "0.00123")!) == "1.23E-03")
+        #expect(FloatingPointFormatStyle<Double>(locale: frFRLocale).notation(.printfScientific).precision(.significantDigits(3)).format(1234.5678) == "1,23E+03")
+    }
 }
 
 extension NumberFormatStyleConfiguration.Collection {

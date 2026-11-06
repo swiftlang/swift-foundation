@@ -19,7 +19,7 @@ public class UnitDuration: Dimension {}
 
 extension Measurement where UnitType: Dimension {
     public struct FormatStyle : Sendable {
-        public struct UnitWidth : Codable, Hashable, Sendable {
+        public struct UnitWidth : Hashable, Sendable {
             /// A unit width that shows the full unit name.
             ///
             /// For example, `37.20 Calories` or `37,20 litres`.
@@ -35,7 +35,7 @@ extension Measurement where UnitType: Dimension {
             /// This width may condense the spacing between the value and the unit; for example, `37.20Cal` or `37,2L`.
             public static var narrow: Self { .init(option: .narrow) }
 
-            enum Option: Int, Codable, Hashable {
+            enum Option: Int, Hashable {
                 case wide
                 case abbreviated
                 case narrow
@@ -55,4 +55,10 @@ extension Measurement where UnitType: Dimension {
         }
     }
 }
+
+#if !hasFeature(Embedded)
+extension Measurement.FormatStyle.UnitWidth : Codable {}
+
+extension Measurement.FormatStyle.UnitWidth.Option : Codable {}
+#endif // !hasFeature(Embedded)
 #endif // !FOUNDATION_FRAMEWORK

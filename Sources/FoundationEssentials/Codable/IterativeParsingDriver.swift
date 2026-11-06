@@ -10,8 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
+internal import _FoundationRefs
+#endif
 
+#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
+internal import BasicContainers
+#endif
 
 // MARK: - ParseEventVocabulary
 
@@ -429,4 +434,3 @@ struct ParseEventAccumulator<Fragment>: ~Copyable, ~Escapable {
         storage.value.append(fragment)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)

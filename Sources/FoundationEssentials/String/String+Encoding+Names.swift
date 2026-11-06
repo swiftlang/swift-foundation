@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 // MARK: - Private extensions for parsing encoding names
 
 private extension UTF8.CodeUnit {
@@ -153,5 +151,3 @@ extension String.Encoding {
         return nil
     }
 }
-
-#endif // !hasFeature(Embedded)

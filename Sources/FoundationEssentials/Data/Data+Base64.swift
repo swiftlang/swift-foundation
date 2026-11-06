@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !FOUNDATION_FRAMEWORK
 extension Data {
     
@@ -1361,5 +1359,3 @@ extension Base64 {
         0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF, 0x01FF_FFFF,
     ]
 }
-
-#endif // !hasFeature(Embedded)

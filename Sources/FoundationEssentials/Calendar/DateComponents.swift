@@ -553,20 +553,41 @@ extension DateComponents {
     }
 }
 
-#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateComponents : CustomStringConvertible, CustomDebugStringConvertible {
 
     public var description: String {
-        return self.customMirror.children.reduce(into: "") {
-            $0 += "\($1.label ?? ""): \($1.value) "
-        }
+        var result = ""
+        if let r = calendar { result += "calendar: \(r.debugDescription) " }
+        if let r = timeZone { result += "timeZone: \(r.debugDescription) " }
+        if let r = era { result += "era: \(r) " }
+        if let r = year { result += "year: \(r) " }
+        if let r = month { result += "month: \(r) " }
+        if let r = day { result += "day: \(r) " }
+        if let r = hour { result += "hour: \(r) " }
+        if let r = minute { result += "minute: \(r) " }
+        if let r = second { result += "second: \(r) " }
+        if let r = nanosecond { result += "nanosecond: \(r) " }
+        if let r = weekday { result += "weekday: \(r) " }
+        if let r = weekdayOrdinal { result += "weekdayOrdinal: \(r) " }
+        if let r = quarter { result += "quarter: \(r) " }
+        if let r = weekOfMonth { result += "weekOfMonth: \(r) " }
+        if let r = weekOfYear { result += "weekOfYear: \(r) " }
+        if let r = dayOfYear { result += "dayOfYear: \(r) " }
+        if let r = yearForWeekOfYear { result += "yearForWeekOfYear: \(r) " }
+        if let r = isLeapMonth { result += "isLeapMonth: \(r) " }
+        if let r = isRepeatedDay { result += "isRepeatedDay: \(r) " }
+        return result
     }
 
     public var debugDescription: String {
         return self.description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension DateComponents : CustomReflectable {
     public var customMirror: Mirror {
         var c: [(label: String?, value: Any)] = []
         if let r = calendar { c.append((label: "calendar", value: r.debugDescription)) }

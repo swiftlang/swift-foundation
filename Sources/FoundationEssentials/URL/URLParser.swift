@@ -182,7 +182,7 @@ internal func _uidnaHook() -> UIDNAHook.Type? {
     UIDNAHookICU.self
 }
 #elseif hasFeature(Embedded)
-// Embedded Swift doesn't support dynamic replacement, and we do not have ICU.
+// Embedded Swift cannot call static methods through an existential metatype, so there is no hook. FoundationInternationalization is in the same module, so the callers use UIDNAHookICU directly.
 #else
 dynamic package func _uidnaHook() -> UIDNAHook.Type? {
     nil
@@ -259,6 +259,7 @@ internal struct RFC3986Parser {
             // Always percent-encode the host if we can't access UIDNA encoding functions
             return true
         }
+#endif
         if looksLikeIPLiteral(host) {
             // We should percent-encode IP-literals to handle zone IDs.
             return true
@@ -268,10 +269,6 @@ internal struct RFC3986Parser {
         }
         let lowercased = scheme.lowercased().utf8
         return schemesToPercentEncodeHost.contains { $0.elementsEqual(lowercased) }
-#else
-        // Always percent-encode the host if we can't access UIDNA encoding functions
-        return true
-#endif
     }
 
     private static func percentEncodeIPLiteralHost(_ host: some StringProtocol) -> String? {
@@ -308,21 +305,20 @@ internal struct RFC3986Parser {
     }
 
     /// Whether IDNA encoding and decoding are available.
-    /// Embedded builds do not have ICU (and cannot use the existential metatype the hook is looked up through), so there is never a hook.
+    /// Embedded builds always have UIDNAHookICU, because FoundationInternationalization is in the same module.
     static var supportsIDNA: Bool {
 #if hasFeature(Embedded)
-        false
+        true
 #else
         _uidnaHook() != nil
 #endif
     }
-    
+
     static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
 #if hasFeature(Embedded)
-        // There is no IDNA hook in embedded mode.
-        return nil
+        return UIDNAHookICU.encode(host)
 #else
         return _uidnaHook()?.encode(host)
 #endif
@@ -332,8 +328,7 @@ internal struct RFC3986Parser {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
 #if hasFeature(Embedded)
-        // There is no IDNA hook in embedded mode.
-        return String(host)
+        return UIDNAHookICU.decode(host)
 #else
         guard let uidnaHook = _uidnaHook() else { return String(host) }
         return uidnaHook.decode(host)

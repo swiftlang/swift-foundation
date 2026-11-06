@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - Document
 
@@ -32,9 +31,9 @@ final class XMLPlistDecodingDocument: PlistDecodingDocument {
     private var ownedAllocation: UnsafeMutableRawBufferPointer?
 
     /// The parsed structural map. `~Copyable`; owned inline.
-    var map: XMLPlistMap<UniqueMapRecords>
+    var map: XMLPlistMap
 
-    init(bytes: UnsafeRawBufferPointer, map: consuming XMLPlistMap<UniqueMapRecords>) {
+    init(bytes: UnsafeRawBufferPointer, map: consuming XMLPlistMap) {
         self.bytes = bytes
         self.ownedAllocation = nil
         self.map = map
@@ -116,6 +115,5 @@ final class XMLPlistDecodingDocument: PlistDecodingDocument {
     }
 }
 
-#endif  // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

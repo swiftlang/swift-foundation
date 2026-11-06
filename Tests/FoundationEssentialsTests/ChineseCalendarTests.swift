@@ -77,20 +77,20 @@ private struct ChineseCalendarTests {
             (1871, 1871, 2, 19), (1890, 1890, 1, 21), (2148, 2148, 2, 20),
         ]
         for (iso, gy, gm, gd) in pins {
-            #expect(_CalendarChinese.year(relatedISOYear: iso).newYearRataDie
+            #expect(_CalendarChinese.year(relatedISOYear: iso, .chinese).newYearRataDie
                     == _CalendarAstronomy.gregorianRataDie(gy, gm, gd), "CNY \(iso)")
         }
         let leaps: [(Int, UInt8)] = [(1775, 10), (1776, 0), (1900, 8), (2147, 11), (2148, 0)]
         for (iso, want) in leaps {
-            #expect(_CalendarChinese.year(relatedISOYear: iso).leapMonthNumber == want, "leap \(iso)")
+            #expect(_CalendarChinese.year(relatedISOYear: iso, .chinese).leapMonthNumber == want, "leap \(iso)")
         }
     }
 
     @Test func yearStructureInvariants() {
         var failures: [String] = []
-        var prev = _CalendarChinese.year(relatedISOYear: 1800)
+        var prev = _CalendarChinese.year(relatedISOYear: 1800, .chinese)
         for iso in 1801...2300 {
-            let y = _CalendarChinese.year(relatedISOYear: iso)
+            let y = _CalendarChinese.year(relatedISOYear: iso, .chinese)
             if prev.endRataDie != y.newYearRataDie { failures.append("\(iso): tiling") }
             let n = Int(y.monthCount)
             if n != 12 && n != 13 { failures.append("\(iso): months \(n)") }
@@ -172,7 +172,7 @@ private struct ChineseCalendarTests {
     ])
     func rollMonthWrapsWithinYear(iso: Int, monthCount: UInt8, amount: Int, wantMonth: Int) throws {
         let c = Self.chineseCalendar()
-        let year = _CalendarChinese.year(relatedISOYear: iso)
+        let year = _CalendarChinese.year(relatedISOYear: iso, .chinese)
         #expect(year.monthCount == monthCount, "fixture \(iso): month count is \(year.monthCount)")
         let from = Self.date(rataDie: year.monthStartRataDie(ordinal: 3) + 4)   // ordinal month 3, day 5
         let before = c.dateComponents([.year, .month, .day], from: from, in: .gmt)
@@ -188,7 +188,7 @@ private struct ChineseCalendarTests {
     // The same amount added without wrapping does change the year.
     @Test func addMonthWithoutWrappingCarriesIntoTheYear() throws {
         let c = Self.chineseCalendar()
-        let year = _CalendarChinese.year(relatedISOYear: 2024)
+        let year = _CalendarChinese.year(relatedISOYear: 2024, .chinese)
         let from = Self.date(rataDie: year.monthStartRataDie(ordinal: 3) + 4)
         var dc = DateComponents()
         dc.month = 11
@@ -210,7 +210,7 @@ private struct ChineseCalendarTests {
     ])
     func dayRangeInWeekOfMonth(ordinal: Int, day: Int, want: Range<Int>) {
         let c = Self.chineseCalendar()
-        let year = _CalendarChinese.year(relatedISOYear: 2024)
+        let year = _CalendarChinese.year(relatedISOYear: 2024, .chinese)
         let date = Self.date(rataDie: year.monthStartRataDie(ordinal: ordinal) + day - 1)
         let got = c.range(of: .day, in: .weekOfMonth, for: date)
         #expect(got == want, "ordinal \(ordinal) day \(day): \(got.map { "\($0)" } ?? "nil"), wanted \(want)")
@@ -221,7 +221,7 @@ private struct ChineseCalendarTests {
         let c = Self.chineseCalendar()
         var failures: [String] = []
         for iso in 2000...2030 {
-            let year = _CalendarChinese.year(relatedISOYear: iso)
+            let year = _CalendarChinese.year(relatedISOYear: iso, .chinese)
             for ordinal in 1...Int(year.monthCount) {
                 let length = year.monthLength(ordinal: ordinal)
                 let start = year.monthStartRataDie(ordinal: ordinal)
