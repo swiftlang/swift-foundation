@@ -94,9 +94,14 @@ final class ICUDateFormatter : @unchecked Sendable {
         ucal_setDateTime(ucal, twoDigitStartYear, 0, 1, 0, 0, 0, &status);
 
         let startOfTwoDigitStartYear = ucal_getMillis(ucal, &status)
-        udat_set2DigitYearStart(udateFormat, startOfTwoDigitStartYear, &status);
 
+        // Set the calendar before the two-digit year start. When the new calendar is not equivalent
+        // to the formatter's current one (e.g. `firstWeekday` or `minimumDaysInFirstWeek` differ from
+        // the locale's defaults), ICU's `SimpleDateFormat::adoptCalendar` re-initializes the default
+        // century and would silently discard a two-digit year start set earlier.
         udat_setCalendar(udateFormat, ucal)
+        udat_set2DigitYearStart(udateFormat, startOfTwoDigitStartYear, &status)
+        _ = status.checkSuccessAndLogError("udat_set2DigitYearStart failed.")
     }
 
     deinit {

@@ -969,6 +969,40 @@ private struct DateVerbatimFormatStyleTests {
         #expect(try rocStrategy.parse("民國59年1月1日") == date(1970, 1, 1))
     }
 
+    // `twoDigitStartDate` must apply even when the calendar's week rules differ from the locale's
+    // defaults (e.g. Calendar(identifier: .gregorian) uses firstWeekday 1 / minimumDaysInFirstWeek 1,
+    // while de_DE, fr_FR and en_GB use 2 / 4). Previously ICU reset the window in that case.
+    @Test(arguments: ["en_US", "de_DE", "fr_FR", "en_GB"])
+    func parseStrategyRespectsTwoDigitStartDateRegardlessOfLocaleWeekRules(localeIdentifier: String) throws {
+        let timeZone = TimeZone.gmt
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        func year(_ string: String, _ strategy: Date.ParseStrategy) throws -> Int {
+            gregorian.component(.year, from: try strategy.parse(string))
+        }
+
+        let format: Date.FormatString = "\(month: .twoDigits)/\(day: .twoDigits)/\(year: .twoDigits)"
+        let locale = Locale(identifier: localeIdentifier)
+
+        // Default window starts at 1970-01-01
+        let defaultWindow = Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone, calendar: gregorian)
+        #expect(try year("01/01/50", defaultWindow) == 2050)
+        #expect(try year("01/01/69", defaultWindow) == 2069)
+        #expect(try year("01/01/70", defaultWindow) == 1970)
+
+        // Custom window starting at 2000-01-01
+        let start2000 = try #require(gregorian.date(from: DateComponents(year: 2000, month: 1, day: 1)))
+        let customWindow = Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone, calendar: gregorian, twoDigitStartDate: start2000)
+        #expect(try year("01/01/99", customWindow) == 2099)
+        #expect(try year("01/01/00", customWindow) == 2000)
+
+        // Same, but with the mismatch coming from the calendar instead of the locale
+        var mondayFirst = gregorian
+        mondayFirst.firstWeekday = 2
+        let mondayFirstWindow = Date.ParseStrategy(format: format, locale: locale, timeZone: timeZone, calendar: mondayFirst, twoDigitStartDate: start2000)
+        #expect(try year("01/01/99", mondayFirstWindow) == 2099)
+    }
+
     // Test parsing strings containing `abbreviated` names
     @Test func nonLenientParsingAbbreviatedNames() throws {
 
