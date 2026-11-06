@@ -165,4 +165,56 @@ private struct HebrewDSTPolicyParityTests {
             "[\(probe.label)] hebrew=\(hebDate) greg=\(gregDate) diff=\(hebDate.timeIntervalSince(gregDate))s"
         )
     }
+
+    @Test(arguments: [
+        // 02:45 in the first copy of the repeated hour (00:45 UTC). The second 02:30 on the same day is 01:30 UTC.
+        ("Europe/Paris", 1_729_989_900, DateComponents(hour: 2, minute: 30, second: 0), .forward, 1_729_992_600),
+        // 02:15 in the second copy (01:15 UTC), backward. The first 02:30 on the same day is 00:30 UTC.
+        ("Europe/Paris", 1_729_991_700, DateComponents(hour: 2, minute: 30, second: 0), .backward, 1_729_989_000),
+        // Sunday 2017-03-26 00:00 in Paris skips 02:00 to 03:00, so Sunday at 02:15 gives 03:00 on the same day.
+        ("Europe/Paris", 1_490_482_800, DateComponents(hour: 2, minute: 15, second: 0, weekday: 1), .forward, 1_490_490_000),
+        // 03:00 just after the skipped hour, backward. The previous Sunday at 02:00 is the match.
+        ("Europe/Paris", 1_490_490_000, DateComponents(hour: 2, minute: 0, second: 0, weekday: 1), .backward, 1_489_885_200),
+        // The second 01:30 on Lord Howe's repeated half hour, forward. The following Sunday at 01:45 is the match.
+        ("Australia/Lord_Howe", 1_491_058_800, DateComponents(hour: 1, minute: 45, second: 0, weekday: 1), .forward, 1_491_664_500),
+    ] as [(String, Double, DateComponents, Calendar.SearchDirection, Double)])
+    func nextDateAroundATimeZoneChange(zone: String, start: Double, components: DateComponents, direction: Calendar.SearchDirection, expected: Double) throws {
+        var hebrew = Calendar(identifier: .hebrew)
+        hebrew.timeZone = try #require(TimeZone(identifier: zone))
+        let result = hebrew.nextDate(after: Date(timeIntervalSince1970: start), matching: components, matchingPolicy: .nextTime, direction: direction)
+        #expect(result == Date(timeIntervalSince1970: expected))
+    }
+
+    // 5780 Elul 25 in GMT. Elul has 29 days, so `{day: 30}` gives the next month that has a day 30, Tishri 30 5781.
+    @Test func nextDateForDay30() throws {
+        var hebrew = Calendar(identifier: .hebrew)
+        hebrew.timeZone = .gmt
+        let result = hebrew.nextDate(after: Date(timeIntervalSince1970: 1_600_043_200), matching: DateComponents(day: 30), matchingPolicy: .nextTime)
+        #expect(result == Date(timeIntervalSince1970: 1_602_979_200))
+    }
+
+    private var skippedHourMatches: [Date] {
+        [1_711_762_200, 1_711_846_800, 1_711_931_400].map { Date(timeIntervalSince1970: $0) }
+    }
+
+    // 2024-03-31 skips 02:00 to 03:00 in Paris. The search for 02:30 gives 02:30, then 03:00 on the skipped day, then 02:30 again.
+    @Test func enumerateAcrossASkippedHour() throws {
+        var hebrew = Calendar(identifier: .hebrew)
+        hebrew.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        var results: [Date] = []
+        hebrew.enumerateDates(startingAfter: Date(timeIntervalSince1970: 1_711_756_800), matching: DateComponents(hour: 2, minute: 30, second: 0), matchingPolicy: .nextTime) { date, _, stop in
+            guard let date else { stop = true; return }
+            results.append(date)
+            if results.count == 3 { stop = true }
+        }
+        #expect(results == skippedHourMatches)
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @Test func datesByMatchingAcrossASkippedHour() throws {
+        var hebrew = Calendar(identifier: .hebrew)
+        hebrew.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        let results = hebrew.dates(byMatching: DateComponents(hour: 2, minute: 30, second: 0), startingAt: Date(timeIntervalSince1970: 1_711_756_800), matchingPolicy: .nextTime).prefix(3)
+        #expect(Array(results) == skippedHourMatches)
+    }
 }

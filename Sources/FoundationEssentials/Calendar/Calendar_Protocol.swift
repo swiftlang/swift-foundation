@@ -50,7 +50,7 @@ package protocol _CalendarProtocol: AnyObject, Sendable, CustomDebugStringConver
     func date(byAdding components: DateComponents, to date: Date, wrappingComponents: Bool) -> Date?
     func dateComponents(_ components: Calendar.ComponentSet, from start: Date, to end: Date) -> DateComponents
 
-    /// Optional fast path for `Calendar.nextDate(after:matching:)`. Nil means no more matches (not "unsupported pattern" — use `supportsNextDateFastPath(for:)` to check that).
+    /// Optional fast path for `Calendar.nextDate(after:matching:)`, for the patterns that `supportsNextDateFastPath(for:)` accepts. Nil means that the calendar does not answer this search, and the general search runs instead.
     func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date?
 
     /// Whether this calendar can fast path the given pattern. Default returns false; calendar implementations override for patterns they handle.
