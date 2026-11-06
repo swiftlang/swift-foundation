@@ -21,8 +21,8 @@ internal import os
 /// maps to JulianDay  `2451545`                 (Jan 01 2000, 12:00)
 extension Date {
     static let julianDayAtDateReference: Double = 2_451_910.5 // 2001 Jan 1, midnight, UTC
-    static let maxJulianDay = 0x7F000000  // Dec 20, 5828963 AD
-    static let minJulianDay = -0x7F000000 // Sep 20, 5838270 BC
+    package static let maxJulianDay = 0x7F000000  // Dec 20, 5828963 AD
+    package static let minJulianDay = -0x7F000000 // Sep 20, 5838270 BC
 
     var julianDate: Double {
         timeIntervalSinceReferenceDate / 86400 + Self.julianDayAtDateReference

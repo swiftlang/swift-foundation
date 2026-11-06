@@ -96,4 +96,5 @@ let benchmarks: @Sendable () -> Void = {
     #endif // swift(>=6)
 
     listFormatBenchmarks()
+    dateFormatBenchmarks()
 }
