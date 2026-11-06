@@ -289,9 +289,20 @@ extension TimeZone {
 #endif
 }
 
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        return _tz.debugDescription
+    }
+
+    public var debugDescription : String {
+        return _tz.debugDescription
+    }
+}
+
 #if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension TimeZone : CustomReflectable {
     public var customMirror : Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),
@@ -301,14 +312,6 @@ extension TimeZone : CustomStringConvertible, CustomDebugStringConvertible, Cust
           ("isDaylightSavingTime", isDaylightSavingTime()),
         ]
         return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
-    }
-
-    public var description: String {
-        return _tz.debugDescription
-    }
-
-    public var debugDescription : String {
-        return _tz.debugDescription
     }
 }
 #endif

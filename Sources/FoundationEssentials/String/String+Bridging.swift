@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Embedded Swift has no Objective-C interop, so it does not need the bridging code.
 #if !hasFeature(Embedded)
 
 #if FOUNDATION_FRAMEWORK

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+#if canImport(CollectionsInternal)
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
 internal import _RopeModule

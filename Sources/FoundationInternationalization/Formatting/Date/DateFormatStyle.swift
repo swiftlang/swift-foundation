@@ -86,7 +86,7 @@ extension Date {
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
-    internal struct DateFieldCollection : Codable, Hashable {
+    internal struct DateFieldCollection : Hashable {
         var era: Symbol.SymbolType.EraOption?
         var year: Symbol.SymbolType.YearOption?
         var quarter: Symbol.SymbolType.QuarterOption?
@@ -558,12 +558,9 @@ extension Date {
     @available(watchOS, deprecated: 11, introduced: 8, message: "Use Date.FormatStyle.Attributed or Date.VerbatimFormatStyle.Attributed instead")
     public struct AttributedStyle : Sendable {
 
-        enum InnerStyle: Codable, Hashable {
+        enum InnerStyle: Hashable {
             case formatStyle(Date.FormatStyle)
             case verbatimFormatStyle(VerbatimFormatStyle)
-            
-            private typealias FormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias VerbatimFormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
         }
         
         var innerStyle: InnerStyle
@@ -1063,41 +1060,10 @@ extension Date.FormatStyle : ParseStrategy {
     }
 }
 
-// MARK: Codable+Hashable Conformance
+// MARK: Hashable Conformance
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.FormatStyle : Codable, Hashable {
-
-    enum CodingKeys: CodingKey {
-        case symbols
-        case locale
-        case timeZone
-        case calendar
-        case capitalizationContext
-        case dateStyle
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.symbols, forKey: .symbols)
-        try container.encode(self.locale, forKey: .locale)
-        try container.encode(self.timeZone, forKey: .timeZone)
-        try container.encode(self.calendar, forKey: .calendar)
-        try container.encode(self.capitalizationContext, forKey: .capitalizationContext)
-        try container.encodeIfPresent(self._dateStyle, forKey: .dateStyle)
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let symbols = try container.decode(DateFieldCollection.self, forKey: .symbols)
-        let locale = try container.decode(Locale.self, forKey: .locale)
-        let timeZone = try container.decode(TimeZone.self, forKey: .timeZone)
-        let calendar = try container.decode(Calendar.self, forKey: .calendar)
-        let context = try container.decode(FormatStyleCapitalizationContext.self, forKey: .capitalizationContext)
-        let dateStyle = try container.decodeIfPresent(DateStyle.self, forKey: .dateStyle)
-        self.init(symbols: symbols, dateStyle: dateStyle, locale: locale, timeZone: timeZone, calendar: calendar, capitalizationContext: context)
-    }
-}
+extension Date.FormatStyle : Hashable {}
 
 // MARK: Date/Time Style
 
@@ -1132,7 +1098,7 @@ extension Date.FormatStyle {
     ///
     ///
     /// The default date style is `numeric`.
-    public struct DateStyle : Codable, Hashable, Sendable {
+    public struct DateStyle : Hashable, Sendable {
 
         /// Excludes the date part.
         public static let omitted: DateStyle = DateStyle(rawValue: 0)
@@ -1179,7 +1145,7 @@ extension Date.FormatStyle {
     ///
     ///
     /// The default time style is ``shortened``.
-    public struct TimeStyle : Codable, Hashable, Sendable {
+    public struct TimeStyle : Hashable, Sendable {
 
         /// Excludes the time part.
         public static let omitted: TimeStyle = TimeStyle(rawValue: 0)
@@ -1551,6 +1517,7 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
 }
 
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.FormatStyle : CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
@@ -1575,6 +1542,7 @@ extension Date.FormatStyle : CustomConsumingRegexComponent {
         return fmt.parse(input, in: index..<bounds.upperBound)
     }
 }
+#endif // !hasFeature(Embedded)
 
 extension String {
     func _attributedStringFromPositions(_ positions: [ICUDateFormatter.AttributePosition]) -> AttributedString {
@@ -1597,3 +1565,54 @@ extension String {
         return attrstr
     }
 }
+
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.FormatStyle : Codable {
+
+    enum CodingKeys: CodingKey {
+        case symbols
+        case locale
+        case timeZone
+        case calendar
+        case capitalizationContext
+        case dateStyle
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.symbols, forKey: .symbols)
+        try container.encode(self.locale, forKey: .locale)
+        try container.encode(self.timeZone, forKey: .timeZone)
+        try container.encode(self.calendar, forKey: .calendar)
+        try container.encode(self.capitalizationContext, forKey: .capitalizationContext)
+        try container.encodeIfPresent(self._dateStyle, forKey: .dateStyle)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let symbols = try container.decode(DateFieldCollection.self, forKey: .symbols)
+        let locale = try container.decode(Locale.self, forKey: .locale)
+        let timeZone = try container.decode(TimeZone.self, forKey: .timeZone)
+        let calendar = try container.decode(Calendar.self, forKey: .calendar)
+        let context = try container.decode(FormatStyleCapitalizationContext.self, forKey: .capitalizationContext)
+        let dateStyle = try container.decodeIfPresent(DateStyle.self, forKey: .dateStyle)
+        self.init(symbols: symbols, dateStyle: dateStyle, locale: locale, timeZone: timeZone, calendar: calendar, capitalizationContext: context)
+    }
+}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.FormatStyle.DateFieldCollection : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.AttributedStyle.InnerStyle : Codable {
+    private typealias FormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias VerbatimFormatStyleCodingKeys = DefaultAssociatedValueCodingKeys1
+}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.FormatStyle.DateStyle : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.FormatStyle.TimeStyle : Codable {}
+#endif // !hasFeature(Embedded)

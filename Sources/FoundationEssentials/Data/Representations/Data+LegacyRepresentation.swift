@@ -279,7 +279,7 @@ extension Data {
                     buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
                 case .inline(let inline):
                     buffer = unsafe UnsafeMutableRawBufferPointer(
-                      start: UnsafeMutableRawPointer(Builtin.addressOfBorrow(self)),
+                      start: UnsafeMutableRawPointer(Builtin.addressof(&self)),
                       count: inline.count
                     )
                 case .large(var slice):

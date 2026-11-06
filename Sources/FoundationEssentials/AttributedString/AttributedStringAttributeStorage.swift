@@ -87,7 +87,12 @@ extension AttributedString {
         ) -> K.Value where K.Value: Sendable {
             // Dynamic cast instead of an identity cast to support bridging between attribute value types like NSColor/UIColor
             guard let value = self._rawValue as? K.Value else {
+                #if hasFeature(Embedded)
+                // Embedded Swift cannot get the dynamic type of the stored value.
+                preconditionFailure("Unable to read \(K.self) attribute: stored value is not key's value type (\(K.Value.self))")
+                #else
                 preconditionFailure("Unable to read \(K.self) attribute: stored value of type \(type(of: self._rawValue)) is not key's value type (\(K.Value.self))")
+                #endif
             }
             return value
         }

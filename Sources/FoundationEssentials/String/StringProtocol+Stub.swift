@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !FOUNDATION_FRAMEWORK
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
@@ -48,5 +46,3 @@ dynamic package func _localizedCompare_platform(_ string: Substring, other: Subs
 #endif
 
 #endif // !FOUNDATION_FRAMEWORK
-
-#endif // !hasFeature(Embedded)

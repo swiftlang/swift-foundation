@@ -195,7 +195,7 @@ extension OutputRawSpan {
         }
     }
 
-    mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
+    package mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
         of type: T.Type,
         _ body: (inout OutputSpan<T>) throws(E) -> R
     ) throws(E) -> R {

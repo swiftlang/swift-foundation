@@ -17,20 +17,14 @@ import CoreFoundation
 
 internal import Synchronization
 
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if (FOUNDATION_FRAMEWORK && canImport(_FoundationICU)) || hasFeature(Embedded)
 internal func _calendarICUClass() -> _CalendarProtocol.Type? {
     _CalendarICU.self
-}
-#else
-#if hasFeature(Embedded)
-package func _calendarICUClass() -> _CalendarProtocol.Type? {
-    nil
 }
 #else
 dynamic package func _calendarICUClass() -> _CalendarProtocol.Type? {
     nil
 }
-#endif
 #endif
 
 #if FOUNDATION_FRAMEWORK
