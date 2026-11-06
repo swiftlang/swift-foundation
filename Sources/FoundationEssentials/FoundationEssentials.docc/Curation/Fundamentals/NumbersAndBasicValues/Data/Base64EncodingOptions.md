@@ -3,15 +3,8 @@
 
 ## Topics
 
-### Initializers
 
-- ``init(rawValue:)``
-
-### Instance Properties
-
-- ``rawValue``
-
-### Type Properties
+### Working with encoding options
 
 - ``base64URLAlphabet``
 - ``endLineWithCarriageReturn``
@@ -19,3 +12,8 @@
 - ``lineLength64Characters``
 - ``lineLength76Characters``
 - ``omitPaddingCharacter``
+
+### Working with raw values
+
+- ``init(rawValue:)``
+- ``rawValue``

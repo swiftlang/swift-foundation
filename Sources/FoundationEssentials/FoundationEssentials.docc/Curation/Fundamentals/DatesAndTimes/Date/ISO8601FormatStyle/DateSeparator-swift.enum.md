@@ -2,12 +2,12 @@
 
 ## Topics
 
-### Specifying ISO 8601 Format Style Date Separators
+### Specifying ISO 8601 format style date separators
 
 - ``dash``
 - ``omitted``
 
-### ### Working with raw values
+### Working with raw values
 
 
 - ``init(rawValue:)``

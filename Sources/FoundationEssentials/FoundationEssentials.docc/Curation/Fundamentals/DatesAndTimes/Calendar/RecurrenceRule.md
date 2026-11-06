@@ -7,7 +7,7 @@
 
 - ``init(calendar:frequency:interval:end:matchingPolicy:repeatedTimePolicy:months:daysOfTheYear:daysOfTheMonth:weeks:weekdays:hours:minutes:seconds:setPositions:)``
 
-### Working with recurrence rule properties 
+### Working with recurrence rule properties
 
 - ``calendar``
 - ``frequency``

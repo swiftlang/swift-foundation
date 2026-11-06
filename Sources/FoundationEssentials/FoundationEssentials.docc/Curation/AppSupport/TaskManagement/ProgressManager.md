@@ -2,14 +2,11 @@
 
 ## Topics
 
-### Protocols
-
-
 ### Creating a progress manager
 
 - ``init(totalCount:)``
 
-### Inspecting progress 
+### Inspecting progress
 
 - ``totalCount``
 - ``completedCount``

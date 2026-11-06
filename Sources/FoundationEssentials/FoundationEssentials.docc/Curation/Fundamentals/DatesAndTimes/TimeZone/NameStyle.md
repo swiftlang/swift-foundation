@@ -3,7 +3,7 @@
 
 ## Topics
 
-### Enumeration Cases
+### Working with time zone name styles
 
 - ``daylightSaving``
 - ``generic``
@@ -12,6 +12,6 @@
 - ``shortStandard``
 - ``standard``
 
-### Initializers
+### Working with raw values
 
 - ``init(rawValue:)``
