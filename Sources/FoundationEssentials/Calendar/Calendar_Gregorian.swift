@@ -2320,7 +2320,9 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 
     // Returns the weekday of the last day of the month or the year, using `referenceDayOfPeriod` and `referenceDayWeekday` as the reference
     func relativeWeekdayForLastDayOfPeriod(periodLength: Int, referenceDayOfPeriod dayOfPeriod: Int, referenceDayWeekday weekday: Int) -> Int {
-        return (periodLength - dayOfPeriod + weekday - firstWeekday) % 7
+        // `weekday - firstWeekday` can be negative, so keep the remainder in 0...6
+        let relativeWeekday = (periodLength - dayOfPeriod + weekday - firstWeekday) % 7
+        return relativeWeekday < 0 ? relativeWeekday + 7 : relativeWeekday
     }
 
     // Returns the "adjusted" day of month considering gregorian cutover:
