@@ -283,27 +283,31 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         let (bytes, hasEscapes) = try self.stringBytes
         return try Self.decodeStringPayload(bytes: bytes, hasEscapes: hasEscapes, json5Mode: json5Mode)
     }
-    
+
     internal static func decodeStringPayload(bytes: borrowing Span<UInt8>, hasEscapes: Bool, json5Mode: Bool) throws -> String {
+        try withDecodedStringBytes(bytes: bytes, hasEscapes: hasEscapes, json5Mode: json5Mode) { decoded in
+            guard let utf8 = try? UTF8Span(validating: decoded) else {
+                throw JSONPrimitiveError.corruptedValue("string: invalid UTF-8")
+            }
+            return String(copying: utf8)
+        }
+    }
+
+    /// Runs `body` with the string's bytes after rejecting unescaped control characters and resolving escape sequences. The bytes are not validated as UTF-8; that is the caller's responsibility. The span is only valid for the duration of `body`.
+    internal static func withDecodedStringBytes<R>(bytes: borrowing Span<UInt8>, hasEscapes: Bool, json5Mode: Bool, _ body: (borrowing Span<UInt8>) throws -> R) throws -> R {
         if !hasEscapes {
             // RFC-8259 forbids unescaped control characters (0x00-0x1F) inside string literals. Scanner leniency means we validate here.
             // TODO: the pre-scan for control chars is an additional O(n) cost before we validate UTF-8; it'd be nice to merge this with either the scanner pass or the UTF8 validation pass.
             for i in bytes.indices where bytes[i] < 0x20 {
                 throw JSONPrimitiveError.corruptedValue("string: unescaped control character")
             }
-            guard let utf8 = try? UTF8Span(validating: copy bytes) else {
-                throw JSONPrimitiveError.corruptedValue("string: invalid UTF-8")
-            }
-            return String(copying: utf8)
+            return try body(bytes)
         }
         // Every escape sequence shrinks the byte count (single-byte escapes 2→1; `\uXXXX` ≤3 UTF-8 for 6 source; surrogate pair 4 UTF-8 for 12 source), so `bytes.count` is a safe upper bound on the output.
         let bytesCopy = copy bytes
         return try withTemporaryAllocation(of: UInt8.self, capacity: bytesCopy.count) { out throws in
             try decodeEscapedString(source: bytesCopy, json5Mode: json5Mode, into: &out)
-            guard let utf8 = try? UTF8Span(validating: out.span) else {
-                throw JSONPrimitiveError.corruptedValue("string: invalid UTF-8")
-            }
-            return String(copying: utf8)
+            return try body(out.span)
         }
     }
 
