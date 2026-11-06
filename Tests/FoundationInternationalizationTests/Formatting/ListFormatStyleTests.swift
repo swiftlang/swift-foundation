@@ -17,6 +17,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("ListFormatStyle")
 private struct ListFormatStyleTests {
     @Test func orList() {
@@ -501,3 +503,5 @@ private struct ListFormatStyleTests {
         #expect([persian, persian].formatted(s) == "\(persian) and \(persian)")
     }
 }
+
+#endif // ICU

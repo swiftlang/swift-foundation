@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 
 #if os(Windows)
@@ -266,3 +267,5 @@ extension UNumberFormatSymbol {
         self.init(rawValue: EnumRawType(rawValue))
     }
 }
+
+#endif // ICU

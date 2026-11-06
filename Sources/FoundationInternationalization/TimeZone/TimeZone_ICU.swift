@@ -18,7 +18,7 @@ import FoundationEssentials
 import ucrt
 #endif
 
-#if canImport(_FoundationICU)
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -473,4 +473,4 @@ extension TimeZone {
     }
 }
 
-#endif //canImport(_FoundationICU)
+#endif // ICU

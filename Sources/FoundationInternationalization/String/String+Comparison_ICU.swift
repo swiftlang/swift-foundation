@@ -14,6 +14,7 @@
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
+#if ICU
 internal import _FoundationICU
 
 internal func compareStringsWithLocale(_ string1: Substring, _ string2: Substring, options: String.CompareOptions, locale: Locale) -> ComparisonResult {
@@ -82,3 +83,5 @@ package func _localizedCompare_ICU(_ string: Substring, other: Substring, option
 }
 
 #endif // FOUNDATION_ICU_STRING_COMPARE
+
+#endif // ICU

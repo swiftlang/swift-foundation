@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -898,3 +899,5 @@ extension Locale.LanguageDirection {
         }
     }
 }
+
+#endif // ICU

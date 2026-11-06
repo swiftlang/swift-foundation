@@ -21,6 +21,8 @@ import Testing
 
 
 
+#if ICU
+
 extension Duration {
     init(weeks: Int64 = 0, days: Int64 = 0, hours: Int64 = 0, minutes: Int64 = 0, seconds: Int64 = 0, milliseconds: Int64 = 0, microseconds: Int64 = 0) {
         self = .init(secondsComponent: Int64(weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds),
@@ -663,3 +665,5 @@ private struct TestDurationTimeDiscreteConformance {
         try verifyDiscreteFormatStyleConformance(style.locale(Locale(identifier: "en_US")), samples: 100, "\(style)")
     }
 }
+
+#endif // ICU

@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 #if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
@@ -117,3 +118,5 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
         return result
     }
 }
+
+#endif // ICU

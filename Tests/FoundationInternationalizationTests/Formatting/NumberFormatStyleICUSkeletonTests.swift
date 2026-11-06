@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("NumberFormatStyle ICU Skeleton")
 private struct NumberFormatStyleICUSkeletonTests {
 
@@ -139,3 +141,5 @@ private struct NumberFormatStyleICUSkeletonTests {
         #expect(style.precision(.integerAndFractionLength(integerLimits: ...2, fractionLimits: 3...3)).rounded(increment: 0.3).collection.skeleton == "precision-increment/0.300 integer-width/## rounding-mode-half-even")
     }
 }
+
+#endif // ICU

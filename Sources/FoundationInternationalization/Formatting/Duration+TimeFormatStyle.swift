@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 let hourSymbol: Character = "h"
@@ -523,3 +524,5 @@ extension Duration.TimeFormatStyle.Pattern : Codable {}
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Duration.TimeFormatStyle.Pattern.Fields : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU
