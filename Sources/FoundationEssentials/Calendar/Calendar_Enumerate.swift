@@ -2414,6 +2414,12 @@ extension Calendar {
         guard let dateRange = dateInterval(of: .yearForWeekOfYear, for: yearBegin) else {
             throw CalendarEnumerationError.dateOutOfRange(.yearForWeekOfYear, yearBegin)
         }
+
+        // The beginning of the calendar year can still belong to the preceding week-based year.
+        if component(.yearForWeekOfYear, from: yearBegin) != yearForWeekOfYear,
+           component(.yearForWeekOfYear, from: dateRange.end) == yearForWeekOfYear {
+            return dateRange.end
+        }
         
         return dateRange.start
     }
