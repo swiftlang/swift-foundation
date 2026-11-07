@@ -12,6 +12,12 @@
 
 import Testing
 
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -108,6 +114,33 @@ private final class DataIOTests {
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
     }
     #endif
+
+#if os(Linux) && FOUNDATION_EXIT_TESTS
+    @Test(.enabled(if: geteuid() != 0, "Root bypasses directory search permissions"))
+    func atomicWriteWithUnsearchableCWD() async {
+        // Isolate the working directory change from other tests in this process.
+        await #expect(processExitsWith: .success) {
+            let manager = FileManager.default
+            let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            let current = directory.appendingPathComponent("current")
+            let destination = directory.appendingPathComponent("destination")
+            try manager.createDirectory(at: current, withIntermediateDirectories: true)
+            defer {
+                try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: current.path)
+                _ = manager.changeCurrentDirectoryPath("/")
+                try? manager.removeItem(at: directory)
+            }
+
+            try #require(manager.changeCurrentDirectoryPath(current.path))
+            try manager.setAttributes([.posixPermissions: 0o000], ofItemAtPath: current.path)
+
+            try Data("initial".utf8).write(to: destination, options: .atomic)
+            #expect(try Data(contentsOf: destination) == Data("initial".utf8))
+            try Data("replacement".utf8).write(to: destination, options: .atomic)
+            #expect(try Data(contentsOf: destination) == Data("replacement".utf8))
+        }
+    }
+#endif
 
     @Test func readWriteMapped() throws {
         try writeAndVerifyTestData(to: url, readOptions: [.mappedIfSafe])
