@@ -181,19 +181,17 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
     // WASI/Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
-    // When `destDirfd == -1`, build a full-path template and open the file by path.
-    // Otherwise the template is a basename only and the file is created relative to
-    // `destDirfd` via openat.
+    // A directory descriptor makes the temporary name relative to the destination, independent of the process's working directory.
     let pidString = String(ProcessInfo.processInfo.processIdentifier, radix: 16, uppercase: true)
-    let template: String
+    let prefix: String
     if destDirfd == -1 {
         var directoryPath = destinationPath.deletingLastPathComponent()
         if !directoryPath.isEmpty && directoryPath.last! != "/" {
             directoryPath.append("/")
         }
-        template = directoryPath + ".dat.nosync" + pidString + ".XXXXXX"
+        prefix = directoryPath + ".dat.nosync" + pidString + "."
     } else {
-        template = ".dat.nosync" + pidString + ".XXXXXX"
+        prefix = ".dat.nosync" + pidString + "."
     }
     let maxCount = 7
     for _ in 0 ..< maxCount {
@@ -242,31 +240,15 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
         if amkrErrno == EEXIST {
             continue
         }
-        // Otherwise, fall through to mktemp below
+        // Otherwise, try creating a file directly.
 #endif
-        
-        let result: (Int32, String)? = try template.withMutableFileSystemRepresentation { templateFileSystemRep in
+
+        // Exclusive creation handles collisions without a separate existence check. Opening with the requested mode also preserves umask and file-protection semantics.
+        let template = prefix + String(UInt64.random(in: .min ... .max), radix: 16)
+        let result: (Int32, String)? = try template.withFileSystemRepresentation { templateFileSystemRep in
             guard let templateFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)
             }
-            
-            // The warning diligently tells us we shouldn't be using mktemp() because blindly opening the returned path opens us up to a TOCTOU race. However, in this case, we're being careful by doing O_CREAT|O_EXCL and repeating, just like the implementation of mkstemp.
-            // Furthermore, we can't compatibly switch to mkstemp()/mkstemp_dprotected_np() until we have the ability to set fchmod correctly, which requires the ability to query the current umask, which we don't have. (22033100)
-#if os(Windows)
-            guard _mktemp_s(templateFileSystemRep, strlen(templateFileSystemRep) + 1) == 0 else {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
-            }
-#else
-            @diagnose(DeprecatedDeclaration, as: ignored)
-            func _mktemp(_ templateFileSystemRep: UnsafeMutablePointer<CChar>!) -> UnsafeMutablePointer<CChar>! {
-                mktemp(templateFileSystemRep)
-            }
-            
-            guard _mktemp(templateFileSystemRep) != nil else {
-                throw CocoaError.errorWithFilePath(inPath, errno: errno, reading: false, variant: variant)
-            }
-#endif
-
             let fd: Int32
 #if os(Windows)
             assert(destDirfd == -1, "openat is unavailable on Windows")
@@ -289,7 +271,7 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
             // If the file exists, we repeat. Otherwise throw the error.
             if errno != EEXIST {
                 #if FOUNDATION_FRAMEWORK
-                let debugDescription = "Creating a temporary file via mktemp failed. Creating the temporary file via _amkrtemp previously also failed with errno \(amkrErrno)"
+                let debugDescription = "Creating a temporary file failed. Creating the temporary file via _amkrtemp previously also failed with errno \(amkrErrno)"
                 #else
                 let debugDescription: String? = nil
                 #endif
