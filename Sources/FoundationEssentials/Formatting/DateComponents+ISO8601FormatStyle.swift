@@ -208,7 +208,6 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
             let asciiZulu = UInt8(90)
             let asciiPlus = UInt8(43)
             let asciiMinus = UInt8(45) // Same as dash, renamed for clarity
-            let asciiNull = UInt8(0)
 
             if formatFields.contains(.year) {
                 if formatFields.contains(.weekOfYear), let y = components.yearForWeekOfYear {

@@ -97,8 +97,8 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
             defer { ufmt_close(formattable) }
 
             var pos = Int32(0) // 0 == start, per ICU docs
-            unum_parseToUFormattable(uformatter, formattable, arr, Int32(arr.count), &pos, &status)
-            guard status.isSuccess else { return nil }
+            guard unum_parseToUFormattable(uformatter, formattable, arr, Int32(arr.count), &pos, &status) != nil,
+                  status.isSuccess else { return nil }
             upperBound = Int(pos)
 
             var len: Int32 = 0
