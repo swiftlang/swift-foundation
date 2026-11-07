@@ -129,6 +129,31 @@ extension NotificationCenter.MessageIdentifier where Self == NotificationCenter.
 @Suite("NotificationCenterMessage", .timeLimit(.minutes(2)))
 private struct NotificationCenterMessageTests {
 
+    @MainActor
+    @Test func mainActorMessagePayload() {
+        final class Payload {
+            var value = 0
+        }
+        struct Message: NotificationCenter.MainActorMessage {
+            typealias Subject = MessageTestSubject
+            let payload: Payload
+        }
+
+        let center = NotificationCenter()
+        let payload = Payload()
+        let token = center.addObserver(for: Message.self) { message in
+            MainActor.assertIsolated()
+            #expect(message.payload === payload)
+            message.payload.value += 1
+        }
+        defer { center.removeObserver(token) }
+
+        center.post(Message(payload: payload))
+        #expect(payload.value == 1)
+        center.post(Message(payload: payload))
+        #expect(payload.value == 2)
+    }
+
     // MARK: - Basic capabilities (using MainActorMessage)
     
     @MainActor

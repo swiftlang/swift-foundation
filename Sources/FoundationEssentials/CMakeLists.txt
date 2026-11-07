@@ -97,6 +97,7 @@ target_compile_options(FoundationEssentials PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend StrictConcurrency>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend InferSendableFromCaptures>"
+    "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend GlobalActorIsolatedTypesUsability>"
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-upcoming-feature -Xfrontend MemberImportVisibility>")
 target_compile_options(FoundationEssentials PRIVATE ${_SwiftFoundation_availability_macros})
 target_compile_options(FoundationEssentials PRIVATE ${_SwiftFoundation_wasi_libc_flags})

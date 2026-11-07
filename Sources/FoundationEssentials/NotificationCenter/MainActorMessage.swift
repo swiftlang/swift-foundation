@@ -192,7 +192,12 @@ extension NotificationCenter {
             }
         })
 #else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: observer))
+        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { (message: Message) in
+            // Main-actor messages are posted synchronously from the main actor.
+            MainActor.assumeIsolated {
+                observer(message)
+            }
+        })
 #endif
     }
 
