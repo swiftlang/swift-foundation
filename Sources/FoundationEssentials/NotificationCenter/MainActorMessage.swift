@@ -192,10 +192,10 @@ extension NotificationCenter {
             }
         })
 #else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { (message: Message) in
-            // Main-actor messages are posted synchronously from the main actor.
+        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { (message: @MainActor () -> Message) in
+            // Access the payload only on the actor that posted it.
             MainActor.assumeIsolated {
-                observer(message)
+                observer(message())
             }
         })
 #endif
@@ -232,7 +232,8 @@ extension NotificationCenter {
         
         post(notification)
 #else
-        _post(M.name, subject: subject, message: message)
+        // The registrar transfers the accessor, keeping non-Sendable payloads on the main actor.
+        _post(M.name, subject: subject, message: { @MainActor in message })
 #endif
     }
 }
