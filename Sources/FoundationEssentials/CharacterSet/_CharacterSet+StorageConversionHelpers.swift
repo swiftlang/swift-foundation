@@ -57,10 +57,12 @@ extension _CharacterSet {
     }
     
     private func addRangeAnnexPlanes(rangeBacked: RangeBacked) {
-        addNonBMPPlanes(inRange: rangeBacked.closedRange)
-        // Check whether we need to invert Annex
-        if !hasNonBMPPlane && isInverted {
+        if isInverted {
+            // An inverted range holds every non-BMP character outside the range.
             self.annex.isInverted = true
+            removeNonBMPPlanes(inRange: rangeBacked.closedRange)
+        } else {
+            addNonBMPPlanes(inRange: rangeBacked.closedRange)
         }
     }
 
