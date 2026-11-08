@@ -194,7 +194,7 @@ extension _URL {
             }
             switch misuse {
             case .http:
-                #if canImport(os) && !hasFeature(Embedded)
+                #if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
                 URL.logger.error("API MISUSE: URL(filePath:) called with an HTTP URL string. Using URL(string:) instead.")
                 #endif
                 // Drop any base URL since we have an HTTP scheme
@@ -204,7 +204,7 @@ extension _URL {
                 }
                 // Fall through to file path handling
             case .file(let compressed):
-                #if canImport(os) && !hasFeature(Embedded)
+                #if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
                 URL.logger.error("API MISUSE: URL(filePath:) called with a \"file:\" scheme. Input must only contain a path. Dropping \"file:\" scheme.")
                 #endif
                 path = compressed

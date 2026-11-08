@@ -30,7 +30,7 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     }
 
     private static let logForwardingErrorOnce: Void = {
-        #if canImport(os) && !hasFeature(Embedded)
+        #if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
         URL.logger.error("struct URL no longer stores an NSURL. Clients should not assume the memory address of a URL will contain an NSURL * or CFURLRef and should not send ObjC messages to it directly. Bridge (url as NSURL) instead.")
         #endif
     }()

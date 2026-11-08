@@ -643,7 +643,7 @@ internal import os
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "url")
     }()
