@@ -85,3 +85,31 @@ extension String {
     }
 }
 #endif
+
+#if !FOUNDATION_FRAMEWORK
+// On Darwin, the Foundation framework provides these initializers.
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension String {
+    /// Creates a string by copying the data from a given null-terminated C array of UTF-8 encoded bytes.
+    ///
+    /// Returns `nil` if the bytes are not valid UTF-8.
+    public init?(utf8String bytes: UnsafePointer<CChar>) {
+        self.init(validatingCString: bytes)
+    }
+
+    @available(swift, deprecated: 6, message: "Use String(validating: array, as: UTF8.self) instead, after truncating the null termination.")
+    public init?(utf8String bytes: [CChar]) {
+        self.init(validatingCString: bytes)
+    }
+
+    @available(*, deprecated, message: "Use a copy of the String argument")
+    public init?(utf8String bytes: String) {
+        self.init(validatingCString: bytes)
+    }
+
+    @available(*, deprecated, message: "Use String(_ scalar: Unicode.Scalar)")
+    public init?(utf8String bytes: inout CChar) {
+        self.init(validatingCString: &bytes)
+    }
+}
+#endif
