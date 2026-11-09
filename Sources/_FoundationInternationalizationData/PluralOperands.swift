@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_PLURAL_RULES_SWIFT
-
 /// The values of a number that plural rules test, for the number as it is shown.
 ///
 /// "1" and "1.0" have different operands: the second has one visible fraction digit. All operands describe the absolute value.
@@ -127,5 +125,3 @@ package struct PluralOperands: Sendable, Hashable {
         return count
     }
 }
-
-#endif // FOUNDATION_PLURAL_RULES_SWIFT

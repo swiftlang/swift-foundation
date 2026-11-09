@@ -15,8 +15,6 @@
 // Fallback: root
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_PLURAL_RULES_SWIFT
-
 internal enum PluralRulesData {
     // The rule set a lookup uses when it finds no data for a locale.
     internal static let cardinalFallback: UInt16 = 0
@@ -1319,5 +1317,3 @@ internal enum PluralRulesData {
         PluralLocaleEntry(227, 0), // zu
     ]
 }
-
-#endif // FOUNDATION_PLURAL_RULES_SWIFT

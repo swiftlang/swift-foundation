@@ -250,8 +250,6 @@ func renderSwift(_ packed: PackedData, data: PluralRulesDataSchema, keptLocales:
     // Fallback: \(fallback)
     //===----------------------------------------------------------------------===//
 
-    #if FOUNDATION_PLURAL_RULES_SWIFT
-
     internal enum PluralRulesData {
         // The rule set a lookup uses when it finds no data for a locale.
         internal static let cardinalFallback: UInt16 = \(packed.cardinalFallback)
@@ -312,7 +310,7 @@ func renderSwift(_ packed: PackedData, data: PluralRulesDataSchema, keptLocales:
         out += "    ]\n\n"
     }
     out.removeLast()
-    out += "}\n\n#endif // FOUNDATION_PLURAL_RULES_SWIFT\n"
+    out += "}\n"
     return out
 }
 

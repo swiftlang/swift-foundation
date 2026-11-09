@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_PLURAL_RULES_SWIFT
-
 /// The plural category of a number, which selects a grammatical form such as "1 day" or "2 days".
 package enum PluralCategory: String, Sendable, Hashable, CaseIterable {
     case zero
@@ -229,5 +227,3 @@ internal struct PluralLocaleEntry: Sendable {
         self.ruleSet = ruleSet
     }
 }
-
-#endif // FOUNDATION_PLURAL_RULES_SWIFT

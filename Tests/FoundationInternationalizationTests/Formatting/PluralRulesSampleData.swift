@@ -13,7 +13,7 @@
 // CLDR version: 48
 //===----------------------------------------------------------------------===//
 
-#if canImport(_FoundationInternationalizationData) && FOUNDATION_PLURAL_RULES_SWIFT
+#if canImport(_FoundationInternationalizationData)
 import _FoundationInternationalizationData
 
 // The documented samples of each rule. Each sample must get the category of its rule.
