@@ -1742,6 +1742,46 @@ struct StringCharacterSetTests {
 
         #expect("%".removingPercentEncoding == nil)
     }
+
+    @Test(arguments: [
+        ("", CharacterSet.decimalDigits, ""),
+        ("abc", .decimalDigits, "abc"),
+        ("123", .decimalDigits, ""),
+        ("123abc789", .decimalDigits, "abc"),
+        (" \t\na 1 b\r\n ", .whitespacesAndNewlines, "a 1 b"),
+        ("\u{1F600}a\u{1F600}", CharacterSet(charactersIn: "\u{1F600}"), "a"),
+        // Compares Unicode scalars, not characters.
+        ("e\u{0301}", CharacterSet(charactersIn: "\u{0301}"), "e"),
+        ("し\u{3099}abc", CharacterSet(charactersIn: "\u{3058}"), "し\u{3099}abc"),
+    ] as [(String, CharacterSet, String)])
+    func trimmingCharacters(_ string: String, _ set: CharacterSet, _ expected: String) {
+        #expect(string.trimmingCharacters(in: set) == expected)
+    }
+
+    @Test func trimmingCharactersInSubstring() {
+        let ss = "x12ab34x".dropFirst().dropLast()
+        #expect("ab" == ss.trimmingCharacters(in: .decimalDigits))
+    }
+
+    @Test(arguments: [
+        ("", CharacterSet.whitespaces, [""]),
+        ("abc", .whitespaces, ["abc"]),
+        ("a b\tc", .whitespaces, ["a", "b", "c"]),
+        ("a,,b,", CharacterSet(charactersIn: ","), ["a", "", "b", ""]),
+        (",a", CharacterSet(charactersIn: ","), ["", "a"]),
+        ("a\u{1F600}b", CharacterSet(charactersIn: "\u{1F600}"), ["a", "b"]),
+        // Compares Unicode scalars, not characters.
+        ("e\u{0301}x", CharacterSet(charactersIn: "\u{0301}"), ["e", "x"]),
+        ("し\u{3099}abc", CharacterSet(charactersIn: "\u{3058}"), ["し\u{3099}abc"]),
+    ] as [(String, CharacterSet, [String])])
+    func componentsSeparatedByCharacterSet(_ string: String, _ separator: CharacterSet, _ expected: [String]) {
+        #expect(string.components(separatedBy: separator) == expected)
+    }
+
+    @Test func componentsSeparatedByCharacterSetInSubstring() {
+        let ss = "x1 2x".dropFirst().dropLast()
+        #expect(["1", "2"] == ss.components(separatedBy: .whitespaces))
+    }
 }
 
 #if FOUNDATION_FRAMEWORK
