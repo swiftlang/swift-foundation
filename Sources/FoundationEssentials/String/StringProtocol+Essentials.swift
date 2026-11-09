@@ -258,7 +258,6 @@ extension StringProtocol {
         return subStr._rangeOfCharacter(from: aSet, options: mask)
     }
 
-#if !FOUNDATION_FRAMEWORK
     /// Returns a new string made by removing from both ends of the `String` characters contained in a given character set.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
     public func trimmingCharacters(in set: CharacterSet) -> String {
@@ -270,7 +269,6 @@ extension StringProtocol {
     public func components(separatedBy separator: CharacterSet) -> [String] {
         Substring(self)._components(separatedBy: separator)
     }
-#endif
 
     /// Returns a `Data` containing a representation of
     /// the `String` encoded using a given encoding.
