@@ -371,7 +371,6 @@ extension Calendar {
     }
 }
 
-// Codable is unavailable in Embedded Swift.
 #if !hasFeature(Embedded)
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Calendar.RecurrenceRule.Frequency: Codable {}

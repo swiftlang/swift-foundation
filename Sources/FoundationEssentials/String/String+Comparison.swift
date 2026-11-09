@@ -616,13 +616,11 @@ extension Substring {
     }
 #endif
 
-#if FOUNDATION_FRAMEWORK
     func _rangeOfCharacter(from set: CharacterSet, options: String.CompareOptions) -> Range<Index>? {
         guard !isEmpty else { return nil }
 
         return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
-#endif
 
 #if !NO_UNI_CHAR_DATA
     func _rangeOfCharacter(from set: BuiltInUnicodeScalarSet, options: String.CompareOptions) -> Range<Index>? {

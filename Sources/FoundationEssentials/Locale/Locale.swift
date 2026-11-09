@@ -369,12 +369,10 @@ public struct Locale : Hashable, Equatable, Sendable {
         return result
     }
 
-#if FOUNDATION_FRAMEWORK
     /// The exemplar character set for the locale, or `nil` if has none.
     public var exemplarCharacterSet: CharacterSet? {
         _locale.exemplarCharacterSet
     }
-#endif
 
     /// The calendar for the locale, or the Gregorian calendar as a fallback.
     public var calendar: Calendar {

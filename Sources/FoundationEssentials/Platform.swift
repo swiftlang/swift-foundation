@@ -356,12 +356,28 @@ extension Platform {
 
 // MARK: - Executable Path
 extension Platform {
-    static func getFullExecutablePath() -> String? {
+    /// The path of the main executable.
+    ///
+    /// Pass `standardized: true` to get the path through `standardizingPath`, on the platforms that standardize it. That also removes the `/private` prefix of paths in `/private/tmp`, `/private/var` and `/private/etc`. Pass `false` to get the path as the system gives it, for example to compare it with the paths of the loaded images.
+    static func getFullExecutablePath(standardized: Bool) -> String? {
+#if !NO_FILESYSTEM && (canImport(Darwin) || os(Linux) || os(Android))
+        return if standardized {
+            _getFullExecutablePath()?.standardizingPath
+        } else {
+            _getFullExecutablePath()
+        }
+#else
+        // These platforms do not standardize the path
+        return _getFullExecutablePath()
+#endif
+    }
+    
+    private static func _getFullExecutablePath() -> String? {
 #if FOUNDATION_FRAMEWORK && !NO_FILESYSTEM
         guard let cPath = _CFProcessPath() else {
             return nil
         }
-        return String(cString: cPath).standardizingPath
+        return String(cString: cPath)
 #elseif canImport(Darwin) && hasFeature(Embedded)
         // Embedded Swift has no MachO module (for _NSGetExecutablePath) and no FileManager.
         // proc_pidpath returns an absolute path with symlinks resolved.
@@ -376,7 +392,7 @@ extension Platform {
         // Apple platforms, first check for env override
         #if os(macOS)
         if let override = Self.getEnvSecure("CFProcessPath") {
-            return override.standardizingPath
+            return override
         }
         #endif
 
@@ -388,16 +404,12 @@ extension Platform {
             guard _NSGetExecutablePath(buffer.baseAddress!, &size) == 0 else {
                 return nil
             }
-            #if NO_FILESYSTEM
             return String(cString: buffer.baseAddress!)
-            #else
-            return String(cString: buffer.baseAddress!).standardizingPath
-            #endif
         }
 #elseif os(Linux) || os(Android)
         // For Linux, read /proc/self/exe
         return try? FileManager.default.destinationOfSymbolicLink(
-            atPath: "/proc/self/exe").standardizingPath
+            atPath: "/proc/self/exe")
 #elseif os(Windows)
         return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(MAX_PATH)) { lpBuffer in
             let actualLength = GetModuleFileNameW(nil, lpBuffer.baseAddress!, DWORD(lpBuffer.count))

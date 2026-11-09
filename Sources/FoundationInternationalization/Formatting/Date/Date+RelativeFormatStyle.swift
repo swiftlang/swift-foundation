@@ -79,15 +79,15 @@ extension Date {
     /// }
     /// ```
     @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-    public struct RelativeFormatStyle : Codable, Hashable, Sendable {
+    public struct RelativeFormatStyle : Hashable, Sendable {
         @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
         public typealias Field = Date.ComponentsFormatStyle.Field
 
         /// A type that represents the style to use when formatting the units of relative dates.
         ///
         /// Cases include ``wide``, ``narrow``, ``abbreviated`` and ``spellOut``.
-        public struct UnitsStyle : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable {
+        public struct UnitsStyle : Hashable, Sendable {
+            enum Option : Int, Hashable {
                 case wide
                 case spellOut
                 case abbreviated
@@ -136,8 +136,8 @@ extension Date {
         }
 
         /// A type that represents the style to use when formatting relative dates, such as "1 week ago" or "last week".
-        public struct Presentation : Codable, Hashable, Sendable {
-            enum Option : Int, Codable, Hashable {
+        public struct Presentation : Hashable, Sendable {
+            enum Option : Int, Hashable {
                 case numeric
                 case named
             }
@@ -213,15 +213,6 @@ extension Date {
         }
 
         var _allowedFields: Set<Date.ComponentsFormatStyle.Field>
-
-        private enum CodingKeys: String, CodingKey {
-            case presentation
-            case unitsStyle
-            case capitalizationContext
-            case locale
-            case calendar
-            case _allowedFields = "allowedFields"
-        }
 
         /// Creates a relative date format style with the specified presentation, units, locale, calendar, and capitalization context.
         ///
@@ -304,12 +295,9 @@ extension Date {
             return new
         }
 
-        enum ComponentAdjustmentStrategy : Codable, Hashable {
+        enum ComponentAdjustmentStrategy : Hashable {
             case alignedWithComponentBoundary
             case rounded
-            
-            private typealias AlignedWithComponentBoundaryCodingKeys = EmptyCodingKeys
-            private typealias RoundedCodingKeys = EmptyCodingKeys
         }
 
         var componentAdjustmentStrategy: ComponentAdjustmentStrategy {
@@ -505,3 +493,35 @@ public extension FormatStyle where Self == Date.RelativeFormatStyle {
             .init(presentation: presentation, unitsStyle: unitsStyle)
     }
 }
+
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.RelativeFormatStyle : Codable {
+    private enum CodingKeys: String, CodingKey {
+        case presentation
+        case unitsStyle
+        case capitalizationContext
+        case locale
+        case calendar
+        case _allowedFields = "allowedFields"
+    }
+}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.RelativeFormatStyle.UnitsStyle : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.RelativeFormatStyle.UnitsStyle.Option : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.RelativeFormatStyle.Presentation : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.RelativeFormatStyle.Presentation.Option : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Date.RelativeFormatStyle.ComponentAdjustmentStrategy : Codable {
+    private typealias AlignedWithComponentBoundaryCodingKeys = EmptyCodingKeys
+    private typealias RoundedCodingKeys = EmptyCodingKeys
+}
+#endif // !hasFeature(Embedded)

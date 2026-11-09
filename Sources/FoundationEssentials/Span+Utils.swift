@@ -141,7 +141,7 @@ extension Span where Element == UInt8 {
 
     /// Whole-span comparison against a StaticString literal. The comparison is literal, not Unicode canonical.
     @inline(__always)
-    func equals(_ other: StaticString) -> Bool {
+    package func equals(_ other: StaticString) -> Bool {
         count == other.utf8CodeUnitCount && starts(with: other)
     }
 }
@@ -195,7 +195,7 @@ extension OutputRawSpan {
         }
     }
 
-    mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
+    package mutating func withOutputSpan<T: ConvertibleToBytes & ConvertibleFromBytes, E: Error, R: ~Copyable>(
         of type: T.Type,
         _ body: (inout OutputSpan<T>) throws(E) -> R
     ) throws(E) -> R {

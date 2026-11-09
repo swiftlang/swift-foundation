@@ -9,8 +9,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 extension Date {
 #if !FOUNDATION_FRAMEWORK
     /**
@@ -27,5 +25,3 @@ extension Date {
     }
 #endif // !FOUNDATION_FRAMEWORK
 }
-
-#endif // !hasFeature(Embedded)

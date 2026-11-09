@@ -759,7 +759,6 @@ extension URLEncoder {
     }
 }
 
-#if FOUNDATION_FRAMEWORK // Requires CharacterSet
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension StringProtocol {
     /// Returns a new string created by replacing all characters not in the
@@ -814,4 +813,3 @@ extension StringProtocol {
         )
     }
 }
-#endif

@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if !FOUNDATION_FRAMEWORK
 
 public protocol FileManagerDelegate : AnyObject, Sendable {
@@ -84,5 +82,3 @@ extension FileManagerDelegate {
 }
 
 #endif
-
-#endif // !hasFeature(Embedded)

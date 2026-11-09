@@ -21,7 +21,7 @@ internal enum _CalendarUtility {
         return value
     }
 
-    /// Resolves `firstWeekday`: stored value → locale preference → 1 (Sunday).
+    /// The first weekday to use: the stored value, else the first day of the week of the locale, else 1 (Sunday).
     static func resolveFirstWeekday(stored: Int?, locale: Locale?) -> Int {
         if let stored {
             return stored
@@ -41,7 +41,7 @@ internal enum _CalendarUtility {
         return value
     }
 
-    /// Resolves `minimumDaysInFirstWeek`: stored value → locale preference → 1.
+    /// The minimum days in the first week to use: the stored value, else the value of the locale, else 1.
     static func resolveMinimumDaysInFirstWeek(stored: Int?, locale: Locale?) -> Int {
         if let stored {
             return stored
@@ -95,7 +95,7 @@ internal enum _CalendarUtility {
         }
     }
 
-    /// Default weekend range (region 001): Sat–Sun, full day.
+    /// The default weekend (region 001): all of Saturday and Sunday.
     static let defaultWeekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
 
     // MARK: - Rata die arithmetic (shared by the non-ICU calendars)
@@ -112,7 +112,7 @@ internal enum _CalendarUtility {
         }
     }
 
-    /// Splits local-seconds-since-reference into a fixed-day rata die and the seconds within that day.
+    /// Splits the local seconds since the reference date into a rata die and the seconds since local midnight of that day.
     static func rataDieAndSecondsInDay<I: FixedWidthInteger>(localSeconds: Double) -> (rataDie: I, secondsInDay: Double) {
         let totalDays = (localSeconds / 86400).rounded(.down)
         let rataDie = I(totalDays) &+ I(rataDieAtDateReference)
@@ -120,11 +120,11 @@ internal enum _CalendarUtility {
         return (rataDie, secondsInDay)
     }
 
-    /// Builds a UTC `Date` from a fixed-day rata die plus local seconds within the day, subtracting the time zone offset at that local instant.
+    /// Makes a `Date` from a rata die and the seconds since local midnight of that day. It subtracts the time zone offset at that local time.
     static func utcDate<I: FixedWidthInteger>(fromRataDie rataDie: I, secondsInDay: Double, in timeZone: TimeZone,
                                               repeatedTimePolicy: TimeZone.DaylightSavingTimePolicy,
                                               skippedTimePolicy: TimeZone.DaylightSavingTimePolicy) -> Date {
-        _ = skippedTimePolicy   // silenced — a fixed-day representation cannot land in a skipped interval
+        _ = skippedTimePolicy   // Not used. The offset lookup uses its default, `.former`, for a skipped time. All callers pass `.former`.
         let daysSinceRef = rataDie &- I(rataDieAtDateReference)
         let secondsAsIfUTC = Double(daysSinceRef) * 86400 + secondsInDay
         let tmpDate = Date(timeIntervalSinceReferenceDate: secondsAsIfUTC)
@@ -133,7 +133,372 @@ internal enum _CalendarUtility {
         return tmpDate - Double(tzOffset) - dstOffset
     }
 
-    /// Week-of-period number using the ICU algorithm, shared across calendars.
+    /// Moves a date by whole days and keeps the local time of day. Returns nil if the day count overflows.
+    /// If the new day skips that time, the result is after the skipped hour.
+    /// If the new day has that time twice, the result is the first one when moving forward and the second one when moving back.
+    static func date(byAddingDays days: Int, to date: Date, in timeZone: TimeZone) -> Date? {
+        let localSeconds = date.timeIntervalSinceReferenceDate + Double(timeZone.secondsFromGMT(for: date))
+        let (rataDie, secondsInDay): (Int, Double) = rataDieAndSecondsInDay(localSeconds: localSeconds)
+        let (moved, overflow) = rataDie.addingReportingOverflow(days)
+        guard !overflow else { return nil }
+        return utcDate(fromRataDie: moved, secondsInDay: secondsInDay, in: timeZone, repeatedTimePolicy: days > 0 ? .former : .latter, skippedTimePolicy: .former)
+    }
+
+    /// Converts a `Double` to `Int` and drops the fraction. A value outside the range of `Int` gives `Int.max` or `Int.min`, where `Int(_:)` would trap.
+    static func truncatedInt(_ value: Double) -> Int {
+        let whole = value.rounded(.towardZero)
+        if whole >= Double(Int.max) { return Int.max }
+        if whole <= Double(Int.min) { return Int.min }
+        return Int(whole)
+    }
+
+    /// Adds `amount` to `value` and wraps the sum into `0..<count`. `amount` can be any `Int`. It is reduced first, so the sum does not overflow.
+    static func wrapped(_ value: Int, by amount: Int, count: Int) -> Int {
+        ((value + amount % count) % count + count) % count
+    }
+
+    /// Rolls the hour, the minute or the second of a date. The larger units do not change.
+    /// Usually the date moves by the change of the value, as elapsed time.
+    /// If a forward roll wraps past the largest value, the result counts from the start of the local day, hour or minute instead.
+    /// Then a change of the offset between the new time and the old time does not move the result.
+    static func rolledTimeUnit(_ field: Calendar.Component, by amount: Int, from date: Date, in timeZone: TimeZone) -> Date {
+        let localSeconds = date.timeIntervalSinceReferenceDate + Double(timeZone.secondsFromGMT(for: date))
+        let (rataDie, secondsInDay): (Int, Double) = rataDieAndSecondsInDay(localSeconds: localSeconds)
+        let value: Int, limit: Int, length: Double
+        switch field {
+        case .hour: (value, limit, length) = (Int(secondsInDay / Double(Calendar._secondsInHour)), 24, Double(Calendar._secondsInHour))
+        case .minute: (value, limit, length) = (Int(secondsInDay / 60) % 60, 60, 60)
+        default: (value, limit, length) = (Int(secondsInDay) % 60, 60, 1)
+        }
+        let newValue = wrapped(value, by: amount, count: limit)
+        guard newValue < value, amount > 0 else { return date + Double(newValue - value) * length }
+        let largerLength = length * Double(limit)
+        let start = utcDate(fromRataDie: rataDie, secondsInDay: (secondsInDay / largerLength).rounded(.down) * largerLength, in: timeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
+        return start + Double(newValue) * length + secondsInDay.truncatingRemainder(dividingBy: length)
+    }
+
+    /// Moves a date by a number of 24 hour days. If `forward` is true and the result is in a repeated hour, the result moves to the first of the two times.
+    static func moved(_ date: Date, byElapsedDays days: Int, forward: Bool, in timeZone: TimeZone) -> Date {
+        let result = date + Double(days) * Double(Calendar._secondsInDay)
+        guard forward else { return result }
+        let localSeconds = result.timeIntervalSinceReferenceDate + Double(timeZone.secondsFromGMT(for: result))
+        let (rataDie, secondsInDay): (Int, Double) = rataDieAndSecondsInDay(localSeconds: localSeconds)
+        return utcDate(fromRataDie: rataDie, secondsInDay: secondsInDay, in: timeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
+    }
+
+    /// Rolls a day of a month or a year by whole weeks, for a roll of the week of the month or the week of the year.
+    /// `position` is the day, from 1. `length` is the number of days in the period. `weekdayOffset` is the position of the day in its week, from 0.
+    /// The roll treats a partial first or last week as a whole week. A result outside the period moves to its first or last day.
+    /// Returns nil if no week of the period counts. This can happen in a short month when `minimumDaysInFirstWeek` is large.
+    static func rolledWeekPosition(_ position: Int, length: Int, weekdayOffset: Int, by amount: Int, minimumDaysInFirstWeek: Int) -> Int? {
+        let firstOfPeriod = ((weekdayOffset - position + 1) % 7 + 7) % 7
+        let start = (7 - firstOfPeriod) < minimumDaysInFirstWeek ? 8 - firstOfPeriod : 1 - firstOfPeriod
+        let lastOfPeriod = (length - position + weekdayOffset) % 7
+        let gap = length + 7 - lastOfPeriod - start
+        guard gap > 0 else { return nil }
+        return min(max(wrapped(position - start, by: amount % gap * 7, count: gap) + start, 1), length)
+    }
+
+    /// The day of the month for the nth weekday of the month, for example the second Tuesday. The day counts from 1 and can be outside the month.
+    /// A negative ordinal counts back from the end of the month, so -1 is the last such weekday.
+    /// `weekdayOffset` and `monthStartOffset` are the positions in the week of the weekday and of the first day of the month, from 0.
+    static func dayOfMonth(weekdayOrdinal ordinal: Int, weekdayOffset: Int, monthStartOffset: Int, monthLength: Int) -> Int {
+        var day = weekdayOffset - monthStartOffset + 1
+        if day < 1 { day += 7 }
+        return ordinal >= 0 ? day + (ordinal - 1) * 7 : day + ((monthLength - day) / 7 + ordinal + 1) * 7
+    }
+
+    /// The day of the month for a weekday in a week of the month. The day counts from 1 and can be outside the month.
+    /// If the first partial week has fewer days than `minimumDaysInFirstWeek`, it is week 0 and week 1 starts after it.
+    static func dayOfMonth(weekOfMonth week: Int, weekdayOffset: Int, monthStartOffset: Int, minimumDaysInFirstWeek: Int) -> Int {
+        let firstWeekShift = 7 - monthStartOffset < minimumDaysInFirstWeek ? 7 : 0
+        return weekdayOffset - monthStartOffset + 1 + firstWeekShift + (week - 1) * 7
+    }
+
+    /// The number of days to move a date for a roll of the weekday, the weekday ordinal or the day of the year. The roll wraps inside the week, the month or the year. Returns nil for any other component.
+    static func daysToRoll(_ field: Calendar.Component, by amount: Int, weekdayOffset: Int, dayOfMonth: Int, monthLength: Int, dayOfYear: Int, yearLength: Int) -> Int? {
+        switch field {
+        case .weekday:
+            return wrapped(weekdayOffset, by: amount, count: 7) - weekdayOffset
+        case .weekdayOrdinal:
+            let weeksBefore = (dayOfMonth - 1) / 7
+            return (wrapped(weeksBefore, by: amount, count: weeksBefore + (monthLength - dayOfMonth) / 7 + 1) - weeksBefore) * 7
+        case .dayOfYear:
+            return wrapped(dayOfYear - 1, by: amount, count: yearLength) + 1 - dayOfYear
+        default:
+            return nil
+        }
+    }
+
+    /// The number of days to add for the day, day of year, weekday, week and weekday ordinal fields. A week counts as 7 days. Returns nil if the sum overflows.
+    static func dayCount(of components: DateComponents) -> Int? {
+        var total = 0
+        func add(_ value: Int?, times factor: Int) -> Bool {
+            guard let value else { return true }
+            let (days, multiplyOverflow) = value.multipliedReportingOverflow(by: factor)
+            let (sum, addOverflow) = total.addingReportingOverflow(days)
+            guard !multiplyOverflow, !addOverflow else { return false }
+            total = sum
+            return true
+        }
+        guard add(components.day, times: 1), add(components.dayOfYear, times: 1), add(components.weekOfMonth, times: 7), add(components.weekOfYear, times: 7), add(components.weekdayOrdinal, times: 7), add(components.weekday, times: 1) else { return nil }
+        return total
+    }
+
+    /// Finds the largest count of a unit that moves `start` toward `end` without going past `end`. Returns the count and `start` moved by that count.
+    /// `shifted` moves `start` by a count, or returns nil if the count is too large.
+    /// The search doubles the count until it goes past `end`, then halves the gap. The count is 0 if the unit does not move the date.
+    static func differenceBySearch(from start: Date, to end: Date, shifted: (Int) -> Date?) -> (difference: Int, advancedDate: Date) {
+        let forward = end > start
+        func isPastEnd(_ date: Date) -> Bool { forward ? date > end : date < end }
+        var good = 0
+        var goodDate = start
+        var bad = forward ? 1 : -1
+        while true {
+            guard let trial = shifted(bad), !isPastEnd(trial) else { break }
+            if trial == start { return (0, start) }
+            good = bad
+            goodDate = trial
+            if trial == end { return (good, goodDate) }
+            guard abs(bad) < Int.max / 4 else { return (good, goodDate) }
+            bad *= 2
+        }
+        while abs(bad - good) > 1 {
+            let middle = good + (bad - good) / 2
+            if let trial = shifted(middle), !isPastEnd(trial) {
+                good = middle
+                goodDate = trial
+                if trial == end { break }
+            } else {
+                bad = middle
+            }
+        }
+        return (good, goodDate)
+    }
+
+    /// The interval of the hour, minute, second or nanosecond that holds a date. Returns nil for any other component.
+    static func timeUnitInterval(of component: Calendar.Component, for date: Date, in timeZone: TimeZone) -> DateInterval? {
+        let time = date.timeIntervalSinceReferenceDate
+        switch component {
+        case .hour:
+            let offset = Double(timeZone.secondsFromGMT(for: date))
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: ((time + offset) / Double(Calendar._secondsInHour)).rounded(.down) * Double(Calendar._secondsInHour) - offset), duration: Double(Calendar._secondsInHour))
+        case .minute:
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: (time / 60.0).rounded(.down) * 60.0), duration: 60.0)
+        case .second:
+            return DateInterval(start: Date(timeIntervalSinceReferenceDate: time.rounded(.down)), duration: 1.0)
+        case .nanosecond:
+            return DateInterval(start: date, duration: 1e-9)
+        default:
+            return nil
+        }
+    }
+
+    /// The whole count of hours, minutes, seconds or nanoseconds from one date to another, and the start moved by that count.
+    /// Returns nil for any other component. The count of nanoseconds is limited to the range of `Int32`, as in the Gregorian calendar.
+    static func timeUnitDifference(in component: Calendar.Component, from start: Date, to end: Date) -> (difference: Int, advancedDate: Date)? {
+        let seconds = end.timeIntervalSince(start)
+        let unit: Double
+        switch component {
+        case .hour: unit = Double(Calendar._secondsInHour)
+        case .minute: unit = 60
+        case .second: unit = 1
+        case .nanosecond:
+            let count = truncatedInt(min(max(seconds * 1_000_000_000, Double(Int32.min)), Double(Int32.max)).rounded())
+            return (count, start.addingTimeInterval(Double(count) / 1_000_000_000))
+        default:
+            return nil
+        }
+        let count = truncatedInt(seconds / unit)
+        return (count, start.addingTimeInterval(Double(count) * unit))
+    }
+
+    /// The weekday of a rata die, from 1 for Sunday to 7 for Saturday. Rata die 1 was a Monday.
+    static func weekday(ofRataDie rataDie: Int) -> Int {
+        (rataDie % 7 + 7) % 7 + 1
+    }
+
+    /// The components in the set, from the largest unit to the smallest. A difference computes them in this order.
+    static func orderedDifferenceComponents(_ components: Calendar.ComponentSet) -> [Calendar.Component] {
+        var out: [Calendar.Component] = []
+        if components.contains(.era) { out.append(.era) }
+        if components.contains(.year) { out.append(.year) }
+        if components.contains(.yearForWeekOfYear) { out.append(.yearForWeekOfYear) }
+        if components.contains(.quarter) { out.append(.quarter) }
+        if components.contains(.month) { out.append(.month) }
+        if components.contains(.weekOfYear) { out.append(.weekOfYear) }
+        if components.contains(.weekOfMonth) { out.append(.weekOfMonth) }
+        if components.contains(.day) { out.append(.day) }
+        if components.contains(.dayOfYear) { out.append(.dayOfYear) }
+        if components.contains(.weekday) { out.append(.weekday) }
+        if components.contains(.weekdayOrdinal) { out.append(.weekdayOrdinal) }
+        if components.contains(.hour) { out.append(.hour) }
+        if components.contains(.minute) { out.append(.minute) }
+        if components.contains(.second) { out.append(.second) }
+        if components.contains(.nanosecond) { out.append(.nanosecond) }
+        return out
+    }
+
+    /// The range of a unit that starts again each month, such as the day or the week of the month, inside a larger unit such as the year.
+    /// It joins the month ranges end to end. It starts at the lowest first value and adds the last value of each month to the count. It looks at no more than 15 months.
+    static func rangeOverMonths<Implementation: _CalendarProtocol>(of smaller: Calendar.Component, in larger: Calendar.Component, for date: Date, in calendar: Implementation) -> Range<Int>? {
+        guard let interval = calendar.dateInterval(of: larger, for: date) else { return nil }
+        let end = interval.end - 1
+        var current = interval.start + 1
+        var result: Range<Int>?
+        for _ in 0..<15 {
+            guard let month = calendar.dateInterval(of: .month, for: current),
+                  let first = calendar.ordinality(of: smaller, in: .month, for: month.start + 0.1),
+                  let last = calendar.ordinality(of: smaller, in: .month, for: month.end - 0.1) else { return result }
+            if let previous = result {
+                let low = min(previous.lowerBound, first)
+                result = low..<low + previous.count + last
+            } else {
+                result = first..<last + 1
+            }
+            current = month.end + 1
+            if current >= end { break }
+        }
+        return result
+    }
+
+    private static let timeUnits: [Calendar.Component] = [.hour, .minute, .second, .nanosecond]
+
+    /// The position, from 1, of an hour, a minute, a second or a nanosecond inside a larger unit. Returns nil if `smaller` is not a time unit smaller than `larger`, or if the count overflows.
+    /// `secondsInDay` is the local time since midnight. `dayOrdinality` gives the position of the day inside a unit longer than a day. The fraction of a second for the nanoseconds comes from `date`.
+    static func timeOrdinality(of smaller: Calendar.Component, in larger: Calendar.Component, secondsInDay: Double, date: Date, dayOrdinality: (Calendar.Component) -> Int?) -> Int? {
+        guard let smallerIndex = timeUnits.firstIndex(of: smaller), smallerIndex > (timeUnits.firstIndex(of: larger) ?? -1) else { return nil }
+        let wholeSecondsInDay = Int(secondsInDay)
+        let seconds: Int
+        switch larger {
+        case .hour: seconds = wholeSecondsInDay % Calendar._secondsInHour
+        case .minute: seconds = wholeSecondsInDay % 60
+        case .second: seconds = 0
+        case .weekday, .day, .dayOfYear: seconds = wholeSecondsInDay
+        case .era, .year, .yearForWeekOfYear, .quarter, .month, .weekOfYear, .weekOfMonth:
+            guard let days = dayOrdinality(larger) else { return nil }
+            let (daySeconds, multiplyOverflow) = (days - 1).multipliedReportingOverflow(by: Calendar._secondsInDay)
+            let (sum, addOverflow) = daySeconds.addingReportingOverflow(wholeSecondsInDay)
+            guard !multiplyOverflow, !addOverflow else { return nil }
+            seconds = sum
+        default:
+            return nil
+        }
+        switch smaller {
+        case .hour: return seconds / Calendar._secondsInHour + 1
+        case .minute: return seconds / 60 + 1
+        case .second: return seconds + 1
+        default:
+            let fraction = date.timeIntervalSinceReferenceDate - date.timeIntervalSinceReferenceDate.rounded(.down)
+            let nanoseconds = (Double(seconds) + fraction) * 1e9
+            guard nanoseconds < Double(Int.max) else { return nil }
+            return Int(nanoseconds) + 1
+        }
+    }
+
+    // MARK: - Shared by the fixed month and the Chinese family calendars
+
+    /// The largest absolute value of a month, day, week or weekday ordinal that the calendars accept from `DateComponents`. A larger value is outside the supported dates, and its day count could overflow.
+    static let fieldLimit: UInt = 100_000_000
+
+    /// Splits a month number that can be outside 1 to `monthsInYear` into whole years and a month from 1 to `monthsInYear`.
+    /// For example, month 14 in a year of 13 months is month 1 of the next year. Returns nil for `Int.min`.
+    static func carriedMonth(_ month: Int, monthsInYear: Int) -> (yearsCarried: Int, month: Int)? {
+        let (zeroBased, overflow) = month.subtractingReportingOverflow(1)
+        guard !overflow else { return nil }
+        // Take the month from the remainder, not from `zeroBased - years * monthsInYear`, which can overflow near `Int.min`.
+        let remainder = zeroBased % monthsInYear
+        return (floorDiv(zeroBased, monthsInYear), (remainder < 0 ? remainder + monthsInYear : remainder) + 1)
+    }
+
+    /// The values of `smaller`, counted inside `counting`, at the start and at the end of the `larger` unit that holds `date`. For example, the weeks of the year that a month covers.
+    static func rangeAtEnds<Implementation: _CalendarProtocol>(of smaller: Calendar.Component, in larger: Calendar.Component, counting: Calendar.Component, for date: Date, in calendar: Implementation) -> Range<Int>? {
+        guard let interval = calendar.dateInterval(of: larger, for: date),
+              let first = calendar.ordinality(of: smaller, in: counting, for: interval.start + 0.1),
+              let last = calendar.ordinality(of: smaller, in: counting, for: interval.end - 0.1) else { return nil }
+        return first..<last + 1
+    }
+
+    /// The first weekday that a new calendar stores: the value if it names a weekday from 1 to 7, or nil.
+    static func storedFirstWeekday(_ value: Int?) -> Int? {
+        guard let value, value >= 1 && value <= 7 else { return nil }
+        return value
+    }
+
+    /// The seconds after local midnight that the hour, minute, second and nanosecond of the components name. A missing field counts as 0.
+    static func secondsInDay(of components: DateComponents) -> Double {
+        var seconds: Double = 0
+        if let hour = components.hour { seconds += Double(hour) * Double(Calendar._secondsInHour) }
+        if let minute = components.minute { seconds += Double(minute) * 60 }
+        if let second = components.second { seconds += Double(second) }
+        if let nanosecond = components.nanosecond { seconds += Double(nanosecond) / 1e9 }
+        return seconds
+    }
+
+    /// Adds the hours, minutes, seconds and nanoseconds of the components to a date as elapsed time.
+    static func adding(timeUnitsOf components: DateComponents, to date: Date) -> Date {
+        var result = date
+        if let hours = components.hour, hours != 0 { result += Double(hours) * Double(Calendar._secondsInHour) }
+        if let minutes = components.minute, minutes != 0 { result += Double(minutes) * 60 }
+        if let seconds = components.second, seconds != 0 { result += Double(seconds) }
+        if let nanoseconds = components.nanosecond, nanoseconds != 0 { result += Double(nanoseconds) / 1_000_000_000 }
+        return result
+    }
+
+    /// Sets the hour, minute, second and nanosecond fields that `components` contains. `secondsInDay` is the local time since midnight.
+    /// `localSeconds` is the local time since the reference date and gives the fraction of a second for the nanoseconds.
+    static func setTimeFields(_ components: Calendar.ComponentSet, secondsInDay: Double, localSeconds: Double, in result: inout DateComponents) {
+        guard components.contains(.hour) || components.contains(.minute) || components.contains(.second) || components.contains(.nanosecond) else { return }
+        let hour = Int(secondsInDay / Double(Calendar._secondsInHour))
+        let remainderAfterHour = secondsInDay - Double(hour) * Double(Calendar._secondsInHour)
+        let minute = Int(remainderAfterHour / 60)
+        let remainderAfterMinute = remainderAfterHour - Double(minute) * 60
+        if components.contains(.hour) { result.hour = hour }
+        if components.contains(.minute) { result.minute = minute }
+        if components.contains(.second) { result.second = Int(remainderAfterMinute) }
+        if components.contains(.nanosecond) { result.nanosecond = Int((localSeconds - localSeconds.rounded(.down)) * 1_000_000_000) }
+    }
+
+    /// The position of a day in its week, from 0 for the first weekday to 6.
+    static func relativeWeekday(ofRataDie rataDie: Int, firstWeekday: Int) -> Int {
+        (weekday(ofRataDie: rataDie) - firstWeekday + 7) % 7
+    }
+
+    /// The position of a weekday number in the week, from 0 for the first weekday to 6. The weekday is reduced first, so `Int.min` does not overflow.
+    static func relativeWeekday(of weekday: Int, firstWeekday: Int) -> Int {
+        ((weekday % 7 - firstWeekday) % 7 + 7) % 7
+    }
+
+    /// The rata die of the first day of week 1 of a year. Week 1 is the week that holds `yearStart`, or the week after it if fewer than `minimumDaysInFirstWeek` days of that week are in the year.
+    static func firstDayOfWeekYear(yearStart: Int, firstWeekday: Int, minimumDaysInFirstWeek: Int) -> Int {
+        let daysIntoWeek = relativeWeekday(ofRataDie: yearStart, firstWeekday: firstWeekday)
+        return (7 - daysIntoWeek) >= minimumDaysInFirstWeek ? yearStart - daysIntoWeek : yearStart + 7 - daysIntoWeek
+    }
+
+    /// The week year of a day and the number of its week in that week year. `year` is the year of the day, and the week year is `year` or the year before or after it.
+    /// `firstDayOfWeekYear` gives the first day of week 1 of a year.
+    static func weekYearAndWeek(rataDie: Int, year: Int, firstDayOfWeekYear: (Int) -> Int) -> (weekYear: Int, week: Int) {
+        var weekYear = year
+        if rataDie < firstDayOfWeekYear(weekYear) {
+            weekYear -= 1
+        } else if rataDie >= firstDayOfWeekYear(weekYear + 1) {
+            weekYear += 1
+        }
+        return (weekYear, (rataDie - firstDayOfWeekYear(weekYear)) / 7 + 1)
+    }
+
+    /// The local midnight at the start of a rata die. If the time zone skips that midnight, the result is the first time after the skipped hour.
+    static func localMidnight(rataDie: Int, in timeZone: TimeZone) -> Date {
+        utcDate(fromRataDie: rataDie, secondsInDay: 0, in: timeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
+    }
+
+    /// The interval from local midnight of one day to local midnight of another.
+    static func interval(fromRataDie start: Int, toRataDie end: Int, in timeZone: TimeZone) -> DateInterval {
+        let startDate = localMidnight(rataDie: start, in: timeZone)
+        return DateInterval(start: startDate, duration: localMidnight(rataDie: end, in: timeZone).timeIntervalSince(startDate))
+    }
+
+    /// The week number of a day inside a month or a year, with the week rules of ICU.
     static func weekNumber(desiredDay: Int, dayOfPeriod: Int, weekday: Int,
                            firstWeekday: Int, minimumDaysInFirstWeek: Int) -> Int {
         var periodStartDayOfWeek = (weekday - firstWeekday - dayOfPeriod + 1) % 7

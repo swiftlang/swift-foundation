@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -32,7 +30,8 @@ internal import _FoundationCShims
 #endif
 
 extension _FileManagerImpl {
-    func createSymbolicLink(
+    static func createSymbolicLink(
+        _ fileManager: FileManager,
         at url: URL,
         withDestinationURL destURL: URL
     ) throws {
@@ -57,7 +56,8 @@ extension _FileManagerImpl {
         try fileManager.createSymbolicLink(atPath: path, withDestinationPath: destPath)
     }
     
-    func createSymbolicLink(
+    static func createSymbolicLink(
+        _ fileManager: FileManager,
         atPath path: String,
         withDestinationPath destPath: String
     ) throws {
@@ -94,7 +94,8 @@ extension _FileManagerImpl {
 #endif
     }
     
-    func linkItem(
+    static func linkItem(
+        _ fileManager: FileManager,
         at srcURL: URL,
         to dstURL: URL
     ) throws {
@@ -118,14 +119,15 @@ extension _FileManagerImpl {
         try fileManager.linkItem(atPath: srcPath, toPath: dstPath)
     }
     
-    func linkItem(
+    static func linkItem(
+        _ fileManager: FileManager,
         atPath srcPath: String,
         toPath dstPath: String
     ) throws {
         try _FileOperations.linkFile(srcPath, to: dstPath, with: fileManager)
     }
     
-    func destinationOfSymbolicLink(atPath path: String) throws -> String {
+    static func destinationOfSymbolicLink(_ fileManager: FileManager, atPath path: String) throws -> String {
 #if os(Windows)
         return try path.withNTPathRepresentation {
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
@@ -216,5 +218,3 @@ extension _FileManagerImpl {
 #endif
     }
 }
-
-#endif // !hasFeature(Embedded)

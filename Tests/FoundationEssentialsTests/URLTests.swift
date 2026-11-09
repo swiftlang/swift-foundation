@@ -3842,6 +3842,28 @@ private struct URLTests {
         #expect(url.standardized.host() == nil)
         #expect(URL(string: url.standardized.absoluteString)?.host() == nil)
 
+        if foundation_swift_url_v2_enabled() {
+            url = try #require(URL(string: "/.//host/path"))
+            #expect(url.standardized.relativeString == "/.//host/path")
+            #expect(url.standardized.host() == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.host() == nil)
+
+            url = try #require(URL(string: "/a/..//host/path"))
+            #expect(url.standardized.relativeString == "/.//host/path")
+            #expect(url.standardized.host() == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.host() == nil)
+
+            url = try #require(URL(string: ".///host/path"))
+            #expect(url.standardized.relativeString == "/.//host/path")
+            #expect(url.standardized.host() == nil)
+            #expect(URL(string: url.standardized.absoluteString)?.host() == nil)
+
+            let base = try #require(URL(string: "https://example.com/dir/"))
+            url = try #require(URL(string: "/.//host/path?query#fragment", relativeTo: base))
+            #expect(url.standardized.relativeString == "/.//host/path?query#fragment")
+            #expect(URL(string: url.standardized.relativeString, relativeTo: base)?.host() == "example.com")
+        }
+
         // Dot resolution can move a colon-bearing segment to the front of a
         // scheme-less path. The result must not re-parse as having a scheme.
         if foundation_swift_url_v2_enabled() {

@@ -758,7 +758,6 @@ extension RegexComponent where Self == DateComponents.ISO8601FormatStyle {
 }
 #endif
 
-// Codable is unavailable in Embedded Swift.
 #if !hasFeature(Embedded)
 @available(FoundationPreview 6.2, *)
 extension DateComponents.ISO8601FormatStyle : Codable {
