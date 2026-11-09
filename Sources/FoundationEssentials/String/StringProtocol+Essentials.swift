@@ -246,7 +246,6 @@ extension StringProtocol {
     }
 #endif
 
-#if FOUNDATION_FRAMEWORK
     /// Finds and returns the range in the `String` of the first
     /// character from a given character set found in a given range with
     /// given options.
@@ -258,7 +257,6 @@ extension StringProtocol {
         }
         return subStr._rangeOfCharacter(from: aSet, options: mask)
     }
-#endif // FOUNDATION_FRAMEWORK
 
     /// Returns a `Data` containing a representation of
     /// the `String` encoded using a given encoding.

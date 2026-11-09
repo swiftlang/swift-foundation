@@ -97,12 +97,10 @@ internal final class _LocaleAutoupdating : _LocaleProtocol, @unchecked Sendable 
         LocaleCache.cache.current.regionCode
     }
     
-#if FOUNDATION_FRAMEWORK
     var exemplarCharacterSet: CharacterSet? {
         LocaleCache.cache.current.exemplarCharacterSet
     }
-    
-#endif
+
     var calendar: Calendar {
         LocaleCache.cache.current.calendar
     }
