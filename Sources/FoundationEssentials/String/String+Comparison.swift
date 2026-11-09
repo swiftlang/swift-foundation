@@ -889,7 +889,7 @@ extension Substring {
 
         let byte = haystack[offset]
         if byte >= 0x80 {
-            // A non-ASCII character can match an ASCII one when an option transforms it, or when it is canonically equivalent: U+037E, U+1FEF and U+212A are equivalent to ";", "`" and "K".
+            // A non-ASCII character can match an ASCII one when an option transforms it, or when it is canonically equivalent to it. Only three scalars are: U+037E, U+1FEF and U+212A, whose canonical decompositions are ";", "`" and "K".
             let canMatch = hasTransforms || (!literal && (needle[0] == ._semicolon || needle[0] == UInt8(ascii: "`") || needle[0] == UInt8(ascii: "K")))
             let startsScalar = byte & 0xC0 != 0x80
             return canMatch && startsScalar ? .compareCharacters : .noMatch

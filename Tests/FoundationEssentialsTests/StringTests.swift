@@ -290,6 +290,9 @@ private struct StringTests {
         ("x\u{212A}K", "K", [], 1..<4),
         ("x\u{212A}K", "K", .backwards, 4..<5),
         ("\u{212A}x", "K", .anchored, 0..<3),
+        // U+037E GREEK QUESTION MARK and U+1FEF GREEK VARIA are canonically equivalent to ";" and "`".
+        ("a\u{037E}", ";", [], 1..<3),
+        ("\u{1FEF}a", "`", .anchored, 0..<3),
         ("\u{E9} abc", "abc", [], 3..<6),
         ("e\u{301}", "\u{E9}", [], 0..<3),
         ("e\u{301}", "\u{E9}", .literal, nil),
@@ -305,6 +308,19 @@ private struct StringTests {
         let result = try tested[...]._range(of: string[...], options: options)
         let utf8Result = result.map { tested.utf8.distance(from: tested.startIndex, to: $0.lowerBound) ..< tested.utf8.distance(from: tested.startIndex, to: $0.upperBound) }
         #expect(utf8Result == expectation)
+    }
+
+    // The UTF-8 search in `_range(of:options:)` compares characters at a non-ASCII position only for these scalars when no option is set.
+    @Test func nonASCIIScalarsCanonicallyEquivalentToASCII() {
+        // String equality is canonical equivalence, so the set finds a scalar that is equivalent to an ASCII one.
+        let ascii = Set((0 ..< 0x80).map { String(Unicode.Scalar(UInt8($0))) })
+        var equivalent: [UInt32] = []
+        for value in UInt32(0x80) ... 0x10FFFF {
+            if let scalar = Unicode.Scalar(value), ascii.contains(String(scalar)) {
+                equivalent.append(value)
+            }
+        }
+        #expect(equivalent == [0x037E, 0x1FEF, 0x212A])
     }
 
 #if FOUNDATION_FRAMEWORK
