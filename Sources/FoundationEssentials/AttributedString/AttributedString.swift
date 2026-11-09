@@ -124,6 +124,38 @@ extension AttributedString {
         }
     }
 
+    /// Creates an attributed string from consecutive runs of `string`, given as UTF-8 lengths that cover it.
+    /// Runs must start and end on Unicode scalar boundaries, as everywhere else in `AttributedString`.
+    package init(_ string: String, utf8Runs: some Sequence<(count: Int, attributes: AttributeContainer)>) {
+        var runs = Rope<_InternalRun>()
+        var hasConstrainedAttributes = false
+        let utf8 = string.utf8
+        var end = utf8.startIndex
+        for run in utf8Runs where run.count > 0 {
+            guard let next = utf8.index(end, offsetBy: run.count, limitedBy: utf8.endIndex) else {
+                preconditionFailure("The runs must cover the string")
+            }
+            end = next
+            precondition(end == utf8.endIndex || !UTF8.isContinuation(utf8[end]), "The runs must split the string on Unicode scalar boundaries")
+            if let previous = runs.last, previous.attributes == run.attributes.storage {
+                let last = runs.index(before: runs.endIndex)
+                runs[last].length += run.count
+            } else {
+                runs.append(_InternalRun(length: run.count, attributes: run.attributes.storage))
+                hasConstrainedAttributes = hasConstrainedAttributes || run.attributes.storage.hasConstrainedAttributes
+            }
+        }
+        precondition(end == utf8.endIndex, "The runs must cover the string")
+        guard !runs.isEmpty else {
+            self.init(string)
+            return
+        }
+        self.init(Guts(string: BigString(string), runs: _InternalRuns(runs)))
+        if hasConstrainedAttributes {
+            _guts.adjustConstrainedAttributesForUntrustedRuns()
+        }
+    }
+
     internal init(_ string: BigString, attributes: _AttributeStorage) {
         guard !string.isEmpty else {
             self.init()
