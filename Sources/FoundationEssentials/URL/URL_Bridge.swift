@@ -93,11 +93,13 @@ internal final class _BridgedURL: NSObject, _URLProtocol, @unchecked Sendable {
     
     init?(dataRepresentation: Data, relativeTo base: URL?, isAbsolute: Bool) {
         guard !dataRepresentation.isEmpty else { return nil }
-        _url = if isAbsolute {
+        let url = if isAbsolute {
             NSURL(absoluteURLWithDataRepresentation: dataRepresentation, relativeTo: base)
         } else {
             NSURL(dataRepresentation: dataRepresentation, relativeTo: base)
         }
+        guard !url.relativeString.isEmpty else { return nil }
+        _url = url
     }
     
     init(fileURLWithFileSystemRepresentation path: UnsafePointer<Int8>, isDirectory: Bool, relativeTo base: URL?) {
