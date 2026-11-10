@@ -13,7 +13,6 @@
 #if os(Linux)
 
 import Testing
-import Foundation
 
 #if canImport(FoundationEssentials)
 @testable import FoundationEssentials
