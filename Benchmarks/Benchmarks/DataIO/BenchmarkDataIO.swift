@@ -88,7 +88,7 @@ let benchmarks: @Sendable () -> Void = {
         try data.write(to: testPath)
     }
     
-#if !os(WASI) // atomic writing is unavailable on WASI
+#if !os(Emscripten) // Atomic writing is not enabled on Emscripten.
     Benchmark("write-regularFile-atomic", configuration: .cleanupTestPathConfig) { benchmark in
         try data.write(to: testPath, options: .atomic)
     }
@@ -105,7 +105,7 @@ let benchmarks: @Sendable () -> Void = {
         try? data.write(to: testPath)
     }
     
-#if !os(WASI) // atomic writing is unavailable on WASI
+#if !os(Emscripten) // Atomic writing is not enabled on Emscripten.
     Benchmark("write-regularFile-alreadyExists-atomic",
               configuration: .init(
                 setup: {

@@ -295,8 +295,8 @@ extension _FileManagerImpl {
             }
             attr?[.protectionKey] = nil
         }
-        #elseif os(WASI) || os(Emscripten)
-        // `.atomic` is unavailable on WASI/Emscripten
+        #elseif os(Emscripten)
+        // `.atomic` is unavailable on Emscripten.
         let opts: Data.WritingOptions = []
         #else
         let opts = Data.WritingOptions.atomic

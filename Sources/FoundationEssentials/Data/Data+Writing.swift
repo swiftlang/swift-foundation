@@ -174,11 +174,10 @@ private func cleanupTemporaryDirectory(at inPath: String?) {
 /// Creates a temporary file for atomic writing of `inPath` in the destination's parent directory.
 /// If `destDirfd` is -1, then `destinationPath` should be the full path.
 #if os(Emscripten)
-@available(*, unavailable, message: "Emscripten does not have temporary directories")
+@available(*, unavailable, message: "atomic writing is not yet supported on Emscripten")
 #endif
 private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, permissions: TemporaryFilePermissions, variant: String? = nil) throws -> (Int32, String) {
 #if os(Emscripten)
-    // Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
     // A directory descriptor makes the temporary name relative to the destination, independent of the process's working directory.
@@ -295,11 +294,10 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
 /// Caller is responsible for calling `close` on the `fd: Int32` file descriptor and calling `cleanupTemporaryDirectory` on the temporary directory path. The temporary directory path may be nil, if it does not need to be cleaned up.
 /// Caller must also close the `tempDirfd: Int32` file descriptor if it's different than `fd`.
 #if os(Emscripten)
-@available(*, unavailable, message: "Emscripten does not have temporary directories")
+@available(*, unavailable, message: "atomic writing is not yet supported on Emscripten")
 #endif
 private func createProtectedTemporaryFile(destDirfd: Int32, destinationPath: String, inPath: borrowing some FileSystemRepresentable & ~Copyable, options: Data.WritingOptions, permissions: TemporaryFilePermissions, variant: String? = nil) throws -> (fd: Int32, name: String, tempDirfd: Int32, cleanupPath: String?) {
 #if os(Emscripten)
-    // Emscripten does not have temp directories
     throw CocoaError(.featureUnsupported)
 #else
 #if FOUNDATION_FRAMEWORK
@@ -436,7 +434,7 @@ internal func writeToFile(path inPath: borrowing some FileSystemRepresentable & 
 
 /// Create a new file out of `Data` at a path, using atomic writing.
 #if os(Emscripten)
-@available(*, unavailable, message: "atomic writing is unavailable in Emscripten because temporary files are not supported")
+@available(*, unavailable, message: "atomic writing is not yet supported on Emscripten")
 #endif
 private func writeToFileAux(path inPath: borrowing some FileSystemRepresentable & ~Copyable, buffer: RawSpan, options: Data.WritingOptions, attributes: [String : Data], reportProgress: Bool) throws {
 #if os(Emscripten)
@@ -813,7 +811,7 @@ extension Data {
         
         /// An option to write data to an auxiliary file first and then replace the original file with the auxiliary file when the write completes.
 #if os(Emscripten)
-        @available(*, unavailable, message: "atomic writing is unavailable in Emscripten because temporary files are not supported")
+        @available(*, unavailable, message: "atomic writing is not yet supported on Emscripten")
 #endif
         public static let atomic = WritingOptions(rawValue: 1 << 0)
         

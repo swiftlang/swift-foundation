@@ -462,7 +462,7 @@ extension StringProtocol {
             attributes = [:]
         }
 
-#if os(WASI) || os(Emscripten)
+#if os(Emscripten)
         guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
         let options : Data.WritingOptions = []
 #else
@@ -485,7 +485,7 @@ extension StringProtocol {
             attributes = [:]
         }
 
-#if os(WASI) || os(Emscripten)
+#if os(Emscripten)
         guard !useAuxiliaryFile else { throw CocoaError(.featureUnsupported) }
         let options : Data.WritingOptions = []
 #else
