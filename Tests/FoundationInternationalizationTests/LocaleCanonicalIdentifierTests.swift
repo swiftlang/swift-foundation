@@ -231,8 +231,30 @@ private struct LocaleCanonicalIdentifierTests {
         #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
     }
 
-#if FOUNDATION_FRAMEWORK
-    // TODO: Enable the tests when once we are done implementing ICU locale canonicalization functions in FoundationEssentials
+    @Test(arguments: [
+        (identifier: "en", language: "en", script: nil as String?, region: nil as String?, variant: nil as String?),
+        (identifier: "en_US", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "en-US", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "pt_br", language: "pt", script: nil, region: "BR", variant: nil),
+        (identifier: "es_419", language: "es", script: nil, region: "419", variant: nil),
+        (identifier: "en_US_POSIX", language: "en", script: nil, region: "US", variant: "POSIX"),
+        (identifier: "ca_ES_VALENCIA", language: "ca", script: nil, region: "ES", variant: "VALENCIA"),
+        (identifier: "EN_us", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "sr_Latn_RS", language: "sr", script: "Latn", region: "RS", variant: nil),
+        (identifier: "eng_US", language: "en", script: nil, region: "US", variant: nil),
+        (identifier: "no-NO", language: "nb", script: nil, region: "NO", variant: nil),
+        (identifier: "zh-Hans_CN", language: "zh", script: nil, region: "CN", variant: nil),
+        (identifier: "en_TP", language: "en", script: nil, region: "TL", variant: nil),
+        (identifier: "cs_CS", language: "cs", script: nil, region: "CZ", variant: nil),
+    ])
+    func localeImplCodes(testCase: (identifier: String, language: String, script: String?, region: String?, variant: String?)) {
+        let locale = _LocaleImpl(identifier: testCase.identifier)
+        #expect(locale.languageCode == testCase.language, "language of \"\(testCase.identifier)\"")
+        #expect(locale.scriptCode == testCase.script, "script of \"\(testCase.identifier)\"")
+        #expect(locale.regionCode == testCase.region, "region of \"\(testCase.identifier)\"")
+        #expect(locale.variantCode == testCase.variant, "variant of \"\(testCase.identifier)\"")
+    }
+
     @Test(arguments: [
         ("zh_TW@COLLATION=pinyin", "zh_TW@collation=pinyin"),
         ("de_DE@currency=DEM;calendar=gregorian", "de_DE@calendar=gregorian;currency=DEM"),
@@ -246,5 +268,41 @@ private struct LocaleCanonicalIdentifierTests {
         let actual = Locale._canonicalLocaleIdentifier(from: testCase.identifier)
         #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
     }
-#endif
+
+    // The expected values are the ICU identifiers of the tags.
+    @Test(arguments: [
+        (tag: "en-US-u-ca-chinese", expected: "en_US@calendar=chinese"),
+        (tag: "EN-us-U-CA-Chinese", expected: "en_US@calendar=chinese"),
+        (tag: "en-US-u-nu-thai-ca-chinese", expected: "en_US@calendar=chinese;numbers=thai"),
+        (tag: "en-US-u-ca-islamic-civil-hc-h23", expected: "en_US@calendar=islamic-civil;hours=h23"),
+        (tag: "de-u-co-phonebk-ka-shifted", expected: "de@colalternate=shifted;collation=phonebook"),
+        (tag: "en-u-kn", expected: "en@colnumeric=yes"),
+        (tag: "en-u-kn-true", expected: "en@colnumeric=yes"),
+        (tag: "en-u-ms-uksystem", expected: "en@measure=imperial"),
+        (tag: "en-US-u-va-posix", expected: "en_US_POSIX"),
+        (tag: "en-US-1996-u-va-posix", expected: "en_US_1996@va=posix"),
+        (tag: "en-US-t-fr-u-nu-thai", expected: "en_US@numbers=thai;t=fr"),
+        (tag: "fr-FR-1606nict-u-ca-gregory-x-test", expected: "fr_FR_1606NICT@calendar=gregorian;x=test"),
+        (tag: "zh-cmn-CH-u-co-pinyin", expected: "zh_CH@collation=pinyin"),
+        (tag: "zh-Hans-CN-u-nu-hanidec", expected: "zh_Hans_CN@numbers=hanidec"),
+        (tag: "und-US-u-ca-gregory", expected: "_US@calendar=gregorian"),
+        (tag: "und-u-ca-gregory", expected: "und@calendar=gregorian"),
+        (tag: "und-u-attr-x-private", expected: "und@x=private"),
+        (tag: "de-CH-1901-x-private", expected: "de_CH@x=private"),
+        // "_" is a separator, and a tag can start with "x".
+        (tag: "en_US-u-ca-chinese", expected: "en_US@calendar=chinese"),
+        (tag: "x-private", expected: "@x=private"),
+        (tag: "x-private-u-ca-chinese", expected: "@x=private-u-ca-chinese"),
+        (tag: "x-foo_bar", expected: "@x=foo-bar"),
+        (tag: "x_foo", expected: "@x=foo"),
+    ])
+    func languageTag(testCase: (tag: String, expected: String)) {
+        #expect(Locale.CanonicalizedIdentifier(languageTag: testCase.tag)?.icuIdentifier == testCase.expected, "tag \"\(testCase.tag)\"")
+    }
+
+    // `init?(languageTag:)` returns `nil` for these identifiers, because they have nothing to convert.
+    @Test(arguments: ["en-US", "en", "en_US@calendar=chinese", "en_US_POSIX", "i-klingon"])
+    func languageTagWithNothingToConvert(identifier: String) {
+        #expect(Locale.CanonicalizedIdentifier(languageTag: identifier) == nil, "identifier \"\(identifier)\"")
+    }
 }
