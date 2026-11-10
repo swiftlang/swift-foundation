@@ -15,7 +15,11 @@
 import Testing
 import Foundation
 
+#if canImport(FoundationEssentials)
 @testable import FoundationEssentials
+#else
+@testable import Foundation
+#endif
 
 @Suite struct ProcessInfoCoreCountTests {
     private func file(with contents: String) throws -> URL {
