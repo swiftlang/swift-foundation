@@ -16,6 +16,8 @@ import Testing
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif os(WASI)
+import WASILibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
@@ -104,7 +106,7 @@ private final class DataIOTests {
         #expect(readData == slice)
     }
 
-    #if !os(WASI)
+    #if !os(Emscripten)
     // Atomic writing is a very different code path
     @Test func readWriteAtomic() throws {
         // Perform an atomic write to a file that does not exist
@@ -114,6 +116,55 @@ private final class DataIOTests {
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
     }
     #endif
+
+#if os(WASI)
+    @Test func atomicWriteInDestination() throws {
+        // Only the destination directory needs to be accessible, including in a WASI sandbox.
+        let manager = FileManager.default
+        let directory = URL(filePath: manager.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
+        try manager.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? manager.removeItem(at: directory) }
+
+        let destination = directory.appendingPathComponent("data")
+        try Data().write(to: destination, options: .atomic)
+        #expect(try Data(contentsOf: destination).isEmpty)
+
+        let initial = Data("initial".utf8)
+        try initial.write(to: destination, options: .atomic)
+        let fd = destination.path.withCString { open($0, WASILibc.O_RDONLY) }
+        try #require(fd >= 0)
+        defer { close(fd) }
+
+        let replacement = Data("replacement".utf8)
+        try replacement.write(to: destination, options: .atomic)
+        #expect(try Data(contentsOf: destination) == replacement)
+        // An open reader must retain the original contents after atomic replacement.
+        var original = Data(count: initial.count)
+        let count = original.withUnsafeMutableBytes { read(fd, $0.baseAddress, $0.count) }
+        #expect(count == initial.count)
+        #expect(original == initial)
+        #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
+    }
+
+    @Test func atomicWriteFailureCleansUp() throws {
+        let manager = FileManager.default
+        let directory = URL(filePath: manager.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
+        let destination = directory.appendingPathComponent("destination")
+        try manager.createDirectory(at: destination, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: directory) }
+
+        let sentinel = destination.appendingPathComponent("sentinel")
+        let initial = Data("keep".utf8)
+        try initial.write(to: sentinel)
+
+        // A file cannot replace a nonempty directory; its temporary sibling must be removed.
+        #expect(throws: CocoaError.self) {
+            try Data("replacement".utf8).write(to: destination, options: .atomic)
+        }
+        #expect(try Data(contentsOf: sentinel) == initial)
+        #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["destination"])
+    }
+#endif
 
 #if os(Linux) && FOUNDATION_EXIT_TESTS
     @Test(.enabled(if: geteuid() != 0, "Root bypasses directory search permissions"))
@@ -276,6 +327,8 @@ private final class DataIOTests {
         #expect(readData == data)
     }
 
+#if !os(WASI) && !os(Emscripten)
+    // WASI and Emscripten do not support POSIX permissions.
     // Atomic writes must succeed when the destination is read-only.
     // On POSIX this is the behavior of rename(2). On Windows, SetFileInformationByHandle with FileRenameInfoEx returns ERROR_ACCESS_DENIED for a FILE_ATTRIBUTE_READONLY destination even with FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS. So the read-only attribute is cleared and the rename is retried.
     // The resulting file retains the read-only attribute. (Not yet on Windows).
@@ -302,6 +355,7 @@ private final class DataIOTests {
         #expect(mode == 0o400)
 #endif
     }
+#endif
 }
 
 extension LargeDataTests {
