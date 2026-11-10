@@ -22,7 +22,7 @@ import Testing
 @Suite("Fixed Month Calendar")
 private struct FixedMonthCalendarTests {
 
-    private static let identifiers: [Calendar.Identifier] = [.coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem, .persian, .indian]
+    private static let identifiers: [Calendar.Identifier] = [.coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem, .persian, .indian, .islamicCivil, .islamicTabular, .islamicUmmAlQura]
 
     private static func calendar(_ identifier: Calendar.Identifier, timeZone: TimeZone = .gmt, firstWeekday: Int = 1, minimumDays: Int = 1) -> _CalendarFixedMonth {
         _CalendarFixedMonth(identifier: identifier, timeZone: timeZone, locale: nil, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDays, gregorianStartDate: nil)
@@ -130,6 +130,42 @@ private struct FixedMonthCalendarTests {
         #expect(date == Self.date((gregorianYear, 3, 20), hour: 0))
     }
 
+    // In each cycle of 30 years, the years 2, 5, 7, 10, 13, 16, 18, 21, 24, 26 and 29 have 355 days, and the other years have 354.
+    @Test(arguments: [Calendar.Identifier.islamicCivil, .islamicTabular])
+    func islamicLeapYearsFollowTheCycle(_ identifier: Calendar.Identifier) throws {
+        let calendar = Self.calendar(identifier)
+        let leapYearsOfCycle: Set<Int> = [2, 5, 7, 10, 13, 16, 18, 21, 24, 26, 29]
+        var wrong: [Int] = []
+        for year in 1...3000 {
+            let date = try #require(calendar.date(from: DateComponents(year: year, month: 1, day: 1, hour: 12)))
+            let length = try #require(calendar.range(of: .day, in: .year, for: date)).count
+            if length != (leapYearsOfCycle.contains((year - 1) % 30 + 1) ? 355 : 354) { wrong.append(year) }
+        }
+        #expect(wrong.isEmpty, "first wrong years: \(wrong.prefix(3))")
+    }
+
+    // The tabular calendar starts one day before the civil one, so the same year, month and day is one day earlier.
+    @Test(arguments: [(1, 1, 1), (1447, 9, 1), (1448, 12, 29), (3000, 6, 15)])
+    func islamicTabularIsOneDayBeforeCivil(_ year: Int, _ month: Int, _ day: Int) throws {
+        let components = DateComponents(year: year, month: month, day: day, hour: 12)
+        let civil = try #require(Self.calendar(.islamicCivil).date(from: components))
+        let tabular = try #require(Self.calendar(.islamicTabular).date(from: components))
+        #expect(civil.timeIntervalSince(tabular) == 86400)
+    }
+
+    // In the Umm al-Qura table, the last month of each year ends on the day before the next year starts. A wrong month length or a wrong year start in the table breaks this.
+    @Test func ummAlQuraLastMonthEndsBeforeTheNextYear() throws {
+        let calendar = Self.calendar(.islamicUmmAlQura)
+        var wrong: [Int] = []
+        for year in 1299...1600 {
+            let lastMonth = try #require(calendar.date(from: DateComponents(year: year, month: 12, day: 1, hour: 12)))
+            let nextYear = try #require(calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1, hour: 12)))
+            let length = try #require(calendar.range(of: .day, in: .month, for: lastMonth)).count
+            if calendar.dateComponents(Calendar.ComponentSet([.day]), from: lastMonth, to: nextYear).day != length { wrong.append(year) }
+        }
+        #expect(wrong.isEmpty, "first wrong years: \(wrong.prefix(3))")
+    }
+
     // MARK: Building a date
 
     @Test(arguments: lenientCases)
@@ -190,7 +226,7 @@ private struct FixedMonthCalendarTests {
 
 #if !FOUNDATION_FRAMEWORK
     // In the package build, Calendar(identifier:) uses this class for these identifiers. The framework build leaves the routing off for now.
-    @Test(arguments: [Calendar.Identifier.coptic, .ethiopicAmeteMihret, .persian, .indian])
+    @Test(arguments: [Calendar.Identifier.coptic, .ethiopicAmeteMihret, .persian, .indian, .islamicCivil, .islamicTabular, .islamicUmmAlQura])
     func identifierUsesTheClass(_ identifier: Calendar.Identifier) throws {
         let type = try #require(_calendarClass(identifier: identifier))
         #expect(ObjectIdentifier(type) == ObjectIdentifier(_CalendarFixedMonth.self))
@@ -241,6 +277,22 @@ private struct FixedMonthCalendarTests {
         let indian = Self.calendar(.indian)
         #expect(indian.dateInterval(of: .era, for: today) == DateInterval(start: Self.date((79, 3, 22), hour: 0), duration: maximum))
         #expect(indian.dateInterval(of: .era, for: Self.date(rataDie: 1)) == nil)
+
+        let civil = Self.calendar(.islamicCivil)
+        #expect(civil.dateInterval(of: .era, for: today) == DateInterval(start: Self.date(rataDie: 227_015, hour: 0), duration: maximum))
+        #expect(civil.dateInterval(of: .era, for: Self.date(rataDie: 227_100)) == DateInterval(start: Self.date(rataDie: 227_015, hour: 0), duration: maximum))
+        #expect(civil.dateInterval(of: .era, for: Self.date(rataDie: 100_000)) == nil)
+        #expect(civil.ordinality(of: .day, in: .era, for: Self.date(rataDie: 100_000)) == nil)
+
+        let tabular = Self.calendar(.islamicTabular)
+        #expect(tabular.dateInterval(of: .era, for: today) == DateInterval(start: Self.date(rataDie: 227_014, hour: 0), duration: maximum))
+        #expect(tabular.dateInterval(of: .era, for: Self.date(rataDie: 100_000)) == nil)
+        #expect(tabular.ordinality(of: .day, in: .era, for: Self.date(rataDie: 100_000)) == nil)
+
+        // The era starts on the first day of year 1, 622-07-19, as for civil. ICU starts its Umm al-Qura era one day earlier, on the last day of year 0, so its counts in `.era` can differ by one.
+        let ummAlQura = Self.calendar(.islamicUmmAlQura)
+        #expect(ummAlQura.dateInterval(of: .era, for: today) == DateInterval(start: Self.date(rataDie: 227_015, hour: 0), duration: maximum))
+        #expect(ummAlQura.dateInterval(of: .era, for: Self.date(rataDie: 100_000)) == nil)
     }
 
     // MARK: Differences
@@ -372,7 +424,7 @@ private struct FixedMonthCalendarTests {
     // MARK: Day of year
 
     // The date is 2022-08-22 22:02:38 in GMT. The day of the year counts like the day, and the hour, minute and second count inside that day.
-    @Test(arguments: [(Calendar.Identifier.coptic, 346), (.ethiopicAmeteMihret, 346), (.ethiopicAmeteAlem, 346), (.persian, 155), (.indian, 154)])
+    @Test(arguments: [(Calendar.Identifier.coptic, 346), (.ethiopicAmeteMihret, 346), (.ethiopicAmeteAlem, 346), (.persian, 155), (.indian, 154), (.islamicCivil, 24), (.islamicTabular, 25), (.islamicUmmAlQura, 24)])
     func dayOfYearOrdinality(_ identifier: Calendar.Identifier, _ dayOfYear: Int) {
         let calendar = Self.calendar(identifier)
         let date = Self.date((2022, 8, 22), hour: 22) + 158
@@ -458,6 +510,9 @@ private struct FixedMonthCalendarTests {
         (.persian, 1, 1..<6, 1..<7),
         (.persian, 4, 1..<5, 0..<6),
         (.indian, 7, 1..<5, 0..<6),
+        (.islamicCivil, 1, 1..<6, 1..<7),
+        (.islamicCivil, 4, 1..<5, 0..<6),
+        (.islamicTabular, 7, 1..<5, 0..<6),
     ])
     func weekOfMonthLimits(_ identifier: Calendar.Identifier, _ minimumDays: Int, _ minimum: Range<Int>, _ maximum: Range<Int>) {
         let calendar = Self.calendar(identifier, minimumDays: minimumDays)
@@ -479,7 +534,7 @@ private struct FixedMonthCalendarTests {
     }
 
     // The week in the era, checked against a count of the days from the first day of the era.
-    @Test(arguments: [(Calendar.Identifier.coptic, 103_605), (.persian, 226_895), (.indian, 28_570)], [(1, 1), (2, 4), (7, 1), (4, 7)])
+    @Test(arguments: [(Calendar.Identifier.coptic, 103_605), (.persian, 226_895), (.indian, 28_570), (.islamicCivil, 227_015), (.islamicTabular, 227_014), (.islamicUmmAlQura, 227_015)], [(1, 1), (2, 4), (7, 1), (4, 7)])
     func weekInEra(_ calendarAndFirstDay: (Calendar.Identifier, Int), _ week: (firstWeekday: Int, minimumDays: Int)) {
         let (identifier, firstDay) = calendarAndFirstDay
         let calendar = Self.calendar(identifier, firstWeekday: week.firstWeekday, minimumDays: week.minimumDays)
@@ -884,6 +939,16 @@ private let knownDates: [KnownDate] = [
         KnownDate(.indian, 1800, 1, 1, 12, firstWeekday: 2, minimumDays: 4, era: 0, year: 1721, month: 10, day: 11, dayOfYear: 286, weekday: 4, weekOfYear: 41, yearForWeekOfYear: 1721, weekOfMonth: 2, weekdayOrdinal: 2),
         KnownDate(.indian, 1900, 9, 12, 6, firstWeekday: 2, minimumDays: 4, era: 0, year: 1822, month: 6, day: 21, dayOfYear: 175, weekday: 4, weekOfYear: 26, yearForWeekOfYear: 1822, weekOfMonth: 4, weekdayOrdinal: 3),
         KnownDate(.indian, 2124, 3, 20, 12, firstWeekday: 2, minimumDays: 4, era: 0, year: 2045, month: 12, day: 30, dayOfYear: 365, weekday: 2, weekOfYear: 1, yearForWeekOfYear: 2046, weekOfMonth: 5, weekdayOrdinal: 5),
+        KnownDate(.islamicCivil, 2026, 6, 16, 12, firstWeekday: 2, minimumDays: 4, era: 0, year: 1447, month: 12, day: 30, dayOfYear: 355, weekday: 3, weekOfYear: 1, yearForWeekOfYear: 1448, weekOfMonth: 5, weekdayOrdinal: 5),
+        KnownDate(.islamicCivil, 2100, 3, 1, 12, firstWeekday: 2, minimumDays: 4, era: 0, year: 1523, month: 12, day: 19, dayOfYear: 344, weekday: 2, weekOfYear: 50, yearForWeekOfYear: 1523, weekOfMonth: 4, weekdayOrdinal: 3),
+        KnownDate(.islamicTabular, 2026, 2, 18, 12, firstWeekday: 1, minimumDays: 1, era: 0, year: 1447, month: 9, day: 2, dayOfYear: 238, weekday: 4, weekOfYear: 35, yearForWeekOfYear: 1447, weekOfMonth: 1, weekdayOrdinal: 1),
+        KnownDate(.islamicTabular, 2026, 10, 7, 12, firstWeekday: 1, minimumDays: 1, era: 0, year: 1448, month: 4, day: 25, dayOfYear: 114, weekday: 4, weekOfYear: 17, yearForWeekOfYear: 1448, weekOfMonth: 4, weekdayOrdinal: 4),
+        KnownDate(.islamicUmmAlQura, 2026, 2, 18, 12, firstWeekday: 1, minimumDays: 1, era: 0, year: 1447, month: 9, day: 1, dayOfYear: 238, weekday: 4, weekOfYear: 35, yearForWeekOfYear: 1447, weekOfMonth: 1, weekdayOrdinal: 1),
+        KnownDate(.islamicUmmAlQura, 2026, 10, 7, 12, firstWeekday: 1, minimumDays: 1, era: 0, year: 1448, month: 4, day: 26, dayOfYear: 114, weekday: 4, weekOfYear: 17, yearForWeekOfYear: 1448, weekOfMonth: 5, weekdayOrdinal: 4),
+        KnownDate(.islamicUmmAlQura, 1900, 9, 12, 6, firstWeekday: 1, minimumDays: 1, era: 0, year: 1318, month: 5, day: 17, dayOfYear: 136, weekday: 4, weekOfYear: 20, yearForWeekOfYear: 1318, weekOfMonth: 3, weekdayOrdinal: 3),
+        KnownDate(.islamicUmmAlQura, 622, 7, 19, 0, firstWeekday: 1, minimumDays: 1, era: 0, year: 1, month: 1, day: 1, dayOfYear: 1, weekday: 6, weekOfYear: 1, yearForWeekOfYear: 1, weekOfMonth: 1, weekdayOrdinal: 1),
+        KnownDate(.islamicUmmAlQura, 2026, 2, 18, 23, firstWeekday: 2, minimumDays: 4, era: 0, year: 1447, month: 9, day: 1, dayOfYear: 238, weekday: 4, weekOfYear: 35, yearForWeekOfYear: 1447, weekOfMonth: 1, weekdayOrdinal: 1),
+        KnownDate(.islamicUmmAlQura, 2100, 3, 1, 12, firstWeekday: 2, minimumDays: 4, era: 0, year: 1523, month: 12, day: 19, dayOfYear: 344, weekday: 2, weekOfYear: 50, yearForWeekOfYear: 1523, weekOfMonth: 4, weekdayOrdinal: 3),
 ]
 
 private let yearStarts: [YearStart] = [
@@ -902,6 +967,18 @@ private let yearStarts: [YearStart] = [
         YearStart(.persian, era: 0, year: 2987, gregorian: (3608, 3, 20)),
         YearStart(.indian, era: 0, year: 1948, gregorian: (2026, 3, 22)),
         YearStart(.indian, era: 0, year: 1947, gregorian: (2025, 3, 22)),
+        YearStart(.islamicCivil, era: 0, year: 1446, gregorian: (2024, 7, 8)),
+        YearStart(.islamicCivil, era: 0, year: 1447, gregorian: (2025, 6, 27)),
+        YearStart(.islamicCivil, era: 0, year: -1, gregorian: (620, 8, 9)),
+        YearStart(.islamicTabular, era: 0, year: 1, gregorian: (622, 7, 18)),
+        YearStart(.islamicTabular, era: 0, year: 1446, gregorian: (2024, 7, 7)),
+        YearStart(.islamicTabular, era: 0, year: -100, gregorian: (524, 7, 20)),
+        YearStart(.islamicUmmAlQura, era: 0, year: 1, gregorian: (622, 7, 19)),
+        YearStart(.islamicUmmAlQura, era: 0, year: 1299, gregorian: (1881, 11, 23)),
+        YearStart(.islamicUmmAlQura, era: 0, year: 1300, gregorian: (1882, 11, 12)),
+        YearStart(.islamicUmmAlQura, era: 0, year: 1447, gregorian: (2025, 6, 26)),
+        YearStart(.islamicUmmAlQura, era: 0, year: 1448, gregorian: (2026, 6, 16)),
+        YearStart(.islamicUmmAlQura, era: 0, year: 1600, gregorian: (2173, 12, 7)),
 ]
 
 private let monthLengths: [MonthLengths] = [
@@ -916,6 +993,15 @@ private let monthLengths: [MonthLengths] = [
         MonthLengths(.indian, era: 0, year: 1948, lengths: [30, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30], yearLength: 365),
         MonthLengths(.indian, era: 0, year: 1946, lengths: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30], yearLength: 366),
         MonthLengths(.indian, era: 0, year: 1947, lengths: [30, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 30], yearLength: 365),
+        MonthLengths(.islamicCivil, era: 0, year: 1448, lengths: [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29], yearLength: 354),
+        MonthLengths(.islamicTabular, era: 0, year: 1447, lengths: [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 30], yearLength: 355),
+        MonthLengths(.islamicTabular, era: 0, year: 1448, lengths: [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29], yearLength: 354),
+        MonthLengths(.islamicUmmAlQura, era: 0, year: 1299, lengths: [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29], yearLength: 354),
+        MonthLengths(.islamicUmmAlQura, era: 0, year: 1300, lengths: [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29], yearLength: 354),
+        MonthLengths(.islamicUmmAlQura, era: 0, year: 1447, lengths: [30, 29, 30, 30, 30, 29, 30, 29, 30, 29, 30, 29], yearLength: 355),
+        MonthLengths(.islamicUmmAlQura, era: 0, year: 1448, lengths: [29, 30, 29, 30, 30, 29, 30, 30, 29, 30, 29, 30], yearLength: 355),
+        MonthLengths(.islamicUmmAlQura, era: 0, year: 1600, lengths: [29, 29, 30, 29, 30, 29, 29, 30, 30, 30, 29, 30], yearLength: 354),
+        MonthLengths(.islamicUmmAlQura, era: 0, year: 1601, lengths: [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29], yearLength: 354),
 ]
 
 private let rangeCases: [RangeCase] = [
@@ -924,6 +1010,9 @@ private let rangeCases: [RangeCase] = [
         RangeCase(.ethiopicAmeteAlem, [(.era, 0..<1, 0..<1), (.year, 1..<5000001, 1..<5000001), (.month, 1..<14, 1..<14), (.day, 1..<6, 1..<31), (.weekday, 1..<8, 1..<8), (.weekdayOrdinal, -1..<2, -1..<6), (.quarter, 1..<5, 1..<5), (.weekOfMonth, 1..<2, 1..<7), (.weekOfYear, 1..<53, 1..<54), (.yearForWeekOfYear, -5000000..<5000001, -5000000..<5000001), (.dayOfYear, 1..<366, 1..<367), (.hour, 0..<24, 0..<24), (.minute, 0..<60, 0..<60), (.second, 0..<60, 0..<60), (.nanosecond, 0..<1000000000, 0..<1000000000), (.isLeapMonth, 0..<1, 0..<1)]),
         RangeCase(.persian, [(.era, 0..<1, 0..<1), (.year, -5000000..<5000001, -5000000..<5000001), (.month, 1..<13, 1..<13), (.day, 1..<30, 1..<32), (.weekday, 1..<8, 1..<8), (.weekdayOrdinal, 1..<6, 1..<6), (.quarter, 1..<5, 1..<5), (.weekOfMonth, 1..<6, 1..<7), (.weekOfYear, 1..<53, 1..<54), (.yearForWeekOfYear, -5000000..<5000001, -5000000..<5000001), (.dayOfYear, 1..<366, 1..<367), (.hour, 0..<24, 0..<24), (.minute, 0..<60, 0..<60), (.second, 0..<60, 0..<60), (.nanosecond, 0..<1000000000, 0..<1000000000), (.isLeapMonth, 0..<1, 0..<1)]),
         RangeCase(.indian, [(.era, 0..<1, 0..<1), (.year, -5000000..<5000001, -5000000..<5000001), (.month, 1..<13, 1..<13), (.day, 1..<31, 1..<32), (.weekday, 1..<8, 1..<8), (.weekdayOrdinal, -1..<6, -1..<6), (.quarter, 1..<5, 1..<5), (.weekOfMonth, 1..<6, 1..<7), (.weekOfYear, 1..<53, 1..<54), (.yearForWeekOfYear, -5000000..<5000001, -5000000..<5000001), (.dayOfYear, 1..<366, 1..<367), (.hour, 0..<24, 0..<24), (.minute, 0..<60, 0..<60), (.second, 0..<60, 0..<60), (.nanosecond, 0..<1000000000, 0..<1000000000), (.isLeapMonth, 0..<1, 0..<1)]),
+        RangeCase(.islamicCivil, [(.era, 0..<1, 0..<1), (.year, 1..<5000001, 1..<5000001), (.month, 1..<13, 1..<13), (.day, 1..<30, 1..<32), (.weekday, 1..<8, 1..<8), (.weekdayOrdinal, -1..<6, -1..<6), (.quarter, 1..<5, 1..<5), (.weekOfMonth, 1..<6, 1..<7), (.weekOfYear, 1..<51, 1..<52), (.yearForWeekOfYear, 1..<5000001, 1..<5000001), (.dayOfYear, 1..<355, 1..<356), (.hour, 0..<24, 0..<24), (.minute, 0..<60, 0..<60), (.second, 0..<60, 0..<60), (.nanosecond, 0..<1000000000, 0..<1000000000), (.isLeapMonth, 0..<1, 0..<1)]),
+        RangeCase(.islamicTabular, [(.era, 0..<1, 0..<1), (.year, 1..<5000001, 1..<5000001), (.month, 1..<13, 1..<13), (.day, 1..<30, 1..<32), (.weekday, 1..<8, 1..<8), (.weekdayOrdinal, -1..<6, -1..<6), (.quarter, 1..<5, 1..<5), (.weekOfMonth, 1..<6, 1..<7), (.weekOfYear, 1..<51, 1..<52), (.yearForWeekOfYear, 1..<5000001, 1..<5000001), (.dayOfYear, 1..<355, 1..<356), (.hour, 0..<24, 0..<24), (.minute, 0..<60, 0..<60), (.second, 0..<60, 0..<60), (.nanosecond, 0..<1000000000, 0..<1000000000), (.isLeapMonth, 0..<1, 0..<1)]),
+        RangeCase(.islamicUmmAlQura, [(.era, 0..<1, 0..<1), (.year, 1..<5000001, 1..<5000001), (.month, 1..<13, 1..<13), (.day, 1..<30, 1..<32), (.weekday, 1..<8, 1..<8), (.weekdayOrdinal, -1..<6, -1..<6), (.quarter, 1..<5, 1..<5), (.weekOfMonth, 1..<6, 1..<7), (.weekOfYear, 1..<51, 1..<52), (.yearForWeekOfYear, 1..<5000001, 1..<5000001), (.dayOfYear, 1..<355, 1..<356), (.hour, 0..<24, 0..<24), (.minute, 0..<60, 0..<60), (.second, 0..<60, 0..<60), (.nanosecond, 0..<1000000000, 0..<1000000000), (.isLeapMonth, 0..<1, 0..<1)]),
 ]
 
 // A month or a day out of range carries into the next or the previous one. A missing field takes the first value.
@@ -968,6 +1057,15 @@ private let lenientCases: [LenientCase] = [
         LenientCase(.indian, era: 0, year: 1948, month: 1, day: 30, expected: (0, 1948, 1, 30)),
         LenientCase(.indian, era: 0, year: 1946, month: 12, day: 30, expected: (0, 1946, 12, 30)),
         LenientCase(.indian, era: 0, year: 1946, month: 7, day: 31, expected: (0, 1946, 8, 1)),
+        LenientCase(.islamicCivil, era: 0, year: 1448, month: 1, day: 0, expected: (0, 1447, 12, 30)),
+        LenientCase(.islamicCivil, era: 5, year: 1448, month: 3, day: 4, expected: (0, 1448, 3, 4)),
+        LenientCase(.islamicTabular, era: 0, year: 1448, month: 0, day: 1, expected: (0, 1447, 12, 1)),
+        LenientCase(.islamicTabular, era: 0, year: 1448, month: 1, day: 0, expected: (0, 1447, 12, 30)),
+        LenientCase(.islamicTabular, era: 5, year: 1448, month: 3, day: 4, expected: (0, 1448, 3, 4)),
+        LenientCase(.islamicUmmAlQura, era: 0, year: 1448, month: 2, day: 30, expected: (0, 1448, 2, 30)),
+        LenientCase(.islamicUmmAlQura, era: 0, year: 1447, month: 12, day: 30, expected: (0, 1448, 1, 1)),
+        LenientCase(.islamicUmmAlQura, era: 0, year: 1448, month: 12, day: 30, expected: (0, 1448, 12, 30)),
+        LenientCase(.islamicUmmAlQura, era: 0, year: 1448, month: 1, day: 0, expected: (0, 1447, 12, 29)),
 ]
 
 // The ways to name a day other than year, month and day.
@@ -992,6 +1090,14 @@ private let formCases: [FormCase] = [
         FormCase(.indian, era: 0, year: 1948, month: 4, hour: 12, weekday: 3, weekdayOrdinal: -1, expected: (0, 1948, 4, 30)),
         FormCase(.indian, era: 0, year: 1948, hour: 12, weekday: 1, weekOfYear: 53, expected: (0, 1948, 12, 30)),
         FormCase(.indian, hour: 12, weekday: 7, weekOfYear: 1, yearForWeekOfYear: 1946, expected: (0, 1946, 1, 3)),
+        FormCase(.islamicCivil, hour: 12, weekday: 4, weekOfYear: 0, yearForWeekOfYear: 1448, expected: (0, 1447, 12, 24)),
+        FormCase(.islamicCivil, era: 0, year: 1448, hour: 12, weekday: 1, weekOfYear: 51, expected: (0, 1448, 12, 23)),
+        FormCase(.islamicTabular, era: 0, year: 1448, month: 9, hour: 12, weekday: 6, weekdayOrdinal: 2, expected: (0, 1448, 9, 13)),
+        FormCase(.islamicTabular, hour: 12, weekday: 4, weekOfYear: 5, yearForWeekOfYear: 1448, expected: (0, 1448, 1, 30)),
+        FormCase(.islamicUmmAlQura, era: 0, year: 1447, hour: 12, dayOfYear: 355, expected: (0, 1447, 12, 29)),
+        FormCase(.islamicUmmAlQura, era: 0, year: 1448, month: 2, hour: 12, weekday: 3, weekOfMonth: 5, expected: (0, 1448, 2, 28)),
+        FormCase(.islamicUmmAlQura, hour: 12, weekday: 4, weekOfYear: 5, yearForWeekOfYear: 1448, expected: (0, 1448, 2, 1)),
+        FormCase(.islamicUmmAlQura, hour: 12, weekday: 4, weekOfYear: 0, yearForWeekOfYear: 1448, expected: (0, 1447, 12, 24)),
 ]
 
 private let addCases: [AddCase] = [
@@ -1055,6 +1161,20 @@ private let addCases: [AddCase] = [
         AddCase(.coptic, (0, 1, 13, 5), .year, -10, wrapping: true, expected: (0, 11, 13, 5, 12)),
         AddCase(.ethiopicAmeteMihret, (1, 1, 1, 1), .year, -1, wrapping: false, expected: (0, 5500, 1, 1, 12)),
         AddCase(.ethiopicAmeteMihret, (0, 5500, 13, 5), .day, 1, wrapping: true, expected: (0, 5500, 13, 1, 12)),
+        AddCase(.islamicCivil, (0, 1447, 12, 30), .year, 1, wrapping: false, expected: (0, 1448, 12, 29, 12)),
+        AddCase(.islamicCivil, (0, 1447, 12, 30), .day, 1, wrapping: true, expected: (0, 1447, 12, 1, 12)),
+        AddCase(.islamicCivil, (0, 1447, 12, 30), .dayOfYear, 1, wrapping: true, expected: (0, 1447, 1, 1, 12)),
+        AddCase(.islamicCivil, (0, 1448, 1, 30), .month, -2, wrapping: true, expected: (0, 1448, 11, 30, 12)),
+        AddCase(.islamicTabular, (0, 1447, 12, 30), .year, 1, wrapping: false, expected: (0, 1448, 12, 29, 12)),
+        AddCase(.islamicTabular, (0, 1447, 12, 30), .month, 1, wrapping: false, expected: (0, 1448, 1, 30, 12)),
+        AddCase(.islamicTabular, (0, 1447, 12, 30), .dayOfYear, 1, wrapping: true, expected: (0, 1447, 1, 1, 12)),
+        AddCase(.islamicTabular, (0, 1447, 12, 30), .yearForWeekOfYear, 1, wrapping: false, expected: (0, 1448, 12, 25, 12)),
+        AddCase(.islamicTabular, (0, 1448, 1, 30), .month, -2, wrapping: true, expected: (0, 1448, 11, 30, 12)),
+        AddCase(.islamicUmmAlQura, (0, 1447, 12, 30), .month, 1, wrapping: false, expected: (0, 1448, 2, 1, 12)),
+        AddCase(.islamicUmmAlQura, (0, 1447, 12, 30), .weekOfYear, -2, wrapping: true, expected: (0, 1448, 12, 19, 12)),
+        AddCase(.islamicUmmAlQura, (0, 1447, 12, 30), .yearForWeekOfYear, 1, wrapping: false, expected: (0, 1449, 1, 3, 12)),
+        AddCase(.islamicUmmAlQura, (0, 1448, 1, 30), .month, -2, wrapping: true, expected: (0, 1448, 12, 1, 12)),
+        AddCase(.islamicUmmAlQura, (0, 1448, 9, 1), .yearForWeekOfYear, -2, wrapping: false, expected: (0, 1446, 9, 3, 12)),
 ]
 
 private let intervalCases: [IntervalCase] = [
@@ -1078,6 +1198,13 @@ private let intervalCases: [IntervalCase] = [
         IntervalCase(.indian, (2026, 10, 7), .month, start: (2026, 9, 23), end: (2026, 10, 23)),
         IntervalCase(.indian, (2027, 9, 9), .quarter, start: (2027, 6, 22), end: (2027, 9, 23)),
         IntervalCase(.indian, (2027, 9, 9), .month, start: (2027, 8, 23), end: (2027, 9, 23)),
+        IntervalCase(.islamicCivil, (2026, 10, 7), .year, start: (2026, 6, 17), end: (2027, 6, 6)),
+        IntervalCase(.islamicCivil, (2026, 10, 7), .month, start: (2026, 9, 14), end: (2026, 10, 13)),
+        IntervalCase(.islamicTabular, (2026, 10, 7), .year, start: (2026, 6, 16), end: (2027, 6, 5)),
+        IntervalCase(.islamicTabular, (2026, 10, 7), .month, start: (2026, 9, 13), end: (2026, 10, 12)),
+        IntervalCase(.islamicUmmAlQura, (2026, 10, 7), .year, start: (2026, 6, 16), end: (2027, 6, 6)),
+        IntervalCase(.islamicUmmAlQura, (2026, 10, 7), .month, start: (2026, 9, 12), end: (2026, 10, 12)),
+        IntervalCase(.islamicUmmAlQura, (2026, 2, 18), .month, start: (2026, 2, 18), end: (2026, 3, 20)),
 ]
 
 private let ordinalityCases: [OrdinalityCase] = [
@@ -1116,6 +1243,16 @@ private let ordinalityCases: [OrdinalityCase] = [
         OrdinalityCase(.indian, (2027, 2, 22), .day, in: .quarter, range: 1..<91, ordinality: 63),
         OrdinalityCase(.indian, (2026, 3, 23), .day, in: .month, range: 1..<31, ordinality: 2),
         OrdinalityCase(.indian, (2026, 3, 23), .month, in: .quarter, range: 1..<4, ordinality: 1),
+        OrdinalityCase(.islamicCivil, (2026, 10, 7), .day, in: .month, range: 1..<30, ordinality: 24),
+        OrdinalityCase(.islamicCivil, (2026, 10, 7), .day, in: .year, range: 1..<355, ordinality: 113),
+        OrdinalityCase(.islamicCivil, (2026, 10, 7), .year, in: .era, range: 1..<5000001, ordinality: 1448),
+        OrdinalityCase(.islamicTabular, (2026, 10, 7), .day, in: .month, range: 1..<30, ordinality: 25),
+        OrdinalityCase(.islamicTabular, (2026, 10, 7), .day, in: .year, range: 1..<355, ordinality: 114),
+        OrdinalityCase(.islamicTabular, (2026, 10, 7), .year, in: .era, range: 1..<5000001, ordinality: 1448),
+        OrdinalityCase(.islamicUmmAlQura, (2026, 10, 7), .day, in: .month, range: 1..<31, ordinality: 26),
+        OrdinalityCase(.islamicUmmAlQura, (2026, 10, 7), .day, in: .year, range: 1..<356, ordinality: 114),
+        OrdinalityCase(.islamicUmmAlQura, (2026, 2, 18), .day, in: .month, range: 1..<31, ordinality: 1),
+        OrdinalityCase(.islamicUmmAlQura, (2026, 2, 18), .day, in: .weekOfMonth, range: 1..<5, ordinality: 4),
 ]
 
 private let differenceCases: [DifferenceCase] = [
@@ -1144,6 +1281,14 @@ private let differenceCases: [DifferenceCase] = [
         DifferenceCase(.indian, (2026, 3, 20, 0), (2026, 3, 22, 23), [.day, .year], expected: [(.year, 0), (.day, 2)]),
         DifferenceCase(.indian, (1900, 1, 1, 1), (2026, 10, 7, 12), [.day, .era, .hour, .month, .weekOfMonth, .year], expected: [(.era, 0), (.year, 126), (.month, 9), (.weekOfMonth, 0), (.day, 4), (.hour, 11)]),
         DifferenceCase(.indian, (1900, 1, 1, 1), (2026, 10, 7, 12), [.weekOfYear, .weekday, .yearForWeekOfYear], expected: [(.yearForWeekOfYear, 126), (.weekOfYear, 40), (.weekday, 2)]),
+        DifferenceCase(.islamicCivil, (1900, 1, 1, 1), (2026, 10, 7, 12), [.day, .year], expected: [(.year, 130), (.day, 233)]),
+        DifferenceCase(.islamicCivil, (2026, 2, 18, 0), (2026, 3, 20, 23), [.day, .era, .hour, .month, .weekOfMonth, .year], expected: [(.era, 0), (.year, 0), (.month, 1), (.weekOfMonth, 0), (.day, 0), (.hour, 23)]),
+        DifferenceCase(.islamicTabular, (2024, 9, 1, 12), (2027, 9, 12, 5), [.day, .era, .hour, .month, .weekOfMonth, .year], expected: [(.era, 0), (.year, 3), (.month, 1), (.weekOfMonth, 1), (.day, 6), (.hour, 17)]),
+        DifferenceCase(.islamicTabular, (2024, 9, 1, 12), (2027, 9, 12, 5), [.weekOfYear, .weekday, .yearForWeekOfYear], expected: [(.yearForWeekOfYear, 3), (.weekOfYear, 6), (.weekday, 6)]),
+        DifferenceCase(.islamicTabular, (2027, 9, 12, 5), (2024, 9, 1, 12), [.dayOfYear, .month, .quarter, .weekdayOrdinal], expected: [(.quarter, 0), (.month, -37), (.weekdayOrdinal, 0), (.dayOfYear, -12)]),
+        DifferenceCase(.islamicTabular, (1900, 1, 1, 1), (2026, 10, 7, 12), [.day, .year], expected: [(.year, 130), (.day, 233)]),
+        DifferenceCase(.islamicUmmAlQura, (2027, 9, 12, 5), (2024, 9, 1, 12), [.dayOfYear, .month, .quarter, .weekdayOrdinal], expected: [(.quarter, 0), (.month, -37), (.weekdayOrdinal, 0), (.dayOfYear, -12)]),
+        DifferenceCase(.islamicUmmAlQura, (1900, 1, 1, 1), (2026, 10, 7, 12), [.day, .year], expected: [(.year, 130), (.day, 232)]),
 ]
 
 private let searchCases: [SearchCase] = [
@@ -1167,6 +1312,15 @@ private let searchCases: [SearchCase] = [
         SearchCase(.indian, DateComponents(day: 30), .nextTime, .backward, expected: (2026, 9, 21, 0)),
         SearchCase(.indian, DateComponents(month: 2, day: 30), .strict, .forward, expected: (2027, 5, 20, 0)),
         SearchCase(.indian, DateComponents(month: 2, day: 30), .nextTime, .forward, expected: (2027, 5, 20, 0)),
+        SearchCase(.islamicCivil, DateComponents(month: 12, day: 30), .strict, .forward, expected: (2029, 5, 14, 0)),
+        SearchCase(.islamicCivil, DateComponents(month: 12, day: 30), .nextTime, .forward, expected: (2029, 5, 14, 0)),
+        SearchCase(.islamicCivil, DateComponents(day: 30), .strict, .backward, expected: (2026, 9, 13, 0)),
+        SearchCase(.islamicTabular, DateComponents(month: 12, day: 30), .strict, .forward, expected: (2029, 5, 13, 0)),
+        SearchCase(.islamicTabular, DateComponents(day: 30), .strict, .backward, expected: (2026, 9, 12, 0)),
+        SearchCase(.islamicUmmAlQura, DateComponents(month: 12, day: 30), .strict, .forward, expected: (2027, 6, 5, 0)),
+        SearchCase(.islamicUmmAlQura, DateComponents(month: 12, day: 30), .nextTime, .forward, expected: (2027, 6, 5, 0)),
+        SearchCase(.islamicUmmAlQura, DateComponents(day: 30), .strict, .backward, expected: (2026, 5, 17, 0)),
+        SearchCase(.islamicUmmAlQura, DateComponents(month: 2, day: 30), .nextTime, .forward, expected: (2027, 8, 3, 0)),
 ]
 
 private let ancientCases: [AncientCase] = [

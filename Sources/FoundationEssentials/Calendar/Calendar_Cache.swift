@@ -43,9 +43,15 @@ internal func foundation_swift_additional_calendars_feature_enabled() -> Bool {
     // TODO: Return the runtime feature flag value, _foundation_swift_additional_calendars_feature_enabled(), once Apple adds the underscored binding.
     return false
 }
+
+internal func foundation_swift_islamic_calendars_feature_enabled() -> Bool {
+    // TODO: Return the runtime feature flag value, _foundation_swift_islamic_calendars_feature_enabled(), once Apple adds the underscored binding.
+    return false
+}
 #else
 internal func foundation_swift_calendar_feature_enabled() -> Bool { return true }
 internal func foundation_swift_additional_calendars_feature_enabled() -> Bool { return true }
+internal func foundation_swift_islamic_calendars_feature_enabled() -> Bool { return true }
 #endif
 
 func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? {
@@ -76,6 +82,14 @@ func _calendarClass(identifier: Calendar.Identifier) -> _CalendarProtocol.Type? 
                 case .vietnamese:
                     return _CalendarChinese.self
 #endif
+                default:
+                    break
+                }
+            }
+            if foundation_swift_islamic_calendars_feature_enabled() {
+                switch identifier {
+                case .islamicCivil, .islamicTabular, .islamicUmmAlQura:
+                    return _CalendarFixedMonth.self
                 default:
                     break
                 }

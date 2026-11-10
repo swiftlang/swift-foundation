@@ -755,6 +755,61 @@ func calendarBenchmarks() {
         }
     }
 
+    // Islamic tabular is civil with another first day, so civil stands for both. The test dates lie inside the Umm al-Qura table.
+    let islamicCivilCal = Calendar(identifier: .islamicCivil)
+    let islamicUmmAlQuraCal = Calendar(identifier: .islamicUmmAlQura)
+    let ramadanComponents = DateComponents(month: 9, day: 1)
+
+    Benchmark("IslamicCivilCalendar-nextThousandRamadans") { benchmark in
+        var count = 1000
+        islamicCivilCal.enumerateDates(startingAfter: arithmeticStart, matching: ramadanComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("IslamicCivilCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = islamicCivilCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("IslamicCivilCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = islamicCivilCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTrip = islamicCivilCal.date(from: components)
+            blackHole(roundTrip)
+        }
+    }
+
+    Benchmark("IslamicUmmAlQuraCalendar-nextThousandRamadans") { benchmark in
+        var count = 1000
+        islamicUmmAlQuraCal.enumerateDates(startingAfter: arithmeticStart, matching: ramadanComponents, matchingPolicy: .nextTime) { result, exactMatch, stop in
+            count -= 1
+            if count == 0 {
+                stop = true
+            }
+        }
+    }
+
+    Benchmark("IslamicUmmAlQuraCalendar-dateComponents-yearMonthDay", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = islamicUmmAlQuraCal.dateComponents([.year, .month, .day], from: date)
+            blackHole(components)
+        }
+    }
+
+    Benchmark("IslamicUmmAlQuraCalendar-roundTripDateComponents", configuration: .init(scalingFactor: .mega)) { benchmark in
+        for date in arithmeticTestDates {
+            let components = islamicUmmAlQuraCal.dateComponents([.era, .year, .month, .day], from: date)
+            let roundTrip = islamicUmmAlQuraCal.date(from: components)
+            blackHole(roundTrip)
+        }
+    }
+
     // MARK: - Gregorian-family calendars (Buddhist, Japanese, ROC)
 
     // These three share one era-table engine over `_CalendarGregorian`, so they are benchmarked against the same dates to make the relabeling cost comparable.
