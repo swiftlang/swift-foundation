@@ -191,7 +191,8 @@ public enum NumberFormatStyleConfiguration {
         /// - Parameter digits: The maximum number of significant digits to use when formatting values.
         /// - Returns: A precision that constrains formatted values to a given number of significant digits.
         public static func significantDigits(_ digits: Int) -> Self {
-            return Precision(option: .significantDigits(min: digits, max: digits))
+            let clamped = Swift.min(Swift.max(digits, validPartLength.lowerBound), validPartLength.upperBound - 1)
+            return Precision(option: .significantDigits(min: clamped, max: clamped))
         }
 
         // maxInt 2 : 1997 -> 97
@@ -236,7 +237,9 @@ public enum NumberFormatStyleConfiguration {
         ///   - fraction: The number of digits to use when formatting the fraction part of a number.
         /// - Returns: A precision that constrains formatted values a given number of digits in the integer and fraction parts.
         public static func integerAndFractionLength(integer: Int, fraction: Int) -> Self {
-            return Precision(option: .integerAndFractionalLength(minInt: integer, maxInt: integer, minFraction: fraction, maxFraction: fraction))
+            let clampedInteger = Swift.min(Swift.max(integer, validPartLength.lowerBound), validPartLength.upperBound - 1)
+            let clampedFraction = Swift.min(Swift.max(fraction, validPartLength.lowerBound), validPartLength.upperBound - 1)
+            return Precision(option: .integerAndFractionalLength(minInt: clampedInteger, maxInt: clampedInteger, minFraction: clampedFraction, maxFraction: clampedFraction))
         }
 
         /// Returns a precision that constrains formatted values to a range of allowed digits in the integer part.
@@ -253,7 +256,8 @@ public enum NumberFormatStyleConfiguration {
         /// - Parameter length: The number of digits to use when formatting the integer part of a number.
         /// - Returns: A precision that constrains formatted values to a given number of allowed digits in the integer part.
         public static func integerLength(_ length: Int) -> Self {
-            return Precision(option: .integerAndFractionalLength(minInt: length, maxInt: length, minFraction: nil, maxFraction: nil))
+            let clamped = Swift.min(Swift.max(length, validPartLength.lowerBound), validPartLength.upperBound - 1)
+            return Precision(option: .integerAndFractionalLength(minInt: clamped, maxInt: clamped, minFraction: nil, maxFraction: nil))
         }
 
         /// Returns a precision that constrains formatted values to a range of allowed digits in the fraction part.
@@ -270,7 +274,8 @@ public enum NumberFormatStyleConfiguration {
         /// - Parameter length: The number of digits to use when formatting the fraction part of a number.
         /// - Returns: A precision that constrains formatted values to a given number of allowed digits in the fraction part.
         public static func fractionLength(_ length: Int) -> Self {
-            return Precision(option: .integerAndFractionalLength(minInt: nil, maxInt: nil, minFraction: length, maxFraction: length))
+            let clamped = Swift.min(Swift.max(length, validPartLength.lowerBound), validPartLength.upperBound - 1)
+            return Precision(option: .integerAndFractionalLength(minInt: nil, maxInt: nil, minFraction: clamped, maxFraction: clamped))
         }
     }
 
