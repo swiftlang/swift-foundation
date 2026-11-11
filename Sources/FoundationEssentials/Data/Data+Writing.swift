@@ -192,6 +192,9 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
     } else {
         prefix = ".dat.nosync" + pidString + "."
     }
+    // Keep the established suffix width and filename-safe alphabet.
+    let suffixLength = 6
+    let suffixCharacters = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".utf8)
     let maxCount = 7
     for _ in 0 ..< maxCount {
 #if FOUNDATION_FRAMEWORK
@@ -243,7 +246,8 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
 #endif
 
         // Exclusive creation handles collisions without a separate existence check. Opening with the requested mode also preserves umask and file-protection semantics.
-        let template = prefix + String(UInt64.random(in: .min ... .max), radix: 16)
+        let suffix = (0..<suffixLength).map { _ in suffixCharacters.randomElement()! }
+        let template = prefix + String(decoding: suffix, as: UTF8.self)
         let result: (Int32, String)? = try template.withFileSystemRepresentation { templateFileSystemRep in
             guard let templateFileSystemRep else {
                 throw CocoaError(.fileWriteInvalidFileName)

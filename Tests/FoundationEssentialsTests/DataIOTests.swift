@@ -340,6 +340,43 @@ private final class DataIOTests {
         }
     }
 
+#if !os(Emscripten)
+    @Test func atomicReadersSeeWholeWrites() async throws {
+        let manager = FileManager.default
+        let directory = atomicTestDirectory
+        try manager.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? manager.removeItem(at: directory) }
+        let destination = directory.appendingPathComponent("data")
+        let payloadSize = 64 * 1024
+        let writesPerTask = 8
+        let readerChecks = 128
+        let payloads = (0..<4).map { Data(repeating: UInt8($0), count: payloadSize) }
+        try payloads[0].write(to: destination, options: .atomic)
+
+        // Different payloads expose truncated or mixed writes that identical concurrent writers cannot detect.
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for payload in payloads {
+                group.addTask {
+                    for _ in 0..<writesPerTask {
+                        try payload.write(to: destination, options: .atomic)
+                        await Task.yield()
+                    }
+                }
+            }
+            group.addTask {
+                for _ in 0..<readerChecks {
+                    let observed = try Data(contentsOf: destination)
+                    #expect(payloads.contains(observed))
+                    await Task.yield()
+                }
+            }
+            try await group.waitForAll()
+        }
+        #expect(payloads.contains(try Data(contentsOf: destination)))
+        #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
+    }
+#endif
+
     @Test
     func atomicWrite() async throws {
         let data = generateTestData()
