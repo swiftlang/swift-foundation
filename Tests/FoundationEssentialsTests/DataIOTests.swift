@@ -12,7 +12,15 @@
 
 import Testing
 
-#if canImport(Glibc)
+#if canImport(Android)
+import Android
+#endif
+
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Bionic)
+import Bionic
+#elseif canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
 import Musl
@@ -117,7 +125,8 @@ private final class DataIOTests {
     }
     #endif
 
-#if os(WASI)
+#if !os(Windows) && !os(Emscripten)
+    // The open-reader check uses POSIX descriptors; atomic writing is unavailable on Emscripten.
     @Test func atomicWriteInDestination() throws {
         try verifyAtomicWrite { data, destination in
             try data.write(to: destination, options: .atomic)
@@ -155,7 +164,13 @@ private final class DataIOTests {
 
         let initial = Data("initial".utf8)
         try write(initial, destination)
-        let fd = destination.path.withCString { open($0, WASILibc.O_RDONLY) }
+        #if os(WASI)
+        // FoundationEssentials also defines this flag for older WASI SDKs.
+        let readOnly = WASILibc.O_RDONLY
+        #else
+        let readOnly = O_RDONLY
+        #endif
+        let fd = destination.path.withCString { open($0, readOnly) }
         try #require(fd >= 0)
         defer { close(fd) }
 
@@ -170,6 +185,9 @@ private final class DataIOTests {
         #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
     }
 
+#endif
+
+#if !os(Emscripten)
     @Test func atomicWriteFailureCleansUp() throws {
         let manager = FileManager.default
         let directory = URL(filePath: manager.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
