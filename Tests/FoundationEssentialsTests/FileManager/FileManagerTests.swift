@@ -779,7 +779,8 @@ private struct FileManagerTests {
         }
     }
     
-    #if os(Linux)
+    // Requires Unix search permissions; Emscripten does not yet support atomic writes.
+    #if !os(Windows) && !os(WASI) && !os(Emscripten)
     @Test(.disabled(if: isUnixRoot, "Root bypasses directory search permissions"))
     func atomicWriteWithoutCWDSearch() async throws {
         try await FilePlayground {
