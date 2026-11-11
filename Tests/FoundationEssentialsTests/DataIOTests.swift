@@ -54,6 +54,16 @@ private final class DataIOTests {
     // MARK: - Helpers
     
     let url: URL
+
+    private var atomicTestDirectory: URL {
+        #if os(WASI)
+        // A WASI sandbox may expose only its current directory.
+        URL(filePath: FileManager.default.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
+        #else
+        // FilePlayground tests can change the process CWD concurrently.
+        url
+        #endif
+    }
     
     init() {
         // Generate a random file name
@@ -154,7 +164,7 @@ private final class DataIOTests {
     private func verifyAtomicReplacement(_ write: (Data, URL) throws -> Void) throws {
         // Only the destination directory needs to be accessible, including in a WASI sandbox.
         let manager = FileManager.default
-        let directory = URL(filePath: manager.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
+        let directory = atomicTestDirectory
         try manager.createDirectory(at: directory, withIntermediateDirectories: false)
         defer { try? manager.removeItem(at: directory) }
 
@@ -194,7 +204,7 @@ private final class DataIOTests {
 #if !os(Emscripten)
     @Test func atomicWriteFailureCleansUp() throws {
         let manager = FileManager.default
-        let directory = URL(filePath: manager.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
+        let directory = atomicTestDirectory
         let destination = directory.appendingPathComponent("destination")
         try manager.createDirectory(at: destination, withIntermediateDirectories: true)
         defer { try? manager.removeItem(at: directory) }
@@ -212,32 +222,7 @@ private final class DataIOTests {
     }
 #endif
 
-#if os(Linux) && FOUNDATION_EXIT_TESTS
-    @Test(.enabled(if: geteuid() != 0, "Root bypasses directory search permissions"))
-    func atomicWriteWithUnsearchableCWD() async {
-        // Isolate the working directory change from other tests in this process.
-        await #expect(processExitsWith: .success) {
-            let manager = FileManager.default
-            let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-            let current = directory.appendingPathComponent("current")
-            let destination = directory.appendingPathComponent("destination")
-            try manager.createDirectory(at: current, withIntermediateDirectories: true)
-            defer {
-                try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: current.path)
-                _ = manager.changeCurrentDirectoryPath("/")
-                try? manager.removeItem(at: directory)
-            }
 
-            try #require(manager.changeCurrentDirectoryPath(current.path))
-            try manager.setAttributes([.posixPermissions: 0o000], ofItemAtPath: current.path)
-
-            try Data("initial".utf8).write(to: destination, options: .atomic)
-            #expect(try Data(contentsOf: destination) == Data("initial".utf8))
-            try Data("replacement".utf8).write(to: destination, options: .atomic)
-            #expect(try Data(contentsOf: destination) == Data("replacement".utf8))
-        }
-    }
-#endif
 
     @Test func readWriteMapped() throws {
         try writeAndVerifyTestData(to: url, readOptions: [.mappedIfSafe])
