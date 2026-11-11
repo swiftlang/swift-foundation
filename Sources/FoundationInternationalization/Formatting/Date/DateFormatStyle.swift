@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 // MARK: Date Extensions
@@ -1633,3 +1634,5 @@ extension Date.FormatStyle.DateStyle : Codable {}
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle.TimeStyle : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

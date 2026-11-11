@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Number FormatStyle")
 private struct NumberFormatStyleTests {
     let enUSLocale = Locale(identifier: "en_US")
@@ -2297,3 +2299,5 @@ extension NumberFormatStyleTests {
         #expect(Int64.min.formatted(.currency(code: "USD").locale(enUSLocale)) == "-$9,223,372,036,854,775,808.00")
     }
 }
+
+#endif // ICU

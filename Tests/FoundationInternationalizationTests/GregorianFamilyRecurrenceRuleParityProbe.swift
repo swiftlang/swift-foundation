@@ -20,6 +20,8 @@ import Testing
 #endif
 
 /// Compares `recurrences(of:)` sequences between `_CalendarICU` and `_CalendarGregorian` for the three Gregorian-family calendars. Covers each one's era transition where it has one.
+#if ICU
+
 @Suite("Gregorian Family RecurrenceRule Parity Probe")
 private struct GregorianFamilyRecurrenceRuleParityProbe {
 
@@ -224,3 +226,5 @@ private struct GregorianFamilyRecurrenceRuleParityProbe {
         #expect(ourDates == icuDates, "across the \(boundary.boundaryLabel) boundary")
     }
 }
+
+#endif // ICU

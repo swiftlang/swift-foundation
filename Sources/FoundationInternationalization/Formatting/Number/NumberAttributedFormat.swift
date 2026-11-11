@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 extension AttributeScopes.FoundationAttributes.NumberFormatAttributes.SymbolAttribute.Symbol {
@@ -72,3 +73,5 @@ extension AttributeScopes.FoundationAttributes.MeasurementAttribute.Component {
         }
     }
 }
+
+#endif // ICU

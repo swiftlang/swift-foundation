@@ -13,6 +13,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 extension String {
     func _lowercased(with locale: Locale?) -> String {
         guard let casemap = ICU.CaseMap.caseMappingForLocale(locale?.identifier), let lowered = casemap.lowercase(self) else {
@@ -45,3 +47,5 @@ extension String {
         return uppered
     }
 }
+
+#endif // ICU

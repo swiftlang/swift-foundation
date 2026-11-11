@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 // MARK: VerbatimFormatStyle Definition
 
 #if FOUNDATION_FRAMEWORK
@@ -252,3 +254,5 @@ extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
         base.input(after: input)
     }
 }
+
+#endif // ICU

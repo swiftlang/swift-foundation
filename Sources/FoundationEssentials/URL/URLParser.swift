@@ -177,7 +177,7 @@ package protocol UIDNAHook {
     ) -> Bool
 }
 
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
 internal func _uidnaHook() -> UIDNAHook.Type? {
     UIDNAHookICU.self
 }
@@ -254,6 +254,10 @@ internal struct RFC3986Parser {
     }
 
     static func shouldPercentEncodeHost(_ host: some StringProtocol, forScheme scheme: (some StringProtocol)?) -> Bool {
+#if hasFeature(Embedded) && !ICU
+        // Always percent-encode the host if we can't access UIDNA encoding functions
+        return true
+#else
 #if !hasFeature(Embedded)
         guard _uidnaHook() != nil else {
             // Always percent-encode the host if we can't access UIDNA encoding functions
@@ -269,6 +273,7 @@ internal struct RFC3986Parser {
         }
         let lowercased = scheme.lowercased().utf8
         return schemesToPercentEncodeHost.contains { $0.elementsEqual(lowercased) }
+#endif
     }
 
     private static func percentEncodeIPLiteralHost(_ host: some StringProtocol) -> String? {
@@ -305,10 +310,12 @@ internal struct RFC3986Parser {
     }
 
     /// Whether IDNA encoding and decoding are available.
-    /// Embedded builds always have UIDNAHookICU, because FoundationInternationalization is in the same module.
+    /// Embedded builds with ICU always have UIDNAHookICU, because FoundationInternationalization is in the same module.
     static var supportsIDNA: Bool {
-#if hasFeature(Embedded)
+#if hasFeature(Embedded) && ICU
         true
+#elseif hasFeature(Embedded)
+        false
 #else
         _uidnaHook() != nil
 #endif
@@ -317,8 +324,10 @@ internal struct RFC3986Parser {
     static func IDNAEncodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
-#if hasFeature(Embedded)
+#if hasFeature(Embedded) && ICU
         return UIDNAHookICU.encode(host)
+#elseif hasFeature(Embedded)
+        return nil
 #else
         return _uidnaHook()?.encode(host)
 #endif
@@ -327,8 +336,10 @@ internal struct RFC3986Parser {
     static func IDNADecodeHost(_ host: (some StringProtocol)?) -> String? {
         guard let host else { return nil }
         guard !host.isEmpty else { return "" }
-#if hasFeature(Embedded)
+#if hasFeature(Embedded) && ICU
         return UIDNAHookICU.decode(host)
+#elseif hasFeature(Embedded)
+        return String(host)
 #else
         guard let uidnaHook = _uidnaHook() else { return String(host) }
         return uidnaHook.decode(host)
