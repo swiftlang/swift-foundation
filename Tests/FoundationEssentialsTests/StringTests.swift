@@ -1603,7 +1603,6 @@ private struct StringTests {
 
     // MARK: - Creating strings from C strings
 
-    @available(*, deprecated)
     @Test(arguments: [
         ([0x66, 0x6F, 0x6F, 0x00], "foo"),
         ([0x66, 0x6F, 0x6F, 0x20, 0xE3, 0x81, 0x82, 0x00], "foo あ"),
@@ -1635,8 +1634,7 @@ private struct StringTests {
         #expect(String(utf8String: &nullCharacter) == "")
     }
 
-#if FOUNDATION_EXIT_TESTS && !FOUNDATION_FRAMEWORK
-    @available(*, deprecated)
+#if FOUNDATION_EXIT_TESTS
     @Test func initUTF8StringFromArrayWithoutNullTerminator() async {
         await #expect(processExitsWith: .failure) {
             _ = String(utf8String: [CChar(0x61)])
