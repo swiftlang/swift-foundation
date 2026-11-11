@@ -128,30 +128,30 @@ private final class DataIOTests {
 #if !os(Windows) && !os(Emscripten)
     // The open-reader check uses POSIX descriptors; atomic writing is unavailable on Emscripten.
     @Test func atomicWriteInDestination() throws {
-        try verifyAtomicWrite { data, destination in
+        try verifyAtomicReplacement { data, destination in
             try data.write(to: destination, options: .atomic)
         }
     }
 
     @Test func atomicStringPathWrite() throws {
-        try verifyAtomicWrite { data, destination in
+        try verifyAtomicReplacement { data, destination in
             try String(decoding: data, as: UTF8.self).write(toFile: destination.path, atomically: true, encoding: .utf8)
         }
     }
 
     @Test func atomicStringURLWrite() throws {
-        try verifyAtomicWrite { data, destination in
+        try verifyAtomicReplacement { data, destination in
             try String(decoding: data, as: UTF8.self).write(to: destination, atomically: true, encoding: .utf8)
         }
     }
 
     @Test func atomicCreateFile() throws {
-        try verifyAtomicWrite { data, destination in
+        try verifyAtomicReplacement { data, destination in
             try #require(FileManager.default.createFile(atPath: destination.path, contents: data))
         }
     }
 
-    private func verifyAtomicWrite(_ write: (Data, URL) throws -> Void) throws {
+    private func verifyAtomicReplacement(_ write: (Data, URL) throws -> Void) throws {
         // Only the destination directory needs to be accessible, including in a WASI sandbox.
         let manager = FileManager.default
         let directory = URL(filePath: manager.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
@@ -159,30 +159,34 @@ private final class DataIOTests {
         defer { try? manager.removeItem(at: directory) }
 
         let destination = directory.appendingPathComponent("data")
-        try write(Data(), destination)
+        var initial = Data()
+        try write(initial, destination)
         #expect(try Data(contentsOf: destination).isEmpty)
 
-        let initial = Data("initial".utf8)
-        try write(initial, destination)
         #if os(WASI)
         // FoundationEssentials also defines this flag for older WASI SDKs.
         let readOnly = WASILibc.O_RDONLY
         #else
         let readOnly = O_RDONLY
         #endif
-        let fd = destination.path.withCString { open($0, readOnly) }
-        try #require(fd >= 0)
-        defer { close(fd) }
 
-        let replacement = Data("replacement".utf8)
-        try write(replacement, destination)
-        #expect(try Data(contentsOf: destination) == replacement)
-        // An open reader must retain the original contents after atomic replacement.
-        var original = Data(count: initial.count)
-        let count = original.withUnsafeMutableBytes { read(fd, $0.baseAddress, $0.count) }
-        #expect(count == initial.count)
-        #expect(original == initial)
-        #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
+        // Reading the destination alone cannot distinguish replacement from an in-place overwrite.
+        for replacement in [Data("initial 🗽".utf8), Data("a longer replacement 🚉".utf8), Data("short".utf8), Data()] {
+            let fd = destination.path.withCString { open($0, readOnly) }
+            try #require(fd >= 0)
+            defer { close(fd) }
+
+            try write(replacement, destination)
+            #expect(try Data(contentsOf: destination) == replacement)
+            // The extra byte detects in-place growth, including overwriting an empty file.
+            var original = Data(count: initial.count + 1)
+            let count = original.withUnsafeMutableBytes { read(fd, $0.baseAddress, $0.count) }
+            try #require(count >= 0)
+            #expect(count == initial.count)
+            #expect(original.prefix(count) == initial)
+            #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
+            initial = replacement
+        }
     }
 
 #endif
