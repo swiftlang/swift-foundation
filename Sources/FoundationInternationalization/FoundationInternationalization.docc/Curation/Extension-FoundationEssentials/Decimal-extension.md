@@ -11,7 +11,7 @@ Initializers, methods, and supporting types that extend FoundationEssentials's d
 - ``init(_:format:lenient:)-2xnp``
 - ``init(_:format:lenient:)-5f21h``
 - ``init(_:strategy:)``
-
+- ``ParseStrategy``
 
 ### Formatting decimals
 
@@ -19,9 +19,5 @@ Initializers, methods, and supporting types that extend FoundationEssentials's d
 - ``formatted(_:)``
 - ``FormatStyle``
 
-### Supporting types
-
-- ``FormatStyle``
-- ``ParseStrategy``
 
 
