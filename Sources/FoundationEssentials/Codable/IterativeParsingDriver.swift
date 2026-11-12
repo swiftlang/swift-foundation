@@ -33,8 +33,8 @@ protocol ParseEventVocabulary {
 /// Drives an iterative parse: routes events from a `ParseEventSource` to a `ParseEventSink`, owns the frame stack, and dispatches to a `ParseEventFilter`.
 struct IterativeParsingDriver<Source: ParseEventSource & ~Copyable & ~Escapable, Sink: ParseEventSink & ~Copyable>: ~Copyable where Source.Filter: ~Copyable {
     var sink: Sink
-    var keysArena: UniqueArray<Sink.Fragment>
-    var valuesArena: UniqueArray<Sink.Fragment>
+    var keysArena: UniqueArray<Sink.KeyFragment>
+    var valuesArena: UniqueArray<Sink.ValueFragment>
     var frames: UniqueArray<_Frame>
     /// Set by the driver before every source call; read by `beginUnkeyedContainer`/`beginKeyedContainer` to stamp the pushed child frame's `filterLevel`. `nil` = no filter at this frame.
     var pendingChildFilterLevel: Int?
@@ -63,8 +63,8 @@ struct IterativeParsingDriver<Source: ParseEventSource & ~Copyable & ~Escapable,
     }
 
     mutating func releaseArenaContents() {
-        for i in 0..<keysArena.count { sink.releaseFragment(keysArena[i]) }
-        for i in 0..<valuesArena.count { sink.releaseFragment(valuesArena[i]) }
+        for i in 0..<keysArena.count { sink.releaseKeyFragment(keysArena[i]) }
+        for i in 0..<valuesArena.count { sink.releaseValueFragment(valuesArena[i]) }
         if keysArena.count > 0 { keysArena.removeSubrange(0..<keysArena.count) }
         if valuesArena.count > 0 { valuesArena.removeSubrange(0..<valuesArena.count) }
     }
@@ -109,7 +109,7 @@ extension IterativeParsingDriver where Source: ~Copyable & ~Escapable, Sink: ~Co
         }
     }
 
-    /// Hand the sink the one fragment (if any) the root event pushed into `valuesArena`. Void-fragment sinks that never appended see no callback; tree sinks get their root here.
+    /// Hand the sink the one value fragment (if any) the root event pushed into `valuesArena`. A root container does not go through the arena: it is handed to `acceptTopLevelContainer` when it is finalized. Void-fragment sinks that never appended see no callback.
     private mutating func deliverTopLevelFragment() throws {
         guard valuesArena.count > 0 else { return }
         precondition(valuesArena.count == 1, "runParser: top-level values arena has \(valuesArena.count) entries; expected 0 or 1")
@@ -190,20 +190,20 @@ extension IterativeParsingDriver where Source: ~Copyable & ~Escapable, Sink: ~Co
         precondition(frames[topIdx].isKeyed, "parkKey: top frame is an array")
         precondition(!frames[topIdx].hasPendingKey, "parkKey: previous key not paired")
 
-        var acc = ParseEventAccumulator<Sink.Fragment>(storage: MutableRef(&keysArena))
+        var acc = ParseEventAccumulator<Sink.KeyFragment>(storage: MutableRef(&keysArena))
         try sink.acceptKey(key, into: &acc)
 
         frames[topIdx].hasPendingKey = true
     }
 
     mutating func emitScalar(_ scalar: borrowing Scalar, cacheKey: Int? = nil) throws {
-        var acc = ParseEventAccumulator<Sink.Fragment>(storage: MutableRef(&valuesArena))
+        var acc = ParseEventAccumulator<Sink.ValueFragment>(storage: MutableRef(&valuesArena))
         try sink.acceptScalar(scalar, cacheKey: cacheKey, into: &acc)
         markPendingKeyConsumed()
     }
 
     mutating func emitNull(cacheKey: Int? = nil) throws {
-        var acc = ParseEventAccumulator<Sink.Fragment>(storage: MutableRef(&valuesArena))
+        var acc = ParseEventAccumulator<Sink.ValueFragment>(storage: MutableRef(&valuesArena))
         try sink.acceptNull(cacheKey: cacheKey, into: &acc)
         markPendingKeyConsumed()
     }
@@ -211,7 +211,7 @@ extension IterativeParsingDriver where Source: ~Copyable & ~Escapable, Sink: ~Co
     mutating func tryEmitCachedForKey(_ key: Int) throws -> Bool {
         // Roots are never dedup targets; sink cache is empty at parse start.
         if frames.isEmpty { return false }
-        var acc = ParseEventAccumulator<Sink.Fragment>(storage: MutableRef(&valuesArena))
+        var acc = ParseEventAccumulator<Sink.ValueFragment>(storage: MutableRef(&valuesArena))
         let hit = try sink.tryEmitCachedForKey(key, into: &acc)
         if hit {
             markPendingKeyConsumed()
@@ -255,53 +255,60 @@ extension IterativeParsingDriver where Source: ~Copyable & ~Escapable, Sink: ~Co
 
     private mutating func finalizeUnkeyedContainerFields(valueStart: Int, cacheKey: Int?, kind: Sink.Vocabulary.UnkeyedContainerKind) throws {
         let count = valuesArena.count &- valueStart
-        let fragment: Sink.Fragment
+        let container: Sink.ContainerFragment
         if count == 0 {
             // Zero-count Span needs a valid non-nil base pointer; the stub is never read.
-            fragment = try withUnsafeTemporaryAllocation(of: Sink.Fragment.self, capacity: 1) { stub -> Sink.Fragment in
-                let span = unsafe Span<Sink.Fragment>(_unsafeStart: stub.baseAddress!, count: 0)
+            container = try withUnsafeTemporaryAllocation(of: Sink.ValueFragment.self, capacity: 1) { stub -> Sink.ContainerFragment in
+                let span = unsafe Span<Sink.ValueFragment>(_unsafeStart: stub.baseAddress!, count: 0)
                 return try sink.finalizeUnkeyedContainer(values: span, cacheKey: cacheKey, kind: kind)
             }
         } else {
-            fragment = try valuesArena.span.withUnsafeBufferPointer { buf -> Sink.Fragment in
+            container = try valuesArena.span.withUnsafeBufferPointer { buf -> Sink.ContainerFragment in
                 let base = unsafe buf.baseAddress!.advanced(by: valueStart)
-                let span = unsafe Span<Sink.Fragment>(_unsafeStart: base, count: count)
+                let span = unsafe Span<Sink.ValueFragment>(_unsafeStart: base, count: count)
                 return try sink.finalizeUnkeyedContainer(values: span, cacheKey: cacheKey, kind: kind)
             }
         }
         valuesArena.removeSubrange(valueStart..<valuesArena.count)
-        try placeFinalizedContainerFragment(fragment)
+        try placeFinalizedContainer(container)
     }
 
     private mutating func finalizeKeyedContainerFields(keyStart: Int, valueStart: Int, cacheKey: Int?, kind: Sink.Vocabulary.KeyedContainerKind) throws {
         let keyCount = keysArena.count &- keyStart
         let valueCount = valuesArena.count &- valueStart
-        let fragment: Sink.Fragment
+        let container: Sink.ContainerFragment
         if keyCount == 0 && valueCount == 0 {
-            fragment = try withUnsafeTemporaryAllocation(of: Sink.Fragment.self, capacity: 1) { stub -> Sink.Fragment in
-                let empty = unsafe Span<Sink.Fragment>(_unsafeStart: stub.baseAddress!, count: 0)
-                return try sink.finalizeKeyedContainer(keys: empty, values: empty, cacheKey: cacheKey, kind: kind)
+            container = try withUnsafeTemporaryAllocation(of: Sink.KeyFragment.self, capacity: 1) { keyStub -> Sink.ContainerFragment in
+                try withUnsafeTemporaryAllocation(of: Sink.ValueFragment.self, capacity: 1) { valueStub -> Sink.ContainerFragment in
+                    let emptyKeys = unsafe Span<Sink.KeyFragment>(_unsafeStart: keyStub.baseAddress!, count: 0)
+                    let emptyValues = unsafe Span<Sink.ValueFragment>(_unsafeStart: valueStub.baseAddress!, count: 0)
+                    return try sink.finalizeKeyedContainer(keys: emptyKeys, values: emptyValues, cacheKey: cacheKey, kind: kind)
+                }
             }
         } else {
-            fragment = try keysArena.span.withUnsafeBufferPointer { kBuf -> Sink.Fragment in
+            container = try keysArena.span.withUnsafeBufferPointer { kBuf -> Sink.ContainerFragment in
                 let kBase = unsafe kBuf.baseAddress!.advanced(by: keyStart)
-                let kSpan = unsafe Span<Sink.Fragment>(_unsafeStart: kBase, count: keyCount)
-                return try valuesArena.span.withUnsafeBufferPointer { vBuf -> Sink.Fragment in
+                let kSpan = unsafe Span<Sink.KeyFragment>(_unsafeStart: kBase, count: keyCount)
+                return try valuesArena.span.withUnsafeBufferPointer { vBuf -> Sink.ContainerFragment in
                     let vBase = unsafe vBuf.baseAddress!.advanced(by: valueStart)
-                    let vSpan = unsafe Span<Sink.Fragment>(_unsafeStart: vBase, count: valueCount)
+                    let vSpan = unsafe Span<Sink.ValueFragment>(_unsafeStart: vBase, count: valueCount)
                     return try sink.finalizeKeyedContainer(keys: kSpan, values: vSpan, cacheKey: cacheKey, kind: kind)
                 }
             }
         }
         keysArena.removeSubrange(keyStart..<keysArena.count)
         valuesArena.removeSubrange(valueStart..<valuesArena.count)
-        try placeFinalizedContainerFragment(fragment)
+        try placeFinalizedContainer(container)
     }
 
-    /// Route a just-finalized container fragment to the current frame's values arena. The root container's fragment lands in `valuesArena` and is delivered to `sink.acceptTopLevel` after the run loop returns.
-    private mutating func placeFinalizedContainerFragment(_ fragment: consuming Sink.Fragment) throws {
-        var acc = ParseEventAccumulator<Sink.Fragment>(storage: MutableRef(&valuesArena))
-        try sink.acceptContainer(fragment, into: &acc)
+    /// Route a just-finalized container. The root container goes to `sink.acceptTopLevelContainer`. A nested one is handed to `sink.acceptContainer`, which appends to the current frame's values.
+    private mutating func placeFinalizedContainer(_ container: consuming Sink.ContainerFragment) throws {
+        if frames.isEmpty {
+            try sink.acceptTopLevelContainer(container)
+            return
+        }
+        var acc = ParseEventAccumulator<Sink.ValueFragment>(storage: MutableRef(&valuesArena))
+        try sink.acceptContainer(container, into: &acc)
         markPendingKeyConsumed()
     }
 }
@@ -365,18 +372,20 @@ extension ParseEventSource where Self: ~Copyable & ~Escapable, Filter: ~Copyable
 
 /// Materializes parse output. The driver owns two shared fragment arenas (keys and values) plus a frame stack; the sink is handed append-only accumulators over those arenas and read-only spans at finalize time.
 ///
-/// `Fragment` is the sink's per-child accumulator element type, if any.
+/// `KeyFragment` and `ValueFragment` are the sink's per-child accumulator element types for the keys and values of a container, if any. A sink that only accepts strings can use `String` for both. `ContainerFragment` is what a finalized container is: a nested one is handed to `acceptContainer`, which can turn it into a `ValueFragment` or reject it, and the root one is handed to `acceptTopLevelContainer`.
 protocol ParseEventSink: ~Copyable {
     associatedtype Vocabulary: ParseEventVocabulary
-    associatedtype Fragment
+    associatedtype KeyFragment = ValueFragment
+    associatedtype ValueFragment
+    associatedtype ContainerFragment = ValueFragment
     associatedtype Output: ~Copyable
 
     // Leaf events. Sink decides whether to compute and append.
-    mutating func acceptScalar(_ scalar: borrowing Vocabulary.Scalar, cacheKey: Int?, into accumulator: inout ParseEventAccumulator<Fragment>) throws
-    mutating func acceptKey(_ keyView: borrowing Vocabulary.KeyView, into accumulator: inout ParseEventAccumulator<Fragment>) throws
-    mutating func acceptNull(cacheKey: Int?, into accumulator: inout ParseEventAccumulator<Fragment>) throws
-    /// Container fragment built by `finalizeUnkeyedContainer`/`finalizeKeyedContainer`; sink decides whether to append to the parent's accumulator.
-    mutating func acceptContainer(_ fragment: consuming Fragment, into accumulator: inout ParseEventAccumulator<Fragment>) throws
+    mutating func acceptScalar(_ scalar: borrowing Vocabulary.Scalar, cacheKey: Int?, into accumulator: inout ParseEventAccumulator<ValueFragment>) throws
+    mutating func acceptKey(_ keyView: borrowing Vocabulary.KeyView, into accumulator: inout ParseEventAccumulator<KeyFragment>) throws
+    mutating func acceptNull(cacheKey: Int?, into accumulator: inout ParseEventAccumulator<ValueFragment>) throws
+    /// A nested container built by `finalizeUnkeyedContainer`/`finalizeKeyedContainer`; sink decides whether to append a value for it to the parent's accumulator, or throw if a container is not allowed there. The root container is not handed to this method.
+    mutating func acceptContainer(_ container: consuming ContainerFragment, into accumulator: inout ParseEventAccumulator<ValueFragment>) throws
 
     /// Container open hint. Fired before the driver pushes its frame. Map-builders back-patching `[marker, nextSibling, count]` use this to reserve the header slot. Default no-op.
     mutating func beginUnkeyedContainer(cacheKey: Int?) throws
@@ -385,38 +394,54 @@ protocol ParseEventSink: ~Copyable {
     /// Container assembly. Driver hands the sink read-only spans of the accumulated fragments; sink materializes and returns the fragment representing the finalized container. Return-value shape avoids overlapping-access hazards.
     ///
     /// `cacheKey`: stable identity if the source provided one at begin time. Sinks that dedup cache the produced fragment for later `tryEmitCachedForKey`.
-    mutating func finalizeUnkeyedContainer(values: borrowing Span<Fragment>, cacheKey: Int?) throws -> Fragment
-    mutating func finalizeKeyedContainer(keys: borrowing Span<Fragment>, values: borrowing Span<Fragment>, cacheKey: Int?) throws -> Fragment
-    mutating func finalizeUnkeyedContainer(values: borrowing Span<Fragment>, cacheKey: Int?, kind: Vocabulary.UnkeyedContainerKind) throws -> Fragment
-    mutating func finalizeKeyedContainer(keys: borrowing Span<Fragment>, values: borrowing Span<Fragment>, cacheKey: Int?, kind: Vocabulary.KeyedContainerKind) throws -> Fragment
+    mutating func finalizeUnkeyedContainer(values: borrowing Span<ValueFragment>, cacheKey: Int?) throws -> ContainerFragment
+    mutating func finalizeKeyedContainer(keys: borrowing Span<KeyFragment>, values: borrowing Span<ValueFragment>, cacheKey: Int?) throws -> ContainerFragment
+    mutating func finalizeUnkeyedContainer(values: borrowing Span<ValueFragment>, cacheKey: Int?, kind: Vocabulary.UnkeyedContainerKind) throws -> ContainerFragment
+    mutating func finalizeKeyedContainer(keys: borrowing Span<KeyFragment>, values: borrowing Span<ValueFragment>, cacheKey: Int?, kind: Vocabulary.KeyedContainerKind) throws -> ContainerFragment
 
-    /// Called exactly once after the source finishes with the root value's fragment.
-    mutating func acceptTopLevel(_ fragment: consuming Fragment) throws
+    /// Called once after the source finishes, if the root value is not a container.
+    mutating func acceptTopLevel(_ value: consuming ValueFragment) throws
+
+    /// Called once after the source finishes, if the root value is a container. The default is `acceptTopLevel`, for sinks whose container fragments are their value fragments.
+    mutating func acceptTopLevelContainer(_ container: consuming ContainerFragment) throws
 
     consuming func takeResult() throws -> Output
 
-    /// Release any resources associated with `fragment`. Called on abnormal exit for fragments still live in the driver's arenas.
-    func releaseFragment(_ fragment: consuming Fragment)
+    /// Release any resources associated with a key or value fragment. Called on abnormal exit for fragments still live in the driver's arenas.
+    func releaseKeyFragment(_ fragment: consuming KeyFragment)
+    func releaseValueFragment(_ fragment: consuming ValueFragment)
 
     /// Optional dedup lookup. Sink returns true iff it recognized `key` and emitted the cached value into `accumulator`. Default returns false (opt out).
-    mutating func tryEmitCachedForKey(_ key: Int, into accumulator: inout ParseEventAccumulator<Fragment>) throws -> Bool
+    mutating func tryEmitCachedForKey(_ key: Int, into accumulator: inout ParseEventAccumulator<ValueFragment>) throws -> Bool
 }
 
 extension ParseEventSink where Self: ~Copyable {
-    mutating func tryEmitCachedForKey(_ key: Int, into accumulator: inout ParseEventAccumulator<Fragment>) throws -> Bool { false }
+    mutating func tryEmitCachedForKey(_ key: Int, into accumulator: inout ParseEventAccumulator<ValueFragment>) throws -> Bool { false }
     mutating func beginUnkeyedContainer(cacheKey: Int?) throws {}
     mutating func beginKeyedContainer(cacheKey: Int?) throws {}
-    mutating func finalizeUnkeyedContainer(values: borrowing Span<Fragment>, cacheKey: Int?, kind: Vocabulary.UnkeyedContainerKind) throws -> Fragment {
+    mutating func finalizeUnkeyedContainer(values: borrowing Span<ValueFragment>, cacheKey: Int?, kind: Vocabulary.UnkeyedContainerKind) throws -> ContainerFragment {
         try finalizeUnkeyedContainer(values: values, cacheKey: cacheKey)
     }
-    mutating func finalizeKeyedContainer(keys: borrowing Span<Fragment>, values: borrowing Span<Fragment>, cacheKey: Int?, kind: Vocabulary.KeyedContainerKind) throws -> Fragment {
+    mutating func finalizeKeyedContainer(keys: borrowing Span<KeyFragment>, values: borrowing Span<ValueFragment>, cacheKey: Int?, kind: Vocabulary.KeyedContainerKind) throws -> ContainerFragment {
         try finalizeKeyedContainer(keys: keys, values: values, cacheKey: cacheKey)
     }
 }
 
-extension ParseEventSink where Self: ~Copyable, Fragment == Void {
+extension ParseEventSink where Self: ~Copyable, ContainerFragment == ValueFragment {
+    mutating func acceptTopLevelContainer(_ container: consuming ContainerFragment) throws {
+        try acceptTopLevel(container)
+    }
+}
+
+extension ParseEventSink where Self: ~Copyable, KeyFragment == ValueFragment {
+    func releaseKeyFragment(_ fragment: consuming KeyFragment) {
+        releaseValueFragment(fragment)
+    }
+}
+
+extension ParseEventSink where Self: ~Copyable, ValueFragment == Void {
     /// Void-fragment sinks (map builders, NullSink) already have their output as a side effect of the events; the root callback is a no-op.
-    mutating func acceptTopLevel(_ fragment: consuming Void) throws {}
+    mutating func acceptTopLevel(_ value: consuming Void) throws {}
 }
 
 // MARK: - ParseEventAccumulator
