@@ -1,4 +1,7 @@
 # ``FoundationInternationalization/Swift``
+@Metadata {
+    @DisplayName("Standard Library")
+}
 
 Extensions to types that the Swift Standard Library defines.
 

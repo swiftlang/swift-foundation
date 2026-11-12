@@ -11,12 +11,12 @@ The FoundationInternationalization library builds on FoundationEssentials by pro
 
 ## Topics
 
-### Data modeling
-
-- <doc:units-and-measurement>
-
 ### Data management
 
 - <doc:filters-and-sorting>
 - <doc:data-formatting>
+
+### Data modeling
+
+- <doc:units-and-measurement>
 
