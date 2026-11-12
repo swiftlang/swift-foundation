@@ -319,15 +319,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         return _CalendarUtility.firstDayOfWeekYear(yearStart: rdTishri1, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
     }
 
-    /// Number of weeks in the given Hebrew year for week-of-year semantics.
-    /// `dateInterval(.yearForWeekOfYear)` duration = this × 7 × 86400 (in local days).
-    /// Returns 50 or 51 for common years, 54–56 for leap years, depending on weekday alignment.
-    private func numWeeksInYearForWeekOfYear(_ year: Int32) -> Int {
-        let start = firstDayOfWeekYear(year)
-        let nextStart = firstDayOfWeekYear(year + 1)
-        return Int(nextStart - start) / 7
-    }
-
     /// Build a Date at local midnight of the given (year, civilMonth, day) in the given timezone.
     private func localMidnight(year: Int32, civilMonth: UInt8, day: UInt8, in tz: TimeZone) -> Date? {
         var dc = DateComponents()
@@ -732,23 +723,13 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         // day-count delta that keeps the local time.
         guard var daysToAdd = _CalendarUtility.dayCount(of: components) else { return nil }
 
-        // `.yearForWeekOfYear`: advance by N week-year lengths (numWeeksInYearForWeekOfYear × 7).
-        if let n = components.yearForWeekOfYear, n != 0 {
-            let tz = self.timeZone
-            let localComps = dateComponents([.yearForWeekOfYear], from: result, in: tz)
-            if var yy = localComps.yearForWeekOfYear {
-                if n > 0 {
-                    for _ in 0..<n {
-                        daysToAdd += numWeeksInYearForWeekOfYear(Int32(yy)) * 7
-                        yy += 1
-                    }
-                } else {
-                    for _ in 0..<(-n) {
-                        yy -= 1
-                        daysToAdd -= numWeeksInYearForWeekOfYear(Int32(yy)) * 7
-                    }
-                }
-            }
+        // `.yearForWeekOfYear`: move by the days from the first day of the week year to the first day of the week year `n` later. Returns nil if a value overflows.
+        if let n = components.yearForWeekOfYear, n != 0, let year = dateComponents([.yearForWeekOfYear], from: result, in: timeZone).yearForWeekOfYear {
+            let (target, overflow) = year.addingReportingOverflow(n)
+            guard !overflow, let startYear = Int32(exactly: year), let endYear = Int32(exactly: target), let days = Int(exactly: firstDayOfWeekYear(endYear) - firstDayOfWeekYear(startYear)) else { return nil }
+            let (sum, sumOverflow) = daysToAdd.addingReportingOverflow(days)
+            guard !sumOverflow else { return nil }
+            daysToAdd = sum
         }
 
         if daysToAdd != 0 {
@@ -1162,7 +1143,7 @@ internal enum HebrewArithmetic {
 
     /// Whether a Hebrew year is a leap year (13 months).
     /// Leap positions in the 19-year cycle: 3, 6, 8, 11, 14, 17, 19.
-    static func isLeapYear(_ year: Int32) -> Bool {
+    static func isLeapYear<I: FixedWidthInteger>(_ year: I) -> Bool {
         var r = (7 &* Int64(year) &+ 1) % 19
         if r < 0 { r += 19 }
         return r < 7
@@ -1176,8 +1157,9 @@ internal enum HebrewArithmetic {
 
     /// Days elapsed from the epoch to the start of the given Hebrew year,
     /// with all four dehiyot (Lo ADU, Molad Zaken, Gatarad, Betutakpat) applied inline.
-    static func calendarElapsedDays(_ year: Int32) -> Int64 {
-        let monthsElapsed = _CalendarUtility.floorDiv(235 &* Int64(year) &- 234, 19)
+    /// The year is an `Int64`, so the year after `Int32.max` does not overflow.
+    static func calendarElapsedDays(_ year: Int64) -> Int64 {
+        let monthsElapsed = _CalendarUtility.floorDiv(235 &* year &- 234, 19)
         let partsElapsed = 12084 &+ 13753 &* monthsElapsed
         var days = 29 &* monthsElapsed &+ _CalendarUtility.floorDiv(partsElapsed, 25920)
         var frac = partsElapsed % 25920
@@ -1206,7 +1188,7 @@ internal enum HebrewArithmetic {
 
     /// Fixed date of Tishri 1 (Hebrew New Year) for the given year.
     static func newYear(_ year: Int32) -> Int64 {
-        return epoch &+ calendarElapsedDays(year)
+        return epoch &+ calendarElapsedDays(Int64(year))
     }
 
     // MARK: YearData (cached per conversion)
@@ -1237,8 +1219,8 @@ internal enum HebrewArithmetic {
             self.year = year
             // calendarElapsedDays now applies all four dehiyot inline (matching
             // ICU's startOfYear), so no post-hoc correction is needed here.
-            let ny1 = HebrewArithmetic.calendarElapsedDays(year)
-            let ny2 = HebrewArithmetic.calendarElapsedDays(year + 1)
+            let ny1 = HebrewArithmetic.calendarElapsedDays(Int64(year))
+            let ny2 = HebrewArithmetic.calendarElapsedDays(Int64(year) + 1)
             self.newYear = HebrewArithmetic.epoch &+ ny1
             self.yearLen = Int32(ny2 &- ny1)
 
