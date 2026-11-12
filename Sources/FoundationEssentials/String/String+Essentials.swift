@@ -91,7 +91,6 @@ extension String {
     /// Creates a string by copying the data from a given null-terminated C array of UTF-8 encoded bytes.
     ///
     /// Returns `nil` if the bytes are not valid UTF-8.
-    @export(implementation)
     public init?(utf8String bytes: UnsafePointer<CChar>) {
         if let str = String(validatingCString: bytes) {
             self = str
