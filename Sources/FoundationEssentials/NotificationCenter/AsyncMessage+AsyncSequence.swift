@@ -169,7 +169,7 @@ extension NotificationCenter {
             state.withLock { _state -> Resumption? in
                 if _state.buffer.count + 1 > _state.bufferSize {
                     _state.buffer.removeFirst()
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
                     NotificationCenter.logger.fault("Notification center message dropped due to buffer limit. Check sequence iterator frequently or increase buffer size. Message: \(String(describing: Message.self))")
 #endif
                 }

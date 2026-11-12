@@ -14,7 +14,9 @@
 
 #if canImport(os) && !hasFeature(Embedded)
 internal import os.log
+#endif
 
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 extension NotificationCenter {
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "notification-center")
