@@ -192,12 +192,9 @@ extension NotificationCenter {
             }
         })
 #else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { (message: @MainActor () -> Message) in
-            // Access the payload only on the actor that posted it.
-            MainActor.assumeIsolated {
-                observer(message())
-            }
-        })
+        // MainActorMessage posts synchronously on the main actor, so the registrar invokes this observer there.
+        let unsafeObserver = unsafeBitCast(observer, to: (@Sendable (Message) -> Void).self)
+        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: unsafeObserver))
 #endif
     }
 
@@ -232,8 +229,7 @@ extension NotificationCenter {
         
         post(notification)
 #else
-        // The registrar transfers the accessor, keeping non-Sendable payloads on the main actor.
-        _post(M.name, subject: subject, message: { @MainActor in message })
+        _post(M.name, subject: subject, message: message)
 #endif
     }
 }

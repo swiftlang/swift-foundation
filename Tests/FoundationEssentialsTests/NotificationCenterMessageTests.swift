@@ -146,12 +146,45 @@ private struct NotificationCenterMessageTests {
             #expect(message.payload === payload)
             message.payload.value += 1
         }
-        defer { center.removeObserver(token) }
 
         center.post(Message(payload: payload))
         #expect(payload.value == 1)
         center.post(Message(payload: payload))
         #expect(payload.value == 2)
+
+        center.removeObserver(token)
+        center.post(Message(payload: payload))
+        #expect(payload.value == 2)
+    }
+
+    @MainActor
+    @Test func mainActorNestedPosts() {
+        final class Message: NotificationCenter.MainActorMessage {
+            typealias Subject = MessageTestSubject
+            var values: [Int] = []
+        }
+
+        let center = NotificationCenter()
+        let subject = MessageTestSubject()
+        let message = Message()
+        let token = center.addObserver(of: subject, for: Message.self) { observed in
+            MainActor.assertIsolated()
+            #expect(observed === message)
+
+            if observed.values.isEmpty {
+                observed.values.append(1)
+                center.post(observed, subject: subject)
+                // Nested delivery must finish before the outer post resumes.
+                #expect(observed.values == [1, 2])
+                observed.values.append(3)
+            } else {
+                observed.values.append(2)
+            }
+        }
+        defer { center.removeObserver(token) }
+
+        center.post(message, subject: subject)
+        #expect(message.values == [1, 2, 3])
     }
 
     // MARK: - Basic capabilities (using MainActorMessage)

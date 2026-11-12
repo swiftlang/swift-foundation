@@ -47,7 +47,6 @@ let featureSettings: [SwiftSetting] = [
     .enableExperimentalFeature("StrictConcurrency"),
     .enableExperimentalFeature("ImportMacroAliases"),
     .enableUpcomingFeature("InferSendableFromCaptures"),
-    .enableUpcomingFeature("GlobalActorIsolatedTypesUsability"),
     .enableUpcomingFeature("MemberImportVisibility"),
     .swiftLanguageMode(.v5)
 ]
