@@ -606,6 +606,57 @@ private struct CharacterSetRangeBasedManipulationTests {
         #expect(!cs.contains(UnicodeScalar(0x0110)!))
     }
 
+    @Test func insertNonBMPRangeIntoInvertedSetIsNoOp() {
+        var cs = CharacterSet()
+        for value in 0x0100...0x0180 {
+            cs.insert(UnicodeScalar(value)!)
+        }
+        cs.invert()
+        cs.insert(charactersIn: UnicodeScalar(0x1F600)!...UnicodeScalar(0x1F64F)!)
+
+        #expect(cs.contains(UnicodeScalar(0x1F600)!))
+        #expect(cs.contains(UnicodeScalar(0x1F64F)!))
+        #expect(cs.contains(UnicodeScalar(0x1F5FF)!))
+        #expect(!cs.contains(UnicodeScalar(0x0110)!))
+    }
+
+    @Test func insertNonBMPStringIntoInvertedSetIsNoOp() {
+        var cs = CharacterSet()
+        for value in 0x0100...0x0180 {
+            cs.insert(UnicodeScalar(value)!)
+        }
+        cs.invert()
+        cs.insert(charactersIn: "\u{1F600}\u{1F64F}")
+
+        #expect(cs.contains(UnicodeScalar(0x1F600)!))
+        #expect(cs.contains(UnicodeScalar(0x1F64F)!))
+        #expect(cs.contains(UnicodeScalar(0x1F5FF)!))
+        #expect(!cs.contains(UnicodeScalar(0x0110)!))
+    }
+
+    @Test func insertRangeIntoInvertedRangeBackedSet() {
+        var cs = CharacterSet(charactersIn: UnicodeScalar(0x0045)!...UnicodeScalar(0x007D)!)
+        cs.invert()
+        cs.insert(charactersIn: UnicodeScalar(0x1F46)!...UnicodeScalar(0x1F3DD)!)
+
+        #expect(cs.contains(UnicodeScalar(0x1000D)!))
+        #expect(cs.contains(UnicodeScalar(0x1F3DD)!))
+        #expect(cs.contains(UnicodeScalar(0x1F3DE)!))
+        #expect(cs.contains(UnicodeScalar(0x0044)!))
+        #expect(!cs.contains(UnicodeScalar(0x0050)!))
+    }
+
+    @Test func insertIntoInvertedNonBMPRangeBackedSet() {
+        var cs = CharacterSet(charactersIn: UnicodeScalar(0x10000)!...UnicodeScalar(0x10010)!)
+        cs.invert()
+        cs.insert(UnicodeScalar(0x0041)!)
+
+        #expect(!cs.contains(UnicodeScalar(0x10000)!))
+        #expect(!cs.contains(UnicodeScalar(0x10010)!))
+        #expect(cs.contains(UnicodeScalar(0x10011)!))
+        #expect(cs.contains(UnicodeScalar(0x0041)!))
+    }
+
     @Test func removeSurrogateOffsetRangeFromInvertedBitmapSet() {
         var cs = CharacterSet()
         for value in 0x0100...0x0180 {
