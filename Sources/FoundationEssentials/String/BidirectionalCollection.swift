@@ -127,3 +127,30 @@ extension BidirectionalCollection {
         return result
     }
 }
+
+extension BidirectionalCollection where Element == Unicode.Scalar, Index == String.Index {
+    func _trimmingCharacters(in set: CharacterSet) -> SubSequence {
+
+        var idx = startIndex
+        while idx < endIndex && set.contains(self[idx]) {
+            formIndex(after: &idx)
+        }
+
+        let startOfNonTrimmedRange = idx // Points at the first char not in the set
+        guard startOfNonTrimmedRange != endIndex else {
+            return self[endIndex...]
+        }
+
+        let beforeEnd = index(before: endIndex)
+        guard startOfNonTrimmedRange < beforeEnd else {
+            return self[startOfNonTrimmedRange ..< endIndex]
+        }
+
+        var backIdx = beforeEnd
+        // No need to bound-check because we've already trimmed from the beginning, so we'd definitely break off of this loop before `backIdx` rewinds before `startIndex`
+        while set.contains(self[backIdx]) {
+            formIndex(before: &backIdx)
+        }
+        return self[startOfNonTrimmedRange ... backIdx]
+    }
+}

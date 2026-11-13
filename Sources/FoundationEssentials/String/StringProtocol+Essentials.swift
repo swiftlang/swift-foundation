@@ -262,6 +262,18 @@ extension StringProtocol {
         return subStr._rangeOfCharacter(from: aSet, options: mask)
     }
 
+    /// Returns a new string made by removing from both ends of the `String` characters contained in a given character set.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func trimmingCharacters(in set: CharacterSet) -> String {
+        String(Substring(self).unicodeScalars._trimmingCharacters(in: set))
+    }
+
+    /// Returns an array containing substrings from the string that have been divided by characters in the given set.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func components(separatedBy separator: CharacterSet) -> [String] {
+        Substring(self)._components(separatedBy: separator)
+    }
+
     /// Returns a `Data` containing a representation of
     /// the `String` encoded using a given encoding.
     @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
