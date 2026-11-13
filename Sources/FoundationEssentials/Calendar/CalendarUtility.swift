@@ -245,6 +245,34 @@ internal enum _CalendarUtility {
         return total
     }
 
+    /// The difference from `start` to `end` in each of the components, from the largest unit to the smallest. Each unit counts from where the larger units stopped.
+    /// `era` returns the number of eras from the first date to the second, and the date from which the smaller units count. The default is for a calendar with one era.
+    /// When an era has a length, such as a Chinese cycle of 60 years, that date is the start moved by the eras. Otherwise it is the start.
+    /// The search adds each count to the original start, not to the previous result. So when a short month moves the 30th back to the 29th, the next count still starts from the 30th.
+    static func dateComponents<Implementation: _CalendarProtocol>(_ components: Calendar.ComponentSet, from start: Date, to end: Date, in calendar: Implementation, era: (Date, Date) -> (Int, Date) = { start, _ in (0, start) }) -> DateComponents {
+        var result = DateComponents()
+        var current = start
+        for component in orderedDifferenceComponents(components) {
+            let difference: Int
+            if current == end {
+                difference = 0
+            } else if let (count, moved) = timeUnitDifference(in: component, from: current, to: end) {
+                (difference, current) = (count, moved)
+            } else if component == .era {
+                (difference, current) = era(current, end)
+            } else {
+                let from = current
+                (difference, current) = differenceBySearch(from: from, to: end) { count in
+                    var amount = DateComponents()
+                    amount.setValue(count, for: component)
+                    return calendar.date(byAdding: amount, to: from, wrappingComponents: false)
+                }
+            }
+            result.setValue(difference, for: component)
+        }
+        return result
+    }
+
     /// Finds the largest count of a unit that moves `start` toward `end` without going past `end`. Returns the count and `start` moved by that count.
     /// `shifted` moves `start` by a count, or returns nil if the count is too large.
     /// The search doubles the count until it goes past `end`, then halves the gap. The count is 0 if the unit does not move the date.
@@ -314,8 +342,9 @@ internal enum _CalendarUtility {
     }
 
     /// The weekday of a rata die, from 1 for Sunday to 7 for Saturday. Rata die 1 was a Monday.
-    static func weekday(ofRataDie rataDie: Int) -> Int {
-        (rataDie % 7 + 7) % 7 + 1
+    /// The rata die helpers are generic so that the `Int64` rata dies of the Hebrew calendar do not overflow `Int` on 32 bit platforms.
+    static func weekday<I: FixedWidthInteger>(ofRataDie rataDie: I) -> Int {
+        Int((rataDie % 7 + 7) % 7) + 1
     }
 
     /// The components in the set, from the largest unit to the smallest. A difference computes them in this order.
@@ -337,6 +366,18 @@ internal enum _CalendarUtility {
         if components.contains(.second) { out.append(.second) }
         if components.contains(.nanosecond) { out.append(.nanosecond) }
         return out
+    }
+
+    /// The units that `.weekday` or a time unit cannot be counted in, because they are not larger. In every other unit, its range is its maximum range. Nil for any other unit.
+    static func unitsNotLarger(than smaller: Calendar.Component) -> Calendar.ComponentSet? {
+        switch smaller {
+        case .weekday: return [.second, .minute, .hour, .day, .weekday]
+        case .hour: return [.second, .minute, .hour]
+        case .minute: return [.second, .minute]
+        case .second: return .second
+        case .nanosecond: return .nanosecond
+        default: return nil
+        }
     }
 
     /// The range of a unit that starts again each month, such as the day or the week of the month, inside a larger unit such as the year.
@@ -397,6 +438,37 @@ internal enum _CalendarUtility {
     }
 
     // MARK: - Shared by the fixed month and the Chinese family calendars
+
+    /// How a set of date components names a day in `date(from:)`.
+    enum DateForm {
+        case day(Int?)
+        case weekdayOrdinal(Int, weekday: Int?)
+        /// `.yearForWeekOfYear` wins over `.year` when the components have both. A `.yearForWeekOfYear` without a `.weekOfYear` means week 0.
+        case weekOfYear(Int?, weekday: Int?)
+        case weekOfMonth(Int, weekday: Int?)
+        case dayOfYear(Int)
+
+        init(_ components: DateComponents) {
+            // A form needs all its fields. A weekday or an ordinal alone does not name a day, so the day of the month decides, as day 1 when it is missing.
+            if let day = components.day {
+                self = .day(day)
+            } else if let ordinal = components.weekdayOrdinal, let weekday = components.weekday {
+                self = .weekdayOrdinal(ordinal, weekday: weekday)
+            } else if let week = components.weekOfYear, let weekday = components.weekday {
+                self = .weekOfYear(week, weekday: weekday)
+            } else if let week = components.weekOfMonth, let weekday = components.weekday {
+                self = .weekOfMonth(week, weekday: weekday)
+            } else if let dayOfYear = components.dayOfYear {
+                self = .dayOfYear(dayOfYear)
+            } else if components.yearForWeekOfYear != nil {
+                self = .weekOfYear(components.weekOfYear, weekday: components.weekday)
+            } else if let week = components.weekOfMonth {
+                self = .weekOfMonth(week, weekday: components.weekday)
+            } else {
+                self = .day(nil)
+            }
+        }
+    }
 
     /// The largest absolute value of a month, day, week or weekday ordinal that the calendars accept from `DateComponents`. A larger value is outside the supported dates, and its day count could overflow.
     static let fieldLimit: UInt = 100_000_000
@@ -460,7 +532,7 @@ internal enum _CalendarUtility {
     }
 
     /// The position of a day in its week, from 0 for the first weekday to 6.
-    static func relativeWeekday(ofRataDie rataDie: Int, firstWeekday: Int) -> Int {
+    static func relativeWeekday<I: FixedWidthInteger>(ofRataDie rataDie: I, firstWeekday: Int) -> Int {
         (weekday(ofRataDie: rataDie) - firstWeekday + 7) % 7
     }
 
@@ -470,9 +542,9 @@ internal enum _CalendarUtility {
     }
 
     /// The rata die of the first day of week 1 of a year. Week 1 is the week that holds `yearStart`, or the week after it if fewer than `minimumDaysInFirstWeek` days of that week are in the year.
-    static func firstDayOfWeekYear(yearStart: Int, firstWeekday: Int, minimumDaysInFirstWeek: Int) -> Int {
+    static func firstDayOfWeekYear<I: FixedWidthInteger>(yearStart: I, firstWeekday: Int, minimumDaysInFirstWeek: Int) -> I {
         let daysIntoWeek = relativeWeekday(ofRataDie: yearStart, firstWeekday: firstWeekday)
-        return (7 - daysIntoWeek) >= minimumDaysInFirstWeek ? yearStart - daysIntoWeek : yearStart + 7 - daysIntoWeek
+        return (7 - daysIntoWeek) >= minimumDaysInFirstWeek ? yearStart - I(daysIntoWeek) : yearStart + I(7 - daysIntoWeek)
     }
 
     /// The week year of a day and the number of its week in that week year. `year` is the year of the day, and the week year is `year` or the year before or after it.
@@ -488,12 +560,12 @@ internal enum _CalendarUtility {
     }
 
     /// The local midnight at the start of a rata die. If the time zone skips that midnight, the result is the first time after the skipped hour.
-    static func localMidnight(rataDie: Int, in timeZone: TimeZone) -> Date {
+    static func localMidnight<I: FixedWidthInteger>(rataDie: I, in timeZone: TimeZone) -> Date {
         utcDate(fromRataDie: rataDie, secondsInDay: 0, in: timeZone, repeatedTimePolicy: .former, skippedTimePolicy: .former)
     }
 
     /// The interval from local midnight of one day to local midnight of another.
-    static func interval(fromRataDie start: Int, toRataDie end: Int, in timeZone: TimeZone) -> DateInterval {
+    static func interval<I: FixedWidthInteger>(fromRataDie start: I, toRataDie end: I, in timeZone: TimeZone) -> DateInterval {
         let startDate = localMidnight(rataDie: start, in: timeZone)
         return DateInterval(start: startDate, duration: localMidnight(rataDie: end, in: timeZone).timeIntervalSince(startDate))
     }
