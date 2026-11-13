@@ -7,7 +7,6 @@
 ### Creating a calendar
 
 - ``init(identifier:)``
-- ``init(identifier:timeZone:locale:firstWeekday:minimumDaysInFirstWeek:)``
 - ``Identifier``
 
 ### Getting the current calendar

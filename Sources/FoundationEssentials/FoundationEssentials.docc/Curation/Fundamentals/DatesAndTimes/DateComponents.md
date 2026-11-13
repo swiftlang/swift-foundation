@@ -69,7 +69,7 @@
 - ``HTTPFormatStyle``
 - ``ISO8601FormatStyle``
 
-### Operators
+### Comparing date components
 
 - ``==(_:_:)``
 

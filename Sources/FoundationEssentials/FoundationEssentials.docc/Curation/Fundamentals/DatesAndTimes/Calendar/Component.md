@@ -35,28 +35,3 @@
 - ``timeZone``
 
 
-
-<!-- 
-### Enumeration Cases
-
-- ``calendar``
-- ``day``
-- ``dayOfYear``
-- ``era``
-- ``hour``
-- ``isLeapMonth``
-- ``isRepeatedDay``
-- ``minute``
-- ``month``
-- ``nanosecond``
-- ``quarter``
-- ``second``
-- ``timeZone``
-- ``weekOfMonth``
-- ``weekOfYear``
-- ``weekday``
-- ``weekdayOrdinal``
-- ``year``
-- ``yearForWeekOfYear``
-
--->

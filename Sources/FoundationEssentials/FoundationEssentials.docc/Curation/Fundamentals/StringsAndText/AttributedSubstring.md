@@ -7,6 +7,6 @@
 
 - ``init()``
 
-### Accessing the Underlying Attributed String
+### Accessing the underlying attributed string
 
 - ``base``

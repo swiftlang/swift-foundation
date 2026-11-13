@@ -3,6 +3,6 @@
 
 ## Topics
 
-### Encoding Values
+### Encoding values
 
 - ``encode(_:to:)``

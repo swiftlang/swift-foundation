@@ -18,7 +18,7 @@
 - ``Comparison``
 - ``ComparisonOperator``
 
-### Building mathmatical expressions
+### Building mathematical expressions
 - ``build_Arithmetic(lhs:rhs:op:)``
 - ``ArithmeticOperator``
 - ``Arithmetic``
@@ -116,7 +116,7 @@
 - ``build_NilCoalesce(lhs:rhs:)``
 - ``NilCoalesce``
 
-### Buildilng nil literal expressions
+### Building nil literal expressions
 
 - ``build_NilLiteral()``
 - ``NilLiteral``

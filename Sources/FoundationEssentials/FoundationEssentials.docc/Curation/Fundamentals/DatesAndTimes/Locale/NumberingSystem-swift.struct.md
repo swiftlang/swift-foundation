@@ -9,7 +9,7 @@
 - ``init(_:)``
 - ``init(stringLiteral:)``
 
-### Discovering available numbering systems 
+### Discovering available numbering systems
 
 - ``availableNumberingSystems``
 

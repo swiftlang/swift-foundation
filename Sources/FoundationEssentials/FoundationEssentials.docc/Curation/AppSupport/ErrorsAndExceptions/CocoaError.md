@@ -3,9 +3,6 @@
 
 ## Topics
 
-### Structures
-
-
 ### Creating an error
 
 - ``init(_:userInfo:)``
@@ -33,7 +30,7 @@
 - ``isValidationError``
 
 
-### Indentifying file errors
+### Identifying file errors
 
 - ``fileLocking``
 - ``fileManagerUnmountBusy``
