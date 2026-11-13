@@ -260,7 +260,9 @@ extension TimeZone {
             idx = name.index(after: idx)
         }
 
-        let firstMinute = name[idx].asciiValue ?? 0
+        guard let firstMinute = name[idx].asciiValue, firstMinute >= zero && firstMinute <= five else {
+            return nil
+        }
 
         // Next character must also be a digit, no single-minutes allowed
         idx = name.index(after: idx)

@@ -235,6 +235,12 @@ private struct TimeZoneTests {
         try test(["GMT-11"], "GMT-1100", -11*3600, "GMT-11", "GMT-11:00", "GMT-11")
     }
 
+    @Test(arguments: ["GMT+05:60", "GMT+05:99", "GMT+05.99", "UTC-05:60", "GMT+05: 0", "GMT+05:/0", "GMT+05:z0", "GMT+05:\u{E9}0"])
+    func timeZoneGMTOffset_invalidMinutes(identifier: String) {
+        #expect(TimeZone(identifier: identifier) == nil)
+        #expect(TimeZone(abbreviation: identifier) == nil)
+    }
+
     @Test func secondsFromGMT_RemoteDates() {
         let date = Date(timeIntervalSinceReferenceDate: -5001243627) // "1842-07-09T05:39:33+0000"
         let europeRome = TimeZone(identifier: "Europe/Rome")!
