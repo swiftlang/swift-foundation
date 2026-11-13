@@ -499,9 +499,9 @@ private struct DurationUnitsFormatStyleTests {
             let formatted = style.format(duration)
             #expect(formatted == expected, sourceLocation: sourceLocation)
         }
-        let oneThousandWithMaxPadding = "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,001,000"
+        let oneThousandWithMaxPadding = "00,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,001,000"
 
-        let padding996 = "000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
+        let padding995 = "00,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000"
 
         // There are 998 "0"s, the maximum allowed length
         let maxFractionalTrailing = String(repeating: "0", count: 998)
@@ -517,29 +517,29 @@ private struct DurationUnitsFormatStyleTests {
             verify(intLimits: Int.min...,   fracLimits: Int.min...Int.min, "0 wks")
             verify(intLimits: 5...,         fracLimits: Int.min...Int.min, "00,000 wks")
             // Total integer length is 999, the maximum allowed by us and ICU
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(padding996),000 wks")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(padding995),000 wks")
 
             verify(intLimits: Int.min...,   fracLimits: 5...5, ".00165 wks")
             verify(intLimits: 5...,         fracLimits: 5...5, "00,000.00165 wks")
-            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(padding996),000.00165 wks")
+            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(padding995),000.00165 wks")
 
             // Total fractional digit length is 998, the maximum allowed by us and ICU
             verify(intLimits: Int.min...,   fracLimits: Int.max...Int.max, ".0016534391534391533\(trailing979) wks")
             verify(intLimits: 5...,         fracLimits: Int.max...Int.max, "00,000.0016534391534391533\(trailing979) wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(padding996),000.0016534391534391533\(trailing979) wks")
+            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(padding995),000.0016534391534391533\(trailing979) wks")
 
             allowedUnits = [.minutes]
             verify(intLimits: Int.min...,   fracLimits: Int.min...Int.min, "17 min")
             verify(intLimits: 5...,         fracLimits: Int.min...Int.min, "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.min, "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: 5...5, "16.66667 min")
             verify(intLimits: 5...,         fracLimits: 5...5, "00,016.66667 min")
-            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(padding996),016.66667 min")
+            verify(intLimits: Int.max...,   fracLimits: 5...5, "\(padding995),016.66667 min")
 
             verify(intLimits: Int.min...,   fracLimits: Int.max...Int.max, "16.666666666666668\(trailing983) min")
             verify(intLimits: 5...,         fracLimits: Int.max...Int.max, "00,016.666666666666668\(trailing983) min")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(padding996),016.666666666666668\(trailing983) min")
+            verify(intLimits: Int.max...,   fracLimits: Int.max...Int.max, "\(padding995),016.666666666666668\(trailing983) min")
 
             allowedUnits = [.seconds]
             verify(intLimits: Int.min...,   fracLimits: Int.min...Int.min, "1,000 sec")
@@ -562,29 +562,29 @@ private struct DurationUnitsFormatStyleTests {
 
             verify(intLimits: Int.min...,   fracLimits: Int.min...,   ".0016534391534391533 wks")
             verify(intLimits: 5...,         fracLimits: Int.min...,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(padding995),000.0016534391534391533 wks")
 
             verify(intLimits: Int.min...,   fracLimits: 2...,   ".0016534391534391533 wks")
             verify(intLimits: 5...,         fracLimits: 2...,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(padding995),000.0016534391534391533 wks")
 
             verify(intLimits: Int.min...,   fracLimits: Int.max...,   ".0016534391534391533\(trailing979) wks")
             verify(intLimits: 5...,         fracLimits: Int.max...,   "00,000.0016534391534391533\(trailing979) wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(padding996),000.0016534391534391533\(trailing979) wks")
+            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(padding995),000.0016534391534391533\(trailing979) wks")
 
             allowedUnits = [.minutes] // 1000 sec ~= 16.666666666666 mins
 
             verify(intLimits: Int.min...,   fracLimits: Int.min...,   "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: Int.min...,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...,   "\(padding995),016.666666666666668 min")
 
             verify(intLimits: Int.min...,   fracLimits: 2...,   "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: 2...,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: 2...,   "\(padding995),016.666666666666668 min")
 
             verify(intLimits: Int.min...,   fracLimits: Int.max...,   "16.666666666666668\(trailing983) min")
             verify(intLimits: 5...,         fracLimits: Int.max...,   "00,016.666666666666668\(trailing983) min")
-            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(padding996),016.666666666666668\(trailing983) min")
+            verify(intLimits: Int.max...,   fracLimits: Int.max...,   "\(padding995),016.666666666666668\(trailing983) min")
 
             allowedUnits = [.seconds]
 
@@ -608,28 +608,28 @@ private struct DurationUnitsFormatStyleTests {
             allowedUnits = [.weeks]
             verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "0 wks")
             verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,000 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),000 wks")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding995),000 wks")
 
             verify(intLimits: Int.min...,   fracLimits: ...5,   ".00165 wks")
             verify(intLimits: 5...,         fracLimits: ...5,   "00,000.00165 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(padding996),000.00165 wks")
+            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(padding995),000.00165 wks")
 
             verify(intLimits: Int.min...,   fracLimits: ...Int.max,   ".0016534391534391533 wks")
             verify(intLimits: 5...,         fracLimits: ...Int.max,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding995),000.0016534391534391533 wks")
 
             allowedUnits = [.minutes]
             verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "17 min")
             verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: ...5,   "16.66667 min")
             verify(intLimits: 5...,         fracLimits: ...5,   "00,016.66667 min")
-            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(padding996),016.66667 min")
+            verify(intLimits: Int.max...,   fracLimits: ...5,   "\(padding995),016.66667 min")
 
             verify(intLimits: Int.min...,   fracLimits: ...Int.max, "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: ...Int.max, "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max, "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.max, "\(padding995),016.666666666666668 min")
 
             allowedUnits = [.seconds]
 
@@ -658,19 +658,19 @@ private struct DurationUnitsFormatStyleTests {
             allowedUnits = [ .minutes ]
             verify(intLimits: Int.min...,   fracLimits: ..<Int.min,   "17 min")
             verify(intLimits: 5...,         fracLimits: ..<Int.min,   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<Int.min,   "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: ..<Int.min,   "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: ..<(Int.min + 1),   "17 min")
             verify(intLimits: 5...,         fracLimits: ..<(Int.min + 1),   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<(Int.min + 1),   "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: ..<(Int.min + 1),   "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: ..<5,   "16.6667 min")
             verify(intLimits: 5...,         fracLimits: ..<5,   "00,016.6667 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<5,   "\(padding996),016.6667 min")
+            verify(intLimits: Int.max...,   fracLimits: ..<5,   "\(padding995),016.6667 min")
 
             verify(intLimits: Int.min...,   fracLimits: ..<Int.max,   "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: ..<Int.max,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: ..<Int.max,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: ..<Int.max,   "\(padding995),016.666666666666668 min")
         }
 
         // Fractional limits: PartialRangeThrough
@@ -682,30 +682,30 @@ private struct DurationUnitsFormatStyleTests {
             verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "0 wks")
             verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,000 wks")
             // The total length of a formatted unit, including zero paddings, would be 999.
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),000 wks")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding995),000 wks")
 
             verify(intLimits: Int.min...,   fracLimits: ...(Int.min + 1),   "0 wks")
             verify(intLimits: 5...,         fracLimits: ...(Int.min + 1),   "00,000 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...(Int.min + 1),   "\(padding996),000 wks")
+            verify(intLimits: Int.max...,   fracLimits: ...(Int.min + 1),   "\(padding995),000 wks")
 
             verify(intLimits: Int.min...,   fracLimits: ...Int.max,   ".0016534391534391533 wks")
             verify(intLimits: 5...,         fracLimits: ...Int.max,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding995),000.0016534391534391533 wks")
 
             allowedUnits = [ .minutes ]
 
             verify(intLimits: Int.min...,   fracLimits: ...Int.min,   "17 min")
             verify(intLimits: 5...,         fracLimits: ...Int.min,   "00,017 min")
             // The total length of a formatted unit, including zero paddings, would be 999.
-            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.min,   "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: ...(Int.min + 1),   "17 min")
             verify(intLimits: 5...,         fracLimits: ...(Int.min + 1),   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: ...(Int.min + 1),   "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: ...(Int.min + 1),   "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: ...Int.max,   "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: ...Int.max,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: ...Int.max,   "\(padding995),016.666666666666668 min")
         }
 
         // Fractional limits: ClosedRange
@@ -715,37 +715,37 @@ private struct DurationUnitsFormatStyleTests {
 
             verify(intLimits: Int.min...,   fracLimits: Int.min...Int.max, ".0016534391534391533 wks")
             verify(intLimits: 5...,         fracLimits: Int.min...Int.max, "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.max, "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.max, "\(padding995),000.0016534391534391533 wks")
 
             verify(intLimits: Int.min...,   fracLimits: Int.min...(-1),   "0 wks")
             verify(intLimits: 5...,         fracLimits: Int.min...(-1),   "00,000 wks")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...(-1),   "\(padding996),000 wks")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...(-1),   "\(padding995),000 wks")
 
             verify(intLimits: Int.min...,   fracLimits: 5...Int.max,   ".0016534391534391533 wks")
             verify(intLimits: 5...,         fracLimits: 5...Int.max,   "00,000.0016534391534391533 wks")
-            verify(intLimits: Int.max...,   fracLimits: 5...Int.max,   "\(padding996),000.0016534391534391533 wks")
+            verify(intLimits: Int.max...,   fracLimits: 5...Int.max,   "\(padding995),000.0016534391534391533 wks")
 
             verify(intLimits: Int.min...,   fracLimits: 5...10, ".0016534392 wks")
             verify(intLimits: 5...,         fracLimits: 5...10, "00,000.0016534392 wks")
-            verify(intLimits: Int.max...,   fracLimits: 5...10, "\(padding996),000.0016534392 wks")
+            verify(intLimits: Int.max...,   fracLimits: 5...10, "\(padding995),000.0016534392 wks")
 
             allowedUnits = [ .minutes ]
 
             verify(intLimits: Int.min...,   fracLimits: Int.min...Int.max, "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: Int.min...Int.max, "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.max, "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...Int.max, "\(padding995),016.666666666666668 min")
 
             verify(intLimits: Int.min...,   fracLimits: Int.min...(-1),   "17 min")
             verify(intLimits: 5...,         fracLimits: Int.min...(-1),   "00,017 min")
-            verify(intLimits: Int.max...,   fracLimits: Int.min...(-1),   "\(padding996),017 min")
+            verify(intLimits: Int.max...,   fracLimits: Int.min...(-1),   "\(padding995),017 min")
 
             verify(intLimits: Int.min...,   fracLimits: 5...Int.max,   "16.666666666666668 min")
             verify(intLimits: 5...,         fracLimits: 5...Int.max,   "00,016.666666666666668 min")
-            verify(intLimits: Int.max...,   fracLimits: 5...Int.max,   "\(padding996),016.666666666666668 min")
+            verify(intLimits: Int.max...,   fracLimits: 5...Int.max,   "\(padding995),016.666666666666668 min")
 
             verify(intLimits: Int.min...,   fracLimits: 5...10, "16.6666666667 min")
             verify(intLimits: 5...,         fracLimits: 5...10, "00,016.6666666667 min")
-            verify(intLimits: Int.max...,   fracLimits: 5...10, "\(padding996),016.6666666667 min")
+            verify(intLimits: Int.max...,   fracLimits: 5...10, "\(padding995),016.6666666667 min")
         }
 
         // Fractional limits: PartialRangeFrom
@@ -758,7 +758,7 @@ private struct DurationUnitsFormatStyleTests {
             verify(intLimits: 1...,         fracLimits: 2...,   "16 min, 40.00 sec")
             verify(intLimits: 5...,         fracLimits: 2...,   "00,016 min, 00,040.00 sec")
             // The total length of a formatted unit, including zero paddings, would be 999.
-            verify(intLimits: Int.max...,      fracLimits: 2...,   "\(padding996),016 min, \(padding996),040.00 sec")
+            verify(intLimits: Int.max...,      fracLimits: 2...,   "\(padding995),016 min, \(padding995),040.00 sec")
         }
 
         // Int limits: PartialRangeFrom
@@ -768,12 +768,12 @@ private struct DurationUnitsFormatStyleTests {
             allowedUnits = [.weeks]
             verify(intLimits: Int.min...,   fracLimits: 10...10,   ".0016534392 wks")
             verify(intLimits: 5...,         fracLimits: 10...10,   "00,000.0016534392 wks")
-            verify(intLimits: Int.max...,   fracLimits: 10...10,   "\(padding996),000.0016534392 wks")
+            verify(intLimits: Int.max...,   fracLimits: 10...10,   "\(padding995),000.0016534392 wks")
 
             allowedUnits = [.minutes]
             verify(intLimits: Int.min...,   fracLimits: 2...2,   "16.67 min")
             verify(intLimits: 5...,         fracLimits: 2...2,   "00,016.67 min")
-            verify(intLimits: Int.max...,   fracLimits: 2...2,   "\(padding996),016.67 min")
+            verify(intLimits: Int.max...,   fracLimits: 2...2,   "\(padding995),016.67 min")
 
             allowedUnits = [.seconds]
             verify(intLimits: Int.min...,   fracLimits: 2...2,   "1,000.00 sec")

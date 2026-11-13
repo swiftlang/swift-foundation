@@ -779,6 +779,28 @@ private struct NumberFormatStyleTests {
         #expect(Decimal.FormatStyle(locale: enUSLocale).notation(.printfScientific).format(Decimal(string: "0.00123")!) == "1.23E-03")
         #expect(FloatingPointFormatStyle<Double>(locale: frFRLocale).notation(.printfScientific).precision(.significantDigits(3)).format(1234.5678) == "1,23E+03")
     }
+
+    // ICU has an internal limit of 999 for individual parts (so we end up limiting the input to 998). Until we remove the ICU dependency (and can remove this artificial limit), validate that we at least clamp the provided value rather than dropping it
+    @Test func clampToICUPartLimits() {
+        let style = FloatingPointFormatStyle<Double>(locale: enUSLocale)
+
+        let integerPrefix = "00," + String(repeating: "000,", count: 331) + "00"
+        let fractionSuffix = String(repeating: "0", count: 996)
+        let significantDigitsSuffix = String(repeating: "0", count: 995)
+
+        #expect(1.23.formatted(style.precision(.integerLength(1002 ..< 1003))) == integerPrefix + "1.23")
+        #expect(1.23.formatted(style.precision(.integerLength(1002...))) == integerPrefix + "1.23")
+        #expect(1.23.formatted(style.precision(.integerLength(1002))) == integerPrefix + "1.23")
+        #expect(1.23.formatted(style.precision(.fractionLength(1002 ..< 1003))) == "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.fractionLength(1002...))) == "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.fractionLength(1002))) == "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.integerAndFractionLength(integerLimits: 1002 ..< 1003, fractionLimits: 1002 ..< 1003))) == integerPrefix + "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.integerAndFractionLength(integerLimits: 1002 ..< 1003, fractionLimits: 1002...))) == integerPrefix + "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.integerAndFractionLength(integer: 1002, fraction: 1002))) == integerPrefix + "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.significantDigits(1002 ..< 1003))) == "1.23" + significantDigitsSuffix)
+        #expect(1.23.formatted(style.precision(.significantDigits(1002...))) == "1.23" + significantDigitsSuffix)
+        #expect(1.23.formatted(style.precision(.significantDigits(1002))) == "1.23" + significantDigitsSuffix)
+    }
 }
 
 extension NumberFormatStyleConfiguration.Collection {

@@ -243,7 +243,7 @@ extension Duration {
             if lower == nil && upper == nil {
                 self.valueLengthLimits = nil
             } else {
-                self.valueLengthLimits = (lower ?? 0) ..< (upper ?? Int.max)
+                self.valueLengthLimits = (lower ?? 0) ..< (upper.map { $0 + 1 } ?? Int.max)
             }
 
             self.locale = .autoupdatingCurrent
