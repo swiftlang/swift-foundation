@@ -85,3 +85,65 @@ extension String {
     }
 }
 #endif
+
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension String {
+    /// Creates a string by copying the data from a given null-terminated C array of UTF-8 encoded bytes.
+    ///
+    /// Returns `nil` if the bytes are not valid UTF-8.
+    public init?(utf8String bytes: UnsafePointer<CChar>) {
+        if let str = String(validatingCString: bytes) {
+            self = str
+            return
+        }
+        #if FOUNDATION_FRAMEWORK
+        if let ns = NSString(utf8String: bytes) {
+            self = String._unconditionallyBridgeFromObjectiveC(ns)
+        } else {
+            return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+
+    /// Creates a string by copying the data from a given null-terminated array of UTF8-encoded bytes.
+    @export(implementation)
+    public init?(utf8String bytes: [CChar]) {
+        // the stdlib's validatingCString [CChar] overload checks for null termination.
+        if let str = String(validatingCString: bytes) {
+            self = str
+            return
+        }
+        #if FOUNDATION_FRAMEWORK
+        guard let nullPosition = bytes.firstIndex(of: 0) else {
+            fatalError(
+                "input of String.init(utf8String:) must be null-terminated"
+            )
+        }
+        let ns = bytes.withUnsafeBytes {
+            NSString(bytes: $0.baseAddress!,
+                     length: nullPosition,
+                     encoding: Encoding.utf8.rawValue)
+        }
+        guard let ns = ns else {
+            return nil
+        }
+        self = String._unconditionallyBridgeFromObjectiveC(ns)
+        #else
+        return nil
+        #endif
+    }
+
+    @available(*, deprecated, message: "Use a copy of the String argument")
+    @export(implementation)
+    public init?(utf8String bytes: String) {
+        self.init(validatingCString: bytes)
+    }
+
+    @available(*, deprecated, message: "Use String(_ scalar: Unicode.Scalar)")
+    @export(implementation)
+    public init?(utf8String bytes: inout CChar) {
+        self.init(validatingCString: &bytes)
+    }
+}
