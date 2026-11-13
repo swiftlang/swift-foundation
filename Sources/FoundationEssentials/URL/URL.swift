@@ -702,6 +702,13 @@ public struct URL: Equatable, Sendable, Hashable {
         guard let inner = URL._type.init(stringOrEmpty: stringOrEmpty, relativeTo: url) else { return nil }
         _url = inner.convertingFileReference()
     }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation)
+    public init?(_stringOrEmpty s: String, relativeTo url: URL? = nil) {
+        self.init(stringOrEmpty: s, relativeTo: url)
+    }
+#endif
 
     /// Creates a URL instance from the provided string.
     ///
