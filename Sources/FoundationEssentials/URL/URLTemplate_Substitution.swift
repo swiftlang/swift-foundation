@@ -133,6 +133,8 @@ extension URL.Template.Expression.Element {
         case .list(let a):
             if explode {
                 return a.map { makeElement($0) }
+            } else if a.isEmpty {
+                return []
             } else {
                 return [makeElement(a)]
             }
