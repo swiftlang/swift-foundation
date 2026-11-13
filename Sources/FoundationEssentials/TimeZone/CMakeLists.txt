@@ -17,4 +17,7 @@ target_sources(FoundationEssentials PRIVATE
     TimeZone_Autoupdating.swift
     TimeZone_Cache.swift
     TimeZone_GMT.swift
-    TimeZone_Protocol.swift)
+    TimeZone_Protocol.swift
+    TimeZone_RulesBased.swift
+    TimeZone_Rules.swift
+    TimeZone_SingleDSTRule.swift)
