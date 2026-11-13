@@ -1,6 +1,6 @@
 # Foundation
 
-Foundation provides a base layer of functionality useful in many applications, including fundamental types for numbers, data, collections, and dates, as well as functions for task management, file system access, and more.
+Foundation provides a base layer of functionality useful in many applications, including fundamental types for numbers, data, collections, and dates, as well as functions for task management, file system access, and more!
 
 It is designed with these goals in mind:
 
