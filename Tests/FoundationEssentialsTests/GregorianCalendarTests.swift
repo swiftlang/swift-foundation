@@ -535,6 +535,34 @@ private struct GregorianCalendarTests {
         test(addField: .nanosecond, value: -1, to: date, wrap: false, expectedDate: Date(timeIntervalSince1970: -62135769600.0))
     }
 
+    struct WrappingWeekAddition: Sendable, CustomTestStringConvertible {
+        let field: Calendar.Component
+        let value: Int
+        let firstWeekday: Int
+        let minimumDaysInFirstWeek: Int
+        let date: Date
+        let expectedDate: Date
+        let testDescription: String
+    }
+
+    // The starting dates are Sundays, which come before the first weekday (Monday) and fall at the end of the month or year
+    @Test(arguments: [
+        WrappingWeekAddition(field: .weekOfMonth, value: 1, firstWeekday: 2, minimumDaysInFirstWeek: 1, date: Date(timeIntervalSince1970: 957096000), expectedDate: Date(timeIntervalSince1970: 954676800), testDescription: "2000-04-30 +1 weekOfMonth is 2000-04-02"),
+        WrappingWeekAddition(field: .weekOfMonth, value: 2, firstWeekday: 2, minimumDaysInFirstWeek: 1, date: Date(timeIntervalSince1970: 957096000), expectedDate: Date(timeIntervalSince1970: 955281600), testDescription: "2000-04-30 +2 weekOfMonth is 2000-04-09"),
+        WrappingWeekAddition(field: .weekOfMonth, value: -1, firstWeekday: 2, minimumDaysInFirstWeek: 1, date: Date(timeIntervalSince1970: 957096000), expectedDate: Date(timeIntervalSince1970: 956491200), testDescription: "2000-04-30 -1 weekOfMonth is 2000-04-23"),
+        WrappingWeekAddition(field: .weekOfMonth, value: 1, firstWeekday: 2, minimumDaysInFirstWeek: 4, date: Date(timeIntervalSince1970: 1062331200), expectedDate: Date(timeIntervalSince1970: 1060516800), testDescription: "2003-08-31 +1 weekOfMonth is 2003-08-10"),
+        WrappingWeekAddition(field: .weekOfMonth, value: 2, firstWeekday: 2, minimumDaysInFirstWeek: 4, date: Date(timeIntervalSince1970: 1062331200), expectedDate: Date(timeIntervalSince1970: 1061121600), testDescription: "2003-08-31 +2 weekOfMonth is 2003-08-17"),
+        WrappingWeekAddition(field: .weekOfMonth, value: -1, firstWeekday: 2, minimumDaysInFirstWeek: 4, date: Date(timeIntervalSince1970: 1062331200), expectedDate: Date(timeIntervalSince1970: 1061726400), testDescription: "2003-08-31 -1 weekOfMonth is 2003-08-24"),
+        WrappingWeekAddition(field: .weekOfYear, value: 1, firstWeekday: 2, minimumDaysInFirstWeek: 1, date: Date(timeIntervalSince1970: 978264000), expectedDate: Date(timeIntervalSince1970: 946814400), testDescription: "2000-12-31 +1 weekOfYear is 2000-01-02"),
+        WrappingWeekAddition(field: .weekOfYear, value: -1, firstWeekday: 2, minimumDaysInFirstWeek: 1, date: Date(timeIntervalSince1970: 978264000), expectedDate: Date(timeIntervalSince1970: 977659200), testDescription: "2000-12-31 -1 weekOfYear is 2000-12-24"),
+    ])
+    func addingWrappedWeekWhenWeekdayIsBeforeFirstWeekday(_ addition: WrappingWeekAddition) throws {
+        let gregorianCalendar = _CalendarGregorian(identifier: .gregorian, timeZone: .gmt, locale: nil, firstWeekday: addition.firstWeekday, minimumDaysInFirstWeek: addition.minimumDaysInFirstWeek, gregorianStartDate: nil)
+        let components = try #require(DateComponents(component: addition.field, value: addition.value))
+        let result = try #require(gregorianCalendar.date(byAdding: components, to: addition.date, wrappingComponents: true))
+        #expect(result == addition.expectedDate)
+    }
+
     @Test func testAddDateComponents() {
 
         let s = Date.ISO8601FormatStyle(timeZone: TimeZone(secondsFromGMT: 3600)!)
