@@ -971,8 +971,26 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         return (py, UInt8(pm))
     }
 
-    package func nextDate(after date: Date, matching components: DateComponents,
-                          direction: Calendar.SearchDirection) -> Date? {
+    package func nextDate(after date: Date, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date? {
+        // The fast paths compare local times, so they are right only when the offset of the time zone does not change on the local day of the start or of the result. Otherwise nil lets the general search answer.
+        let offset = timeZone.secondsFromGMT(for: date)
+        let targetSecondsInDay = Self.secondsInDay(from: components)
+        guard targetSecondsInDay >= 0, targetSecondsInDay < 86400, let result = fastPathNextDate(after: date, offset: offset, matching: components, direction: direction), direction == .forward ? result > date : result < date else { return nil }
+        // Every fast path makes its result at `targetSecondsInDay` on the result day, so these are the starts of the two local days.
+        let startLocalSeconds = date.timeIntervalSinceReferenceDate + Double(offset)
+        let startDay = date - (startLocalSeconds - (startLocalSeconds / 86400).rounded(.down) * 86400)
+        let resultDay = result - targetSecondsInDay
+        let (firstDay, lastDay) = startDay < resultDay ? (startDay, resultDay) : (resultDay, startDay)
+        let oneOffset = lastDay.timeIntervalSince(firstDay) <= 86400 ? hasOneOffset(fromDayAt: firstDay, toDayAt: lastDay) : hasOneOffset(fromDayAt: startDay, toDayAt: startDay) && hasOneOffset(fromDayAt: resultDay, toDayAt: resultDay)
+        return oneOffset ? result : nil
+    }
+
+    /// Whether the time zone has the same offset from 3 hours before the local day that starts at `firstDay` to 3 hours after the local day that starts at `lastDay`. The margin covers a day start that the change itself moves. A time zone does not change its offset twice in that time.
+    private func hasOneOffset(fromDayAt firstDay: Date, toDayAt lastDay: Date) -> Bool {
+        timeZone.secondsFromGMT(for: firstDay - 3 * 3600) == timeZone.secondsFromGMT(for: lastDay + 86400 + 3 * 3600)
+    }
+
+    private func fastPathNextDate(after date: Date, offset: Int, matching components: DateComponents, direction: Calendar.SearchDirection) -> Date? {
         guard supportsNextDateFastPath(for: components._populatedComponentSet) else { return nil }
 
         let hasMonth = components.month != nil
@@ -983,8 +1001,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         let timeOnly = !hasMonth && !hasDay && !hasWeekday
 
         let tz = self.timeZone
-        let totalOffset = tz.secondsFromGMT(for: date)
-        let localSeconds = date.timeIntervalSinceReferenceDate + Double(totalOffset)
+        let localSeconds = date.timeIntervalSinceReferenceDate + Double(offset)
         let (rd, currentSecsInDay) = Self.rataDieAndSecondsInDay(localSeconds: localSeconds)
         let (year, biblicalMonth, day) = HebrewArithmetic.hebrewFromFixed(rd)
         let civilMonth = HebrewArithmetic.biblicalToCivil(year: year, biblicalMonth: biblicalMonth)
@@ -1027,7 +1044,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
         if hasWeekday {
             return nextWeekdayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
                                     targetWeekday: components.weekday!,
-                                    targetSecsInDay: secsInDay, forward: forward, tz: tz)
+                                    targetSecsInDay: secsInDay, hasTime: components.hour != nil || components.minute != nil || components.second != nil || components.nanosecond != nil, forward: forward, tz: tz)
         }
 
         return nextMonthDayMatch(rataDie: rd, currentSecsInDay: currentSecsInDay,
@@ -1044,14 +1061,15 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
                                    targetMonth: Int?, targetDay: Int?,
                                    targetSecsInDay: Double, forward: Bool,
                                    tz: TimeZone) -> Date? {
+        // Every month has days 1 to 29. For any other day the general search decides, because some months do not have it.
+        if let targetDay, !(1...29).contains(targetDay) { return nil }
+
         // Build a candidate (year, civilMonth, day) from the request.
         // Returns nil if the candidate is invalid in this year (e.g., civil-6 in common year).
         func candidateRD(_ y: Int32, _ cm: UInt8, _ d: UInt8) -> Int64? {
             guard cm >= 1, cm <= 13 else { return nil }
             guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: cm) else { return nil }
-            let dim = HebrewArithmetic.lastDayOfMonth(y, month: bib)
-            let clamped = min(d, dim)
-            return HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: clamped)
+            return HebrewArithmetic.fixedFromHebrew(year: y, month: bib, day: d)
         }
 
         // Helper: produce a Date from RD + secsInDay, also checking strict-after-input.
@@ -1093,7 +1111,6 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
         // {day, …} — no month → walk to next/prev civil month boundary.
         let dayInTarget = UInt8(targetDay!)   // hasDay guaranteed by caller (we checked above)
-        if dayInTarget < 1 { return nil }
 
         if forward {
             // Try this month first if day strictly later (or same day with later time-of-day).
@@ -1107,11 +1124,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             var (y, m) = Self.nextCivilMonthForward(year: currentYear, civilMonth: currentCivilMonth)
             for _ in 0..<14 {   // bounded — Hebrew has at most 13 months/year
                 if let cRd = candidateRD(y, m, dayInTarget) {
-                    // Only accept if dayInTarget actually exists (no clamping on day-only walk).
-                    guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: m) else { return nil }
-                    if dayInTarget <= HebrewArithmetic.lastDayOfMonth(y, month: bib) {
-                        return makeDate(cRd)
-                    }
+                    return makeDate(cRd)
                 }
                 (y, m) = Self.nextCivilMonthForward(year: y, civilMonth: m)
             }
@@ -1125,10 +1138,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
             var (y, m) = Self.prevCivilMonthBackward(year: currentYear, civilMonth: currentCivilMonth)
             for _ in 0..<14 {
                 if let cRd = candidateRD(y, m, dayInTarget) {
-                    guard let bib = HebrewArithmetic.civilToBiblical(year: y, civilMonth: m) else { return nil }
-                    if dayInTarget <= HebrewArithmetic.lastDayOfMonth(y, month: bib) {
-                        return makeDate(cRd)
-                    }
+                    return makeDate(cRd)
                 }
                 (y, m) = Self.prevCivilMonthBackward(year: y, civilMonth: m)
             }
@@ -1154,7 +1164,7 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
     /// weekday matches (Sun=1..Sat=7, ICU convention). Pure modular RD arithmetic.
     private func nextWeekdayMatch(rataDie rd: Int64, currentSecsInDay: Double,
                                   targetWeekday: Int,
-                                  targetSecsInDay: Double, forward: Bool,
+                                  targetSecsInDay: Double, hasTime: Bool, forward: Bool,
                                   tz: TimeZone) -> Date? {
         guard targetWeekday >= 1, targetWeekday <= 7 else { return nil }
 
@@ -1167,8 +1177,12 @@ internal final class _CalendarHebrew: _CalendarProtocol, @unchecked Sendable {
 
         let delta: Int64
         if currentWeekday == targetWeekday {
-            // Same weekday: advance by a full week.
-            delta = forward ? 7 : -7
+            // Same weekday: today if the time is still ahead in the direction of the search, else a full week. A backward search without a time skips today, as the general search does.
+            if forward {
+                delta = targetSecsInDay > currentSecsInDay ? 0 : 7
+            } else {
+                delta = hasTime && targetSecsInDay < currentSecsInDay ? 0 : -7
+            }
         } else if forward {
             let raw = (targetWeekday - currentWeekday + 7) % 7   // 1..6
             delta = Int64(raw)
