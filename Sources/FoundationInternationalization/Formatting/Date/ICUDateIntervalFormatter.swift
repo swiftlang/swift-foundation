@@ -19,10 +19,12 @@ internal import _FoundationICU
 
 final class ICUDateIntervalFormatter : @unchecked Sendable {
     struct Signature : Hashable {
-        let localeComponents: Locale.Components
+        /// Never the autoupdating locale: that one is equal only to itself, but formats differently when the system settings change.
+        let locale: Locale
         let calendarIdentifier: Calendar.Identifier
         let timeZoneIdentifier: String
         let dateTemplate: String
+        let minimization: Date.IntervalFormatStyle.Minimization
     }
     
     internal static let cache = FormatterCache<Signature, ICUDateIntervalFormatter?>()
@@ -31,7 +33,8 @@ final class ICUDateIntervalFormatter : @unchecked Sendable {
     let uformatter: OpaquePointer // UDateIntervalFormat
 
     private init?(signature: Signature) {
-        var comps = signature.localeComponents
+        // The locale's preferences (such as hour cycle) are captured in the components, so they are part of the formatter.
+        var comps = Locale.Components(locale: signature.locale)
         comps.calendar = signature.calendarIdentifier
         let id = comps.icuIdentifier
 
@@ -54,7 +57,12 @@ final class ICUDateIntervalFormatter : @unchecked Sendable {
 
         uformatter = formatter
 
-        udtitvfmt_setAttribute(uformatter, UDTITVFMT_MINIMIZE_TYPE, UDTITVFMT_MINIMIZE_NONE, &status)
+        let minimize: UDateIntervalFormatAttributeValue = switch signature.minimization {
+        case .none: UDTITVFMT_MINIMIZE_NONE
+        case .adjacentDays: UDTITVFMT_MINIMIZE_ADJACENT_DAYS
+        case .adjacentMonths: UDTITVFMT_MINIMIZE_ADJACENT_MONTHS
+        }
+        udtitvfmt_setAttribute(uformatter, UDTITVFMT_MINIMIZE_TYPE, minimize, &status)
         _ = status.checkSuccessAndLogError("udtitvfmt_setAttribute failed.")
     }
 
@@ -63,27 +71,41 @@ final class ICUDateIntervalFormatter : @unchecked Sendable {
     }
 
     func string(from: Range<Date>) -> String? {
-        let fromUDate = from.lowerBound.udate
-        let toUDate = from.upperBound.udate
+        string(from: from.lowerBound, to: from.upperBound)
+    }
 
-        return _withResizingUCharBuffer { buffer, size, status in
+    /// `from` may be later than `to`.
+    func string(from: Date, to: Date) -> String? {
+        let fromUDate = from.udate
+        let toUDate = to.udate
+
+        // Test cases show that 256 covers all known format outputs. If one is larger, though, we will correctly resize.
+        return _withResizingUCharBuffer(initialSize: 256) { buffer, size, status in
             udtitvfmt_format(uformatter, fromUDate, toUDate, buffer, size, nil /* position */, &status)
         }
     }
 
     internal static func formatter(for style: Date.IntervalFormatStyle) -> ICUDateIntervalFormatter? {
-        var template = style.symbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
+        var template: String
+        if let override = style.templateOverride {
+            template = override
+        } else {
+            template = style.symbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
 
-        if template.isEmpty {
-            let defaultSymbols = Date.FormatStyle.DateFieldCollection()
-                .collection(date: .numeric)
-                .collection(time: .shortened)
-            template = defaultSymbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
+            if template.isEmpty {
+                let defaultSymbols = Date.FormatStyle.DateFieldCollection()
+                    .collection(date: .numeric)
+                    .collection(time: .shortened)
+                template = defaultSymbols.formatterTemplate(overridingDayPeriodWithLocale: style.locale)
+            }
         }
 
-        // This captures all of the special preferences that may be set on the locale
-        let comps = Locale.Components(locale: style.locale)
-        let signature = Signature(localeComponents: comps, calendarIdentifier: style.calendar.identifier, timeZoneIdentifier: style.timeZone.identifier, dateTemplate: template)
+        // Key on the locale itself (its identifier and special preferences) so that the components are only built when the formatter is created. An autoupdating locale is replaced by what it currently stands for.
+        var locale = style.locale
+        if locale == .autoupdatingCurrent {
+            locale = .current
+        }
+        let signature = Signature(locale: locale, calendarIdentifier: style.calendar.identifier, timeZoneIdentifier: style.timeZone.identifier, dateTemplate: template, minimization: style.minimization)
         
         return Self.cache.formatter(for: signature) {
             ICUDateIntervalFormatter(signature: signature)

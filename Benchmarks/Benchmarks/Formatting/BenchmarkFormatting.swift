@@ -97,4 +97,5 @@ let benchmarks: @Sendable () -> Void = {
 
     listFormatBenchmarks()
     dateFormatBenchmarks()
+    dateIntervalFormatBenchmarks()
 }

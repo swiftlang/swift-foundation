@@ -40,6 +40,12 @@ extension Date {
         // Internal
         internal var symbols =  Date.FormatStyle.DateFieldCollection()
 
+        /// When non-nil, this skeleton is passed to the formatter as-is, instead of the one built from `symbols`.
+        internal var templateOverride: String?
+
+        /// How the style should shorten the boundary between two adjacent days or months.
+        internal var minimization: Minimization = .none
+
         /// Creates a new `FormatStyle` with the given configurations.
         /// - Parameters:
         ///   - date: The style for formatting the date part of the given date pairs. Note that if `.omitted` is specified, but the date interval spans more than one day, a locale-specific fallback will be used.
@@ -86,6 +92,30 @@ extension Date {
             new.locale = locale
             return new
         }
+    }
+}
+
+// MARK: - Package-only configuration
+
+extension Date.IntervalFormatStyle {
+    package enum Minimization : Hashable, Sendable {
+        case none
+        case adjacentDays
+        case adjacentMonths
+    }
+
+    /// Creates a style that uses a customized `template` string.
+    package init(template: String, minimization: Minimization = .none, locale: Locale, calendar: Calendar, timeZone: TimeZone) {
+        self.init(locale: locale, calendar: calendar, timeZone: timeZone)
+        self.templateOverride = template
+        self.minimization = minimization
+    }
+
+    /// Formats the interval between two dates.
+    ///
+    /// Unlike `format(_:)`, this accepts `from` later than `to`, and returns `nil` on failure.
+    package func format(from: Date, to: Date) -> String? {
+        ICUDateIntervalFormatter.formatter(for: self)?.string(from: from, to: to)
     }
 }
 
@@ -205,7 +235,12 @@ extension Range where Bound == Date {
 
 #if !hasFeature(Embedded)
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
-extension Date.IntervalFormatStyle : Codable {}
+extension Date.IntervalFormatStyle : Codable {
+    // These fields are not part of the encoded representation.
+    private enum CodingKeys: String, CodingKey {
+        case locale, timeZone, calendar, symbols
+    }
+}
 #endif // !hasFeature(Embedded)
 
 #endif // ICU
