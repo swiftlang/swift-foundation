@@ -192,7 +192,9 @@ extension NotificationCenter {
             }
         })
 #else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: observer))
+        // MainActorMessage posts synchronously on the main actor, so the registrar invokes this observer there.
+        let unsafeObserver = unsafeBitCast(observer, to: (@Sendable (Message) -> Void).self)
+        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: unsafeObserver))
 #endif
     }
 
