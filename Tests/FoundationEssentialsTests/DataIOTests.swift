@@ -12,6 +12,22 @@
 
 import Testing
 
+#if canImport(Android)
+import Android
+#endif
+
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Bionic)
+import Bionic
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(WASI)
+import WASILibc
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @testable import Foundation
 #else
@@ -38,6 +54,16 @@ private final class DataIOTests {
     // MARK: - Helpers
     
     let url: URL
+
+    private var atomicTestDirectory: URL {
+        #if os(WASI)
+        // A WASI sandbox may expose only its current directory.
+        URL(filePath: FileManager.default.currentDirectoryPath).appendingPathComponent(UUID().uuidString)
+        #else
+        // FilePlayground tests can change the process CWD concurrently.
+        url
+        #endif
+    }
     
     init() {
         // Generate a random file name
@@ -98,7 +124,7 @@ private final class DataIOTests {
         #expect(readData == slice)
     }
 
-    #if !os(WASI)
+    #if !os(Emscripten)
     // Atomic writing is a very different code path
     @Test func readWriteAtomic() throws {
         // Perform an atomic write to a file that does not exist
@@ -108,6 +134,95 @@ private final class DataIOTests {
         try writeAndVerifyTestData(to: url, writeOptions: [.atomic])
     }
     #endif
+
+#if !os(Windows) && !os(Emscripten)
+    // The open-reader check uses POSIX descriptors; atomic writing is unavailable on Emscripten.
+    @Test func atomicWriteInDestination() throws {
+        try verifyAtomicReplacement { data, destination in
+            try data.write(to: destination, options: .atomic)
+        }
+    }
+
+    @Test func atomicStringPathWrite() throws {
+        try verifyAtomicReplacement { data, destination in
+            try String(decoding: data, as: UTF8.self).write(toFile: destination.path, atomically: true, encoding: .utf8)
+        }
+    }
+
+    @Test func atomicStringURLWrite() throws {
+        try verifyAtomicReplacement { data, destination in
+            try String(decoding: data, as: UTF8.self).write(to: destination, atomically: true, encoding: .utf8)
+        }
+    }
+
+    @Test func atomicCreateFile() throws {
+        try verifyAtomicReplacement { data, destination in
+            try #require(FileManager.default.createFile(atPath: destination.path, contents: data))
+        }
+    }
+
+    private func verifyAtomicReplacement(_ write: (Data, URL) throws -> Void) throws {
+        // Only the destination directory needs to be accessible, including in a WASI sandbox.
+        let manager = FileManager.default
+        let directory = atomicTestDirectory
+        try manager.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? manager.removeItem(at: directory) }
+
+        let destination = directory.appendingPathComponent("data")
+        var initial = Data()
+        try write(initial, destination)
+        #expect(try Data(contentsOf: destination).isEmpty)
+
+        #if os(WASI)
+        // FoundationEssentials also defines this flag for older WASI SDKs.
+        let readOnly = WASILibc.O_RDONLY
+        #else
+        let readOnly = O_RDONLY
+        #endif
+
+        // Reading the destination alone cannot distinguish replacement from an in-place overwrite.
+        for replacement in [Data("initial 🗽".utf8), Data("a longer replacement 🚉".utf8), Data("short".utf8), Data()] {
+            let fd = destination.path.withCString { open($0, readOnly) }
+            try #require(fd >= 0)
+            defer { close(fd) }
+
+            try write(replacement, destination)
+            #expect(try Data(contentsOf: destination) == replacement)
+            // The extra byte detects in-place growth, including overwriting an empty file.
+            var original = Data(count: initial.count + 1)
+            let count = original.withUnsafeMutableBytes { read(fd, $0.baseAddress, $0.count) }
+            try #require(count >= 0)
+            #expect(count == initial.count)
+            #expect(original.prefix(count) == initial)
+            #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
+            initial = replacement
+        }
+    }
+
+#endif
+
+#if !os(Emscripten)
+    @Test func atomicWriteFailureCleansUp() throws {
+        let manager = FileManager.default
+        let directory = atomicTestDirectory
+        let destination = directory.appendingPathComponent("destination")
+        try manager.createDirectory(at: destination, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: directory) }
+
+        let sentinel = destination.appendingPathComponent("sentinel")
+        let initial = Data("keep".utf8)
+        try initial.write(to: sentinel)
+
+        // A file cannot replace a nonempty directory; its temporary sibling must be removed.
+        #expect(throws: CocoaError.self) {
+            try Data("replacement".utf8).write(to: destination, options: .atomic)
+        }
+        #expect(try Data(contentsOf: sentinel) == initial)
+        #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["destination"])
+    }
+#endif
+
+
 
     @Test func readWriteMapped() throws {
         try writeAndVerifyTestData(to: url, readOptions: [.mappedIfSafe])
@@ -225,6 +340,43 @@ private final class DataIOTests {
         }
     }
 
+#if !os(Emscripten)
+    @Test func atomicReadersSeeWholeWrites() async throws {
+        let manager = FileManager.default
+        let directory = atomicTestDirectory
+        try manager.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? manager.removeItem(at: directory) }
+        let destination = directory.appendingPathComponent("data")
+        let payloadSize = 64 * 1024
+        let writesPerTask = 8
+        let readerChecks = 128
+        let payloads = (0..<4).map { Data(repeating: UInt8($0), count: payloadSize) }
+        try payloads[0].write(to: destination, options: .atomic)
+
+        // Different payloads expose truncated or mixed writes that identical concurrent writers cannot detect.
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for payload in payloads {
+                group.addTask {
+                    for _ in 0..<writesPerTask {
+                        try payload.write(to: destination, options: .atomic)
+                        await Task.yield()
+                    }
+                }
+            }
+            group.addTask {
+                for _ in 0..<readerChecks {
+                    let observed = try Data(contentsOf: destination)
+                    #expect(payloads.contains(observed))
+                    await Task.yield()
+                }
+            }
+            try await group.waitForAll()
+        }
+        #expect(payloads.contains(try Data(contentsOf: destination)))
+        #expect(try manager.contentsOfDirectory(atPath: directory.path) == ["data"])
+    }
+#endif
+
     @Test
     func atomicWrite() async throws {
         let data = generateTestData()
@@ -243,6 +395,8 @@ private final class DataIOTests {
         #expect(readData == data)
     }
 
+#if !os(WASI) && !os(Emscripten)
+    // WASI and Emscripten do not support POSIX permissions.
     // Atomic writes must succeed when the destination is read-only.
     // On POSIX this is the behavior of rename(2). On Windows, SetFileInformationByHandle with FileRenameInfoEx returns ERROR_ACCESS_DENIED for a FILE_ATTRIBUTE_READONLY destination even with FILE_RENAME_FLAG_POSIX_SEMANTICS | FILE_RENAME_FLAG_REPLACE_IF_EXISTS. So the read-only attribute is cleared and the rename is retried.
     // The resulting file retains the read-only attribute. (Not yet on Windows).
@@ -269,6 +423,7 @@ private final class DataIOTests {
         #expect(mode == 0o400)
 #endif
     }
+#endif
 }
 
 extension LargeDataTests {
