@@ -635,6 +635,7 @@ enum _FileOperations {
                             }
                         } else {
                             var stack: [String] = [source]
+                            var copiedAllItems = true
                             while let entry = stack.popLast() {
                                 do {
                                     try entry.withNTPathRepresentation { pwszEntry in
@@ -644,7 +645,8 @@ enum _FileOperations {
                                         }
 
                                         var pwszDestination: PWSTR? = nil
-                                        guard SUCCEEDED(PathAllocCombine(destination, entry, PATHCCH_ALLOW_LONG_PATHS, &pwszDestination)) else {
+                                        let relativePath = String(entry.dropFirst(source.count).drop(while: { $0 == "/" || $0 == "\\" }))
+                                        guard SUCCEEDED(PathAllocCombine(destination, relativePath, PATHCCH_ALLOW_LONG_PATHS, &pwszDestination)) else {
                                             throw CocoaError.moveFileError(GetLastError(), src, dst)
                                         }
                                         defer { LocalFree(pwszDestination) }
@@ -665,9 +667,8 @@ enum _FileOperations {
                                                 guard CreateDirectoryW(pwszDestination, nil) else {
                                                     throw CocoaError.moveFileError(GetLastError(), src, dst)
                                                 }
-                                                stack.append(entry)
-                                                for entry in _Win32DirectoryContentsSequence(path: entry, appendSlashForDirectory: true) {
-                                                    stack.append(entry.fileName)
+                                                for child in _Win32DirectoryContentsSequence(path: entry, appendSlashForDirectory: true) {
+                                                    stack.append(entry.appendingPathComponent(child.fileName))
                                                 }
                                             } else {
                                                 guard CopyFileW(pwszEntry, pwszDestination, true) else {
@@ -677,10 +678,14 @@ enum _FileOperations {
                                         }
                                     }
                                 } catch let error {
+                                    copiedAllItems = false
                                     guard fileManager._shouldProceedAfter(error: error, movingItemAtPath: source, to: destination) else {
                                         throw error
                                     }
                                 }
+                            }
+                            if copiedAllItems {
+                                try removeFile(source, with: nil)
                             }
                         }
                     }

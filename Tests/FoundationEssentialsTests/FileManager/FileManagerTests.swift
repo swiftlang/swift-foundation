@@ -585,6 +585,83 @@ private struct FileManagerTests {
         }
     }
 
+    #if os(Windows)
+    // A DOS drive alias exercises the different-root move fallback without requiring another filesystem.
+    private func withDriveAlias(for path: String, _ body: (String) throws -> Void) throws {
+        let driveMask = GetLogicalDrives()
+        let driveIndex = try #require((UInt32(3)..<26).first { driveMask & (1 << $0) == 0 })
+        let device = String(try #require(UnicodeScalar(65 + driveIndex))) + ":"
+        let target = String(path.map { $0 == "/" ? "\\" : $0 })
+        try #require(device.withCString(encodedAs: UTF16.self) { device in
+            target.withCString(encodedAs: UTF16.self) { target in
+                DefineDosDeviceW(DWORD(DDD_NO_BROADCAST_SYSTEM), device, target)
+            }
+        })
+        defer {
+            #expect(device.withCString(encodedAs: UTF16.self) { device in
+                target.withCString(encodedAs: UTF16.self) { target in
+                    DefineDosDeviceW(DWORD(DDD_REMOVE_DEFINITION | DDD_EXACT_MATCH_ON_REMOVE | DDD_NO_BROADCAST_SYSTEM), device, target)
+                }
+            })
+        }
+        try body(device + "\\")
+    }
+
+    @Test func moveDirectoryBetweenDriveRoots() async throws {
+        let contents = Data("nested file".utf8)
+        try await FilePlayground {
+            Directory("source") {
+                Directory("nested 日本語") {
+                    File("file with spaces.txt", contents: contents)
+                }
+                Directory("empty") {}
+            }
+        }.test(captureDelegateCalls: true) { fileManager in
+            try withDriveAlias(for: fileManager.currentDirectoryPath) { drive in
+                let source = fileManager.currentDirectoryPath.appendingPathComponent("source")
+                let destination = drive + "moved"
+                try fileManager.moveItem(atPath: source, toPath: destination)
+                #expect(!fileManager.fileExists(atPath: source))
+                #expect(fileManager.delegateCaptures.shouldCopy.isEmpty)
+                #expect(fileManager.delegateCaptures.shouldRemove.isEmpty)
+                #expect(try fileManager.subpathsOfDirectory(atPath: "moved").sorted() == ["empty", "nested 日本語", "nested 日本語/file with spaces.txt"])
+                #expect(fileManager.contents(atPath: "moved/nested 日本語/file with spaces.txt") == contents)
+            }
+        }
+    }
+
+    @Test(arguments: [false, true]) func moveDirectoryBetweenDriveRootsKeepsSourceAfterCopyFailure(_ ignoreMoveError: Bool) async throws {
+        try await FilePlayground {
+            Directory("source") {
+                File("locked", contents: Data("unchanged".utf8))
+            }
+        }.test(captureDelegateCalls: ignoreMoveError) { fileManager in
+            try withDriveAlias(for: fileManager.currentDirectoryPath) { drive in
+                let source = fileManager.currentDirectoryPath.appendingPathComponent("source")
+                do {
+                    let handle = try #require(source.appendingPathComponent("locked").withCString(encodedAs: UTF16.self) {
+                        WinSDK.CreateFileW($0, DWORD(WinSDK.GENERIC_READ), 0, nil, DWORD(WinSDK.OPEN_EXISTING), DWORD(WinSDK.FILE_ATTRIBUTE_NORMAL), nil)
+                    })
+                    try #require(handle != WinSDK.INVALID_HANDLE_VALUE)
+                    defer { WinSDK.CloseHandle(handle) }
+                    if ignoreMoveError {
+                        try fileManager.moveItem(atPath: source, toPath: drive + "moved")
+                        #expect(fileManager.delegateCaptures.shouldProceedAfterMoveError.map { $0.code } == [.fileWriteNoPermission])
+                        #expect(fileManager.delegateCaptures.shouldCopy.isEmpty)
+                    } else {
+                        #expect {
+                            try fileManager.moveItem(atPath: source, toPath: drive + "moved")
+                        } throws: {
+                            ($0 as? CocoaError)?.code == .fileWriteNoPermission
+                        }
+                    }
+                }
+                #expect(fileManager.contents(atPath: source.appendingPathComponent("locked")) == Data("unchanged".utf8))
+            }
+        }
+    }
+    #endif
+
     @Test func copyItemAtPathToPath() async throws {
         let data = randomData()
         try await FilePlayground {
