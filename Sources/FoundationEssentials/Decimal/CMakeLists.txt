@@ -2,7 +2,7 @@
 ##
 ## This source file is part of the Swift open source project
 ##
-## Copyright (c) 2024 Apple Inc. and the Swift project authors
+## Copyright (c) 2024-2026 Apple Inc. and the Swift project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -14,5 +14,6 @@
 target_sources(FoundationEssentials PRIVATE
     Decimal.swift
     Decimal+Conformances.swift
+    Decimal+FloatingPointConversion.swift
     Decimal+Math.swift
     Decimal+Compatibility.swift)
