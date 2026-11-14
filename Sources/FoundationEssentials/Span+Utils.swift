@@ -275,7 +275,6 @@ extension OutputSpan where Element: ~Copyable {
     }
 }
 
-
 extension String {
     package init<E>(_capacity capacity: Int, initializingWith body: (inout OutputSpan<UTF8.CodeUnit>) throws(E) -> Void) throws(E) {
         try self.init(unsafeUninitializedCapacity: capacity) { buffer throws(E) in
@@ -283,5 +282,26 @@ extension String {
             try body(&outputSpan)
             return outputSpan.finalize(for: buffer)
         }
+    }
+}
+
+extension Array {
+    package init(copying span: borrowing Span<Element>) {
+        self = Self.init(capacity: span.count) { outputSpan in
+            for i in 0..<span.count {
+                outputSpan.append(span[i])
+            }
+        }
+    }
+}
+
+extension Dictionary {
+    package init<E: Error>(copyingKeys keys: borrowing Span<Key>, values: borrowing Span<Value>, uniquingKeysWith combine: (Value, Value) throws(E) -> Value) throws(E) {
+        precondition(keys.count == values.count)
+        var result = Dictionary(minimumCapacity: keys.count)
+        for i in 0..<keys.count {
+            try result.merge(CollectionOfOne((keys[i], values[i])), uniquingKeysWith: combine)
+        }
+        self = result
     }
 }
