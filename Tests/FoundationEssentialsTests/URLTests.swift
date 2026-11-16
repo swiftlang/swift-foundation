@@ -3149,6 +3149,47 @@ private struct URLTests {
         #expect(schemeOnly.scheme == "scheme")
     }
 
+    @Test func bracketBeforeColonInRelativeReference() throws {
+        // A "[", "]", or "@" before the first ":" means the string has no scheme and parses as a relative path, with the invalid characters and the ":" in its first segment percent-encoded.
+        var url = try #require(URL(string: "[2001:db8::1]:443"))
+        #expect(url.absoluteString == "%5B2001%3Adb8%3A%3A1%5D%3A443")
+        #expect(url.scheme == nil)
+        #expect(url.host() == nil)
+        #expect(url.port == nil)
+        #expect(url.path == "[2001:db8::1]:443")
+        #expect(URL(string: url.absoluteString)?.absoluteString == url.absoluteString)
+
+        url = try #require(URL(string: "[::1]"))
+        #expect(url.absoluteString == "%5B%3A%3A1%5D")
+
+        url = try #require(URL(string: "x[y]:z"))
+        #expect(url.absoluteString == "x%5By%5D%3Az")
+        #expect(url.scheme == nil)
+
+        url = try #require(URL(string: "user@host name:22"))
+        #expect(url.absoluteString == "user@host%20name%3A22")
+        #expect(url.scheme == nil)
+        #expect(url.path == "user@host name:22")
+
+        // ":" is only encoded in the first path segment
+        url = try #require(URL(string: "[::1]:8080/a:b?q:r#f:g"))
+        #expect(url.absoluteString == "%5B%3A%3A1%5D%3A8080/a:b?q:r#f:g")
+        #expect(url.path == "[::1]:8080/a:b")
+        #expect(url.query == "q:r")
+        #expect(url.fragment == "f:g")
+
+        let base = try #require(URL(string: "https://example.com/dir/"))
+        url = try #require(URL(string: "[2001:db8::1]:443", relativeTo: base))
+        #expect(url.absoluteString == "https://example.com/dir/%5B2001%3Adb8%3A%3A1%5D%3A443")
+        #expect(url.host() == "example.com")
+
+        #expect(URL(string: "[2001:db8::1]:443", encodingInvalidCharacters: false) == nil)
+
+        // Without a "[", "]", or "@" first, the ":" might be a scheme delimiter.
+        #expect(URL(string: "not a scheme:path") == nil)
+        #expect(URL(string: "a b:c[d]") == nil)
+    }
+
     @Test func emptySchemeCompatibility() throws {
         var url = try #require(URL(string: ":memory:"))
         #expect(url.scheme == "")
