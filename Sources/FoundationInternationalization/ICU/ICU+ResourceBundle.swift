@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 
+#if ICU
 internal import _FoundationICU
 
 #if canImport(FoundationEssentials)
@@ -164,3 +165,4 @@ extension ICU {
     }
 }
 
+#endif // ICU

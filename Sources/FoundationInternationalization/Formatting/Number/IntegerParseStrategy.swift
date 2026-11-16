@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 /// A parse strategy for creating integer values from formatted strings.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct IntegerParseStrategy<Format> : Hashable where Format : FormatStyle, Format.FormatInput : BinaryInteger {
@@ -122,3 +124,5 @@ public extension IntegerParseStrategy {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerParseStrategy : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

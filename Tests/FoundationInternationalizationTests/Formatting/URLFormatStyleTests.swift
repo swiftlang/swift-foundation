@@ -245,6 +245,7 @@ private struct URLFormatStyleTests {
 #endif
     }
 
+#if ICU
     @Test func lookalikeCharacters() {
         // Display all components
         let style = URL.FormatStyle(
@@ -447,6 +448,7 @@ private struct URLFormatStyleTests {
             verify(encodedUnicodeTest.url, matches: encodedUnicodeTest.output, withStyle: style)
         }
     }
+#endif // ICU
 
     private func verify(_ urlString: String, matches expectedOutput: String, withStyle style: URL.FormatStyle, sourceLocation: SourceLocation = #_sourceLocation) {
         // Use a URLComponents to create the URL in case it has Unicode characters

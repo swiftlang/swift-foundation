@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle {
 
@@ -1610,3 +1612,5 @@ extension Date.FormatStyle.Symbol.VerbatimHour.HourCycle : Codable {}
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.FormatStyle.Symbol.VerbatimHour.Clock : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

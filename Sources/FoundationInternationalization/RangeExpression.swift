@@ -12,44 +12,39 @@
 
 internal extension RangeExpression {
     func clampedLowerAndUpperBounds(_ boundary: Range<Int>) -> (lower: Int?, upper: Int?) {
-        var lower: Int?
-        var upper: Int?
+        // Boundary should never be empty because there must be at least one valid value
+        // Assuming boundary is non-empty allows us to increment its lowerBound or decrement its upperBound below without overflows
+        assert(!boundary.isEmpty)
+
         switch self {
         case let self as Range<Int>:
             let clamped = self.clamped(to: boundary)
-            lower = clamped.lowerBound
-            upper = clamped.upperBound
+            if clamped.isEmpty {
+                // If the range is empty, we have no choice but to treat it as a requirement for the closest valid value in boundary
+                if clamped.lowerBound == boundary.upperBound {
+                    return (boundary.upperBound - 1, boundary.upperBound - 1)
+                } else {
+                    return (clamped.lowerBound, clamped.lowerBound)
+                }
+            } else {
+                // We can safely subtract 1 from clamped.upperBound below because we know that clamped.upperBound > boundary.lowerBound
+                return (clamped.lowerBound, clamped.upperBound - 1)
+            }
         case let self as ClosedRange<Int>:
             let clamped = self.clamped(to: ClosedRange(boundary))
-            lower = clamped.lowerBound
-            upper = clamped.upperBound
+            return (clamped.lowerBound, clamped.upperBound)
         case let self as PartialRangeFrom<Int>:
-            lower = max(self.lowerBound, boundary.lowerBound)
-            upper = nil
+            let clamped = min(max(self.lowerBound, boundary.lowerBound), boundary.upperBound - 1)
+            return (clamped, nil)
         case let self as PartialRangeThrough<Int>:
-            lower = nil
-            upper = min(self.upperBound, boundary.upperBound)
+            let clamped = min(max(self.upperBound, boundary.lowerBound), boundary.upperBound - 1)
+            return (nil, clamped)
         case let self as PartialRangeUpTo<Int>:
-            lower = nil
-            let (val, overflow) = self.upperBound.subtractingReportingOverflow(1)
-            if overflow { // So small that we have no choice but treating self as PartialRangeThrough
-                upper = min(self.upperBound, boundary.upperBound)
-            } else {
-                upper = min(val, boundary.upperBound)
-            }
+            let clamped = min(max(self.upperBound, boundary.lowerBound + 1), boundary.upperBound)
+            // We can safely subtract 1 from clamped below because we know that clamped > boundary.lowerBound
+            return (nil, clamped - 1)
         default:
-            lower = nil
-            upper = nil
+            return (nil, nil)
         }
-
-        if lower != nil {
-            lower = min(lower!, boundary.upperBound)
-        }
-
-        if upper != nil {
-            upper = max(upper!, boundary.lowerBound)
-        }
-
-        return (lower: lower, upper: upper)
     }
 }

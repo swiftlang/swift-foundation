@@ -567,6 +567,12 @@ extension URL {
             shouldEncode = true
         }
 
+        // When enabled, strict validation rejects some of the invalid URL strings that CFURL would otherwise allow.
+        @inline(__always)
+        func useStrictValidation() -> Bool {
+            return !useModernParsing && foundation_swift_url_strict_validation_enabled()
+        }
+
         @inline(__always)
         func checkHost() -> Bool {
             guard flags.contains(.hasHost) else { return true }
@@ -577,7 +583,8 @@ extension URL {
                 let innerHost = host.extracting(1..<(host.count - 1))
                 guard let isValid = validateIPLiteral(
                     innerHost: innerHost,
-                    useModernParsing: useModernParsing
+                    useModernParsing: useModernParsing,
+                    useStrictValidation: useStrictValidation()
                 ) else {
                     return false
                 }
@@ -989,12 +996,16 @@ extension URL {
             func idnaEncodeHost(range: Range<Int>) -> Bool {
                 guard !range.isEmpty else { return true }
                 guard flush() else { return false }
-                #if hasFeature(Embedded)
+                #if hasFeature(Embedded) && ICU
                 // FoundationInternationalization is in the same module.
                 let uidnaHook = UIDNAHookICU.self
+                #elseif hasFeature(Embedded)
+                // IDNA encoding requires ICU.
+                return false
                 #else
                 guard let uidnaHook = _uidnaHook() else { return false }
                 #endif
+                #if !hasFeature(Embedded) || ICU
                 let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
                     return uidnaHook.nameToASCII(
                         input: utf16Span,
@@ -1004,6 +1015,7 @@ extension URL {
                 guard success else { return false }
                 updateIndices(currentIndex: range.endIndex)
                 return true
+                #endif
             }
 
             // Returns false if there's not enough room in the output buffer.

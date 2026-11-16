@@ -40,6 +40,7 @@ target_compile_options(FoundationInternationalization PRIVATE
 target_compile_options(FoundationInternationalization PRIVATE ${_SwiftFoundation_availability_macros})
 target_compile_options(FoundationInternationalization PRIVATE ${_SwiftFoundation_wasi_libc_flags})
 target_compile_options(FoundationInternationalization PRIVATE -package-name "SwiftFoundation")
+target_compile_options(FoundationInternationalization PRIVATE "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-DICU>")
 
 target_link_libraries(FoundationInternationalization PUBLIC
     FoundationEssentials

@@ -25,6 +25,8 @@ import Testing
 // `TimeZone(identifier: "America/Los_Angeles")`, which requires the ICU-backed
 // TimeZone implementation only linked when FoundationInternationalization is
 // part of the test target's dependency graph.
+#if ICU
+
 @Suite("Hebrew DST Policy Parity")
 private struct HebrewDSTPolicyParityTests {
 
@@ -166,3 +168,5 @@ private struct HebrewDSTPolicyParityTests {
         )
     }
 }
+
+#endif // ICU

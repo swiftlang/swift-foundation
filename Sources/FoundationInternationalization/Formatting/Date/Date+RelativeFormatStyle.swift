@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 typealias CalendarComponentAndValue = (component: Calendar.Component, value: Int)
@@ -525,3 +526,5 @@ extension Date.RelativeFormatStyle.ComponentAdjustmentStrategy : Codable {
     private typealias RoundedCodingKeys = EmptyCodingKeys
 }
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

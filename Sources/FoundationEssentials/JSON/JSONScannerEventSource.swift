@@ -374,7 +374,7 @@ struct JSONScannerEventSource<Mode: JSONScannerMode>: ParseEventSource<NullFilte
     private mutating func scanNumber<Sink: ParseEventSink & ~Copyable>(into channel: inout IterativeParsingDriver<Self, Sink>) throws where Sink.Vocabulary == JSONVocabulary {
         let startOffset = readOffset
         var containsExponent = false
-        let hitEOF = try skipNumber(containsExponent: &containsExponent)
+        try skipNumber(containsExponent: &containsExponent)
         let byteCount = readOffset &- startOffset
         let slice = sourceBytes.extracting(unchecked: startOffset ..< startOffset &+ byteCount)
         try channel.emitScalar(JSONScalar.number(bytes: slice, containsExponent: containsExponent, source: sourceBytes))
@@ -611,8 +611,8 @@ struct JSONScannerEventSource<Mode: JSONScannerMode>: ParseEventSource<NullFilte
         readOffset &+= 2
     }
 
-    /// Advance through a JSON number. Sets `containsExponent` on `e`/`E`. In JSON5 mode also accepts `+`/`.`/`I`/`N` as leading bytes and consumes ASCII letters so tokens like `Infinity`, `NaN`, `0x1F` capture as one span; the sink's number decoder does the real validation. Returns `true` iff scanning stopped at EOF rather than a trailing non-numeric byte.
-    private mutating func skipNumber(containsExponent: inout Bool) throws -> Bool {
+    /// Advance through a JSON number. Sets `containsExponent` on `e`/`E`. In JSON5 mode also accepts `+`/`.`/`I`/`N` as leading bytes and consumes ASCII letters so tokens like `Infinity`, `NaN`, `0x1F` capture as one span; the sink's number decoder does the real validation.
+    private mutating func skipNumber(containsExponent: inout Bool) throws {
         let first = try readByteOrEOF()
         switch first {
         case _asciiNumbers, UInt8(ascii: "-"):
@@ -641,10 +641,9 @@ struct JSONScannerEventSource<Mode: JSONScannerMode>: ParseEventSource<NullFilte
                 // Sweep up `Infinity`, `NaN`, hex-digit tails. Validated by the sink.
                 readOffset &+= 1
             default:
-                return false
+                return
             }
         }
-        return true
     }
 
     private mutating func expectLiteralTail(_ tail: StaticString, context: String) throws {

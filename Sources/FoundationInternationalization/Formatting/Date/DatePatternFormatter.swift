@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
@@ -814,3 +816,5 @@ extension AttributeScopes.FoundationAttributes.DateFieldAttribute.Field {
         }
     }
 }
+
+#endif // ICU

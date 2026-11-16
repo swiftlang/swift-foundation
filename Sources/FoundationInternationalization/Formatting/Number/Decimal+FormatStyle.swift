@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
     /// A structure that converts between decimal values and their textual representations.
@@ -888,3 +890,5 @@ extension RegexComponent where Self == Decimal.FormatStyle.Currency {
     }
 }
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

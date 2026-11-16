@@ -23,6 +23,8 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+#if ICU
+
 @Suite("Locale.Components", .tags(.locale))
 private struct LocaleComponentsTests {
 
@@ -677,3 +679,5 @@ private struct LocaleCodableTests {
         """)
     }
 }
+
+#endif // ICU

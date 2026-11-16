@@ -15,6 +15,8 @@ import FoundationInternationalization
 import Foundation
 #endif
 
+#if ICU
+
 @Suite("ByteCountFormatStyle")
 private struct ByteCountFormatStyleTests {
     static let locales = [Locale(identifier: "en_US"), .init(identifier: "fr_FR"), .init(identifier: "zh_TW"), .init(identifier: "zh_CN"), .init(identifier: "ar")]
@@ -259,3 +261,5 @@ extension Sequence where Element == Segment {
         }.reduce(into: AttributedString()) { $0 += $1 }
     }
 }
+
+#endif // ICU

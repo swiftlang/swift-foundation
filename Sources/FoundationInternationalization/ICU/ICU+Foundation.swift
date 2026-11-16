@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 
 #if canImport(os) && !hasFeature(Embedded)
@@ -35,7 +36,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
         return String(cString: error)
     }
 
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "icu")
     }()
@@ -54,7 +55,7 @@ extension UErrorCode {
     }
 
     func checkSuccessAndLogError(_ message: @escaping @autoclosure () -> String) -> Bool {
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
         if !isSuccess {
             ICUError.logger.error("\(message()). Error: \(ICUError(code: self).debugDescription)")
         }
@@ -198,3 +199,5 @@ internal func _withStringAsCString(_ input: String, _ body: (UnsafePointer<CChar
         return String(cString: result)
     }
 }
+
+#endif // ICU

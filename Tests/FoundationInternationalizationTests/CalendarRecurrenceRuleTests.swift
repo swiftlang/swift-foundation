@@ -23,6 +23,8 @@ import Testing
 import TestSupport
 #endif
 
+#if ICU
+
 @Suite("Calendar RecurrenceRule", .tags(.calendar))
 private struct CalendarRecurrenceRuleTests {
     /// A Gregorian calendar with a time zone set to California
@@ -229,3 +231,5 @@ private struct CalendarRecurrenceRuleTests {
         #expect(it.next() == nil)
     }
 }
+
+#endif // ICU

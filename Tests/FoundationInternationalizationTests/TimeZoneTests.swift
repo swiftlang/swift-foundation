@@ -23,6 +23,7 @@ extension Testing.Tag {
     @Tag static var timeZone: Self
 }
 
+#if ICU
 @Suite("TimeZone", .tags(.timeZone))
 private struct TimeZoneTests {
     @Test func basics() {
@@ -222,7 +223,7 @@ private struct TimeZoneTests {
                 #expect(tz.localizedName(for: .shortGeneric, locale: locale) == short, sourceLocation: sourceLocation)
             }
         }
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
         try test(["UTC"], "GMT", 0, "GMT", "Greenwich Mean Time", "GMT", daylightLong: "GMT+00:00", daylightShort: "GMT+0")
 #else
         try test(["UTC"], "GMT", 0, "GMT", "Greenwich Mean Time", "GMT", daylightLong: "GMT", daylightShort: "GMT")
@@ -281,6 +282,7 @@ private struct TimeZoneTests {
         }
     }
 }
+#endif // ICU
 
 @Suite("TimeZone GMT", .tags(.timeZone))
 private struct TimeZoneGMTTests {
@@ -326,10 +328,11 @@ private struct TimeZoneGMTTests {
         #expect(tz.nextDaylightSavingTimeTransition == nil)
     }
 
+#if ICU
     @Test func localizedName() {
         #expect(tz.localizedName(for: .standard, locale: Locale(identifier: "en_US")) == "Greenwich Mean Time")
         #expect(tz.localizedName(for: .shortStandard, locale: Locale(identifier: "en_US")) == "GMT")
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
         #expect(tz.localizedName(for: .daylightSaving, locale: Locale(identifier: "en_US")) == "GMT+00:00")
         #expect(tz.localizedName(for: .shortDaylightSaving, locale: Locale(identifier: "en_US")) == "GMT+0")
 #else
@@ -341,6 +344,7 @@ private struct TimeZoneGMTTests {
         
         // TODO: In non-framework, no FoundationInternationalization cases, return nil for all of tehse
     }
+#endif // ICU
     
     @Test func equal() {
         #expect(TimeZone(identifier: "UTC") == TimeZone(identifier: "UTC"))
@@ -359,6 +363,7 @@ private struct TimeZoneGMTTests {
 
 @Suite("TimeZone ICU", .tags(.timeZone))
 private struct TimeZoneICUTests {
+#if ICU
     @Test func timeZoneOffset() throws {
         let tz = TimeZone(identifier: "America/Los_Angeles")!
         var c = Calendar(identifier: .gregorian)
@@ -434,6 +439,7 @@ private struct TimeZoneICUTests {
         try test("UTC+9:00", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
         try test("GMT+9", dc, expectedRawOffset: 32400, expectedDSTOffset: 0)
     }
+#endif // ICU
 }
 
 @Suite("TimeZone_ICUResource", .tags(.timeZone))
@@ -454,6 +460,7 @@ private struct TimeZone_ICUResourceTests {
         return dates
     }()
 
+#if ICU
     @Test func singleDSTRuleTimeZone() throws {
         let t = try _TimeZoneSingleDSTRule(offsetSeconds: -28800, dstSavingsSeconds: 3600, startMonth: 2, startDay: 8, startDayOfWeek: -1, startTime: 7200, startTimeMode: .wallTime, endMonth: 10, endDay: 1, endDayOfWeek: -1, endTime: 7200, endTimeMode: .wallTime, startYear: 2008)
         let truth = try #require(_TimeZoneICU(identifier: "America/Los_Angeles"))
@@ -611,6 +618,7 @@ private struct TimeZone_ICUResourceTests {
         // 1883-11-18T12:00:00Z, Tests NYC Local Mean Time before railroad standard time adoption
         try test("America/New_York", date: Date(timeIntervalSince1970: -2717668800.0), expectedOffsetFromGMT: -17762, expectedRawOffset: -17762, expectedDSTOffset: 0, expectedIsDST: false)
     }
+#endif // ICU
 }
 // MARK: - FoundationPreview disabled tests
 

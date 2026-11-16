@@ -152,19 +152,27 @@ open class PropertyListDecoder {
         return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
             // Enabled by feature flag; falls back to `BPlistLegacyDecodingFormat` when off.
             if foundation_swift_bplist_deserialization_enabled() {
-                var decoder: _PlistDecoder<BPlistDecodingFormat>
-                do {
-                    let parsedMetadata = try BPlistMetadata.parse(from: data.bytes)
-                    let urbp = data.withUnsafeBytes { $0 }
-                    let document = BPlistDecodingDocument(bytes: urbp, metadata: parsedMetadata)
-                    decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
-                } catch let error as BPlistError {
-                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error))
-                }
-                let result = try doDecode(decoder)
+                // The decode, and the copy-in of the backing bytes if the document escapes, must happen while `utf8Buffer` is still valid.
+                let result = try utf8Buffer.withUnsafeRawPointer { ptr, count in
+                    var decoder: _PlistDecoder<BPlistDecodingFormat>
+                    let result: T
+                    do {
+                        // The nested scope ends the lifetime of the parsed metadata and document before decoding begins.
+                        do {
+                            let parsedMetadata = try BPlistMetadata.parse(from: data.bytes)
+                            let urbp = unsafe UnsafeRawBufferPointer(start: ptr, count: count)
+                            let document = BPlistDecodingDocument(bytes: urbp, metadata: parsedMetadata)
+                            decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
+                        }
+                        result = try doDecode(decoder)
+                    } catch let error as BPlistError {
+                        throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
+                    }
 
-                let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
-                decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                    let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
+                    decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                    return result
+                }
 
                 format = .binary
                 return result

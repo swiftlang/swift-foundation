@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 /// A type that formats lists of items with a separator and conjunction appropriate for a given locale.
 ///
 /// A list format style creates human readable text from a `Sequence` of values. Customize the formatting behavior
@@ -300,3 +302,5 @@ public extension FormatStyle {
         return style
     }
 }
+
+#endif // ICU

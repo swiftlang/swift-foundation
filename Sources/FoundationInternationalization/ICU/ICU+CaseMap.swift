@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -120,3 +121,5 @@ extension ICU {
         }
     }
 }
+
+#endif // ICU

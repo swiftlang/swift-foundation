@@ -95,6 +95,7 @@ extension DateComponents {
     }
 }
 
+#if ICU
 @Suite("Calendar", .tags(.calendar))
 private struct CalendarTests {
     @Test func localeIsCached() {
@@ -1670,6 +1671,7 @@ private struct CalendarTests {
 #endif
 
 }
+#endif // ICU
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
@@ -1693,6 +1695,7 @@ private struct CalendarBridgingTests {
 
 
 // This test validates the results against FoundationInternationalization's calendar implementation temporarily until we completely ported the calendar
+#if ICU
 @Suite("GregorianCalendar Compatibility", .disabled("These tests are extensive and have long runtimes to validate full compatibility, they can be enabled locally to validate changes"), .tags(.calendar))
 private struct GregorianCalendarCompatibilityTests {
 
@@ -2737,3 +2740,4 @@ private struct GregorianCalendarCompatibilityTests {
     }
 
 }
+#endif // ICU

@@ -27,8 +27,12 @@ public func _cfStringEncodingConvert(string: String, using encoding: UInt, allow
 }
 
 package func _icuStringEncodingConvert(string: String, using encoding: String.Encoding, allowLossyConversion: Bool) -> Data? {
+#if ICU
     // FoundationInternationalization is in the same module.
     return _icuStringEncodingConvert_impl(string: string, using: encoding, allowLossyConversion: allowLossyConversion)
+#else
+    return nil
+#endif
 }
 #else
 @_spi(SwiftCorelibsFoundation)
@@ -256,6 +260,18 @@ extension StringProtocol {
             subStr = subStr[aRange]
         }
         return subStr._rangeOfCharacter(from: aSet, options: mask)
+    }
+
+    /// Returns a new string made by removing from both ends of the `String` characters contained in a given character set.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func trimmingCharacters(in set: CharacterSet) -> String {
+        String(Substring(self).unicodeScalars._trimmingCharacters(in: set))
+    }
+
+    /// Returns an array containing substrings from the string that have been divided by characters in the given set.
+    @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+    public func components(separatedBy separator: CharacterSet) -> [String] {
+        Substring(self)._components(separatedBy: separator)
     }
 
     /// Returns a `Data` containing a representation of

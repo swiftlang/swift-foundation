@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 /// A structure that converts between integer values and their textual representations.
 ///
 /// Instances of ``IntegerFormatStyle`` create localized, human-readable text from `BinaryInteger` numbers and parse string representations of numbers into instances of `BinaryInteger` types. All of the Swift standard library's integer types, such as `Int` and `UInt32`, conform to `BinaryInteger`, and therefore work with this format style.
@@ -1108,3 +1110,5 @@ extension RegexComponent where Self == IntegerFormatStyle<Int>.Currency {
     }
 }
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

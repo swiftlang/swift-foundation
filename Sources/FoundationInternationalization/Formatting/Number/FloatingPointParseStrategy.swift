@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 /// A parse strategy for creating floating-point values from formatted strings.
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct FloatingPointParseStrategy<Format> : Hashable where Format : FormatStyle, Format.FormatInput : BinaryFloatingPoint {
@@ -111,3 +113,5 @@ public extension FloatingPointParseStrategy {
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension FloatingPointParseStrategy : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -2311,3 +2312,5 @@ extension Calendar {
         return comps.icuIdentifier
     }
 }
+
+#endif // ICU

@@ -622,6 +622,24 @@ extension Substring {
         return unicodeScalars._rangeOfCharacter(anchored: options.contains(.anchored), backwards: options.contains(.backwards), matchingPredicate: set.contains)
     }
 
+    func _components(separatedBy characterSet: CharacterSet) -> [String] {
+        var result = [String]()
+        var searchStart = startIndex
+        while searchStart < endIndex {
+            let r = self[searchStart...]._rangeOfCharacter(from: characterSet, options: [])
+            guard let r, !r.isEmpty else {
+                break
+            }
+
+            result.append(String(self[searchStart ..< r.lowerBound]))
+            searchStart = r.upperBound
+        }
+
+        result.append(String(self[searchStart..<endIndex]))
+
+        return result
+    }
+
 #if !NO_UNI_CHAR_DATA
     func _rangeOfCharacter(from set: BuiltInUnicodeScalarSet, options: String.CompareOptions) -> Range<Index>? {
         guard !isEmpty else { return nil }
