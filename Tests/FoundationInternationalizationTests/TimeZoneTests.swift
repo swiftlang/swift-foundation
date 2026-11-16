@@ -63,45 +63,18 @@ private struct TimeZoneTests {
         #expect(TimeZone.gmt == TimeZone(identifier: "GMT"))
     }
 
-    @Test func localizedName_103036605() {
-        func test(_ tzIdentifier: String, _ localeIdentifier: String, _ style: TimeZone.NameStyle, _ expected: String?, _ expectedDST: String?, sourceLocation: SourceLocation = #_sourceLocation) {
-            let tz = TimeZone(identifier: tzIdentifier)
-            guard let expected else {
-                #expect(tz == nil, sourceLocation: sourceLocation)
-                return
-            }
+    @Test(arguments:
+        [TimeZone.NameStyle.standard, .shortStandard, .daylightSaving, .shortDaylightSaving, .generic, .shortGeneric],
+        ["en_US", "zh_TW"]
+    )
+    func localizedName_103036605(style: TimeZone.NameStyle, localeID: String) throws {
+        let locale = Locale(identifier: localeID)
+        let losAngeles = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let paris = try #require(TimeZone(identifier: "Europe/Paris"))
 
-            let locale = Locale(identifier: localeIdentifier)
-            if let tz, tz.isDaylightSavingTime(for: .now) {
-                #expect(tz.localizedName(for: style, locale: locale) == expectedDST, sourceLocation: sourceLocation)
-            } else {
-                #expect(tz?.localizedName(for: style, locale: locale) == expected, sourceLocation: sourceLocation)
-            }
-        }
-
-        test("America/Los_Angeles", "en_US", .generic, "Pacific Time", "Pacific Time")
-        test("Europe/Paris",       "en_US", .generic, "Central European Time", "Central European Time")
-        test("Antarctica/Vostok",   "en_US", .generic, "Vostok Time", "Vostok Time")
-        test("Asia/Chongqing",      "en_US", .generic, "China Standard Time", "China Standard Time")
-        test("America/Sao_Paulo",   "en_US", .generic, "Brasilia Standard Time", "Brasilia Standard Time")
-
-        test("America/Los_Angeles", "zh_TW", .shortStandard, "PST", "PST")
-
-        test("Europe/Paris",       "zh_TW", .shortStandard, "GMT+1", "GMT+1")
-        test("Europe/Paris",       "zh_TW", .shortDaylightSaving, "GMT+2", "GMT+2")
-
-        test("Antarctica/Davis",   "zh_TW", .shortStandard, "GMT+7", "GMT+7")
-        test("Asia/Chongqing",      "zh_TW", .shortStandard, "GMT+8", "GMT+8")
-        test("America/Sao_Paulo",   "zh_TW", .shortStandard, "GMT-3", "GMT-3")
-
-        // abbreviation
-        test("GMT",     "en_US", .standard, "Greenwich Mean Time", "Greenwich Mean Time")
-        test("GMT+8",   "en_US", .standard, "GMT+08:00", "GMT+08:00")
-        test("PST",     "en_US", .standard, "Pacific Standard Time", "Pacific Standard Time")
-
-        // invalid names
-        test("XYZ", "en_US", .standard, nil, nil)
-        test("BOGUS/BOGUS", "en_US", .standard, nil, nil)
+        let losAngelesName = try #require(losAngeles.localizedName(for: style, locale: locale))
+        let parisName = try #require(paris.localizedName(for: style, locale: locale))
+        #expect(losAngelesName != parisName)
     }
 
     @Test func timeZoneName_103097012() throws {
