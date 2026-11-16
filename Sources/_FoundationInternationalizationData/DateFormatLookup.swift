@@ -29,10 +29,11 @@ package struct DateFormatDataString : Sendable {
                 bytes.append(UInt8(truncatingIfNeeded: entry >> (8 * (i + 1))))
             }
         } else {
-            let offset = Int(entry >> 8)
-            bytes.append(addingCapacity: count) { output in
-                for i in offset ..< offset + count {
-                    output.append(_DateFormatData.pool[i])
+            withUTF8 { utf8 in
+                bytes.append(addingCapacity: count) { output in
+                    for i in utf8.indices {
+                        output.append(utf8[i])
+                    }
                 }
             }
         }
@@ -51,32 +52,23 @@ package struct DateFormatDataString : Sendable {
             let inline: InlineArray<3, UInt8> = [UInt8(truncatingIfNeeded: entry >> 8), UInt8(truncatingIfNeeded: entry >> 16), UInt8(truncatingIfNeeded: entry >> 24)]
             return body(inline.span.extracting(0 ..< count))
         }
-        // Copy the string, since passing on the pool's span would copy the whole table to the stack.
         let offset = Int(entry >> 8)
-        if count <= 16 {
-            var bytes: InlineArray<16, UInt8> = .init(repeating: 0)
-            for i in 0 ..< count {
-                bytes[i] = _DateFormatData.pool[offset + i]
-            }
-            return body(bytes.span.extracting(0 ..< count))
+        return _DateFormatData.pool.withUTF8Buffer { pool in
+            body(pool.span.extracting(offset ..< offset + count))
         }
-        var bytes: [UInt8] = []
-        append(to: &bytes)
-        return body(bytes.span)
     }
 
     /// Compares with UTF-8 bytes, in byte order.
     func compare(_ other: Span<UInt8>) -> Int {
-        let count = Int(entry & 0xFF)
-        let offset = Int(entry >> 8)
-        let n = min(count, other.count)
-        var i = 0
-        while i < n {
-            let byte = count <= 3 ? UInt8(truncatingIfNeeded: entry >> (8 * (i + 1))) : _DateFormatData.pool[offset + i]
-            if byte != other[i] { return byte < other[i] ? -1 : 1 }
-            i &+= 1
+        withUTF8 { utf8 in
+            let n = min(utf8.count, other.count)
+            var i = 0
+            while i < n {
+                if utf8[i] != other[i] { return utf8[i] < other[i] ? -1 : 1 }
+                i &+= 1
+            }
+            return utf8.count == other.count ? 0 : (utf8.count < other.count ? -1 : 1)
         }
-        return count == other.count ? 0 : (count < other.count ? -1 : 1)
     }
 }
 
