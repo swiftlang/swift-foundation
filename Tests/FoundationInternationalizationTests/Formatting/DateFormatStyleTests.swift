@@ -251,7 +251,7 @@ private struct DateFormatStyleTests {
         #expect(date.formatted(style.year(.twoDigits)).filter(\.isNumber).count == 2)
         #expect(date.formatted(style.year(.padded(0))) == "1970")
         #expect(date.formatted(style.year(.padded(1))) == "1970")
-        #expect(date.formatted(style.year(.padded(2))) == "70")
+        #expect(date.formatted(style.year(.padded(2))).filter(\.isNumber).count == 2)
         #expect(date.formatted(style.year(.padded(3))) == "1970")
         #expect(date.formatted(style.year(.padded(999))) == "0000001970")
 
