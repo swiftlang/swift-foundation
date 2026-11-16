@@ -427,6 +427,17 @@ open class PropertyListDecoder {
         return try closure(string.utf16)
     }
 
+    /// Parse `data` as an old-style (OpenStep) property list, and return the dictionaries, arrays, strings and data in it. Binary and XML property lists are errors.
+    internal static func parseOpenStepPropertyList(from data: Data) throws -> Any {
+        try detectFormatAndConvertEncoding(for: data, binaryPlist: { _ -> Any in
+            throw OpenStepPlistError("The property list is in the binary format.")
+        }, xml: { _ -> Any in
+            throw OpenStepPlistError("The property list is in the XML format.")
+        }, openstep: { utf16View in
+            try __ParseOldStylePropertyList(utf16: utf16View)
+        })
+    }
+
 #if FOUNDATION_FRAMEWORK
     // __PlistDictionaryDecoder is only available in the framework for now
     
