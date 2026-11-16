@@ -17,97 +17,11 @@ import FoundationEssentials
 #if ICU
 internal import _FoundationICU
 
-extension TimeZone {
-    enum Error: Swift.Error {
-        case dateOverflow
-        case dateUnderflow
-    }
-}
+/// Kept so existing call sites keep working; the ICU-independent implementation lives in `_TimeZoneRules`.
+internal typealias _TimeZoneICUResource = _TimeZoneRules
 
-extension Date {
-    // Returns nil if it's out of Int64 bound
-    func secondsSince1970() throws(TimeZone.Error) -> Int64 {
-        let sec = timeIntervalSince1970.rounded(.down)
-
-        guard sec < Double(Int64.max) else {
-            throw .dateOverflow
-        }
-
-        guard sec >= Double(Int64.min) else {
-            throw .dateUnderflow
-        }
-
-        return Int64(sec)
-    }
-
-    func checkBounds() throws(TimeZone.Error) {
-        _ = try self.secondsSince1970()
-    }
-}
-
-struct _TimeZoneOffsets: Sendable {
-    // Fixed offset timezone rule (equivalent to ICU's simple rules)
-    // All available fixed offset timezone rules. Values are in seconds.
-    private let fixedOffsetRules: [(rawOffset: Int, dstSavings: Int)]
-
-    // Maps transition indices to `fixedOffsetRules` indices
-    private let transitionRuleMap: [UInt8]?
-
-    var count: Int { fixedOffsetRules.count }
-
-    // Initialize from ICU raw data
-    // Caller is responsible to validate that `offsets` has >= 2 elements
-    init(offsets: Span<Int32>, offsetMap: Span<UInt8>?, identifier: String) {
-        precondition(offsets.count >= 2)
-
-        self.fixedOffsetRules = .init(capacity: offsets.count / 2, initializingWith: { buffer in
-            for i in stride(from: 0, to: offsets.count, by: 2) {
-                buffer.append((Int(offsets[i]), Int(offsets[i + 1])))
-            }
-        })
-
-        self.transitionRuleMap = offsetMap?.withUnsafeBufferPointer { Array($0) }
-    }
-    
-    // Get offsets for a specific transition
-    // - Parameter transitionIndex: The index of the transition
-    // - Returns: The timezone offsets that applies after this transition
-    func offsets(at transitionIndex: Int) -> (rawOffset: Int, dstSavings: Int) {
-        // Handle case where transitionIndex is -1 (can happen with local time disambiguation)
-        guard transitionIndex >= 0 else {
-            // Before all transitions - return initial/default offset
-            return fixedOffsetRules[0]
-        }
-        
-        guard let typeMap = transitionRuleMap, transitionIndex < typeMap.count else {
-            // No transitions or invalid index - return first offset (default)
-            return fixedOffsetRules[0]
-        }
-        
-        let typeIndex = Int(typeMap[transitionIndex])
-        guard typeIndex < fixedOffsetRules.count else {
-            return fixedOffsetRules[0]
-        }
-        
-        return fixedOffsetRules[typeIndex]
-    }
-
-    func zoneOffset(at transitionIndex: Int) -> Int64 {
-        let offsets = offsets(at: transitionIndex)
-        return Int64(offsets.rawOffset + offsets.dstSavings)
-    }
-
-    // Get the initial/default offset (used before any transitions)
-    var initialOffsets: (rawOffset: Int, dstSavings: Int) {
-        return fixedOffsetRules[0]
-    }
-}
-
-
-// Includes IANA timezone data with historical transitions
-// This class is backed by ICU's timezone resources, but has its own implementation that does not use ICU's timezone class
-internal final class _TimeZoneICUResource: Sendable {
-
+// Loads `_TimeZoneRules` from ICU's `zoneinfo64` resource bundle
+extension _TimeZoneRules {
     internal static let kZONEINFO = "zoneinfo64"
     internal static let kTRANS = "trans"
     internal static let kTRANSPRE32 = "transPre32"
@@ -121,20 +35,6 @@ internal final class _TimeZoneICUResource: Sendable {
     internal static let kFINALRAW = "finalRaw"
     internal static let kFINALYEAR = "finalYear"
 
-    // MARK: -
-
-    let identifier: String
-
-    // All transitions in chronological order (in seconds)
-    let allTransitionTimes: [Int64]
-
-    let zoneOffsets: _TimeZoneOffsets
-
-    let finalZone: _TimeZoneSingleDSTRule?
-    let finalStartDate: Date?
-
-    // MARK: - ICU Resource Loading
-    
     /// - Parameters:
     ///   - topBundle: The main ICU zoneinfo resource bundle
     ///   - finalRuleBundle: The bundle containing the rule name/reference
@@ -307,21 +207,17 @@ internal final class _TimeZoneICUResource: Sendable {
         
         return nil // Not found
     }
-    
-    // MARK: - Initialization from ICU UResourceBundle
-    
-    // Initialize from ICU resource bundle
-    init(identifier: String) throws(ICUError) {
-        self.identifier = identifier
 
-        let (topBundle, resBundle) = try _TimeZoneICUResource.openOlsonTimeZoneResource(identifier: identifier)
+    // Initialize from ICU resource bundle
+    convenience init(identifier: String) throws(ICUError) {
+        let (topBundle, resBundle) = try _TimeZoneRules.openOlsonTimeZoneResource(identifier: identifier)
 
         // Handle zone aliases
         var zoneBundle = resBundle
         if zoneBundle.resourceType == URES_INT {
             // This is an alias, dereference it
             let aliasIndex = try zoneBundle.asInteger()
-            let zones = try topBundle.resourceBundle(forKey:_TimeZoneICUResource.kZONES)
+            let zones = try topBundle.resourceBundle(forKey:_TimeZoneRules.kZONES)
             guard let zones, let actualZone = try zones.resourceBundle(forIndex:aliasIndex) else {
                 throw ICUError(code: U_MISSING_RESOURCE_ERROR)
             }
@@ -333,7 +229,7 @@ internal final class _TimeZoneICUResource: Sendable {
         // Get total count first, then fill in the content so we can write directly into an array
         var totalTransitionCount = 0
         // Pre-32bit second transitions (stored as high/low pairs)
-        let transPre32Bundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kTRANSPRE32)
+        let transPre32Bundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kTRANSPRE32)
         if let transPre32Bundle {
             let transitionCount = transPre32Bundle.withIntegers { transPre32 in
                 return (transPre32.count / 2)
@@ -342,7 +238,7 @@ internal final class _TimeZoneICUResource: Sendable {
         }
 
         // 32bit second transitions
-        let trans32Bundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kTRANS)
+        let trans32Bundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kTRANS)
         if let trans32Bundle {
            let transitionCount = trans32Bundle.withIntegers {
                 return $0.count
@@ -351,7 +247,7 @@ internal final class _TimeZoneICUResource: Sendable {
         }
 
         // Post-32bit second transitions (stored as high/low pairs)
-        let transPost32Bundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kTRANSPOST32)
+        let transPost32Bundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kTRANSPOST32)
         if let transPost32Bundle {
             let transitionCount = transPost32Bundle.withIntegers {
                 return $0.count / 2
@@ -365,7 +261,7 @@ internal final class _TimeZoneICUResource: Sendable {
             return Int64(high) << 32 | Int64(low)
         }
 
-        self.allTransitionTimes = totalTransitionCount == 0 ? [] : .init(capacity: totalTransitionCount, initializingWith: { buffer in
+        let allTransitionTimes: [Int64] = totalTransitionCount == 0 ? [] : .init(capacity: totalTransitionCount, initializingWith: { buffer in
             if let transPre32Bundle {
                 transPre32Bundle.withIntegers { transPre32 in
                     for i in stride(from: 0, to: transPre32.count, by: 2) {
@@ -396,12 +292,12 @@ internal final class _TimeZoneICUResource: Sendable {
 
 
         // Type offsets (must be even size, >= 2)
-        guard let typeOffsetsBundle = try zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kTYPEOFFSETS) else {
+        guard let typeOffsetsBundle = try zoneBundle.resourceBundle(forKey:_TimeZoneRules.kTYPEOFFSETS) else {
             throw .init(code: U_MISSING_RESOURCE_ERROR)
         }
 
         // Initialize consolidated timezone offset information
-        self.zoneOffsets = try typeOffsetsBundle.withIntegers { typeOffsetsArray throws(ICUError) in
+        let zoneOffsets = try typeOffsetsBundle.withIntegers { typeOffsetsArray throws(ICUError) in
             guard typeOffsetsArray.count >= 2 && typeOffsetsArray.count % 2 == 0 else {
                 throw ICUError(code: U_INVALID_FORMAT_ERROR)
             }
@@ -414,7 +310,7 @@ internal final class _TimeZoneICUResource: Sendable {
                     identifier: identifier
                 )
             }
-            guard let typeMapBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kTYPEMAP) else {
+            guard let typeMapBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kTYPEMAP) else {
                 throw .init(code: U_MISSING_RESOURCE_ERROR)
             }
 
@@ -427,16 +323,19 @@ internal final class _TimeZoneICUResource: Sendable {
             }
         }
 
+        let finalZone: _TimeZoneSingleDSTRule?
+        let finalStartDate: Date?
+
         // Final rule processing - load actual ICU Rules resource
-        if let finalRawBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kFINALRAW),
-           let finalYearBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kFINALYEAR),
-           let finalRuleBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneICUResource.kFINALRULE) {
+        if let finalRawBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kFINALRAW),
+           let finalYearBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kFINALYEAR),
+           let finalRuleBundle = try? zoneBundle.resourceBundle(forKey:_TimeZoneRules.kFINALRULE) {
 
                 let finalRaw = try finalRawBundle.asInteger()
                 let finalYear = try finalYearBundle.asInteger()
                 
                 // Load the actual DST rule from ICU Rules resource
-                self.finalZone = try _TimeZoneICUResource.loadSimpleTimeZone(
+                finalZone = try _TimeZoneRules.loadSimpleTimeZone(
                     topBundle: topBundle,
                     finalRuleBundle: finalRuleBundle,
                     rawOffsetSeconds: finalRaw
@@ -451,320 +350,14 @@ internal final class _TimeZoneICUResource: Sendable {
                 guard let finalStart = calendar.date(from: components) else {
                     preconditionFailure("Unexpected nil final zone start date")
                 }
-                self.finalStartDate = finalStart
+                finalStartDate = finalStart
         } else {
             // No final rule - timezone has fixed offset after last transition
-            self.finalZone = nil
-            self.finalStartDate = nil
+            finalZone = nil
+            finalStartDate = nil
         }
 
-    }
-    
-    // MARK: - Timezone Methods
-
-    func rawAndDSTOffset(for date: Date, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) -> (Int, Int) {
-        guard let result = try? getOffset(date: date, local: true, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy) else {
-            return (0, 0)
-        }
-        return (Int(result.rawOffset), Int(result.dstSavings))
-    }
-
-    func secondsFromGMT(for date: Date) -> Int {
-        guard let (rawOffset, dstOffset) = try? getOffset(date: date, local: false) else {
-            // TODO: We should throw an error properly, but for now return 0 just like how we handle this when calling into ICU timezone
-            return 0
-        }
-        return Int((rawOffset + dstOffset))
-    }
-    
-    func isDaylightSavingTime(for date: Date) -> Bool {
-        guard let (_, dstOffset) = try? getOffset(date: date, local: false) else {
-            return false
-        }
-        return dstOffset != 0
-    }
-    
-    func daylightSavingTimeOffset(for date: Date) -> TimeInterval {
-        guard let (_, dstOffset) = try? getOffset(date: date, local: false) else {
-            return 0
-        }
-        return TimeInterval(dstOffset)
-    }
-    
-    // MARK: - Offset Calculation
-
-    func rawAndDaylightSavingTimeOffset(for date: Date, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws(TimeZone.Error) -> (rawOffset: Int, daylightSavingOffset: TimeInterval) {
-        let res = try getOffset(date: date, local: true, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
-        return (Int(res.rawOffset), Double(res.dstSavings))
-    }
-
-    // Entry point for offset calculation that delegates to either historical or final zone
-    // Returns: offsets in seconds
-    func getOffset(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former) throws(TimeZone.Error) -> (rawOffset: Int, dstSavings: Int) {
-        // Check if we should use final zone first
-        if let finalZone, let finalStartDate, date >= finalStartDate {
-            return try finalZone.rawAndDaylightSavingTimeOffset(for: date, local: local, duplicatedTimePolicy: duplicatedTimePolicy, nonExistingTimePolicy: nonExistingTimePolicy)
-        }
-        
-        // Otherwise use historical data
-        return try historicalOffsets(date: date, local: local, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
-    }
-    
-    // MARK: - Historical Offset Calculation
-
-    func historicalOffsets(date: Date, local: Bool, nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy, duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy) throws(TimeZone.Error)-> (rawOffset: Int, dstSavings: Int) {
-        let transCount = allTransitionTimes.count
-        guard transCount > 0 else {
-            // No transitions, single pair of offsets only
-            return (initialRawOffset, initialDSTOffset)
-        }
-
-        let sec = try date.secondsSince1970()
-        if !local, let firstTransitionTime = allTransitionTimes.first, sec < firstTransitionTime {
-            // Before the first transition time
-            return (initialRawOffset, initialDSTOffset)
-        }
-
-        let transIdx = binarySearchTransition(secondsSince1970: sec, local: local, start: 0, end: transCount - 1, nonExistingTimePolicy: nonExistingTimePolicy, duplicatedTimePolicy: duplicatedTimePolicy)
-
-        return offsetsAt(transIdx)
-    }
-
-    func transitionTimeInSeconds(at index: Int) -> Int64 {
-        precondition(index >= 0 && index < allTransitionTimes.count, "Transition index \(index) out of range [0..<\(allTransitionTimes.count)]")
-
-        return allTransitionTimes[index]
-    }
-    
-    // MARK: - Zone offset Information Access
-
-    // Get total timezone offset (raw + DST) for a transition
-    func zoneOffset(at transitionIndex: Int) -> Int64 {
-        zoneOffsets.zoneOffset(at: transitionIndex)
-    }
-    
-    // Get timezone offset information for a transition
-    // This provides both raw and DST offsets in one efficient call
-    func offsetsAt(_ transitionIndex: Int) -> (rawOffset: Int, dstSavings: Int) {
-        zoneOffsets.offsets(at: transitionIndex)
-    }
-    
-
-    // MARK: - Transition Discovery Methods
-    
-    // Find the next timezone transition after the given base date
-    // - Parameters:
-    //   - after: The base date to search after
-    // - Returns: The next transition, or nil if no transition is found
-    func nextTransition(after base: Date) -> Date? {
-        // Check if we should use final zone first
-        if let finalZone {
-            if let finalStartDate, base >= finalStartDate {
-                // Delegate to final zone for future transitions
-                if finalZone.useDaylight {
-                    // Use the final zone to get the next DST transition, or nil if there's no more transitions in final zone
-                    return finalZone.dstTransition(after: base)
-                } else {
-                    // Final zone has no DST - no more transitions
-                    return nil
-                }
-            }
-        }
-        
-        if let firstTransition = self.firstTZTransition, base < firstTransition {
-            return firstTransition
-        }
-        
-        guard let baseSec = try? base.secondsSince1970() else {
-            return nil
-        }
-        
-        // Search historical transitions
-        return nextHistoricalTransition(afterTimeIntervalSince1970: baseSec)
-    }
-    
-    // MARK: - Historical Transition Search (Direct Port from olsontz.cpp)
-    
-    // Lazy computed first historical transition
-    private var firstTZTransition: Date? {
-        guard allTransitionTimes.count > 0 else { return nil }
-        return Date(timeIntervalSince1970: TimeInterval(transitionTimeInSeconds(at: 0)))
-    }
-
-    // Returns the first transition occuring within the final zone; one of the following:
-    // - first DST transition if the final zone observes DST
-    // - start date of the final zone
-    // - nil if there's no final zone
-    private var firstFinalTZTransition: Date? {
-        guard let finalZone else {
-            return nil
-        }
-
-        guard finalZone.useDaylight else {
-            // No DST transitions in final zone, use standard time
-            return finalStartDate
-        }
-
-        // Get the first transition from the final zone
-        if let finalStartDate, let firstTransition = finalZone.dstTransition(after: finalStartDate, inclusive: false) {
-            return firstTransition
-        } else {
-            // No DST transitions in final zone, use standard time
-            return finalStartDate
-        }
-    }
-
-    // Find next historical transition
-    private func nextHistoricalTransition(afterTimeIntervalSince1970 baseSec: Int64) -> Date? {
-        let transCount = allTransitionTimes.count
-        guard transCount > 0 else {
-            return nil
-        }
-
-        
-        // Find the last transition that is <= base
-        var left = 0
-        var right = transCount - 1
-        var ttidx = -1
-        
-        while left <= right {
-            let mid = left + (right - left) / 2
-            let transitionSec = allTransitionTimes[mid]
-            
-            if transitionSec <= baseSec {
-                ttidx = mid
-                left = mid + 1
-            } else {
-                right = mid - 1
-            }
-        }
-
-        if ttidx == transCount - 1 {
-            // We're past the last historical transition
-            return firstFinalTZTransition
-        } else if ttidx < 0 {
-            // We're before the first transition
-            return firstTZTransition
-        } else {
-            // Return the transition at ttidx + 1 (the next one after ttidx)
-            let nextIdx = ttidx + 1
-            guard nextIdx < transCount else { 
-                return nil 
-            }
-
-            let fromOffsets = offsetsAt(ttidx)
-            let toOffsets = offsetsAt(nextIdx)
-            // Check for non-transition data (same offsets)
-            if fromOffsets == toOffsets {
-                // Skip non-transitions and recursively search
-                let nextBase = transitionTimeInSeconds(at: nextIdx)
-
-                return nextHistoricalTransition(afterTimeIntervalSince1970: nextBase)
-            }
-            
-            let transitionTime = Date(timeIntervalSince1970: TimeInterval(transitionTimeInSeconds(at: nextIdx)))
-            return transitionTime
-        }
-    }
-    
-    // Returns the index of the transition that applies to the given time
-    private func binarySearchTransition(
-        secondsSince1970 sec: Int64,
-        local: Bool,
-        start: Int,
-        end: Int,
-        nonExistingTimePolicy: TimeZone.DaylightSavingTimePolicy = .former,
-        duplicatedTimePolicy: TimeZone.DaylightSavingTimePolicy = .former
-    ) -> Int {
-        
-        var left = start
-        var right = end
-        
-        // Binary search to find the last transition <= sec
-        while left <= right {
-            let mid = left + (right - left) / 2
-            var transition = transitionTimeInSeconds(at: mid)
-
-            if local && (sec >= (transition - 86400)) {
-                let offsetBefore = zoneOffset(at: mid - 1)
-                let offsetAfter = zoneOffset(at: mid)
-
-                if offsetAfter - offsetBefore >= 0 {
-                    switch nonExistingTimePolicy {
-                    case .former:
-                        transition += offsetAfter
-                    case .latter:
-                        transition += offsetBefore
-                    }
-                } else {
-                    // Negative transition (fall back) - creates duplicated time range
-                    switch duplicatedTimePolicy {
-                    case .former:
-                        transition += offsetBefore
-                    case .latter:
-                        transition += offsetAfter
-                    }
-                }
-            }
-            
-            if transition <= sec {
-                // This transition might be the one we want, but check if there's a later one
-                if mid == allTransitionTimes.count - 1 {
-                    // This is the last transition
-                    return mid
-                }
-                
-                var nextTransition = transitionTimeInSeconds(at: mid + 1)
-                
-                // Apply the same disambiguation logic to the next transition
-                if local && (sec >= (nextTransition - 86400)) {
-                    let nextOffsetBefore = zoneOffset(at: mid)
-                    let nextOffsetAfter = zoneOffset(at: mid + 1)
-
-                    if nextOffsetAfter - nextOffsetBefore >= 0 {
-                        switch nonExistingTimePolicy {
-                        case .former:
-                            nextTransition += nextOffsetAfter
-                        case .latter:
-                            nextTransition += nextOffsetBefore
-                        }
-
-                    } else {
-                        switch duplicatedTimePolicy {
-                        case .former:
-                            nextTransition += nextOffsetBefore
-                        case .latter:
-                            nextTransition += nextOffsetAfter
-                        }
-                    }
-                }
-                
-                if nextTransition > sec {
-                    // Found it: mid's transition applies, next one doesn't
-                    return mid
-                } else {
-                    // Need to search further right
-                    left = mid + 1
-                }
-            } else {
-                // This transition is too late, search left
-                right = mid - 1
-            }
-        }
-        
-        // If we get here, sec is before all transitions
-        return right
-    }
-
-    
-    // Get the initial raw offset (before any transitions)
-    var initialRawOffset: Int {
-        return zoneOffsets.initialOffsets.rawOffset
-    }
-    
-    // Get the initial DST offset (before any transitions)
-    var initialDSTOffset: Int {
-        return zoneOffsets.initialOffsets.dstSavings
+        self.init(identifier: identifier, allTransitionTimes: allTransitionTimes, zoneOffsets: zoneOffsets, finalZone: finalZone, finalStartDate: finalStartDate)
     }
 }
 

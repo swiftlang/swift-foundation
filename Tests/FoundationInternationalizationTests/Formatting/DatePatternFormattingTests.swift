@@ -21,6 +21,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 fileprivate typealias Field = AttributeScopes.FoundationAttributes.DateFieldAttribute.Field
 
 // Apple's ICU data and ICU 78 behavior, which the SwiftPM build's ICU 76 doesn't have.
@@ -805,3 +807,5 @@ struct SwiftFoundationDatePatternFormattingTests {
         #expect(style.format(date) == "japanese_CALENDAR_IS_UNSUPPORTED")
     }
 }
+
+#endif // ICU
