@@ -151,6 +151,27 @@ func table(_ name: String, _ type: String, _ values: [String], comment: String, 
     return out + "    ]\n\n"
 }
 
+/// Returns the declaration of a multiline `StaticString` of `bytes`, with everything outside printable ASCII escaped.
+func staticString(_ name: String, _ bytes: [UInt8], comment: String, columns: Int) -> String {
+    let text = String(decoding: bytes, as: UTF8.self)
+    precondition(Array(text.utf8) == bytes, "\(name) isn't valid UTF-8")
+    var out = "    // \(comment)\n    internal static let \(name): StaticString = \"\"\"\n"
+    var lines = [""]
+    for scalar in text.unicodeScalars {
+        if lines[lines.count - 1].utf8.count >= columns {
+            lines.append("")
+        }
+        switch scalar {
+        case "\\": lines[lines.count - 1] += "\\\\"
+        case "\"": lines[lines.count - 1] += "\\\""
+        case " " ... "~": lines[lines.count - 1].unicodeScalars.append(scalar)
+        default: lines[lines.count - 1] += "\\u{\(String(scalar.value, radix: 16, uppercase: true))}"
+        }
+    }
+    // End each line but the last with a backslash so the line breaks aren't part of the string.
+    return out + "        " + lines.joined(separator: "\\\n        ") + "\n        \"\"\"\n\n"
+}
+
 @main
 struct BuildDateFormatData {
     static func main() throws {
@@ -314,7 +335,7 @@ struct BuildDateFormatData {
         out += table("hanidaysDays", "UInt32", hanidaysDays.map(hex), comment: "Days 1 through 31 for numbers=hanidays.", perLine: 8)
         out += table("validRegions", "UInt32", validRegions.map(hex), comment: "Regions an rg keyword can name, one bit per code: (first letter - A) * 26 + (second letter - A).", perLine: 8)
 
-        out += table("pool", "UInt8", pool.bytes.map { String(format: "0x%02X", $0) }, comment: "Text longer than 3 UTF-8 bytes, stored once.", perLine: 16)
+        out += staticString("pool", pool.bytes, comment: "Text longer than 3 UTF-8 bytes, stored once.", columns: 100)
         out += "}\n"
 
         try out.write(toFile: options.outputSwiftPath, atomically: true, encoding: .utf8)
