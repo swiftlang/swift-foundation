@@ -3,38 +3,47 @@
 
 ## Topics
 
-### Operators
+### Getting the current time zone
+
+- ``autoupdatingCurrent``
+- ``current``
+
+### Getting standard time zones
+
+- ``gmt``
+
+### Creating a time zone
+
+- ``init(secondsFromGMT:)``
+- ``abbreviationDictionary``
+- ``init(abbreviation:)``
+- ``init(identifier:)``
+
+### Getting time zone information
+
+- ``identifier``
+- ``abbreviation(for:)``
+- ``secondsFromGMT(for:)``
+
+### Working with daylight savings
+
+- ``isDaylightSavingTime(for:)``
+- ``daylightSavingTimeOffset(for:)``
+- ``nextDaylightSavingTimeTransition``
+- ``nextDaylightSavingTimeTransition(after:)``
+
+### Describing time zones
+
+- ``localizedName(for:locale:)``
+
+### Comparing time zones
 
 - ``==(_:_:)``
 
-### Initializers
+### Hashing
 
-- ``init(abbreviation:)``
-- ``init(identifier:)``
-- ``init(secondsFromGMT:)``
-
-### Instance Properties
-
-- ``identifier``
-- ``nextDaylightSavingTimeTransition``
-
-### Instance Methods
-
-- ``abbreviation(for:)``
-- ``daylightSavingTimeOffset(for:)``
 - ``hash(into:)``
-- ``isDaylightSavingTime(for:)``
-- ``localizedName(for:locale:)``
-- ``nextDaylightSavingTimeTransition(after:)``
-- ``secondsFromGMT(for:)``
 
-### Type Properties
-
-- ``abbreviationDictionary``
-- ``autoupdatingCurrent``
-- ``current``
-- ``gmt``
-
-### Enumerations
+### Supporting types
 
 - ``NameStyle``

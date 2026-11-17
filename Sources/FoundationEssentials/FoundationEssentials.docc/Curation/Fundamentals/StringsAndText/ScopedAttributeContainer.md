@@ -3,6 +3,6 @@
 
 ## Topics
 
-### Accessing Attribute Keys
+### Accessing attribute keys
 
 - ``subscript(dynamicMember:)``

@@ -122,9 +122,7 @@
 
 ### Selecting bytes
 
-- ``filter(_:)->Self``
 - ``filter(_:)-(Predicate<Element>)``
-- ``filter(_:)-((Self.Element)->Bool)->[Self.Element]``
 - ``prefix(_:)``
 - ``prefix(through:)``
 - ``prefix(upTo:)``

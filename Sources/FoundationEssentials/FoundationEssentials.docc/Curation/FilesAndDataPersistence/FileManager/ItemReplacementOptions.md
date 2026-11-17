@@ -4,7 +4,7 @@
 ## Topics
 
 
-### Working with item replacement optiosn
+### Working with item replacement options
 
 - ``usingNewMetadataOnly``
 - ``withoutDeletingBackupItem``

@@ -25,7 +25,7 @@
 - ``Locale/HourCycle``
 - ``timeZone``
 
-### Specifiying measurement and counting components
+### Specifying measurement and counting components
 
 - ``currency``
 - ``Locale/Currency``
