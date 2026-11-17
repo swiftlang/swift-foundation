@@ -1054,7 +1054,7 @@ private struct PropertyListEncoderTests {
     }
 
     @Test func oldStylePlist_getSlashedChars_literals() throws {
-        let literals = ["\u{7}", "\u{8}", "\u{12}", "\n", "\r", "\t", "\u{11}", "\"", "\\n"]
+        let literals = ["\u{7}", "\u{8}", "\u{C}", "\n", "\r", "\t", "\u{B}", "\"", "\\n"]
         let data = "('\\a', '\\b', '\\f', '\\n', '\\r', '\\t', '\\v', '\\\"', '\\\\n')".data(using: .utf8)!
 
         let strings = try PropertyListDecoder().decode([String].self, from: data)

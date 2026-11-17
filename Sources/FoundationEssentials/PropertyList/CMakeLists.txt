@@ -28,6 +28,8 @@ target_sources(FoundationEssentials PRIVATE
     PlistDictionaryEncoder.swift
     PlistEncoder.swift
     PlistEncoderGeneric.swift
+    PlistValueSink.swift
+    PropertyListSerialization.swift
     XMLPlistDecodingDocument.swift
     XMLPlistDecodingFormat.swift
     XMLPlistEncodingFormat.swift

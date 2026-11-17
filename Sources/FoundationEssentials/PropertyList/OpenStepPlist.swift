@@ -357,11 +357,11 @@ private func getSlashedChar(_ pInfo: inout _ParseInfo) -> UInt16? {
         return parseU16Scalar(&pInfo)
     case UInt16(ascii: "a"): return UInt16(ascii: "\u{7}")
     case UInt16(ascii: "b"): return UInt16(ascii: "\u{8}")
-    case UInt16(ascii: "f"): return UInt16(ascii: "\u{12}")
+    case UInt16(ascii: "f"): return UInt16(ascii: "\u{0C}")
     case UInt16(ascii: "n"): return UInt16(ascii: "\n")
     case UInt16(ascii: "r"): return UInt16(ascii: "\r")
     case UInt16(ascii: "t"): return UInt16(ascii: "\t")
-    case UInt16(ascii: "v"): return UInt16(ascii: "\u{11}")
+    case UInt16(ascii: "v"): return UInt16(ascii: "\u{0B}")
     default:
         return ch
     }

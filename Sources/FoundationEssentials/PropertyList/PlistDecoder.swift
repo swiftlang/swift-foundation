@@ -316,10 +316,10 @@ open class PropertyListDecoder {
                 return .utf8
             }
             
-#if FOUNDATION_FRAMEWORK
             guard let encodingName = String(bytes: UnsafeBufferPointer(start: ptr, count: encodingLength), encoding: .isoLatin1) else {
                 throw DecodingError._dataCorrupted("Encountered unknown encoding", for: .root)
             }
+#if FOUNDATION_FRAMEWORK
             let enc = CFStringConvertIANACharSetNameToEncoding(encodingName as CFString)
             guard enc != kCFStringEncodingInvalidId else {
                 throw DecodingError._dataCorrupted("Encountered unknown encoding \(encodingName)", for: .root)
@@ -327,8 +327,10 @@ open class PropertyListDecoder {
 
             return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(enc))
 #else
-            // TODO: For now, FoundationEssentials only has support for utf-8.
-            throw DecodingError._dataCorrupted("Encountered unknown encoding", for: .root)
+            guard let encoding = String.Encoding(ianaName: encodingName) else {
+                throw DecodingError._dataCorrupted("Encountered unknown encoding \(encodingName)", for: .root)
+            }
+            return encoding
 #endif
         }
 
@@ -388,43 +390,58 @@ open class PropertyListDecoder {
             let postBOMIndex = buffer.index(buffer.startIndex, offsetBy: bomLength)
             let postBOMBuffer = buffer[unchecked: postBOMIndex...]
             
-            var result: T?
-            try Self.withUTF8Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf8Buffer in
-                if XMLPlistScanner.detectPossibleXMLPlist(for: utf8Buffer) {
-                    result = try xml(utf8Buffer)
+            // Convert to a `String` once. UTF-8 input needs no conversion for the XML check, and is only copied into a `String` if it turns out to be OpenStep.
+            var converted: String?
+            if encoding != .utf8 {
+                guard let string = String(bytes: postBOMBuffer, encoding: encoding) ?? repairedString(from: postBOMBuffer, encoding: encoding) else {
+                    throw DecodingError._dataCorrupted("Cannot convert input to UTF-8", for: .root)
                 }
+                converted = string
+            }
+
+            var result: T?
+            if var string = converted {
+                try string.withUTF8 { utf8Buffer in
+                    let utf8View = BufferView(unsafeBufferPointer: utf8Buffer)!
+                    if XMLPlistScanner.detectPossibleXMLPlist(for: utf8View) {
+                        result = try xml(utf8View)
+                    }
+                }
+                converted = string
+            } else if XMLPlistScanner.detectPossibleXMLPlist(for: postBOMBuffer) {
+                result = try xml(postBOMBuffer)
             }
             if let result {
                 return result
             }
-            
+
             // If it doesn't appear to be XML or binary, then we assume it's an OpenStep plist and try to parse it with that format.
-            return try Self.withUTF16Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf16View in
-                try openstep(utf16View)
+            if let converted {
+                return try openstep(converted.utf16)
             }
+            guard let string = String(bytes: postBOMBuffer, encoding: .utf8) else {
+                throw DecodingError._dataCorrupted("Cannot convert input to UTF-16", for: .root)
+            }
+            return try openstep(string.utf16)
         }
     }
 
-    static func withUTF8Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (BufferView<UInt8>) throws -> T ) throws -> T {
-        if sourceEncoding == .utf8 {
-            return try closure(buffer)
-        } else {
-            // TODO: This FOUNDATION_FRAMEWORK-only initializer cannot be used by FoundationPreview. Only UTF-8 encoded xml plists are supported there right now. (See readQuotedEncoding(in:).)
-            guard var string = String(bytes: buffer, encoding: sourceEncoding) else {
-                throw DecodingError._dataCorrupted("Cannot convert input to UTF-8", for: .root)
-            }
-            return try string.withUTF8 {
-                try closure(BufferView(unsafeBufferPointer: $0)!)
-            }
+    /// Decode UTF-16 `buffer` with U+FFFD in place of each unpaired surrogate, and without a last odd byte. CoreFoundation keeps an unpaired surrogate in a text property list, which a `String` cannot hold, and ignores a last odd byte. Returns `nil` for other encodings, where CoreFoundation also fails.
+    private static func repairedString(from buffer: BufferView<UInt8>, encoding: String.Encoding) -> String? {
+        let bigEndian: Bool
+        switch encoding {
+        case .utf16BigEndian: bigEndian = true
+        case .utf16LittleEndian: bigEndian = false
+        default: return nil
         }
-    }
-
-    static func withUTF16Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (String.UTF16View) throws -> T ) throws -> T {
-        // If we were careful with endianness, we could avoid some copies here.
-        guard let string = String(bytes: buffer, encoding: sourceEncoding) else {
-            throw DecodingError._dataCorrupted("Cannot convert input to UTF-16", for: .root)
+        return buffer.withUnsafeRawPointer { pointer, count in
+            let bytes = unsafe UnsafeRawBufferPointer(start: pointer, count: count)
+            let units = (0 ..< count / 2).map { i in
+                let value = unsafe bytes.loadUnaligned(fromByteOffset: i * 2, as: UInt16.self)
+                return bigEndian ? UInt16(bigEndian: value) : UInt16(littleEndian: value)
+            }
+            return String(decoding: units, as: UTF16.self)
         }
-        return try closure(string.utf16)
     }
 
     /// Parse `data` as an old-style (OpenStep) property list, and return the dictionaries, arrays, strings and data in it. Binary and XML property lists are errors.
