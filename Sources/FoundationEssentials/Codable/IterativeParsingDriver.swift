@@ -10,14 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
-internal import _FoundationRefs
-#endif
-
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
-internal import BasicContainers
-#endif
-
 // MARK: - ParseEventVocabulary
 
 /// The event alphabet a `ParseEventSource` emits and a `ParseEventSink` consumes. Format-specific: `JSONVocabulary`, `BPlistVocabulary`, `XMLPlistVocabulary` each pair their scalar enum with their key-view type. A `Source` and `Sink` are compatible when their `Vocabulary` associated types match.

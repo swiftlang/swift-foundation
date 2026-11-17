@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
-internal import BasicContainers
-#endif
-
 internal struct JSON5Scanner: ~Copyable {
     let options: Options
     var reader: DocumentReader

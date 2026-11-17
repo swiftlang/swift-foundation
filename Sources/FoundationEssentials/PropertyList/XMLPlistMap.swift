@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
 typealias XMLPlistMapOffset = Int
