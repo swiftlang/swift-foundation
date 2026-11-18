@@ -226,4 +226,137 @@ private struct NotificationCenterTests {
         
         #expect(center1.asyncObserverQueue !== center2.asyncObserverQueue)
     }
+    
+#if FOUNDATION_FRAMEWORK
+    // Foundation.framework only: swift-foundation has no Notification type. swift-corelibs-foundation should run these too.
+    
+    @Test func postPreservesObserverOrder() {
+        let center = NotificationCenter()
+        let notifName = NSNotification.Name("SomethingDidOccur")
+        let notifObject = NSObject()
+        
+        nonisolated(unsafe) var postRecord: [Int] = []
+        
+        var tokens: [NSObjectProtocol] = []
+        
+        for i in 0..<250 {
+            // 70% chance we add an observer, 30% we remove a random observer
+            if Int.random(in: 0..<100) > 30 {
+                // Pick a "variant" of observer, e.g. name vs nil-name, object vs nil-object
+                let observerVariant = i % 4
+                
+                // name, nil = 0
+                // name, object = 1
+                // nil, object = 2
+                // nil, nil = 3
+                
+                let name: NSNotification.Name? = (observerVariant == 0) || (observerVariant == 1) ? notifName : nil
+                let object: AnyObject? = (observerVariant == 1) || (observerVariant == 2) ? notifObject : nil
+                
+                tokens.append(center.addObserver(forName: name, object: object, queue: nil) { notification in
+                    postRecord.append(i)
+                })
+            } else {
+                // Don't remove every last token, else we won't be able to test order
+                if tokens.count > 5 {
+                    let token = tokens.remove(at: Int.random(in: 0..<tokens.count))
+                    center.removeObserver(token)
+                }
+            }
+        }
+        
+        // Do a quick check to ensure we have observers at all ...
+        center.post(name: notifName, object: notifObject)
+        #expect(postRecord.count >= 5)
+        postRecord.removeAll()
+        
+        // Instead of testing a single post, we continually post while drawing down the registrar.
+        // This ensures a shrinking registrar doesn't lose posting ordering either.
+        while(center.isEmpty() == false) {
+            center.post(name: notifName, object: notifObject)
+            
+            for (prev, next) in zip(postRecord, postRecord.dropFirst()) {
+                #expect(prev < next)
+            }
+            
+            //#expect(postRecord.count == center._observerCount)
+            
+            // Take one down, pass it around
+            let token = tokens.removeLast()
+            center.removeObserver(token)
+            
+            postRecord.removeAll()
+        }
+    }
+    
+    @Test func reentrantPostToDifferentNameDelivers() {
+        let center = NotificationCenter()
+        
+        nonisolated(unsafe) var receiveCountA = 0
+        nonisolated(unsafe) var receiveCountB = 0
+        
+        let observerB = center.addObserver(forName: Notification.Name("b"), object: nil, queue: nil) { _ in
+            receiveCountB += 1
+        }
+        let observerA = center.addObserver(forName: Notification.Name("a"), object: nil, queue: nil) { _ in
+            receiveCountA += 1
+            center.post(name: Notification.Name("b"), object: nil)
+        }
+        
+        center.post(name: Notification.Name("a"), object: nil)
+        
+        #expect(receiveCountA == 1)
+        #expect(receiveCountB == 1)
+        
+        center.removeObserver(observerA)
+        center.removeObserver(observerB)
+    }
+    
+    @Test func reentrantPostToSameNameIsBounded() {
+        let center = NotificationCenter()
+        
+        nonisolated(unsafe) var received = 0
+        
+        let observer = center.addObserver(forName: Notification.Name("a"), object: nil, queue: nil) { _ in
+            received += 1
+            if received < 3 {
+                center.post(name: Notification.Name("a"), object: nil)
+            }
+        }
+        
+        center.post(name: Notification.Name("a"), object: nil)
+        #expect(received == 3)
+        
+        center.removeObserver(observer)
+    }
+    
+    @Test func addObserverDuringPostSkipsInFlightPost() {
+        let center = NotificationCenter()
+
+        nonisolated(unsafe) var receiveCountA = 0
+        nonisolated(unsafe) var receiveCountB = 0
+        nonisolated(unsafe) var addedB = false
+        
+        _ = center.addObserver(forName: Notification.Name("a"), object: nil, queue: nil) { _ in
+            receiveCountA += 1
+
+            if !addedB {
+                addedB = true
+                _ = center.addObserver(forName: Notification.Name("a"), object: nil, queue: nil) { _ in
+                    receiveCountB += 1
+                }
+            }
+        }
+        
+        center.post(name: Notification.Name("a"), object: nil)
+
+        #expect(receiveCountA == 1)
+        #expect(receiveCountB == 0)
+        
+        center.post(name: Notification.Name("a"), object: nil)
+
+        #expect(receiveCountA == 2)
+        #expect(receiveCountB == 1)
+    }
+#endif
 }
