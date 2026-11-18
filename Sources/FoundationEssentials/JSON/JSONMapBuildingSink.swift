@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin) && !hasFeature(Embedded)
-internal import BasicContainers
-#endif
-
 // MARK: - JSONMapBuildingSink
 
 /// `ParseEventSink` that builds a `JSONMap`: the flat-`Int` array record buffer format that describes the structure of a JSON document.

@@ -17,7 +17,7 @@ let versionNumbers = ["6.0.2", "6.1", "6.2", "6.3", "6.4", "6.4.2", "6.5"]
 // Availability Macro Utilities
 
 enum _OSAvailability: String {
-    case alwaysAvailable = "macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26" // This should match the package's deployment target
+    case alwaysAvailable = "macOS 27, iOS 27, tvOS 27, watchOS 27, visionOS 27" // This should match the package's deployment target
     // Use 10000 for future availability to avoid compiler magic around the 9999 version number but ensure it is greater than 9999
     case future = "macOS 10000, iOS 10000, tvOS 10000, watchOS 10000, visionOS 10000"
     // Embedded Swift links Foundation into each program, so its availability is the embedded deployment target, not an OS release.
@@ -100,7 +100,7 @@ let testOnlySwiftSettings: [SwiftSetting] = [
 
 var package = Package(
     name: "swift-foundation",
-    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")],
+    platforms: [.macOS("27"), .iOS("27"), .tvOS("27"), .watchOS("27"), .visionOS("27")],
     products: [
         .library(name: "FoundationEssentials", targets: ["FoundationEssentials"]),
         .library(name: "FoundationInternationalization", targets: ["FoundationInternationalization"]),
@@ -119,18 +119,6 @@ var package = Package(
             ] + wasiLibcCSettings
         ),
 
-        // _FoundationRefs (Internal)
-        // Temporary: stands in for the standard library's `Ref` and `MutableRef` in Darwin package builds. It has its own target because some compiler builds assert when compiling `Ref` with strict concurrency checking, which `featureSettings` enables.
-        .target(
-            name: "_FoundationRefs",
-            swiftSettings: [
-                .enableExperimentalFeature("Lifetimes"),
-                .enableExperimentalFeature("AllowUnsafeAttribute"),
-                .enableExperimentalFeature("BuiltinModule"),
-                .swiftLanguageMode(.v5)
-            ]
-        ),
-
         // TestSupport (Internal)
         .target(
             name: "TestSupport",
@@ -145,12 +133,9 @@ var package = Package(
           dependencies: [
             "_FoundationCShims",
             "FoundationMacros",
-            .target(name: "_FoundationRefs", condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "DequeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
-            // Temporary: provides `UniqueArray` in Darwin package builds.
-            .product(name: "BasicContainers", package: "swift-collections", condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .visionOS])),
           ],
           exclude: [
             "Bytes/CMakeLists.txt",
