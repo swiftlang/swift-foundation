@@ -19,7 +19,7 @@
 /// - The containers and the strings are Swift values, so the mutability options have no effect.
 /// - A null in a binary property list is the string `"$null"`.
 /// - A set in a binary property list is an error.
-open class PropertyListSerialization {
+package class PropertyListSerialization {
     public struct MutabilityOptions : OptionSet, Sendable {
         public let rawValue : UInt
         public init(rawValue: UInt) { self.rawValue = rawValue }
