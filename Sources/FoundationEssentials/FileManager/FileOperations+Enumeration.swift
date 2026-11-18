@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_FILESYSTEM
+
 #if os(Windows)
 
 import WinSDK
@@ -492,3 +494,5 @@ struct _POSIXDirectoryContentsSequence: Sequence {
 }
 
 #endif
+
+#endif // !NO_FILESYSTEM

@@ -179,8 +179,8 @@ extension URL.ParseStrategy {
                 return "required"
             case .optional:
                 return "optional"
-            case .defaultValue(let value):
-                return "assumeValueIfMissing(\(String(describing: value))"
+            case .defaultValue:
+                return "assumeValueIfMissing"
             }
         }
     }

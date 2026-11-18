@@ -17,6 +17,9 @@ extension UnsafeRawBufferPointer : DataProtocol {
     }
 }
 
+#if hasFeature(Embedded)
+@export(implementation)
+#endif
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 extension UnsafeBufferPointer : DataProtocol where Element == UInt8 {
     public var regions: CollectionOfOne<UnsafeBufferPointer<Element>> {
