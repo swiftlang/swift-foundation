@@ -29,68 +29,58 @@ extension Locale.CanonicalizedIdentifier {
             bytes = Bytes(capacity: capacity)
         }
 
-        /// Creates the key-value pairs of the "@key=value;..." section of a locale identifier, sorted by key. A key is lowercase.
-        /// Removes the spaces around each key and value, and skips an empty pair. If a pair is not valid, the section has no pairs.
-        /// A valid pair has a key of letters and digits, "=", and a value of letters, digits, "-", "_", "+" and "/".
+        /// Creates the key-value pairs given a "@key=value;..." section of a locale identifier, sorted by key. Keys are lowercased.
         init(normalizing keyValueString: Span<UInt8>) {
             self.init(capacity: keyValueString.count)
-            var start = 1 // after the "@"
-            while start < keyValueString.count {
-                var end = start
-                while end < keyValueString.count, keyValueString[end] != UInt8(ascii: ";") {
-                    end += 1
-                }
-                defer { start = end + 1 }
-                let pair = Self.trimmingSpaces(start..<end, in: keyValueString)
-                if pair.isEmpty {
+            guard var i = keyValueString.firstIndex(from: 1, where: { $0 != ._space }) else { // after the "@"
+                return
+            }
+            while true {
+                if keyValueString[i] == UInt8(ascii: ";") {
+                    guard let next = keyValueString.firstIndex(from: i + 1, where: { $0 != ._space }) else {
+                        return
+                    }
+                    i = next
                     continue
                 }
 
-                var isValid = false
-                var key = pair
-                var value = pair
-                if let equalsOffset = keyValueString.extracting(pair).firstIndex(of: UInt8(ascii: "=")) {
-                    key = Self.trimmingSpaces(pair.lowerBound..<(pair.lowerBound + equalsOffset), in: keyValueString)
-                    value = Self.trimmingSpaces((pair.lowerBound + equalsOffset + 1)..<pair.upperBound, in: keyValueString)
-                    isValid = !key.isEmpty && !value.isEmpty
+                let keyStart = bytes.count
+                while i < keyValueString.count, keyValueString[i].isAlphanumeric {
+                    bytes.append(keyValueString[i]._lowercased)
+                    i += 1
                 }
-                for i in key where !keyValueString[i].isAlphanumeric {
-                    isValid = false
-                }
-                for i in value where !Self.isKeptInValue(keyValueString[i]) {
-                    isValid = false
-                }
-                guard isValid else {
+                guard bytes.count > keyStart,
+                      let equalsIndex = keyValueString.firstIndex(from: i, where: { $0 != ._space }), keyValueString[equalsIndex] == UInt8(ascii: "="),
+                      let valueIndex = keyValueString.firstIndex(from: equalsIndex + 1, where: { $0 != ._space }) else {
                     self = Self(capacity: 0)
                     return
                 }
 
-                let keyStart = bytes.count
-                for i in key {
-                    bytes.append(keyValueString[i]._lowercased)
-                }
                 let valueStart = bytes.count
-                bytes.append(copying: keyValueString.extracting(value).bytes)
+                i = valueIndex
+                while i < keyValueString.count {
+                    let byte = keyValueString[i]
+                    guard byte.isAlphanumeric || byte == ._minus || byte == ._underscore || byte == UInt8(ascii: "+") || byte == UInt8(ascii: "/") else {
+                        break
+                    }
+                    bytes.append(byte)
+                    i += 1
+                }
+                guard bytes.count > valueStart else {
+                    self = Self(capacity: 0)
+                    return
+                }
                 createPair(keyStart: keyStart, valueStart: valueStart)
-            }
-        }
 
-        /// Returns `range` in `source` without the spaces at its start and end.
-        private static func trimmingSpaces(_ range: Range<Int>, in source: Span<UInt8>) -> Range<Int> {
-            var lowerBound = range.lowerBound
-            var upperBound = range.upperBound
-            while lowerBound < upperBound, source[lowerBound] == ._space {
-                lowerBound += 1
+                guard let pairEnd = keyValueString.firstIndex(from: i, where: { $0 != ._space }) else {
+                    return
+                }
+                guard keyValueString[pairEnd] == UInt8(ascii: ";") else {
+                    self = Self(capacity: 0)
+                    return
+                }
+                i = pairEnd
             }
-            while upperBound > lowerBound, source[upperBound - 1] == ._space {
-                upperBound -= 1
-            }
-            return lowerBound..<upperBound
-        }
-
-        /// Returns whether `byte` is kept in a value of the "@key=value;..." section: a letter, a digit, "-", "_", "+" or "/".
-        private static func isKeptInValue(_ byte: UInt8) -> Bool {
-            byte.isAlphanumeric || byte == UInt8._minus || byte == UInt8._underscore || byte == UInt8(ascii: "+") || byte == UInt8(ascii: "/")
         }
 
         /// Creates the key-value pairs of the keywords in `components`, with their ICU names.
@@ -108,32 +98,33 @@ extension Locale.CanonicalizedIdentifier {
             self.init(capacity: source.count * 2)
 
             // Read each extension: a singleton, then its subtags until the next singleton.
-            // The private use, "x", is the last part of the tag, so its subtags are the rest of the tag.
             var index = 0 // the start of the next singleton
             while index < source.count, Locale.CanonicalizedIdentifier.isSingleton(source, at: index) {
                 let singleton = source[index]
                 let subtagsStart = index + 2
                 if singleton == Locale.CanonicalizedIdentifier.privateUseSingleton {
+                    // The private use, "x", is the last part of the tag. Everything after this are the subtag.
                     if subtagsStart < source.count {
                         append(key: source.extracting(index..<(index + 1)), value: source.extracting(subtagsStart...))
                     }
                     return
                 }
 
-                // Find the next singleton. The subtags end before its "-", or at the end of the tag.
+                // Find the next singleton
                 var nextIndex = subtagsStart
                 while nextIndex < source.count, !Locale.CanonicalizedIdentifier.isSingleton(source, at: nextIndex) {
                     nextIndex = Locale.CanonicalizedIdentifier.scanSegment(source, fromIndex: nextIndex).endIndex + 1
                 }
                 let subtagsEnd = min(nextIndex - 1, source.count)
+
                 // Stop at an extension without subtags.
                 guard subtagsStart < subtagsEnd else {
                     return
                 }
                 hasExtension = true
 
-                if singleton == UInt8(ascii: "u") {
-                    appendUExtensionSubtags(source: source.extracting(subtagsStart..<subtagsEnd))
+                if singleton == Locale.CanonicalizedIdentifier.unicodeExtensionSingleton {
+                    appendUExtension(from: source.extracting(subtagsStart..<subtagsEnd))
                 } else {
                     append(key: source.extracting(index..<(index + 1)), value: source.extracting(subtagsStart..<subtagsEnd))
                 }
@@ -141,9 +132,9 @@ extension Locale.CanonicalizedIdentifier {
             }
         }
 
-        /// Appends the keywords of the subtags of a "u" extension.
-        mutating func appendUExtensionSubtags(source: Span<UInt8>) {
-            // The current keyword: a key and the subtags of its type, such as "ca-islamic-umalqura".
+        /// Splits a whole "u" extension into key-value lists and appends each of them.
+        mutating func appendUExtension(from source: Span<UInt8>) {
+            // Keeps track of the range of the key and the values, such as "ca-islamic-umalqura".
             var keywordRange: Range<Int>? = nil
             var index = 0
             while index < source.count {
@@ -151,25 +142,24 @@ extension Locale.CanonicalizedIdentifier {
                 let length = end - index
                 if length == 2 && source[index].isAlphanumeric && source[index + 1].isLetter { // it's a Unicode Extension key
                     if let keywordRange {
-                        appendUExtension(keyword: source.extracting(keywordRange))
+                        appendUExtensionKeyword(source.extracting(keywordRange))
                     }
                     keywordRange = index..<end
                 } else if let currentKeyword = keywordRange {
-                    // The subtag is part of the type of the current key. Skip it if there is no key yet, because it is an attribute.
                     keywordRange = currentKeyword.lowerBound..<end
                 }
                 index = end + 1
             }
             if let keywordRange {
-                appendUExtension(keyword: source.extracting(keywordRange))
+                appendUExtensionKeyword(source.extracting(keywordRange))
             }
         }
 
-        /// Appends a "u" extension keyword: a key of 2 characters, then "-" and its type if it has one. For example, "ca-islamic-umalqura" or "kn".
-        private mutating func appendUExtension(keyword: Span<UInt8>) {
+        /// Appends a pair of key and values of a "u" extension
+        private mutating func appendUExtensionKeyword(_ keyword: Span<UInt8>) {
             let key = keyword.extracting(0..<2)
             let type = keyword.count > 2 ? keyword.extracting(3...) : keyword.extracting(2...)
-            // Use the key as written if it has no legacy name. For example, "va" stays "va".
+
             let legacyKeyName = Locale.legacyKey(forLowercased: key) ?? ""
             let legacyKey = legacyKeyName.isEmpty ? key : legacyKeyName.utf8Span.span
 
@@ -196,8 +186,8 @@ extension Locale.CanonicalizedIdentifier {
             createPair(keyStart: keyStart, valueStart: valueStart)
         }
 
-        /// Writes the pairs into `output` as "@key=value;...", and returns the ranges of their keys and values in `output`.
-        /// Skips a pair whose key is the same as the key before it, so that a repeated key keeps its first value.
+        /// Writes the key-value pairs into `output` as "@key=value;...", and returns the ranges in `output`.
+        /// Skips a pair whose key is the same as the key before
         func write(into output: inout OutputSpan<UInt8>) -> Locale.CanonicalizedIdentifier.KeywordRanges {
             var outputRanges: Locale.CanonicalizedIdentifier.KeywordRanges = []
             outputRanges.reserveCapacity(ranges.count)
@@ -244,8 +234,7 @@ extension Locale.CanonicalizedIdentifier {
             return removed
         }
 
-        /// Records the bytes from `keyStart` to `valueStart` as a key, and the bytes after them as its value.
-        /// Inserts the pair after the pairs with a smaller or equal key, so that `ranges` stays sorted and a repeated key keeps its first value first.
+        /// Records the bytes from `keyStart..<valueStart` as the key, and the bytes after as the value.
         mutating func createPair(keyStart: Int, valueStart: Int) {
             var index = ranges.count
             while index > 0, bytes.span.extracting(keyStart..<valueStart).lexicographicallyPrecedes(key(at: index - 1)) {

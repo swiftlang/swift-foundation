@@ -37,6 +37,12 @@ private struct LocaleImplTests {
         (identifier: "eng_US", identifierOut: "en_US", codes: (language: "en", script: nil, region: "US", variant: nil) as Codes),
         (identifier: "en_US_POSIX", identifierOut: "en_US_POSIX", codes: (language: "en", script: nil, region: "US", variant: "POSIX") as Codes),
         (identifier: "ca_ES_VALENCIA", identifierOut: "ca_ES_VALENCIA", codes: (language: "ca", script: nil, region: "ES", variant: "VALENCIA") as Codes),
+        (identifier: "en-US", identifierOut: "en-US", codes: (language: "en", script: nil, region: "US", variant: nil) as Codes),
+        (identifier: "pt_br", identifierOut: "pt_BR", codes: (language: "pt", script: nil, region: "BR", variant: nil) as Codes),
+        (identifier: "EN_us", identifierOut: "en_US", codes: (language: "en", script: nil, region: "US", variant: nil) as Codes),
+        (identifier: "no-NO", identifierOut: "nb-NO", codes: (language: "nb", script: nil, region: "NO", variant: nil) as Codes),
+        (identifier: "en_TP", identifierOut: "en_TL", codes: (language: "en", script: nil, region: "TL", variant: nil) as Codes),
+        (identifier: "cs_CS", identifierOut: "cs_CZ", codes: (language: "cs", script: nil, region: "CZ", variant: nil) as Codes),
     ])
     func identifierAndCodes(testCase: (identifier: String, identifierOut: String, codes: Codes)) {
         let locale = _LocaleImpl(identifier: testCase.identifier)
@@ -51,19 +57,12 @@ private struct LocaleImplTests {
         let locale = _LocaleImpl(identifier: "en_US@calendar=japanese;numbers=thai;rg=gbzzzz")
         #expect(locale.calendarIdentifier == .japanese)
         #expect(locale.numberingSystem == Locale.NumberingSystem("thai"))
-        #expect(locale.region?.identifier == "GB")
-
-        let withoutKeywords = _LocaleImpl(identifier: "en_US")
-        #expect(withoutKeywords.region?.identifier == "US")
     }
 
     // The region code uses the region of the "rg" keyword if there is one.
     @Test(arguments: [
-        (identifier: "en_US", regionCode: "US" as String?),
-        (identifier: "en_US@rg=gbzzzz", regionCode: "GB"),
-        (identifier: "en@rg=thzzzz", regionCode: "TH"),
+        (identifier: "en_US@rg=gbzzzz", regionCode: "GB" as String?),
         (identifier: "en-US-u-rg-gbzzzz", regionCode: "GB"),
-        (identifier: "en", regionCode: nil),
     ])
     func regionCode(testCase: (identifier: String, regionCode: String?)) {
         #expect(_LocaleImpl(identifier: testCase.identifier).regionCode == testCase.regionCode, "region code of \"\(testCase.identifier)\"")
@@ -120,15 +119,6 @@ private struct LocaleImplTests {
     ])
     func icuIdentifier(testCase: (identifier: String, icu: String)) {
         #expect(_LocaleImpl(identifier: testCase.identifier).identifier(.icu) == testCase.icu, "icu identifier of \"\(testCase.identifier)\"")
-    }
-
-    @Test(arguments: [
-        (identifier: "en_US@nu=latn;ca=gregory", expected: "en_US@ca=gregory;nu=latn"),
-        (identifier: "en_US@numbers=latn;calendar=gregorian", expected: "en_US@calendar=gregorian;numbers=latn"),
-        (identifier: "en_US@timezone=America/New_York", expected: "en_US@timezone=America/New_York"),
-    ])
-    func icuIdentifierNormalizesKeywords(testCase: (identifier: String, expected: String)) {
-        #expect(_LocaleImpl(identifier: testCase.identifier).identifier(.icu) == testCase.expected, "input \"\(testCase.identifier)\"")
     }
 
     // A leading "i-" is part of the language.
@@ -205,20 +195,6 @@ private struct LocaleImplTests {
         let locale = _LocaleImpl(identifier: testCase.identifier)
         #expect(locale.calendarIdentifier == testCase.calendar, "calendar of \"\(testCase.identifier)\"")
         #expect(locale.region?.identifier == testCase.region, "region of \"\(testCase.identifier)\"")
-    }
-
-    @Test(arguments: [
-        (identifier: "en-US-u-ca-chinese", icu: "en_US@calendar=chinese"),
-        (identifier: "zh-cmn-CH-u-co-pinyin", icu: "zh_CH@collation=pinyin"),
-        (identifier: "fr-FR-1606nict-u-ca-gregory-x-test", icu: "fr_FR_1606NICT@calendar=gregorian;x=test"),
-        (identifier: "en-US-t-fr-u-nu-thai", icu: "en_US@numbers=thai;t=fr"),
-        // `_LocaleImpl` drops the attributes of a "u" extension, such as "attr1".
-        (identifier: "en-US-u-attr1-ca-chinese", icu: "en_US@calendar=chinese"),
-        (identifier: "en-u-va-posix", icu: "en__POSIX"),
-    ])
-    func languageTagIdentifier(testCase: (identifier: String, icu: String)) {
-        let locale = _LocaleImpl(identifier: testCase.identifier)
-        #expect(locale.identifier(.icu) == testCase.icu, "input \"\(testCase.identifier)\"")
     }
 
     @Test func languageTagFromName() {

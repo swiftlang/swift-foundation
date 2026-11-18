@@ -212,6 +212,7 @@ private struct LocaleCanonicalIdentifierTests {
 
         // Duplicate language-region-variant/region subtag dedup
         ("en-US_US", "en_US"),
+        ("EN-uk_GB", "en_GB"),
         ("zh-TW_TW", "zh_TW"),
         ("fr-CA_CA", "fr_CA"),
         ("es-MX_AR", "es-MX_AR"),
@@ -229,30 +230,6 @@ private struct LocaleCanonicalIdentifierTests {
     func canonicalLocaleIdentifier(testCase: (identifier: String, expected: String)) {
         let actual = Locale._canonicalLocaleIdentifier(from: testCase.identifier)
         #expect(actual == testCase.expected, "input \"\(testCase.identifier)\"")
-    }
-
-    @Test(arguments: [
-        (identifier: "en", language: "en", script: nil as String?, region: nil as String?, variant: nil as String?),
-        (identifier: "en_US", language: "en", script: nil, region: "US", variant: nil),
-        (identifier: "en-US", language: "en", script: nil, region: "US", variant: nil),
-        (identifier: "pt_br", language: "pt", script: nil, region: "BR", variant: nil),
-        (identifier: "es_419", language: "es", script: nil, region: "419", variant: nil),
-        (identifier: "en_US_POSIX", language: "en", script: nil, region: "US", variant: "POSIX"),
-        (identifier: "ca_ES_VALENCIA", language: "ca", script: nil, region: "ES", variant: "VALENCIA"),
-        (identifier: "EN_us", language: "en", script: nil, region: "US", variant: nil),
-        (identifier: "sr_Latn_RS", language: "sr", script: "Latn", region: "RS", variant: nil),
-        (identifier: "eng_US", language: "en", script: nil, region: "US", variant: nil),
-        (identifier: "no-NO", language: "nb", script: nil, region: "NO", variant: nil),
-        (identifier: "zh-Hans_CN", language: "zh", script: nil, region: "CN", variant: nil),
-        (identifier: "en_TP", language: "en", script: nil, region: "TL", variant: nil),
-        (identifier: "cs_CS", language: "cs", script: nil, region: "CZ", variant: nil),
-    ])
-    func localeImplCodes(testCase: (identifier: String, language: String, script: String?, region: String?, variant: String?)) {
-        let locale = _LocaleImpl(identifier: testCase.identifier)
-        #expect(locale.languageCode == testCase.language, "language of \"\(testCase.identifier)\"")
-        #expect(locale.scriptCode == testCase.script, "script of \"\(testCase.identifier)\"")
-        #expect(locale.regionCode == testCase.region, "region of \"\(testCase.identifier)\"")
-        #expect(locale.variantCode == testCase.variant, "variant of \"\(testCase.identifier)\"")
     }
 
     @Test(arguments: [
@@ -295,6 +272,9 @@ private struct LocaleCanonicalIdentifierTests {
         (tag: "x-private-u-ca-chinese", expected: "@x=private-u-ca-chinese"),
         (tag: "x-foo_bar", expected: "@x=foo-bar"),
         (tag: "x_foo", expected: "@x=foo"),
+        // Drop the attributes of a "u" extension, such as "attr1".
+        (tag: "en-US-u-attr1-ca-chinese", expected: "en_US@calendar=chinese"),
+        (tag: "en-u-va-posix", expected: "en__POSIX"),
     ])
     func languageTag(testCase: (tag: String, expected: String)) {
         #expect(Locale.CanonicalizedIdentifier(languageTag: testCase.tag)?.icuIdentifier == testCase.expected, "tag \"\(testCase.tag)\"")

@@ -35,7 +35,7 @@ extension Locale {
         /// The byte ranges of the keys and values in `identifier`.
         let keywordRanges: KeywordRanges
         /// The range of the region in `identifier`. It is the region code of the "rg" keyword if there is one.
-        let regionOverrideRange: Range<Int>?
+        let regionRange: Range<Int>?
 
         init(identifier: String, componentRanges: ComponentRanges, keywordRanges: KeywordRanges) {
             self.identifier = identifier
@@ -44,14 +44,14 @@ extension Locale {
 
             // The "rg" value is a region code and a subdivision code, for example "gbzzzz". Use only the region code.
             // Ignore an "rg" value of 2 or fewer characters.
-            var regionOverrideRange = componentRanges.region
+            var regionRange = componentRanges.region
             for (keyRange, valueRange) in keywordRanges where valueRange.count > 2 {
                 if case "rg" = RawByteSpanComparator(identifier.utf8Span.span.extracting(keyRange)) {
-                    regionOverrideRange = valueRange.lowerBound..<(valueRange.lowerBound + 2)
+                    regionRange = valueRange.lowerBound..<(valueRange.lowerBound + 2)
                     break
                 }
             }
-            self.regionOverrideRange = regionOverrideRange
+            self.regionRange = regionRange
         }
 
         /// Creates a canonical identifier from `baseIdentifier`, a canonical identifier without key-value strings, followed by the key-value pairs in `keywords`.
@@ -93,12 +93,6 @@ extension Locale {
             self.init(baseIdentifier: base.span, componentRanges: componentRanges, keywords: keywords)
         }
 
-        /// Creates the canonical form of `identifier`, an ICU identifier or a BCP 47 language tag, with the byte ranges of its parts.
-        /// A language tag with an extension or a private use has the ICU form. For example, `en-US-u-ca-chinese` becomes `en_US@calendar=chinese`.
-        init(identifier: String) {
-            self = Self(languageTag: identifier) ?? Self(canonicalizing: identifier)
-        }
-
         /// Creates the canonical form of `string`, with the byte ranges of its parts. The identifier is "" if `string` is empty, too long, or not ASCII.
         package init(canonicalizing source: String) {
             let utf8 = source.utf8
@@ -115,15 +109,15 @@ extension Locale {
         /// Creates the canonical form of `base`, followed by `keywords`, with the byte ranges of its parts.
         /// `base` should contain no key-value strings. `keywords` are the normalized key-value pairs.
         init(baseIdentifier base: Span<UInt8>, keywords: borrowing KeywordList) {
-            // A. First check if input string matches an old-style Apple string that has a replacement (do this before case normalization)
+            // First check if input string matches an old-style Apple string that has a replacement (do this before case normalization)
             if let canonical = Locale.oldAppleLocaleToCanonical(base) {
-                // D. Append any key-value strings, now canonical
+                // Append any key-value strings, now canonical
                 // TODO: Make `oldAppleLocaleToCanonical` return bytes, so that `canonical` does not need a `String`.
                 self.init(baseIdentifier: canonical.utf8.span, componentRanges: Self.componentRanges(of: canonical.utf8.span), keywords: keywords)
                 return
             }
 
-            // B. No match with an old-style string, use input string but update codes, normalize case, etc.
+            // No match with an old-style string, use input string but update codes, normalize case, etc.:
 
             // The replacement can be a different length than the prefix it replaces (e.g. "art-lojban" -> "jbo").
             if let prefixMatch = Self.canonicalizeLanguagePrefix(base) {
@@ -139,27 +133,23 @@ extension Locale {
 
         /// Creates the canonical form of `source`, followed by `keywords`. `source` is an identifier without key-value strings, with its language prefix already replaced.
         private init(updatingCodesIn source: Span<UInt8>, keywords: borrowing KeywordList) {
-            // Write the canonical identifier into a temporary buffer. Then add the key-value strings to it.
             self = withTemporaryAllocation(of: UInt8.self, capacity: source.count) { output in
-                // C. Now strip defaults that are implied by other fields.
-                // 1. If an ISO 3166 region tag matches an ISO 3166 regional language variant subtag, strip the latter.
-                let regionTagEndIndex = Self.updateFullLocaleString(source, into: &output)
+                let underscoreRegionRange = Self.normalizeCodes(source, into: &output)
 
-                // 2. Strip defaults in input string based on final region tag in locale string
-                // (mainly for Chinese, to strip -Hans for _CN/_SG, -Hant for _TW/_HK/_MO)
-                if let regionTagEndIndex, regionTagEndIndex == output.span.count, let regionStrip = Self.defaultScriptsForRegion( output.span.extracting((regionTagEndIndex - 3)..<regionTagEndIndex)) {
-                    Self.removeSubstrings(regionStrip, from: &output)
+                // Strip the default script of the region, for example "-Hans" from "zh-Hans_CN", assuming the region is at the end of the identifier.
+                if let underscoreRegionRange, underscoreRegionRange.upperBound == output.span.count, let script = Self.defaultScriptToRemove(forRegion: output.span.extracting(underscoreRegionRange)) {
+                    Self.removeFirst(script, from: &output)
                 }
 
-                // 3. Strip defaults in input string based on initial part of locale string
-                // (mainly to strip default script tag for a language)
-                if let prefixStrip = Self.defaultScriptsForLanguage(output.span) {
-                    // The input string begins with a character sequence for which
-                    // there are default substrings which should be stripped if present
-                    Self.removeSubstrings(prefixStrip, from: &output)
+                // Strip the default codes of the language, for example "-Latn" from "en-Latn_US" as implied by "en".
+                if let codes = Self.defaultCodesToRemove(forLanguageOf: output.span) {
+                    Self.removeFirst(codes.first, from: &output)
+                    if let second = codes.second {
+                        Self.removeFirst(second, from: &output)
+                    }
                 }
 
-                // D. Re-append any key-value strings, now canonical
+                // Re-append any key-value strings, now canonical
                 return Self(baseIdentifier: output.span, componentRanges: Self.componentRanges(of: output.span), keywords: keywords)
             }
         }
@@ -174,8 +164,6 @@ extension Locale {
                 return nil
             }
 
-            // Read the tag only if a subtag before a separator has 1 character: the singleton of an extension or the private use.
-            // `init(canonicalizing:)` reads the other identifiers.
             var hasOneCharacterSubtag = false
             var subtagLength = 0
             for i in 0..<source.count {
@@ -308,8 +296,8 @@ extension Locale {
         }
 
         /// The region code in uppercase. Uses the region code of the "rg" keyword if there is one.
-        var regionOverride: String? {
-            regionOverrideRange.map { Self.string(from: identifier.utf8Span.span.extracting($0), uppercased: true) }
+        var region: String? {
+            regionRange.map { Self.string(from: identifier.utf8Span.span.extracting($0), uppercased: true) }
         }
 
         /// Returns the value of `key`, or `nil` if there is no such key.
@@ -384,7 +372,7 @@ extension Locale {
 
         // MARK: - Canonicalization steps
 
-        /// Returns the bytes of `subtag` as a String, in one allocation. `uppercased` uppercases ASCII letters. `hyphenToUnderscore` writes "-" as "_".
+        /// Returns the bytes of `subtag` as a String.
         static func string(from subtag: Span<UInt8>, uppercased: Bool = false, hyphenToUnderscore: Bool = false) -> String {
             String(_capacity: subtag.count) { output in
                 for i in 0..<subtag.count {
@@ -439,30 +427,44 @@ extension Locale {
 
         // MARK: - Table lookups
 
-        /// Looks up the default script of a region code, given the 3-byte delimiter + code span (e.g. `"_CN"`).
-        private static func defaultScriptsForRegion(_ code: Span<UInt8>) -> String? {
-            guard code[0] == ._underscore else { return nil }
-            return Locale.localeStringRegionToDefaults(forRegion: (code[1], code[2]))
+        /// Returns the default script to remove given a region, for example, "-Hans" for "_CN".
+        private static func defaultScriptToRemove(forRegion region: Span<UInt8>) -> String? {
+            guard region.count == 3, region[0] == ._underscore else { return nil }
+            return Locale.defaultScript(forRegion: TwoLetterCode(region[1], region[2]))
         }
 
-        // MARK: - `specialCases`
+        // MARK: - Updating codes
 
-        /// Given a locale string that uses standard codes (not a special old-style Apple string), update all the language codes and region codes to latest versions, map 3-letter language codes to 2-letter codes if possible, and normalize casing.
-        /// If a language-region variant subtag duplicates the region tag, the former is stripped here.
-        /// Returns the end offset (one past the 2-letter code) of the region tag in `buffer`, if present.
-        private static func updateFullLocaleString(_ source: Span<UInt8>, into buffer: inout OutputSpan<UInt8>) -> Int? {
+        /// Writes `source` into `buffer` with normalized codes: normalizes the case and the delimiters, replaces obsolete codes, and removes a repeated region code. For example, "EN-uk_GB" becomes "en_GB".
+        /// Returns the range of the region. Returns `nil` if there is no region.
+        private static func normalizeCodes(_ source: Span<UInt8>, into buffer: inout OutputSpan<UInt8>) -> Range<Int>? {
+            let positions = normalizeCaseAndDelimiters(source, into: &buffer)
+            if positions.hasDelimiter {
+                updateObsoleteCodes(in: &buffer, primaryLanguage: positions.primaryLanguage, underscoreRegionStartIndex: positions.underscoreRegionRange?.lowerBound)
+            }
+            if let hyphenRegionStartIndex = positions.hyphenRegionStartIndex, let underscoreRegionRange = positions.underscoreRegionRange {
+                removeRepeatedRegionCode(in: &buffer, hyphenRegionStartIndex: hyphenRegionStartIndex, underscoreRegionStartIndex: underscoreRegionRange.lowerBound)
+            }
+            return positions.underscoreRegionRange
+        }
+
+        /// Writes `source` into `buffer` code by code, and normalizes the case and the delimiter of each code. For example, "EN_latn_us_posix" becomes "en-Latn_US_POSIX".
+        /// Returns these positions in `buffer`
+        /// - `hyphenRegionStartIndex`: the index of the "-" before a region code written after the language.
+        /// - `underscoreRegionRange`: the range of the region, from its "_" to the end of the region code.
+        /// - `primaryLanguage`: the first subtag, if it has 2 letters. For example, "sh" in "sh_HR".
+        /// - `hasDelimiter`: whether the identifier has a "-" or "_"
+        private static func normalizeCaseAndDelimiters(_ source: Span<UInt8>, into buffer: inout OutputSpan<UInt8>) -> (hyphenRegionStartIndex: Int?, underscoreRegionRange: Range<Int>?, primaryLanguage: TwoLetterCode?, hasDelimiter: Bool) {
+            var hyphenRegionStartIndex: Int? = nil
+            var underscoreRegionRange: Range<Int>? = nil
+            var primaryLanguage: TwoLetterCode? = nil
+            var hasDelimiter = false
+
             // 257 == _maxIdentifierLength
             var subtagStorage = InlineArray<257, UInt8>(repeating: 0)
             var subtagLength = 0
-
-            var langRegSubtagStartIndex: Int? = nil
-            var regionTagStartIndex: Int? = nil
-
-            var hadRegion = false
             var subtagHasDigits = false
-
-            var primaryLanguage: TwoLetterSubtag? = nil
-            var hasDelimiter = false
+            var hadRegion = false
 
             var i = 0
             while true {
@@ -474,38 +476,43 @@ extension Locale {
                     subtagStorage[subtagLength] = source[i]
                     subtagLength += 1
                 } else {
-                    // A delimiter ('-' or '_'), or the end of the string.
+                    // The end of the subtag
                     if subtagLength == 0 || (subtagStorage[0] != ._minus && subtagStorage[0] != ._underscore) {
+                        // The first subtag. Stop reading if it has a digit.
                         if subtagHasDigits {
                             for j in 0..<subtagLength { buffer.append(subtagStorage[j]) }
                             break
                         }
                         if subtagLength == 2 {
-                            primaryLanguage = TwoLetterSubtag(subtagStorage[0], subtagStorage[1])
+                            primaryLanguage = TwoLetterCode(subtagStorage[0], subtagStorage[1])
                         }
                     } else if !hadRegion {
-                        // `subtagLength` includes the leading delimiter
+                        // `subtagLength` includes the delimiter.
                         if subtagLength == 3, !subtagHasDigits {
+                            // A region code of 2 letters: the region code after "_" ("_US"), or the first region code after "-" ("en-GB"). Uppercase it.
                             if subtagStorage[0] == ._underscore {
-                                regionTagStartIndex = buffer.count
+                                underscoreRegionRange = buffer.count..<(buffer.count + subtagLength)
                                 hadRegion = true
                                 subtagStorage[1] = subtagStorage[1]._uppercased
                                 subtagStorage[2] = subtagStorage[2]._uppercased
-                            } else if langRegSubtagStartIndex == nil {
-                                langRegSubtagStartIndex = buffer.count
+                            } else if hyphenRegionStartIndex == nil {
+                                hyphenRegionStartIndex = buffer.count
                                 subtagStorage[1] = subtagStorage[1]._uppercased
                                 subtagStorage[2] = subtagStorage[2]._uppercased
                             }
                         } else if subtagLength == 4, subtagHasDigits {
+                            // A region code of 3 digits, such as "_419" or "es-419".
                             if subtagStorage[0] == ._underscore {
-                                regionTagStartIndex = buffer.count
+                                underscoreRegionRange = buffer.count..<(buffer.count + subtagLength)
                                 hadRegion = true
-                            } else if langRegSubtagStartIndex == nil {
-                                langRegSubtagStartIndex = buffer.count
+                            } else if hyphenRegionStartIndex == nil {
+                                hyphenRegionStartIndex = buffer.count
                             }
                         } else if subtagLength == 5, !subtagHasDigits {
+                            // A script of 4 letters. Uppercase its first letter: "-latn" becomes "-Latn".
                             subtagStorage[1] = subtagStorage[1]._uppercased
                         } else if subtagLength == 1, subtagStorage[0] == ._underscore {
+                            // An empty region, as in "en__POSIX". The subtags after it are uppercase.
                             hadRegion = true
                         }
 
@@ -514,7 +521,7 @@ extension Locale {
                         }
                     }
 
-                    // Once `hadRegion` is true, any further subtag is a variant tag
+                    // Write everything else after the region as part of the variant.
                     buffer._append(copying: subtagStorage.span.extracting(0..<subtagLength))
                     subtagLength = 0
 
@@ -530,80 +537,70 @@ extension Locale {
                 i += 1
             }
 
+            // Copy the rest that we didn't change above
             if i < source.count {
                 buffer._append(copying: source.extracting(i...))
-                // This is to match CoreFoundation's behavior to support malformed input, where the unscanned tail may contain a '-'
                 hasDelimiter = true
             }
-
-            // 4. Handle special cases of updating region codes, or updating language codes based on region code.
-            if hasDelimiter {
-                updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "UK", to: "GB")
-                updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "TP", to: "TL")
-                switch primaryLanguage {
-                case "cs":
-                    updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "CS", to: "CZ")
-                case "sk":
-                    updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "CS", to: "SK")
-                default:
-                    break
-                }
-                updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "CS", to: "RS")
-                updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "YU", to: "RS")
-
-                if primaryLanguage == "sh" && !updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "HR", to: "hr", replacingLanguage: true) {
-                    updateRegionCode(&buffer, regionTagStartIndex: regionTagStartIndex, from: "RS", to: "sr", replacingLanguage: true)
-                }
-            }
-
-            // 5. If an ISO 3166 region tag matches an ISO 3166 regional language variant subtag, strip the latter.
-            if let langRegSubtagStartIndex, let regionTagStartIndex {
-                let langRegion = TwoLetterSubtag(buffer.span.extracting((langRegSubtagStartIndex + 1)...))
-                let region = TwoLetterSubtag(buffer.span.extracting((regionTagStartIndex + 1)...))
-
-                if langRegion == region {
-                    buffer.removeSubrange(langRegSubtagStartIndex..<(langRegSubtagStartIndex + 3))
-                }
-            }
-
-            // Only the end index of the 2-byte code is returned, because every external consumer
-            // only ever looks at those 2 bytes, or checks this offset against the end of the string.
-            return regionTagStartIndex.map { $0 + 3 }
+            return (hyphenRegionStartIndex, underscoreRegionRange, primaryLanguage, hasDelimiter)
         }
 
-        /// Rewrites `from` to `to` where it is the first `-XX` in `buffer` or the region tag. With `replacingLanguage`, overwrites the language instead. Returns whether `from` was found.
-        @discardableResult
-        private static func updateRegionCode(_ buffer: inout OutputSpan<UInt8>, regionTagStartIndex: Int?, from: TwoLetterSubtag, to: TwoLetterSubtag, replacingLanguage: Bool = false) -> Bool {
-            var found = false
-            // Only the first `-XX` counts, and not if a letter or digit follows it.
-            // It can be anywhere, e.g. "en_US-UK". This is to match CoreFoundation's behavior.
-            var hyphenIndex: Int? = nil
-            if buffer.count >= 3 {
-                for i in 0...(buffer.count - 3) where buffer[i] == ._minus && buffer[i + 1] == from.byte0 && buffer[i + 2] == from.byte1 {
-                    if i + 3 == buffer.count || !buffer[i + 3].isAlphanumeric {
-                        hyphenIndex = i
-                    }
-                    break
+        /// Replaces obsolete region and language codes.
+        private static func updateObsoleteCodes(in buffer: inout OutputSpan<UInt8>, primaryLanguage: TwoLetterCode?, underscoreRegionStartIndex: Int?) {
+            var language = primaryLanguage
+            let updates = Locale.obsoleteCodeUpdates
+            for i in updates.indices where updates[i].language == nil || updates[i].language == language {
+                let update = updates[i]
+                if !update.replacesLanguage {
+                    replaceRegionCode(update.regionCode, with: update.to, in: &buffer, underscoreRegionStartIndex: underscoreRegionStartIndex)
+                } else if hasRegionCode(update.regionCode, in: buffer.span, underscoreRegionStartIndex: underscoreRegionStartIndex) {
+                    overwrite(&buffer, at: 0, with: update.to)
+                    language = update.to
                 }
             }
-            if let hyphenIndex {
-                found = true
-                overwrite(&buffer, at: replacingLanguage ? 0 : hyphenIndex + 1, with: to)
-            }
-
-            guard let regionTagStartIndex else {
-                return found
-            }
-
-            let regionTag = TwoLetterSubtag(buffer.span.extracting((regionTagStartIndex + 1)...))
-            if from == regionTag {
-                found = true
-                overwrite(&buffer, at: replacingLanguage ? 0 : regionTagStartIndex + 1, with: to)
-            }
-            return found
         }
 
-        private static func overwrite(_ main: inout OutputSpan<UInt8>, at position: Int, with replacement: TwoLetterSubtag) {
+        /// Removes the region code after the language if it is the same as the region code in the end.
+        /// For example, "en-GB_GB" becomes "en_GB".
+        // TODO: Consider removing support for en-GB_GB as it is not a valid form
+        private static func removeRepeatedRegionCode(in buffer: inout OutputSpan<UInt8>, hyphenRegionStartIndex: Int, underscoreRegionStartIndex: Int) {
+            let languageRegion = TwoLetterCode(buffer.span.extracting((hyphenRegionStartIndex + 1)...))
+            let region = TwoLetterCode(buffer.span.extracting((underscoreRegionStartIndex + 1)...))
+            if languageRegion == region {
+                buffer.removeSubrange(hyphenRegionStartIndex..<(hyphenRegionStartIndex + 3))
+            }
+        }
+
+        /// Replaces the region code `old` with `new` in the region
+        private static func replaceRegionCode(_ old: TwoLetterCode, with new: TwoLetterCode, in buffer: inout OutputSpan<UInt8>, underscoreRegionStartIndex: Int?) {
+            if let hyphenIndex = firstHyphenIndex(before: old, in: buffer.span) {
+                overwrite(&buffer, at: hyphenIndex + 1, with: new)
+            }
+            if let underscoreRegionStartIndex, TwoLetterCode(buffer.span.extracting((underscoreRegionStartIndex + 1)...)) == old {
+                overwrite(&buffer, at: underscoreRegionStartIndex + 1, with: new)
+            }
+        }
+
+        /// Returns whether `code` is in the region
+        private static func hasRegionCode(_ code: TwoLetterCode, in buffer: Span<UInt8>, underscoreRegionStartIndex: Int?) -> Bool {
+            if firstHyphenIndex(before: code, in: buffer) != nil {
+                return true
+            }
+            guard let underscoreRegionStartIndex else { return false }
+            return TwoLetterCode(buffer.extracting((underscoreRegionStartIndex + 1)...)) == code
+        }
+
+        /// Returns the index of the first "-" followed by `code` in `buffer`. The match can be anywhere, as in "en_US-UK".
+        /// Returns `nil` if a letter or digit follows the first match, and does not look for a later match. This matches CoreFoundation.
+        private static func firstHyphenIndex(before code: TwoLetterCode, in buffer: Span<UInt8>) -> Int? {
+            guard buffer.count >= 3 else { return nil }
+            for i in 0...(buffer.count - 3) where buffer[i] == ._minus && buffer[i + 1] == code.byte0 && buffer[i + 2] == code.byte1 {
+                return i + 3 == buffer.count || !buffer[i + 3].isAlphanumeric ? i : nil
+            }
+            return nil
+        }
+
+        private static func overwrite(_ main: inout OutputSpan<UInt8>, at position: Int, with replacement: TwoLetterCode) {
             main[position] = replacement.byte0
             main[position + 1] = replacement.byte1
         }
@@ -611,21 +608,25 @@ extension Locale {
         // MARK: - Prefix matching
 
         // Case-insensitive prefix match to map 3-letter & obsolete ISO 639 codes, plus obsolete RFC 3066 codes, to canonical prefix.
-        private static func canonicalizeLanguagePrefix(_ main: Span<UInt8>) -> (keyLength: Int, result: String)? {
+        private static func canonicalizeLanguagePrefix(_ source: Span<UInt8>) -> (keyLength: Int, result: String)? {
+            guard source.count > 0 else { return nil }
 
-            guard main.count > 0 else { return nil }
             // no need to match beyond the known longest key
-            let limit = min(Locale._maxLocaleStringPrefixToCanonicalKeyLength, main.count)
+            var limit = min(Locale._maxLocaleStringPrefixToCanonicalKeyLength, source.count)
+            for i in 0..<limit where source[i] == ._underscore {
+                limit = i
+                break
+            }
 
             // 10 == _maxLocaleStringPrefixToCanonicalKeyLength
             var lowered = InlineArray<10, UInt8>(repeating: 0)
             for i in 0..<limit {
-                lowered[i] = main[i]._lowercased
+                lowered[i] = source[i]._lowercased
             }
 
-            // Try to match the longest if entries share the same prefix ("no" and "no-bok")
+            // Try the longest prefix first
             for length in stride(from: limit, through: 1, by: -1) {
-                if length < main.count, main[length].isAlphanumeric {
+                if length < source.count, source[length].isAlphanumeric {
                     continue
                 }
                 let candidate = lowered.span.extracting(0..<length)
@@ -636,39 +637,26 @@ extension Locale {
             return nil
         }
 
-        /// Extracts the leading language subtag. Returns the default scripts.
-        private static func defaultScriptsForLanguage(_ main: Span<UInt8>) -> String? {
+        /// Returns the default codes of the language of `identifier`, for example "-Latn" for "en-Latn_US".
+        /// Returns `nil` if we can't find the language tag
+        static func defaultCodesToRemove(forLanguageOf identifier: Span<UInt8>) -> (first: String, second: String?)? {
             var end = 0
-            while end < main.count, main[end].isLetter {
+            while end < identifier.count, identifier[end].isLetter {
                 end += 1
             }
-            guard end == 2 || end == 3, end < main.count, main[end] == ._minus else {
+            guard end == 2 || end == 3, end < identifier.count, identifier[end] == ._minus else {
                 return nil
             }
-            return Locale.localeStringPrefixToDefaults(forLanguage: main.extracting(0..<end))
+            let language = identifier.extracting(0..<end)
+            guard let first = Locale.defaultScript(forLanguage: language) else {
+                return nil
+            }
+            return (first, Locale.secondDefaultCode(forLanguage: language))
         }
 
-        // MARK: - `_RemoveSubstringsIfPresent`
-
-        /// Deletes each substring of the space-separated `substringList` from `main`
-        private static func removeSubstrings(_ substringList: String, from main: inout OutputSpan<UInt8>) {
-            let list = substringList.utf8Span.span
-            var start = 0
-            while start < list.count {
-                // Skip the separating spaces, then take the next substring.
-                guard list[start] != ._space else {
-                    start += 1
-                    continue
-                }
-                var end = start
-                while end < list.count, list[end] != ._space {
-                    end += 1
-                }
-                let needle = list.extracting(start..<end)
-                start = end
-
-                guard let found = main.span.firstRange(of: needle) else { continue }
-
+        /// Removes the first occurrence of `substring` from `main`, if there is one.
+        static func removeFirst(_ substring: String, from main: inout OutputSpan<UInt8>) {
+            if let found = main.span.firstRange(of: substring.utf8Span.span) {
                 main.removeSubrange(found)
             }
         }
@@ -704,9 +692,10 @@ extension Locale {
         }
 
         static let privateUseSingleton = UInt8(ascii: "x")
+        static let unicodeExtensionSingleton = UInt8(ascii: "u")
 
-        /// A 2-byte ASCII tag (language/region code, or old-style special-case code like `"sh"`).
-        struct TwoLetterSubtag: ExpressibleByStringLiteral, Equatable {
+        /// A language or region code of 2 ASCII bytes, such as "sh" or "US".
+        struct TwoLetterCode: ExpressibleByStringLiteral, Equatable {
             let byte0: UInt8
             let byte1: UInt8
 

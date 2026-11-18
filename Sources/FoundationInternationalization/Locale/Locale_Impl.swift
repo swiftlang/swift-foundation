@@ -44,13 +44,13 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
         _languageCode = canonical.languageCode
         _scriptCode = canonical.scriptCode
         _variant = componentsVariant ?? canonical.variantCode.map { Locale.Variant($0) }
-        _region = canonical.regionOverride.map { Locale.Region($0) }
+        _region = canonical.region.map { Locale.Region($0) }
         _icuIdentifier = canonical.icuIdentifier
     }
 
     required convenience init(identifier: String, prefs: LocalePreferences? = nil) {
-        // For historical reasons, `Locale.identifier` is the canonical identifier, not the identifier as written.
-        // For a BCP 47 language tag with an extension, it keeps the tag form, and `_canonical` has the ICU form.
+        // For historical reasons, `Locale.identifier` is the canonical identifier, not the passed-in identifier.
+        // For locale created from a BCP 47 language tag with an extension, we keep the BCP-47 form as the identifier
         let canonical = Locale.CanonicalizedIdentifier(canonicalizing: identifier)
         let languageTag = Locale.CanonicalizedIdentifier(languageTag: identifier)
         self.init(identifier: canonical.identifier, canonical: languageTag ?? canonical, icu: _LocaleICU(identifier: identifier, prefs: prefs), prefs: prefs, componentsVariant: nil)
@@ -59,7 +59,7 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     required convenience init(name: String?, prefs: LocalePreferences, disableBundleMatching: Bool) {
         // FIXME: Implement bundle matching here with user preferences
         let icu = _LocaleICU(name: name, prefs: prefs, disableBundleMatching: disableBundleMatching)
-        self.init(identifier: icu.identifier, canonical: Locale.CanonicalizedIdentifier(identifier: icu.identifier), icu: icu, prefs: prefs, componentsVariant: nil)
+        self.init(identifier: icu.identifier, canonical: Locale.CanonicalizedIdentifier(languageTag: icu.identifier) ?? Locale.CanonicalizedIdentifier(canonicalizing: icu.identifier), icu: icu, prefs: prefs, componentsVariant: nil)
     }
 
     required convenience init(components: Locale.Components) {
@@ -153,8 +153,8 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     var calendarIdentifier: Calendar.Identifier {
         if let value = _canonical.keywordValue("calendar"), let calendar = Calendar.Identifier(identifierString: value) {
             return calendar
-        } else if let regionOverrideRange = _canonical.regionOverrideRange {
-            return Self.defaultCalendar(forRegion: _canonical.identifier.utf8Span.span.extracting(regionOverrideRange))
+        } else if let regionRange = _canonical.regionRange {
+            return Self.defaultCalendar(forRegion: _canonical.identifier.utf8Span.span.extracting(regionRange))
         } else {
             // FIXME: Use the likely region of the language. For example, use the calendar of "TH" for "th".
             return _icu.calendarIdentifier
@@ -338,10 +338,10 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
     static func defaultCalendar(forRegion region: Span<UInt8>) -> Calendar.Identifier {
         // FIXME: Generate this table from the locale data. Use the first preferred calendar of each region.
         guard region.count == 2 else { return .gregorian }
-        switch (region[0]._lowercased, region[1]._lowercased) {
-        case (UInt8(ascii: "a"), UInt8(ascii: "f")), (UInt8(ascii: "i"), UInt8(ascii: "r")): return .persian
-        case (UInt8(ascii: "s"), UInt8(ascii: "a")): return .islamicUmmAlQura
-        case (UInt8(ascii: "t"), UInt8(ascii: "h")): return .buddhist
+        switch Locale.CanonicalizedIdentifier.TwoLetterCode(region[0]._uppercased, region[1]._uppercased) {
+        case "AF", "IR": return .persian
+        case "SA": return .islamicUmmAlQura
+        case "TH": return .buddhist
         default: return .gregorian
         }
     }

@@ -11,6 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 extension Span where Element: ~Copyable {
+    /// Returns the first index at or after `start` whose element satisfies `predicate`, or `nil` if there is none.
+    package func firstIndex(from start: Int = 0, where predicate: (borrowing Element) throws -> Bool) rethrows -> Int? {
+        var i = start
+        while i < count {
+            if try predicate(self[i]) {
+                return i
+            }
+            i += 1
+        }
+
+        return nil
+    }
+
     func lastIndex(where predicate: (borrowing Element) throws -> Bool) rethrows -> Int? {
         guard !isEmpty else {
             return nil

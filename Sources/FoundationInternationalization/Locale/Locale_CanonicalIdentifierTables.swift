@@ -632,21 +632,31 @@ extension Locale {
         }
     }
 
+    // The updates of obsolete codes. Needs to be applied in this order because each update changes the identifier.
+    // If the entry has a non-nil language, only update the region code when the identifier also has that language.
+    static let obsoleteCodeUpdates: InlineArray<8, (language: Locale.CanonicalizedIdentifier.TwoLetterCode?, regionCode: Locale.CanonicalizedIdentifier.TwoLetterCode, to: Locale.CanonicalizedIdentifier.TwoLetterCode, replacesLanguage: Bool)> = [
+        (nil, "UK", "GB", false),
+        (nil, "TP", "TL", false),
+        ("cs", "CS", "CZ", false),
+        ("sk", "CS", "SK", false),
+        (nil, "CS", "RS", false),
+        (nil, "YU", "RS", false),
+        ("sh", "HR", "hr", true),
+        ("sh", "RS", "sr", true),
+    ]
+
     // Map a region-code suffix (matched as the entire remainder of the string) to default script to strip.
     // Should match case-sensitive
-    static func localeStringRegionToDefaults(forRegion region: (UInt8, UInt8)) -> String? {
+    static func defaultScript(forRegion region: Locale.CanonicalizedIdentifier.TwoLetterCode) -> String? {
         switch region {
-        case (UInt8(ascii: "C"), UInt8(ascii: "N")): return "-Hans"
-        case (UInt8(ascii: "H"), UInt8(ascii: "K")): return "-Hant"
-        case (UInt8(ascii: "M"), UInt8(ascii: "O")): return "-Hant"
-        case (UInt8(ascii: "S"), UInt8(ascii: "G")): return "-Hans"
-        case (UInt8(ascii: "T"), UInt8(ascii: "W")): return "-Hant"
+        case "CN", "SG": return "-Hans"
+        case "HK", "MO", "TW": return "-Hant"
         default: return nil
         }
     }
 
-    // Default scripts given a language. Should match case-sensitive
-    static func localeStringPrefixToDefaults(forLanguage language: Span<UInt8>) -> String? {
+    // The default script of a language. Should match case-sensitive
+    static func defaultScript(forLanguage language: Span<UInt8>) -> String? {
         switch RawByteSpanComparator(language) {
         case "ab": return "-Cyrl"
         case "af": return "-Latn"
@@ -677,7 +687,7 @@ extension Locale {
         case "cy": return "-Latn"
         case "da": return "-Latn"
         case "dav": return "-Latn"
-        case "de": return "-Latn -1901"
+        case "de": return "-Latn"
         case "dje": return "-Latn"
         case "dua": return "-Latn"
         case "dv": return "-Thaa"
@@ -731,7 +741,7 @@ extension Locale {
         case "kl": return "-Latn"
         case "km": return "-Khmr"
         case "kn": return "-Knda"
-        case "ko": return "-Hang -Kore"
+        case "ko": return "-Hang"
         case "kok": return "-Deva"
         case "ks": return "-Aran"
         case "ksb": return "-Latn"
@@ -831,6 +841,15 @@ extension Locale {
         case "yo": return "-Latn"
         case "zh": return "-Hani"
         case "zu": return "-Latn"
+        default: return nil
+        }
+    }
+
+    // Returns the second default code of a language if the language has two
+    static func secondDefaultCode(forLanguage language: Span<UInt8>) -> String? {
+        switch RawByteSpanComparator(language) {
+        case "de": return "-1901"
+        case "ko": return "-Kore"
         default: return nil
         }
     }

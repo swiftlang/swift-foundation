@@ -66,7 +66,7 @@ extension UInt8 {
     }
 
     package var isLetter: Bool {
-        return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
+        _allLettersUpper.contains(self) || _allLettersLower.contains(self)
     }
 
     /// Equivalent to `isspace()` in the C locale: space, `\t`, `\n`, `\v`, `\f`, `\r`.
