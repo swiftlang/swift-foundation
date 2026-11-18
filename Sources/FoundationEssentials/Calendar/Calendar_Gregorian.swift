@@ -317,16 +317,6 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return _CalendarGregorian.init(identifier: identifier, timeZone: newTimeZone, locale: newLocale, firstWeekday: newFirstWeekday, minimumDaysInFirstWeek: newMinDays, gregorianStartDate: nil)
     }
 
-    package func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-        hasher.combine(timeZone)
-        hasher.combine(firstWeekday)
-        hasher.combine(minimumDaysInFirstWeek)
-        hasher.combine(localeIdentifier)
-        hasher.combine(preferredFirstWeekday)
-        hasher.combine(preferredMinimumDaysInFirstweek)
-    }
-
     // MARK: - Range
 
     /// How this calendar labels eras and numbers years inside them. The tables live in `CalendarEra.swift`.
@@ -1580,14 +1570,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
     }
 
     package func isDateInWeekend(_ date: Date) -> Bool {
-        let weekendRange: WeekendRange
-        if let localeWeekendRange = locale?.weekendRange {
-            weekendRange = localeWeekendRange
-        } else {
-            // Weekend range for 001 region
-            weekendRange = WeekendRange(onsetTime: 0, ceaseTime: 86400, start: 7, end: 1)
-        }
-
+        let weekendRange = locale?.weekendRange ?? _CalendarUtility.defaultWeekendRange
         return isDateInWeekend(date, weekendRange: weekendRange)
     }
 
@@ -2026,21 +2009,6 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
         return Self.isLeapYear(year)
     }
 
-    // from ICU calendar.cpp
-    func weekNumber(desiredDay: Int, dayOfPeriod: Int, weekday: Int) -> Int {
-        // Determine the day of the week of the first day of the period in question (either a year or a month).  Zero represents the first day of the week on this calendar.
-        var periodStartDayOfWeek = (weekday - firstWeekday - dayOfPeriod + 1) % 7
-        if periodStartDayOfWeek < 0 { periodStartDayOfWeek += 7 }
-
-        // Compute the week number.  Initially, ignore the first week, which may be fractional (or may not be).  We add periodStartDayOfWeek in order to fill out the first week, if it is fractional.
-        var weekNo = (desiredDay + periodStartDayOfWeek - 1) / 7
-
-        // If the first week is long enough, then count it.  If the minimal days in the first week is one, or if the period start is zero, we always increment weekNo.
-        if ((7 - periodStartDayOfWeek) >= minimumDaysInFirstWeek) { weekNo = weekNo + 1 }
-
-        return weekNo
-    }
-
     package func dateComponents(_ components: Calendar.ComponentSet, from d: Date, in timeZone: TimeZone) -> DateComponents {
         guard !components.isEmpty else {
             return DateComponents()
@@ -2208,7 +2176,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 // Adjust for weeks at end of the year that overlap into previous or next calendar year
                 if calculatedWeekOfYear == 0 {
                     let previousDayOfYear = dayOfYear + (gregorianYearIsLeap(year - 1) ? 366 : 365)
-                    calculatedWeekOfYear = weekNumber(desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday)
+                    calculatedWeekOfYear = _CalendarUtility.weekNumber(desiredDay: previousDayOfYear, dayOfPeriod: previousDayOfYear, weekday: weekday, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
                     calculatedYearForWeekOfYear -= 1
                 } else {
                     let lastDayOfYear = (gregorianYearIsLeap(year) ? 366 : 365)
@@ -2238,7 +2206,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                 guard let weekday else {
                     preconditionFailure()
                 }
-                weekOfMonth = weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday)
+                weekOfMonth = _CalendarUtility.weekNumber(desiredDay: day, dayOfPeriod: day, weekday: weekday, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
             }
 
             if components.contains(.weekdayOrdinal) {
@@ -2855,7 +2823,7 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
                     // last week for this year needs to go to the next year
                     lastDoy -= 7
                 }
-                let lastWeekOfYear = weekNumber(desiredDay: lastDoy, dayOfPeriod: lastDoy, weekday: relativeWeekdayForLastOfYear + 1)
+                let lastWeekOfYear = _CalendarUtility.weekNumber(desiredDay: lastDoy, dayOfPeriod: lastDoy, weekday: relativeWeekdayForLastOfYear + 1, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek)
                 newWeekOfYear = (newWeekOfYear + lastWeekOfYear - 1) % lastWeekOfYear + 1
             }
 
@@ -3150,62 +3118,9 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
             goal = end
         }
 
-
-        func orderedComponents(_ components: Calendar.ComponentSet) -> [Calendar.Component] {
-            var comps: [Calendar.Component] = []
-            if components.contains(.era) {
-                comps.append(.era)
-            }
-            if components.contains(.year) {
-                comps.append(.year)
-            }
-            if components.contains(.yearForWeekOfYear) {
-                comps.append(.yearForWeekOfYear)
-            }
-            if components.contains(.quarter) {
-                comps.append(.quarter)
-            }
-            if components.contains(.month) {
-                comps.append(.month)
-            }
-            if components.contains(.weekOfYear) {
-                comps.append(.weekOfYear)
-            }
-            if components.contains(.weekOfMonth) {
-                comps.append(.weekOfMonth)
-            }
-            if components.contains(.day) {
-                comps.append(.day)
-            }
-            if components.contains(.dayOfYear) {
-                comps.append(.dayOfYear)
-            }
-            if components.contains(.weekday) {
-                comps.append(.weekday)
-            }
-            if components.contains(.weekdayOrdinal) {
-                comps.append(.weekdayOrdinal)
-            }
-            if components.contains(.hour) {
-                comps.append(.hour)
-            }
-            if components.contains(.minute) {
-                comps.append(.minute)
-            }
-            if components.contains(.second) {
-                comps.append(.second)
-            }
-
-            if components.contains(.nanosecond) {
-                comps.append(.nanosecond)
-            }
-
-            return comps
-        }
-
         var dc = DateComponents()
 
-        for component in orderedComponents(components) {
+        for component in _CalendarUtility.orderedDifferenceComponents(components) {
             switch component {
             case .era, .year, .month, .day, .dayOfYear, .hour, .minute, .second, .weekday, .weekdayOrdinal, .weekOfYear, .yearForWeekOfYear, .weekOfMonth, .nanosecond:
                 do {
