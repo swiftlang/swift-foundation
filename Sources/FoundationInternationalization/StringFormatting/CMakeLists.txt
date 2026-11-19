@@ -12,7 +12,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-target_sources(FoundationEssentials PRIVATE
+target_sources(FoundationInternationalization PRIVATE
     FormatIsolates.swift
     LocalizedNumbers.swift
     StringsDictResolution.swift)
