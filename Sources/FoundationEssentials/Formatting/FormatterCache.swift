@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 internal import Synchronization
 
 package struct FormatterCache<Format : Hashable & Sendable, FormattingType: Sendable>: Sendable, ~Copyable {
@@ -56,5 +54,3 @@ package struct FormatterCache<Format : Hashable & Sendable, FormattingType: Send
         _lock = Mutex([Format: FormattingType]())
     }
 }
-
-#endif // !hasFeature(Embedded)

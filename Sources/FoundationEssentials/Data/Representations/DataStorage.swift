@@ -445,16 +445,23 @@ internal final class __DataStorage : @unchecked Sendable {
     
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, *)
     @export(implementation)
-    func withUninitializedBytes<Result: ~Copyable, E: Error>(
+    func withTrailingUninitializedBytes<Result: ~Copyable, E: Error>(
       extraCapacity: Int, location: Int, _ appendedCount: inout Int, _ initializer: (inout OutputRawSpan) throws(E) -> Result
     ) throws(E) -> Result {
         // We use the requested capacity to build the `OutputRawSpan`. The requested capacity may be less than the actual capacity.
-        assert((_length + extraCapacity) <= capacity)
-        let buffer = UnsafeMutableRawBufferPointer(start: mutableBytes!.advanced(by: location), count: extraCapacity)
+        let offsetLocation = location - _offset
+        assert((offsetLocation + extraCapacity) <= capacity)
+        assert(offsetLocation <= _length)
+        let buffer = UnsafeMutableRawBufferPointer(start: _bytes!.advanced(by: offsetLocation), count: extraCapacity)
         var outputSpan = OutputRawSpan(buffer: buffer, initializedCount: 0)
         defer {
             appendedCount = outputSpan.finalize(for: buffer)
-            _length &+= appendedCount
+            let resultingLength = offsetLocation + appendedCount
+            if resultingLength > _length {
+                _length = resultingLength
+            } else if resultingLength < _length {
+                setLength(resultingLength)
+            }
             outputSpan = OutputRawSpan()
         }
         return try initializer(&outputSpan)
@@ -580,9 +587,9 @@ internal final class __DataStorage : @unchecked Sendable {
                 mutableBytes!.advanced(by: trailingDestination).copyMemory(from: mutableBytes!.advanced(by: trailingLocation), byteCount: trailingLength)
             }
             let newLength = trailingDestination - _offset + trailingLength
-            if insertedLength > replacedLength {
+            if newLength > _length {
                 _length = newLength
-            } else if insertedLength < replacedLength {
+            } else if newLength < _length {
                 setLength(newLength)
             }
             endIndex += insertedLength - replacedLength

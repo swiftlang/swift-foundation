@@ -3,22 +3,22 @@
 
 ## Topics
 
-### Applying Attributes
+### Applying attributes
 
 - ``settingAttributes(_:)``
 - ``mergingAttributes(_:mergePolicy:)``
 - ``AttributedString/AttributeMergePolicy``
 - ``replacingAttributes(_:with:)``
 
-### Searching for a Substring
+### Searching for a substring
 
 - ``range(of:options:locale:)``
 
-### Accessing a Range
+### Accessing a range
 
 - ``subscript(_:)->AttributedSubstring``                     <!-- subscript<R>(bounds: R) -> AttributedSubstring where R : RangeExpression, R.Bound == AttributedString.Index { get } -->
 
-### Accessing Indices
+### Accessing indices
 
 - ``startIndex``
 - ``endIndex``
@@ -33,7 +33,7 @@
 - ``index(beforeUnicodeScalar:)``
 - ``AttributedString/Index``
 
-### Accessing Views into the Attributed String
+### Accessing views into the attributed string
 
 - ``characters``
 - ``unicodeScalars``
@@ -43,7 +43,7 @@
 - ``utf16``
 - ``AttributedString/UTF16View``
 
-### Accessing Whole-String Attributes
+### Accessing whole-string attributes
 
 - ``subscript(_:)->K.Value?``                                <!-- @preconcurrency subscript<K>(_: K.Type) -> K.Value? where K : AttributedStringKey, K.Value : Sendable { get set } -->
 - ``subscript(dynamicMember:)->K.Value?``                    <!-- @preconcurrency subscript<K>(dynamicMember keyPath: KeyPath<AttributeDynamicLookup, K>) -> K.Value? where K : AttributedStringKey, K.Value : Sendable { get set } -->
@@ -52,7 +52,7 @@
 - ``AttributeScopes``
 - ``ScopedAttributeContainer``
 
-### Comparing Attributed Strings or Substrings
+### Comparing attributed strings or substrings
 
 - ``==(_:_:)``
 

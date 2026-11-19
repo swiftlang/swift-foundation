@@ -170,4 +170,45 @@ private struct HebrewCalendarTests {
         #expect(failures.isEmpty, "\(failures.count) failures, first few: \(failures.prefix(5))")
     }
 
+    // MARK: - Differences and adds with large values
+
+    // 2,314,814 days lie between these dates, the same as for the Gregorian calendar.
+    @Test func dayDifferenceOfMoreThanAMillionDays() {
+        let difference = makeCalendar().dateComponents([.day], from: Date(timeIntervalSinceReferenceDate: -1e11), to: Date(timeIntervalSinceReferenceDate: 1e11))
+        #expect(difference.day == 2_314_814)
+    }
+
+    // The count of nanoseconds over 317 years is limited to the range of Int32, like the Gregorian calendar.
+    @Test func nanosecondDifferenceOverCenturies() {
+        let difference = makeCalendar().dateComponents([.nanosecond], from: Date(timeIntervalSinceReferenceDate: 0), to: Date(timeIntervalSinceReferenceDate: 1e10))
+        #expect(difference.nanosecond == Int(Int32.max))
+    }
+
+    @Test func weekAddThatOverflowsGivesNil() {
+        #expect(makeCalendar().date(byAdding: DateComponents(weekOfYear: Int.max / 2), to: Date(timeIntervalSinceReferenceDate: 0), wrappingComponents: false) == nil)
+    }
+
+    // The same week and weekday, a million week years later.
+    @Test func weekYearAddOfAMillionYears() {
+        let date = makeCalendar().date(byAdding: DateComponents(yearForWeekOfYear: 1_000_000), to: Date(timeIntervalSinceReferenceDate: 0), wrappingComponents: false)
+        #expect(date == Date(timeIntervalSinceReferenceDate: 31_557_325_161_600))
+    }
+
+    // The reference date is in the week year 5761, so this add lands in the week year Int32.max, the last one that the Hebrew arithmetic holds.
+    @Test func weekYearAddToTheLastYear() {
+        let date = makeCalendar().date(byAdding: DateComponents(yearForWeekOfYear: Int(Int32.max) - 5761), to: Date(timeIntervalSinceReferenceDate: 0), wrappingComponents: false)
+        #expect(date == Date(timeIntervalSinceReferenceDate: 6.77686585199904e16))
+    }
+
+    // An amount that overflows, and a week year after Int32.max.
+    @Test(arguments: [Int.min, Int(Int32.max) - 5761 + 1])
+    func weekYearAddThatOverflowsGivesNil(_ amount: Int) {
+        #expect(makeCalendar().date(byAdding: DateComponents(yearForWeekOfYear: amount), to: Date(timeIntervalSinceReferenceDate: 0), wrappingComponents: false) == nil)
+    }
+
+    // The length of the year Int32.max needs the start of the next year, which only an Int64 year holds.
+    @Test func dateInTheLastYear() {
+        #expect(makeCalendar().date(from: DateComponents(year: Int(Int32.max), month: 1, day: 1)) == Date(timeIntervalSinceReferenceDate: 6.77686585119552e16))
+    }
+
 }

@@ -90,7 +90,7 @@ extension Locale {
             self.components = Components(languageCode: languageCode, script: script, region: region)
         }
 
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
         private static let _systemLanguages: [Language] = {
             NSLocale.systemLanguages().map {
                 let comp = Components(identifier: $0 as! String)
@@ -112,7 +112,6 @@ extension Locale {
     }
 }
 
-// Codable is unavailable in Embedded Swift.
 #if !hasFeature(Embedded)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Locale.Language : Codable {}

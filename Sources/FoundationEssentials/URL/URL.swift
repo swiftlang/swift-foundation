@@ -619,9 +619,13 @@ internal func foundation_swift_nsurl_enabled() -> Bool {
 internal func foundation_swift_url_v2_enabled() -> Bool {
     return _foundation_swift_url_v2_enabled()
 }
+internal func foundation_swift_url_strict_validation_enabled() -> Bool {
+    return _foundation_swift_url_strict_validation_enabled()
+}
 #else
 internal func foundation_swift_url_enabled() -> Bool { return true }
 internal func foundation_swift_url_v2_enabled() -> Bool { return true }
+internal func foundation_swift_url_strict_validation_enabled() -> Bool { return true }
 #endif
 
 #if canImport(os) && !hasFeature(Embedded)
@@ -643,7 +647,7 @@ internal import os
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
 public struct URL: Equatable, Sendable, Hashable {
 
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "url")
     }()
@@ -698,6 +702,13 @@ public struct URL: Equatable, Sendable, Hashable {
         guard let inner = URL._type.init(stringOrEmpty: stringOrEmpty, relativeTo: url) else { return nil }
         _url = inner.convertingFileReference()
     }
+    
+#if !FOUNDATION_FRAMEWORK
+    @_spi(SwiftCorelibsFoundation)
+    public init?(_stringOrEmpty s: String, relativeTo url: URL? = nil) {
+        self.init(stringOrEmpty: s, relativeTo: url)
+    }
+#endif
 
     /// Creates a URL instance from the provided string.
     ///

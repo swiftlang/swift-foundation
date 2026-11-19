@@ -69,9 +69,10 @@ internal func containsIPLiteralBracket<T: UnsignedInteger & FixedWidthInteger>(
 @inline(__always)
 internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
     innerHost: borrowing Span<T>,
-    useModernParsing: Bool
+    useModernParsing: Bool,
+    useStrictValidation: Bool
 ) -> Bool? {
-    guard useModernParsing else {
+    guard useModernParsing || useStrictValidation else {
         // For CFURL, allow arbitrary percent-encoding
         return validate(span: innerHost, component: .hostIPvFuture)
     }
@@ -99,6 +100,10 @@ internal func validateIPLiteral<T: UnsignedInteger & FixedWidthInteger>(
             component: .hostZoneID
         )
     )
+    if !isValidZoneID && !useModernParsing && containsPercentEscape(innerHost.extracting(i...)) {
+        // CFURL gets its host from the original string, so even if we encoded the zone ID, its host would differ from URL and NSURL. Reject the invalid CFURL string here.
+        return nil
+    }
     return isValidZoneID
 }
 
@@ -120,6 +125,21 @@ private func isHexDigit<T: UnsignedInteger & FixedWidthInteger>(
     _ codeUnit: T
 ) -> Bool {
     codeUnit < 128 && UInt8(truncatingIfNeeded: codeUnit).isValidHexDigit
+}
+
+private func containsPercentEscape<T: UnsignedInteger & FixedWidthInteger>(
+    _ span: borrowing Span<T>
+) -> Bool {
+    var i = span.indices.startIndex
+    while i + 2 < span.indices.endIndex {
+        if span[i] == UInt8(ascii: "%"),
+           isHexDigit(span[i + 1]),
+           isHexDigit(span[i + 2]) {
+            return true
+        }
+        i += 1
+    }
+    return false
 }
 
 internal struct URLComponentAllowedSet: RawRepresentable {

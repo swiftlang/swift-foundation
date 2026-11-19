@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 
 #if canImport(os) && !hasFeature(Embedded)
@@ -35,7 +36,7 @@ internal struct ICUError: Error, CustomDebugStringConvertible {
         return String(cString: error)
     }
 
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
     internal static let logger: Logger = {
         Logger(subsystem: "com.apple.foundation", category: "icu")
     }()
@@ -54,7 +55,7 @@ extension UErrorCode {
     }
 
     func checkSuccessAndLogError(_ message: @escaping @autoclosure () -> String) -> Bool {
-#if canImport(os) && !hasFeature(Embedded)
+#if FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
         if !isSuccess {
             ICUError.logger.error("\(message()). Error: \(ICUError(code: self).debugDescription)")
         }
@@ -89,6 +90,33 @@ internal func _withResizingUCharBuffer(initialSize: Int32 = 32, _ body: (UnsafeM
         }
         
         return nil
+    }
+}
+
+/// Calls `body` with an empty output span of `chunkSize` `UChar`s, again and again, until `body` sets `status` to a value other than `U_BUFFER_OVERFLOW_ERROR`. This is for ICU functions such as `ucnv_toUnicode` that keep their position from one call to the next, and report `U_BUFFER_OVERFLOW_ERROR` when the output buffer is full.
+/// `body` appends its output to the span. Returns the text of all the chunks, or nil if the last status is a failure.
+internal func _withPerpetuallyResizingUCharBuffer(chunkSize: Int = 1024, _ body: (inout OutputSpan<UChar>, inout UErrorCode) -> Void) -> String? {
+    let chunkByteCount = chunkSize * MemoryLayout<UChar>.stride
+    var data = Data(capacity: chunkByteCount)
+    var status = U_ZERO_ERROR
+
+    repeat {
+        status = U_ZERO_ERROR
+        data.append(addingCount: chunkByteCount) { rawOutputSpan in
+            rawOutputSpan.withOutputSpan(of: UChar.self) { outputSpan in
+                body(&outputSpan, &status)
+            }
+        }
+    } while status == U_BUFFER_OVERFLOW_ERROR
+
+    guard status.isSuccess else {
+        return nil
+    }
+
+    // The UChars are in host byte order, so decode the code units instead of using a UTF-16 String.Encoding.
+    return data.withUnsafeBytes { buffer in
+        // Not String(_utf16:), which returns nil for unpaired surrogates. Some ICU converters (UTF-7) output them without calling the callback, and this replaces them with U+FFFD.
+        String(decoding: buffer.assumingMemoryBound(to: UChar.self), as: UTF16.self)
     }
 }
 
@@ -171,3 +199,5 @@ internal func _withStringAsCString(_ input: String, _ body: (UnsafePointer<CChar
         return String(cString: result)
     }
 }
+
+#endif // ICU

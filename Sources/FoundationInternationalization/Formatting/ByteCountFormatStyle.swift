@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 /// A format style that provides string representations of byte counts.
@@ -103,7 +104,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
     }
 
     /// The semantic style to use when formatting a byte count value.
-    public enum Style: Int, Codable, Hashable, Sendable {
+    public enum Style: Int, Hashable, Sendable {
         /// A style for representing file system storage.
         case file = 0
         /// The style for representing memory usage.
@@ -115,7 +116,7 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
     }
 
     /// The units to use when formatting a byte count, such as kilobytes or gigabytes.
-    public struct Units: OptionSet, Codable, Hashable, Sendable {
+    public struct Units: OptionSet, Hashable, Sendable {
         public var rawValue: UInt
 
         public init(rawValue: UInt) {
@@ -239,8 +240,8 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 }
 
                 var attributedZero = AttributedString(zeroFormatted)
-                attributedZero.byteCount = .spelledOutValue
-                for (value, range) in attributedFormat.runs[\.byteCount] where value == .value {
+                attributedZero[AttributeScopes.FoundationAttributes.ByteCountAttribute.self] = .spelledOutValue
+                for (value, range) in attributedFormat.runs[AttributeScopes.FoundationAttributes.ByteCountAttribute.self] where value == .value {
                     attributedFormat.replaceSubrange(range, with: attributedZero)
                 }
 
@@ -298,8 +299,8 @@ public struct ByteCountFormatStyle: FormatStyle, Sendable {
                 attributedString.append(AttributedString(localizedParens.0))
 
                 var attributedBytes = byteFormatter!.attributedFormat(formatterValue, unit: .byte)
-                for (value, range) in attributedBytes.runs[\.byteCount] where value == .value {
-                    attributedBytes[range].byteCount = .actualByteCount
+                for (value, range) in attributedBytes.runs[AttributeScopes.FoundationAttributes.ByteCountAttribute.self] where value == .value {
+                    attributedBytes[range][AttributeScopes.FoundationAttributes.ByteCountAttribute.self] = .actualByteCount
                 }
                 attributedString.append(attributedBytes)
 
@@ -426,3 +427,13 @@ extension AttributeScopes.FoundationAttributes.ByteCountAttribute.Unit {
         }
     }
 }
+
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ByteCountFormatStyle.Style : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ByteCountFormatStyle.Units : Codable {}
+#endif // !hasFeature(Embedded)
+
+#endif // ICU

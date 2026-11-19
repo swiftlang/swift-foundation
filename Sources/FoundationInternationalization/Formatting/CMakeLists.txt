@@ -23,6 +23,7 @@ target_sources(FoundationInternationalization PRIVATE
     Date/DateFormatString.swift
     Date/DateFormatStyle.swift
     Date/DateParseStrategy.swift
+    Date/DatePatternFormatter.swift
     Date/ICUDateFormatter.swift
     Date/ICUDateIntervalFormatter.swift
     Date/ICURelativeDateFormatter.swift

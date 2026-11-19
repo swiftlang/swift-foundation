@@ -3,7 +3,7 @@
 
 ## Topics
 
-### Inspecting progress 
+### Inspecting progress
 
 - ``totalCount``
 - ``completedCount``

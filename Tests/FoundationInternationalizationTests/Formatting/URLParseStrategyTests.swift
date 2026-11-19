@@ -240,24 +240,17 @@ private struct URLParseStrategyTests {
             if !component.hasComponentValue(in: originalURL) {
                 // We should use the substituted value because the original
                 // url does not contain this value
-                if let stringValue: String = component.getComponentValue(from: output) {
+                if let stringValue = component.getComponentValue(from: output) {
                     #expect(stringValue == defaultValue, sourceLocation: sourceLocation)
-                } else if let intValue: Int = component.getComponentValue(from: output) {
-                    let defaultIntValue = Int(defaultValue)
-                    #expect(defaultIntValue != nil, sourceLocation: sourceLocation)
-                    #expect(intValue == defaultIntValue, sourceLocation: sourceLocation)
                 } else {
                     Issue.record("Unexpected component type", sourceLocation: sourceLocation)
                 }
             } else {
                 // We should use the original value because it's present
                 // so no substitution needed
-                if let stringOriginalValue: String = component.getComponentValue(from: originalURL),
-                   let stringOutputValue: String = component.getComponentValue(from: output) {
-                    #expect(stringOriginalValue == stringOutputValue, sourceLocation: sourceLocation)
-                } else if let intOriginalValue: Int = component.getComponentValue(from: originalURL),
-                          let intOutputValue: Int = component.getComponentValue(from: output) {
-                    #expect(intOriginalValue == intOutputValue, sourceLocation: sourceLocation)
+                if let originalValue = component.getComponentValue(from: originalURL),
+                   let outputValue = component.getComponentValue(from: output) {
+                    #expect(originalValue == outputValue, sourceLocation: sourceLocation)
                 } else {
                     Issue.record("Unexpected component type", sourceLocation: sourceLocation)
                 }
@@ -313,6 +306,7 @@ private struct URLParseStrategyPatternMatchingTests {
             expectedValue: nil)
     }
 
+#if ICU
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     @Test func nonConventionalURLPatternMatching() {
         // Test "non-conventional" URLs. The host names of these URLs are encoded
@@ -351,6 +345,7 @@ private struct URLParseStrategyPatternMatchingTests {
             expectedUpperBound: emojiURLText.endIndex,
             expectedValue: emojiURL)
     }
+#endif // ICU
 
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     @Test func regexMatching() {

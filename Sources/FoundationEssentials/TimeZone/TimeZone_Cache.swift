@@ -37,20 +37,20 @@ internal import CoreFoundation_Private.CFNotificationCenter
 #endif
 
 
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
 internal func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
+#if ICU
     _TimeZoneICU.self
+#else
+    nil
+#endif
 }
 internal func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
+#if ICU
     _TimeZoneGMTICU.self
-}
 #else
-#if hasFeature(Embedded)
-package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
-    nil
-}
-package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMT.self
+#endif
 }
 #else
 dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
@@ -59,7 +59,6 @@ dynamic package func _timeZoneICUClass() -> _TimeZoneProtocol.Type? {
 dynamic package func _timeZoneGMTClass() -> _TimeZoneProtocol.Type {
     _TimeZoneGMT.self
 }
-#endif
 #endif
 
 #if os(Windows)
@@ -244,7 +243,18 @@ struct TimeZoneCache : Sendable, ~Copyable {
                 fixedTimeZones[identifier] = innerTZ
                 return innerTZ
             } else {
-                if let innerTz = _timeZoneICUClass()?.init(identifier: identifier) {
+#if FOUNDATION_FRAMEWORK || FOUNDATION_BUILTIN_TIMEZONE_DATA
+                // Without ICU, fall back to the built-in time zone data
+                let innerTz: (any _TimeZoneProtocol)?
+                if let icuClass = _timeZoneICUClass() {
+                    innerTz = icuClass.init(identifier: identifier)
+                } else {
+                    innerTz = _TimeZoneRulesBased(identifier: identifier)
+                }
+#else
+                let innerTz = _timeZoneICUClass()?.init(identifier: identifier)
+#endif
+                if let innerTz {
                     fixedTimeZones[identifier] = innerTz
                     return innerTz
                 } else {

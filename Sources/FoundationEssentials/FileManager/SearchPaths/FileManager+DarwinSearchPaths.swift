@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import Foundation_Private.NSPathUtilities
 internal import DarwinPrivate.dirhelper
@@ -177,5 +175,3 @@ extension String {
 }
 #endif // os(macOS) && FOUNDATION_FRAMEWORK
 #endif // canImport(Darwin)
-
-#endif // !hasFeature(Embedded)

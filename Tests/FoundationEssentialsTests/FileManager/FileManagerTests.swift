@@ -995,6 +995,15 @@ private struct FileManagerTests {
         }
     }
 
+    #if os(Windows)
+    @Test func resolveSymlinksWithoutFinalPathName() {
+        // These paths can be opened, but GetFinalPathNameByHandleW fails for them.
+        for path in [#"\\.\NUL"#, #"\\.\NUL\x"#] {
+            #expect(path._resolvingSymlinksInPath() == nil, "Resolving symlinks in '\(path)' unexpectedly succeeded")
+        }
+    }
+    #endif
+
     #if os(macOS) && FOUNDATION_FRAMEWORK
     @Test func specialTrashDirectoryTruncation() async throws {
         try await FilePlayground {}.test {

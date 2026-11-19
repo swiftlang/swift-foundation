@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 /// A type that formats lists of items with a separator and conjunction appropriate for a given locale.
 ///
 /// A list format style creates human readable text from a `Sequence` of values. Customize the formatting behavior
@@ -164,7 +166,7 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
     /// The type representing the width of a list.
     ///
     /// The possible values of a ``ListFormatStyle/width`` are `standard`, `short`, and `narrow`.
-    public enum Width: Int, Codable, Sendable {
+    public enum Width: Int, Sendable {
         /// Specifies a standard list style.
         ///
         /// This width creates a list like `One, Two, and Three` in U.S. English.
@@ -182,7 +184,7 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
     /// A type that describes whether the returned list contains cumulative or alternative elements.
     ///
     /// The possible values of a ``ListFormatStyle/listType`` are `and` and `or`.
-    public enum ListType: Int, Codable, Sendable {
+    public enum ListType: Int, Sendable {
         /// Specifies an *and* list type.
         ///
         /// This creates a list like `One, Two, and Three` in U.S. English.
@@ -206,6 +208,14 @@ public struct ListFormatStyle<Style: FormatStyle, Base: Sequence>: FormatStyle w
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension ListFormatStyle : Sendable where Style : Sendable {}
+
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ListFormatStyle.Width : Codable {}
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ListFormatStyle.ListType : Codable {}
+#endif
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 public struct StringStyle: FormatStyle, Sendable {
@@ -292,3 +302,5 @@ public extension FormatStyle {
         return style
     }
 }
+
+#endif // ICU

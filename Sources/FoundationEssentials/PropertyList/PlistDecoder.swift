@@ -150,27 +150,33 @@ open class PropertyListDecoder {
     
     private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
         return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
-#if FOUNDATION_FRAMEWORK || !os(macOS)
             // Enabled by feature flag; falls back to `BPlistLegacyDecodingFormat` when off.
-            if #available(anyAppleOS 26.0, *), foundation_swift_bplist_deserialization_enabled() {
-                var decoder: _PlistDecoder<BPlistDecodingFormat>
-                do {
-                    let parsedMetadata = try BPlistMetadata.parse(from: data.bytes)
-                    let urbp = data.withUnsafeBytes { $0 }
-                    let document = BPlistDecodingDocument(bytes: urbp, metadata: parsedMetadata)
-                    decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
-                } catch let error as BPlistError {
-                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error))
-                }
-                let result = try doDecode(decoder)
+            if foundation_swift_bplist_deserialization_enabled() {
+                // The decode, and the copy-in of the backing bytes if the document escapes, must happen while `utf8Buffer` is still valid.
+                let result = try utf8Buffer.withUnsafeRawPointer { ptr, count in
+                    var decoder: _PlistDecoder<BPlistDecodingFormat>
+                    let result: T
+                    do {
+                        // The nested scope ends the lifetime of the parsed metadata and document before decoding begins.
+                        do {
+                            let parsedMetadata = try BPlistMetadata.parse(from: data.bytes)
+                            let urbp = unsafe UnsafeRawBufferPointer(start: ptr, count: count)
+                            let document = BPlistDecodingDocument(bytes: urbp, metadata: parsedMetadata)
+                            decoder = try _PlistDecoder(referencing: document, options: self.options, codingPathNode: .root)
+                        }
+                        result = try doDecode(decoder)
+                    } catch let error as BPlistError {
+                        throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
+                    }
 
-                let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
-                decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                    let uniquelyReferenced = isKnownUniquelyReferenced(&decoder)
+                    decoder.takeOwnershipOfBackingDataIfNeeded(selfIsUniquelyReferenced: uniquelyReferenced)
+                    return result
+                }
 
                 format = .binary
                 return result
             }
-#endif
             var decoder: _PlistDecoder<BPlistLegacyDecodingFormat>
             do {
                 let map = try BPlistScanner.scanBinaryPropertyList(from: utf8Buffer)
@@ -186,9 +192,8 @@ open class PropertyListDecoder {
             format = .binary
             return result
         }, xml: { utf8Buffer in
-#if FOUNDATION_FRAMEWORK || !os(macOS)
             // Enabled by feature flag; falls back to `XMLPlistLegacyDecodingFormat` when off.
-            if #available(anyAppleOS 26.0, *), foundation_swift_xml_plist_deserialization_enabled() {
+            if foundation_swift_xml_plist_deserialization_enabled() {
                 let result = try utf8Buffer.withUnsafeRawPointer { ptr, count in
                     let sourceSpan = unsafe Span<UInt8>(_unsafeStart: ptr.assumingMemoryBound(to: UInt8.self), count: count)
                     let source = XMLPlistScannerEventSource(sourceBytes: sourceSpan)
@@ -218,7 +223,6 @@ open class PropertyListDecoder {
                 format = .xml
                 return result
             }
-#endif
             var decoder: _PlistDecoder<XMLPlistLegacyDecodingFormat>
             do {
                 var scanInfo = XMLPlistScanner(buffer: utf8Buffer)
@@ -421,6 +425,17 @@ open class PropertyListDecoder {
             throw DecodingError._dataCorrupted("Cannot convert input to UTF-16", for: .root)
         }
         return try closure(string.utf16)
+    }
+
+    /// Parse `data` as an old-style (OpenStep) property list, and return the dictionaries, arrays, strings and data in it. Binary and XML property lists are errors.
+    internal static func parseOpenStepPropertyList(from data: Data) throws -> Any {
+        try detectFormatAndConvertEncoding(for: data, binaryPlist: { _ -> Any in
+            throw OpenStepPlistError("The property list is in the binary format.")
+        }, xml: { _ -> Any in
+            throw OpenStepPlistError("The property list is in the XML format.")
+        }, openstep: { utf16View in
+            try __ParseOldStylePropertyList(utf16: utf16View)
+        })
     }
 
 #if FOUNDATION_FRAMEWORK

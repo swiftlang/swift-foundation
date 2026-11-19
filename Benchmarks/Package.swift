@@ -92,7 +92,7 @@ switch usePackage {
 
 let package = Package(
     name: "benchmarks",
-    platforms: [.macOS("26"), .iOS("26"), .tvOS("26"), .watchOS("26"), .visionOS("26")], // Should match parent project
+    platforms: [.macOS("27"), .iOS("27"), .tvOS("27"), .watchOS("27"), .visionOS("27")], // Should match parent project
     dependencies: packageDependency,
     targets: [
         .executableTarget(

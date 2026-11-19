@@ -10,17 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
-
-
-
 // MARK: - JSONMapBuildingSink
 
 /// `ParseEventSink` that builds a `JSONMap`: the flat-`Int` array record buffer format that describes the structure of a JSON document.
 struct JSONMapBuildingSink: ParseEventSink, ~Copyable {
     typealias Vocabulary = JSONVocabulary
-    typealias Fragment = Void
-    typealias Output = JSONMap<UniqueMapRecords>
+    typealias ValueFragment = Void
+    typealias Output = JSONMap
 
     /// The flat record buffer, handed off to the produced `JSONMap` at `takeResult`.
     var mapData: UniqueArray<Int>
@@ -131,12 +127,12 @@ struct JSONMapBuildingSink: ParseEventSink, ~Copyable {
         // Child count against the parent is bumped in `acceptContainer`, which the driver calls after `finalize*` returns.
     }
 
-    consuming func takeResult() throws -> JSONMap<UniqueMapRecords> {
+    consuming func takeResult() throws -> JSONMap {
         precondition(openHeaderSlots.count == 0, "JSONMapBuildingSink.takeResult: \(openHeaderSlots.count) container(s) still open")
-        return JSONMap(records: UniqueMapRecords(mapData))
+        return JSONMap(records: mapData)
     }
 
-    func releaseFragment(_ fragment: consuming Void) {
+    func releaseValueFragment(_ fragment: consuming Void) {
         // Fragment == Void; nothing to release.
     }
 }
@@ -147,4 +143,3 @@ extension UniqueArray {
         self.append(copying: array.span)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)

@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Generates Sources/_FoundationInternationalizationData/DateFormatData.json
+# from a CLDR XML checkout. The CLDR_PATH environment variable must point at
+# the CLDR root (the directory containing common/main/ and common/supplemental/),
+# e.g. /path/to/cldr.
+#
+# The output is the intermediate form for the date-format data pipeline.
+# A second tool (utils/build-date-format-data) consumes the JSON to produce
+# the Swift tables.
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r targetFileRelativePath="Sources/_FoundationInternationalizationData/DateFormatData.json"
+
+if [[ -z "${CLDR_PATH:-}" ]]; then
+  echo "error: CLDR_PATH environment variable is not set." 1>&2
+  echo "Set it to the root of a CLDR checkout, e.g.:" 1>&2
+  echo "  CLDR_PATH=/path/to/cldr ${commandName}" 1>&2
+  exit 1
+fi
+
+if [[ ! -d "${CLDR_PATH}/common/main" || ! -d "${CLDR_PATH}/common/supplemental" ]]; then
+  echo "error: CLDR_PATH does not point at a CLDR root." 1>&2
+  echo "Expected ${CLDR_PATH}/common/main and ${CLDR_PATH}/common/supplemental." 1>&2
+  exit 1
+fi
+
+echo "Generating ${targetFileRelativePath} from ${CLDR_PATH}..." 1>&2
+
+# Compile the schema, the shared locale fallback, and the impl as one module
+# and run the result. Building a real module with swiftc (rather than piping
+# the files through `swift` in immediate mode) keeps compilation deterministic
+# and makes diagnostics point at the original files with correct line numbers.
+# `-parse-as-library` lets the impl's `@main` provide the entry point instead
+# of top-level script code.
+bindir=$(mktemp -d -t "${commandName}.XXXXXX")
+trap 'rm -rf "${bindir}"' EXIT
+tool="${bindir}/${commandName}"
+swiftc -parse-as-library \
+    "${utilsDir}/date-format-data-schema.swift" \
+    "${utilsDir}/cldr-locale-fallback.swift" \
+    "${utilsDir}/${commandName}-impl.swift" \
+    -o "${tool}"
+
+# Write to a temporary file first, so a failed run leaves the target as it was.
+"${tool}" > "${bindir}/output.json"
+mv "${bindir}/output.json" "${foundationRepoDir}/${targetFileRelativePath}"
+
+echo "Done." 1>&2

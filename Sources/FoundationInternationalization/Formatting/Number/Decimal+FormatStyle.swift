@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
     /// A structure that converts between decimal values and their textual representations.
@@ -586,14 +588,10 @@ extension Decimal.FormatStyle {
     /// attributes to determine which runs of the attributed string represent different parts of
     /// the formatted value.
     public struct Attributed : Sendable {
-        enum Style : Hashable, Codable, Sendable {
+        enum Style : Hashable, Sendable {
             case decimal(Decimal.FormatStyle)
             case currency(Decimal.FormatStyle.Currency)
             case percent(Decimal.FormatStyle.Percent)
-            
-            private typealias DecimalCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
-            private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
         }
 
         var style: Style
@@ -756,7 +754,7 @@ extension Decimal {
         FormatStyle().format(self)
     }
 
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
     /// Formats the decimal using the provided format style.
     ///
     /// Use this method when you want to format a single decimal value with a specific
@@ -801,8 +799,18 @@ extension Decimal {
 #endif
 }
 
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Decimal.FormatStyle.Attributed.Style : Codable {
+    private typealias DecimalCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias CurrencyCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+}
+#endif // !hasFeature(Embedded)
+
 // MARK: - Regex
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Decimal.FormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Decimal
@@ -881,3 +889,6 @@ extension RegexComponent where Self == Decimal.FormatStyle.Currency {
         Decimal.FormatStyle.Currency(code: code.identifier, locale: locale)
     }
 }
+#endif // !hasFeature(Embedded)
+
+#endif // ICU

@@ -89,14 +89,14 @@ internal enum JSONMapValue {
 /// 4. Parse the next key at index 4. Decode the string and find "number", a match.
 /// 5. Decode the value by finding its type (number), its length (2), and the byte offset from the beginning of the input (26).
 /// 6. Pass that byte offset + length into the number parser to produce the corresponding Swift `Int` value.
-internal struct JSONMap<Records: MapRecordStorage & ~Copyable>: ~Copyable {
+internal struct JSONMap: ~Copyable {
     typealias TypeDescriptor = JSONMapTypeDescriptor
     typealias Region = JSONMapRegion
     typealias Value = JSONMapValue
 
-    let records: Records
+    let records: UniqueArray<Int>
 
-    init(records: consuming Records) {
+    init(records: consuming UniqueArray<Int>) {
         self.records = records
     }
 

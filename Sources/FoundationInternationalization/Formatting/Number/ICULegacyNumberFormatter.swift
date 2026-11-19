@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -97,8 +98,8 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
             defer { ufmt_close(formattable) }
 
             var pos = Int32(0) // 0 == start, per ICU docs
-            unum_parseToUFormattable(uformatter, formattable, arr, Int32(arr.count), &pos, &status)
-            guard status.isSuccess else { return nil }
+            guard unum_parseToUFormattable(uformatter, formattable, arr, Int32(arr.count), &pos, &status) != nil,
+                  status.isSuccess else { return nil }
             upperBound = Int(pos)
 
             var len: Int32 = 0
@@ -111,7 +112,7 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
                 return nil
             }
 
-            return Decimal(string: str)
+            return Decimal(asciiDecimalString: str)
         }
     }
 
@@ -142,15 +143,11 @@ internal final class ICULegacyNumberFormatter : @unchecked Sendable {
 
     // MARK: - Cache utilities
 
-    enum NumberFormatType : Hashable, Codable {
+    enum NumberFormatType : Hashable {
         case number(NumberFormatStyleConfiguration.Collection)
         case percent(NumberFormatStyleConfiguration.Collection)
         case currency(CurrencyFormatStyleConfiguration.Collection, currencyCode: String)
         case descriptive(DescriptiveNumberFormatConfiguration.Collection)
-
-        private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
-        private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
-        private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
     }
 
     private struct Signature : Hashable {
@@ -351,3 +348,14 @@ private func setCapitalizationContext(_ context: FormatStyleCapitalizationContex
     unum_setContext(formatter, context.icuContext, &status)
     // status ignored, nothing to do on failure
 }
+
+#if !hasFeature(Embedded)
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension ICULegacyNumberFormatter.NumberFormatType : Codable {
+    private typealias NumberCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias PercentCodingKeys = DefaultAssociatedValueCodingKeys1
+    private typealias DescriptiveCodingKeys = DefaultAssociatedValueCodingKeys1
+}
+#endif // !hasFeature(Embedded)
+
+#endif // ICU

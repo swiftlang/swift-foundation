@@ -20,6 +20,8 @@ import Testing
 #endif
 
 /// The three calendars that share the era-table engine over `_CalendarGregorian`.
+#if ICU
+
 private enum GregorianCalendarFamily: String, Sendable, CaseIterable, CustomTestStringConvertible {
     case buddhist, japanese, roc
 
@@ -427,3 +429,5 @@ private struct GregorianFamilyHashContractTests {
         #expect(Self.hashValue(gmt) != Self.hashValue(tokyo))
     }
 }
+
+#endif // ICU

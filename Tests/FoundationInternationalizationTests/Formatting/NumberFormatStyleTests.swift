@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Number FormatStyle")
 private struct NumberFormatStyleTests {
     let enUSLocale = Locale(identifier: "en_US")
@@ -750,6 +752,54 @@ private struct NumberFormatStyleTests {
 
         let output = FloatingPointFormatStyle.Currency(code: currencyCode, locale: locale).format(1)
         #expect(output == "¤1.00")
+    }
+
+    @Test func printfScientific() {
+        let style = FloatingPointFormatStyle<Double>(locale: enUSLocale).notation(.printfScientific)
+
+        // The exponent has a sign and at least two digits
+        #expect(style.format(12345) == "1.2345E+04")
+        #expect(style.format(0.00015) == "1.5E-04")
+        #expect(style.format(1e100) == "1E+100")
+        #expect(style.format(-1500) == "-1.5E+03")
+        #expect(style.format(0) == "0E+00")
+        #expect(style.format(5) == "5E+00")
+
+        // The precision applies to the mantissa
+        #expect(style.precision(.significantDigits(7)).format(1_500_000) == "1.500000E+06")
+        #expect(style.precision(.significantDigits(3)).format(1234.5678) == "1.23E+03")
+        #expect(style.precision(.fractionLength(2)).format(1234.5678) == "1.23E+03")
+
+        // The sign strategy applies to the mantissa only
+        #expect(style.sign(strategy: .always()).format(1.5) == "+1.5E+00")
+        #expect(style.sign(strategy: .never).format(-1.5) == "1.5E+00")
+
+        // Other value types and locales
+        #expect(IntegerFormatStyle<Int>(locale: enUSLocale).notation(.printfScientific).format(8765) == "8.765E+03")
+        #expect(Decimal.FormatStyle(locale: enUSLocale).notation(.printfScientific).format(Decimal(string: "0.00123")!) == "1.23E-03")
+        #expect(FloatingPointFormatStyle<Double>(locale: frFRLocale).notation(.printfScientific).precision(.significantDigits(3)).format(1234.5678) == "1,23E+03")
+    }
+
+    // ICU has an internal limit of 999 for individual parts (so we end up limiting the input to 998). Until we remove the ICU dependency (and can remove this artificial limit), validate that we at least clamp the provided value rather than dropping it
+    @Test func clampToICUPartLimits() {
+        let style = FloatingPointFormatStyle<Double>(locale: enUSLocale)
+
+        let integerPrefix = "00," + String(repeating: "000,", count: 331) + "00"
+        let fractionSuffix = String(repeating: "0", count: 996)
+        let significantDigitsSuffix = String(repeating: "0", count: 995)
+
+        #expect(1.23.formatted(style.precision(.integerLength(1002 ..< 1003))) == integerPrefix + "1.23")
+        #expect(1.23.formatted(style.precision(.integerLength(1002...))) == integerPrefix + "1.23")
+        #expect(1.23.formatted(style.precision(.integerLength(1002))) == integerPrefix + "1.23")
+        #expect(1.23.formatted(style.precision(.fractionLength(1002 ..< 1003))) == "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.fractionLength(1002...))) == "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.fractionLength(1002))) == "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.integerAndFractionLength(integerLimits: 1002 ..< 1003, fractionLimits: 1002 ..< 1003))) == integerPrefix + "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.integerAndFractionLength(integerLimits: 1002 ..< 1003, fractionLimits: 1002...))) == integerPrefix + "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.integerAndFractionLength(integer: 1002, fraction: 1002))) == integerPrefix + "1.23" + fractionSuffix)
+        #expect(1.23.formatted(style.precision(.significantDigits(1002 ..< 1003))) == "1.23" + significantDigitsSuffix)
+        #expect(1.23.formatted(style.precision(.significantDigits(1002...))) == "1.23" + significantDigitsSuffix)
+        #expect(1.23.formatted(style.precision(.significantDigits(1002))) == "1.23" + significantDigitsSuffix)
     }
 }
 
@@ -2271,3 +2321,5 @@ extension NumberFormatStyleTests {
         #expect(Int64.min.formatted(.currency(code: "USD").locale(enUSLocale)) == "-$9,223,372,036,854,775,808.00")
     }
 }
+
+#endif // ICU

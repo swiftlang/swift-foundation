@@ -3,7 +3,7 @@
 
 ## Topics
 
-### Creating an ISO 8601 Format Style
+### Creating an ISO 8601 format style
 
 - ``init(dateSeparator:dateTimeSeparator:timeZone:)``
 - ``init(dateSeparator:dateTimeSeparator:timeSeparator:timeZoneSeparator:includingFractionalSeconds:timeZone:)``
@@ -12,7 +12,7 @@
 - ``iso8601-5gh6l``
 - ``iso8601-6848a``
 
-### Modifying an ISO 8601 Format Style
+### Modifying an ISO 8601 format style
 
 - ``locale(_:)``
 - ``dateSeparator``
@@ -22,7 +22,7 @@
 - ``timeZone``
 - ``dateTimeSeparator(_:)``
 
-### Modifying Dates in an ISO 8601 Format Style
+### Modifying dates in an ISO 8601 format style
 
 - ``dateSeparator(_:)``
 - ``DateSeparator``
@@ -32,7 +32,7 @@
 - ``day()``
 - ``includingFractionalSeconds``
 
-### Modifying Times in an ISO 8601 Format Style
+### Modifying times in an ISO 8601 format style
 
 - ``time(includingFractionalSeconds:)``
 - ``timeSeparator``
@@ -43,16 +43,16 @@
 - ``TimeZoneSeparator``
 - ``timeZoneSeparator(_:)``
 
-### Parsing an ISO 8601 Format Style
+### Parsing an ISO 8601 format style
 
 - ``parse(_:)``
 - ``parseStrategy``
 
-### Applying an ISO 8601 Format Style
+### Applying an ISO 8601 format style
 
 - ``format(_:)``
 
-### Comparing ISO 8601 Format Styles
+### Comparing ISO 8601 format styles
 
 - ``!=(_:_:)``
 - ``==(_:_:)``

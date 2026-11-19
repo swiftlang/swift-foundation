@@ -114,10 +114,10 @@ enum XMLPlistTag {
 }
 
 class XMLPlistLegacyDecodingDocument : PlistDecodingDocument, @unchecked Sendable {
-    let map: XMLPlistMap<ArrayMapRecords>
+    let map: XMLPlistMap
     let dataLock : Mutex<(buffer: BufferView<UInt8>, allocation: UnsafeRawPointer?)>
 
-    init(map: consuming XMLPlistMap<ArrayMapRecords>, dataBuffer: BufferView<UInt8>) {
+    init(map: consuming XMLPlistMap, dataBuffer: BufferView<UInt8>) {
         self.map = map
         self.dataLock = .init((buffer: dataBuffer, allocation: nil))
     }
@@ -514,9 +514,9 @@ extension XMLPlistMapValue {
                 return rounded
             }
 
-            if let exact = document.withBuffer(for: region) { bytes, _ in
+            if let exact = document.withBuffer(for: region, perform: { bytes, _ in
                 Decimal._decimal(from: bytes, matchEntireString: true).asOptional.result
-            } {
+            }) {
                 if let rounded, Self.decimal(exact, isExactly: rounded) {
                     return rounded
                 }
@@ -675,12 +675,12 @@ extension XMLPlistMapValue: DecodingErrorValueTypeDebugStringConvertible {
     }
 }
 
-internal struct XMLPlistScanner {
+internal struct XMLPlistScanner: ~Copyable {
     var reader : BufferReader
     var partialMapData = PartialMapData()
 
-    struct PartialMapData {
-        var mapData : [Int] = []
+    struct PartialMapData: ~Copyable {
+        var mapData = UniqueArray<Int>()
         var prevMapDataSize = 0
 
         mutating func resizeIfNecessary(with reader: BufferReader) {
@@ -706,7 +706,7 @@ internal struct XMLPlistScanner {
 
             // Reserve space for the next object index and object count.
             let startIdx = mapData.count
-            mapData.append(contentsOf: [0, 0])
+            mapData.append(copyingInline: [0, 0])
             return startIdx
         }
 
@@ -716,23 +716,22 @@ internal struct XMLPlistScanner {
             mapData.append(XMLPlistMapTypeDescriptor.collectionEnd.mapMarker)
 
             let nextValueOffset = mapData.count
-            mapData.withUnsafeMutableBufferPointer {
-                $0[startOffset] = nextValueOffset
-                $0[startOffset + 1] = count
-            }
+            var span = mapData.mutableSpan
+            span[startOffset] = nextValueOffset
+            span[startOffset &+ 1] = count
         }
 
         mutating func recordEmptyCollection(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
             resizeIfNecessary(with: reader)
 
             let nextValueOffset = mapData.count + 4
-            mapData.append(contentsOf: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMapTypeDescriptor.collectionEnd.mapMarker])
+            mapData.append(copyingInline: [tagType.mapMarker, nextValueOffset, 0, XMLPlistMapTypeDescriptor.collectionEnd.mapMarker])
         }
 
         mutating func record(tagType: XMLPlistMapTypeDescriptor, count: Int, dataOffset: Int, with reader: BufferReader) {
             resizeIfNecessary(with: reader)
 
-            mapData.append(contentsOf: [tagType.mapMarker, count, dataOffset])
+            mapData.append(copyingInline: [tagType.mapMarker, count, dataOffset])
         }
 
         mutating func record(tagType: XMLPlistMapTypeDescriptor, with reader: BufferReader) {
@@ -1293,7 +1292,7 @@ internal struct XMLPlistScanner {
         try checkForCloseTag(.plist)
     }
 
-    mutating func scanXMLPropertyList() throws -> XMLPlistMap<ArrayMapRecords> {
+    mutating func scanXMLPropertyList() throws -> XMLPlistMap {
         while !reader.isAtEnd {
             skipWhitespace()
             guard let shouldBeOpenAngle = reader.read() else {
@@ -1323,7 +1322,9 @@ internal struct XMLPlistScanner {
                 try skipXMLProcessingInstruction()
             default:
                 try scanXMLElement()
-                return XMLPlistMap(records: .init(partialMapData.mapData))
+                var mapData = UniqueArray<Int>()
+                swap(&mapData, &partialMapData.mapData)
+                return XMLPlistMap(records: mapData)
             }
         }
         throw XMLPlistError.unexpectedEndOfFile()

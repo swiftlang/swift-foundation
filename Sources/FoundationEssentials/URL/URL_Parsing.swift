@@ -567,6 +567,12 @@ extension URL {
             shouldEncode = true
         }
 
+        // When enabled, strict validation rejects some of the invalid URL strings that CFURL would otherwise allow.
+        @inline(__always)
+        func useStrictValidation() -> Bool {
+            return !useModernParsing && foundation_swift_url_strict_validation_enabled()
+        }
+
         @inline(__always)
         func checkHost() -> Bool {
             guard flags.contains(.hasHost) else { return true }
@@ -577,7 +583,8 @@ extension URL {
                 let innerHost = host.extracting(1..<(host.count - 1))
                 guard let isValid = validateIPLiteral(
                     innerHost: innerHost,
-                    useModernParsing: useModernParsing
+                    useModernParsing: useModernParsing,
+                    useStrictValidation: useStrictValidation()
                 ) else {
                     return false
                 }
@@ -644,11 +651,12 @@ extension URL {
             if useModernParsing {
                 guard allowEncoding else { return false }
                 if flags.isDisjoint(with: [.hasScheme, .hasHost]) {
-                    // A relative-ref must not contain ":" before the first "/"
+                    // A relative-ref must not contain ":" before the first "/", but for compatibility, a "[", "]", or "@" before the first ":" is treated as a relative-ref so URLs like "[::1]:443" don't return nil.
                     for i in path.indices {
-                        if path[i] == UInt8(ascii: "/") {
+                        let v = path[i]
+                        if v == UInt8(ascii: "/") || v == UInt8(ascii: "[") || v == UInt8(ascii: "]") || v == UInt8(ascii: "@") {
                             break
-                        } else if path[i] == UInt8(ascii: ":") {
+                        } else if v == UInt8(ascii: ":") {
                             return false
                         }
                     }
@@ -989,11 +997,16 @@ extension URL {
             func idnaEncodeHost(range: Range<Int>) -> Bool {
                 guard !range.isEmpty else { return true }
                 guard flush() else { return false }
-                #if hasFeature(Embedded)
-                // There is no IDNA hook in embedded mode.
+                #if hasFeature(Embedded) && ICU
+                // FoundationInternationalization is in the same module.
+                let uidnaHook = UIDNAHookICU.self
+                #elseif hasFeature(Embedded)
+                // IDNA encoding requires ICU.
                 return false
                 #else
                 guard let uidnaHook = _uidnaHook() else { return false }
+                #endif
+                #if !hasFeature(Embedded) || ICU
                 let success = T._withUTF16(input: span.extracting(range)) { utf16Span in
                     return uidnaHook.nameToASCII(
                         input: utf16Span,
@@ -1020,6 +1033,17 @@ extension URL {
                 }
                 guard success else { return false }
                 updateIndices(currentIndex: range.endIndex)
+                return true
+            }
+
+            // Returns false if there's not enough room in the output buffer.
+            @inline(__always)
+            func encodeColon(at index: Int) -> Bool {
+                guard flush(), outputSpan.freeCapacity >= 3 else { return false }
+                outputSpan.append(UInt8(ascii: "%"))
+                outputSpan.append(UInt8(ascii: "3"))
+                outputSpan.append(UInt8(ascii: "A"))
+                updateIndices(currentIndex: index + 1)
                 return true
             }
 
@@ -1144,7 +1168,19 @@ extension URL {
             let pathRange = impl.pointee.pathRange
             let newPathStart = pathRange.startIndex + extraBytesAdded
             if flags.contains(.shouldEncodePath) {
-                guard encode(range: pathRange, component: .rfc3986Path) else { return false }
+                var encodeStart = pathRange.startIndex
+                if updateRanges && flags.isDisjoint(with: [.hasScheme, .hasHost]) {
+                    // For NSURL and URL, encode any ":" in the first segment of a relative-ref. CFURL leaves the ":" as-is.
+                    var i = pathRange.startIndex
+                    while i < pathRange.endIndex && span[i] != UInt8(ascii: "/") {
+                        if span[i] == UInt8(ascii: ":") {
+                            guard encode(range: encodeStart..<i, component: .rfc3986Path), encodeColon(at: i) else { return false }
+                            encodeStart = i + 1
+                        }
+                        i += 1
+                    }
+                }
+                guard encode(range: encodeStart..<pathRange.endIndex, component: .rfc3986Path) else { return false }
             } else {
                 copyEnd = pathRange.endIndex
             }

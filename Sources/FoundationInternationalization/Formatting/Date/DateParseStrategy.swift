@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// Options for parsing string representations of dates to create a `Date` instance.
@@ -106,6 +108,7 @@ public extension ParseStrategy {
 
 // MARK: Regex
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.ParseStrategy : CustomConsumingRegexComponent {
     /// The type returned when capturing matching substrings with this strategy.
@@ -130,7 +133,9 @@ extension Date.ParseStrategy : CustomConsumingRegexComponent {
         return fmt.parse(input, in: index..<bounds.upperBound)
     }
 }
+#endif // !hasFeature(Embedded)
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension RegexComponent where Self == Date.ParseStrategy {
 
@@ -179,3 +184,6 @@ extension RegexComponent where Self == Date.ParseStrategy {
 
 
 }
+#endif // !hasFeature(Embedded)
+
+#endif // ICU

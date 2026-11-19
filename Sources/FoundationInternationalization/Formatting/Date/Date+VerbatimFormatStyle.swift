@@ -14,7 +14,24 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 // MARK: VerbatimFormatStyle Definition
+
+#if FOUNDATION_FRAMEWORK
+// For feature flag
+internal import _ForSwiftFoundation
+#endif
+
+internal func foundation_date_format_feature_enabled() -> Bool {
+    #if FOUNDATION_FRAMEWORK
+    return _foundation_date_format_feature_enabled()
+    #elseif FOUNDATION_DATE_FORMAT_SWIFT
+    return true
+    #else
+    return false
+    #endif
+}
 
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
@@ -44,6 +61,9 @@ extension Date {
         }
 
         public func format(_ value: Date) -> String {
+            if foundation_date_format_feature_enabled() {
+                return DatePatternFormatter.cachedFormatter(for: .init(self)).format(value) ?? value.description
+            }
             guard let fm = ICUDateFormatter.cachedFormatter(for: self), let result = fm.format(value) else {
                 return value.description
             }
@@ -139,6 +159,10 @@ extension Date.VerbatimFormatStyle {
         }
 
         public func format(_ value: Date) -> AttributedString {
+            if foundation_date_format_feature_enabled() {
+                return DatePatternFormatter.cachedFormatter(for: .init(base)).attributedFormat(value) ?? AttributedString(value.description)
+            }
+
             guard let fm = ICUDateFormatter.cachedFormatter(for: base), let (str, attributes) = fm.attributedFormat(value) else {
                 return AttributedString(value.description)
             }
@@ -163,6 +187,7 @@ extension Date.VerbatimFormatStyle {
 
 // MARK: MatchingCollectionConsumer
 
+#if !hasFeature(Embedded)
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
@@ -170,6 +195,7 @@ extension Date.VerbatimFormatStyle : CustomConsumingRegexComponent {
         try parseStrategy.consuming(input, startingAt: index, in: bounds)
     }
 }
+#endif // !hasFeature(Embedded)
 
 // MARK: DiscreteFormatStyle Conformance
 
@@ -228,3 +254,5 @@ extension Date.VerbatimFormatStyle.Attributed : DiscreteFormatStyle {
         base.input(after: input)
     }
 }
+
+#endif // ICU

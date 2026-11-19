@@ -40,6 +40,7 @@ import CRT
 @Suite("DateComponents", .tags(.calendar))
 private struct DateComponentsTests {
 
+#if ICU
     @Test func isValidDate() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
@@ -50,6 +51,7 @@ private struct DateComponentsTests {
         let dc2 = DateComponents(year: 2022, month: 11, day: 32)
         #expect(!dc2.isValidDate(in: calendar))
     }
+#endif // ICU
 
     @Test func leapMonth() {
         var components = DateComponents()

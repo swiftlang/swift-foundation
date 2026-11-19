@@ -2,6 +2,6 @@
 
 ## Topics
 
-### ### Decoding Values
+### Decoding values
 
 - ``decode(from:)``

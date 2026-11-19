@@ -96,7 +96,7 @@ package struct LocalePreferences: Hashable, Sendable {
 
     package init() { }
     
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
     // The framework init supports customized dateFormats
     package init(metricUnits: Bool? = nil,
          languages: [String]? = nil,
@@ -527,7 +527,6 @@ extension LocalePreferences.ICUSymbolsAndStrings: Codable {
 }
 #endif
 
-// Codable is unavailable in Embedded Swift.
 @_unavailableInEmbedded
 extension LocalePreferences.MeasurementUnit : Codable {}
 @_unavailableInEmbedded
