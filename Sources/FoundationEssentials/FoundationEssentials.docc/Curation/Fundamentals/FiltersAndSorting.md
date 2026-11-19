@@ -1,6 +1,6 @@
 # Filters and sorting
 
-Use predicates, expressions, and sort descriptors to examine elements in collections and other services.
+Use predicates, expressions, and sort comparators to examine elements in collections and other services.
 
 ## Topics
 

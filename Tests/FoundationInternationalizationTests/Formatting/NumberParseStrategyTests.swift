@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Number ParseStrategy")
 private struct NumberParseStrategyTests {
     @Test func intStrategy() throws {
@@ -448,3 +450,4 @@ private struct NumberExtensionParseStrategyTests {
     }
 }
 
+#endif // ICU

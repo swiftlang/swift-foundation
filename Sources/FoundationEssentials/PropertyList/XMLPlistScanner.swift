@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
 internal import Synchronization
@@ -518,9 +514,9 @@ extension XMLPlistMapValue {
                 return rounded
             }
 
-            if let exact = document.withBuffer(for: region) { bytes, _ in
+            if let exact = document.withBuffer(for: region, perform: { bytes, _ in
                 Decimal._decimal(from: bytes, matchEntireString: true).asOptional.result
-            } {
+            }) {
                 if let rounded, Self.decimal(exact, isExactly: rounded) {
                     return rounded
                 }

@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 final class ICUPatternGenerator : @unchecked Sendable {
@@ -101,3 +102,5 @@ final class ICUPatternGenerator : @unchecked Sendable {
         }
     }
 }
+
+#endif // ICU

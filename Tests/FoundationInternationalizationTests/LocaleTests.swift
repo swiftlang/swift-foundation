@@ -23,6 +23,7 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+#if ICU
 @Suite("Locale", .tags(.locale))
 private struct LocaleTests {
 
@@ -653,9 +654,10 @@ private struct LocalePropertiesTests {
         #expect("HK" == locale.regionCode)
         #expect("Hant" == locale.scriptCode)
         #expect("POSIX" == Locale(identifier: "en_POSIX").variantCode)
-#if FOUNDATION_FRAMEWORK
         #expect(locale.exemplarCharacterSet != nil)
-#endif
+        #expect(Locale(identifier: "en_US").exemplarCharacterSet?.contains("a") == true)
+        #expect(Locale(identifier: "en_US").exemplarCharacterSet?.contains("я") == false)
+        #expect(Locale(identifier: "ru_RU").exemplarCharacterSet?.contains("я") == true)
         // The calendar we get back from Locale has the locale set, but not the one we create with Calendar(identifier:). So we configure our comparison calendar first.
         var c = Calendar(identifier: .gregorian)
         c.locale = Locale(identifier: "en_US")
@@ -739,6 +741,7 @@ private struct LocalePropertiesTests {
         #expect(enCAHourCycle == .oneToTwelve)
     }
 }
+#endif // ICU
 
 // MARK: - Bridging Tests
 #if FOUNDATION_FRAMEWORK
@@ -840,7 +843,7 @@ private struct LocaleBridgingTests {
 #endif // FOUNDATION_FRAMEWORK
 
 // MARK: - FoundationPreview Disabled Tests
-#if FOUNDATION_FRAMEWORK
+#if FOUNDATION_FRAMEWORK && ICU
 extension LocaleTests {
     @Test func userPreferenceOverride_firstWeekday() {
         func verify(_ localeID: String, _ expected: Locale.Weekday, shouldRespectUserPrefForGregorian: Bool, shouldRespectUserPrefForIslamic: Bool, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -1042,4 +1045,4 @@ extension LocaleTests {
         #expect(actual == nil, "Empty preferred locale ID should return nil")
     }
 }
-#endif // FOUNDATION_FRAMEWORK
+#endif // FOUNDATION_FRAMEWORK && ICU

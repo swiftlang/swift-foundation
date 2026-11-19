@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
@@ -242,7 +243,7 @@ extension Duration {
             if lower == nil && upper == nil {
                 self.valueLengthLimits = nil
             } else {
-                self.valueLengthLimits = (lower ?? 0) ..< (upper ?? Int.max)
+                self.valueLengthLimits = (lower ?? 0) ..< (upper.map { $0 + 1 } ?? Int.max)
             }
 
             self.locale = .autoupdatingCurrent
@@ -802,3 +803,5 @@ extension Duration.UnitsFormatStyle.ZeroValueUnitsDisplayStrategy : Codable {}
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Duration.UnitsFormatStyle.FractionalPartDisplayStrategy : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU

@@ -22,10 +22,14 @@ internal import _FoundationCShims
 #endif
 internal import Synchronization
 
-#if (FOUNDATION_FRAMEWORK && canImport(_FoundationICU)) || hasFeature(Embedded)
-// Here, we always have access to _LocaleICU
+#if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
+// Here, _LocaleICU is in the same module when ICU is enabled
 internal func _localeICUClass() -> _LocaleProtocol.Type {
+#if ICU
     _LocaleICU.self
+#else
+    _LocaleUnlocalized.self
+#endif
 }
 #else
 dynamic package func _localeICUClass() -> _LocaleProtocol.Type {
@@ -85,7 +89,7 @@ struct LocaleCache : Sendable, ~Copyable {
             }
         }
 
-#if canImport(_FoundationICU)
+#if ICU
         mutating func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
             let id = IdentifierAndPrefs(identifier: locale.identifier, prefs: locale.prefs)
             if let locale = cachedFixedLocaleToNSLocales[id] {
@@ -114,7 +118,7 @@ struct LocaleCache : Sendable, ~Copyable {
             }
         }
         
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
         var identifiersWithLikelySubtags: [String : String] = [:]
 #endif
     }
@@ -217,7 +221,7 @@ struct LocaleCache : Sendable, ~Copyable {
         lock.withLock { $0.fixedNSLocale(identifier: id) }
     }
 
-#if canImport(_FoundationICU)
+#if ICU
     func fixedNSLocale(_ locale: _LocaleICU) -> _NSSwiftLocale {
         lock.withLock { $0.fixedNSLocale(locale) }
     }
@@ -339,7 +343,7 @@ struct LocaleCache : Sendable, ~Copyable {
     }
 
     func localeAsIfCurrentWithBundleLocalizations(_ availableLocalizations: [String], allowsMixedLocalizations: Bool) -> Locale? {
-#if FOUNDATION_FRAMEWORK && canImport(_FoundationICU)
+#if FOUNDATION_FRAMEWORK && ICU
         guard !allowsMixedLocalizations else {
             let (prefs, _) = preferences()
             let inner = _LocaleICU(name: nil, prefs: prefs, disableBundleMatching: true)
@@ -366,7 +370,7 @@ struct LocaleCache : Sendable, ~Copyable {
     
 #if FOUNDATION_FRAMEWORK
     func localeIdentifierWithLikelySubtags(_ localeID: String, cacheResult: Bool) -> String {
-#if canImport(_FoundationICU)
+#if ICU
         let existing = lock.withLock {
             $0.identifiersWithLikelySubtags[localeID]
         }

@@ -10,19 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-
-
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 // MARK: - JSONMapBuildingSink
 
 /// `ParseEventSink` that builds a `JSONMap`: the flat-`Int` array record buffer format that describes the structure of a JSON document.
 struct JSONMapBuildingSink: ParseEventSink, ~Copyable {
     typealias Vocabulary = JSONVocabulary
-    typealias Fragment = Void
+    typealias ValueFragment = Void
     typealias Output = JSONMap
 
     /// The flat record buffer, handed off to the produced `JSONMap` at `takeResult`.
@@ -139,7 +132,7 @@ struct JSONMapBuildingSink: ParseEventSink, ~Copyable {
         return JSONMap(records: mapData)
     }
 
-    func releaseFragment(_ fragment: consuming Void) {
+    func releaseValueFragment(_ fragment: consuming Void) {
         // Fragment == Void; nothing to release.
     }
 }

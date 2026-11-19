@@ -608,7 +608,9 @@ extension URL.FormatStyle : FormatStyle {
             // Determine if the hostString contains lookalike characters.
             // If the host contains lookalike characters, use the Punycode
             // encoded host instead
+#if ICU
             hostContainsLookalikeCharacters = URL.UnicodeLookalikeTable.default.shouldDisplayEncodedHost(for: hostString)
+#endif
 
             switch self.host.option {
             case .displayed:

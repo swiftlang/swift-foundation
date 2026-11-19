@@ -915,6 +915,45 @@ private struct PropertyListEncoderTests {
         #expect(decoded == ["k": "A"])
     }
 
+    @Test(arguments: [PropertyListDecoder.PropertyListFormat.binary, .xml])
+    func topLevelContainerTypeMismatch(format: PropertyListDecoder.PropertyListFormat) throws {
+        let dictionaryPlist: Data
+        let stringPlist: Data
+        switch format {
+        case .binary:
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            dictionaryPlist = try encoder.encode(["a": 1])
+            stringPlist = Data([
+                0x62, 0x70, 0x6c, 0x69, 0x73, 0x74, 0x30, 0x30, // "bplist00"
+                0x52, 0x68, 0x69,                               // obj0: "hi"
+                0x08,                                           // offset table
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, // trailer: offsetIntSize 1, objectRefSize 1
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // numObjects 1
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // topObject 0
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, // offsetTableOffset 11
+            ])
+        default:
+            dictionaryPlist = Data("<plist><dict><key>a</key><integer>1</integer></dict></plist>".utf8)
+            stringPlist = Data("<plist><string>hi</string></plist>".utf8)
+        }
+
+        func expectTypeMismatch<T: Decodable>(_ type: T.Type, from data: Data, expecting expectedType: Any.Type, sourceLocation: SourceLocation = #_sourceLocation) {
+            do {
+                _ = try PropertyListDecoder().decode(type, from: data)
+                Issue.record("Decoding \(type) was expected to fail", sourceLocation: sourceLocation)
+            } catch DecodingError.typeMismatch(let mismatchedType, let context) {
+                #expect(ObjectIdentifier(mismatchedType) == ObjectIdentifier(expectedType), "\(mismatchedType) != \(expectedType)", sourceLocation: sourceLocation)
+                #expect(context.codingPath.isEmpty, sourceLocation: sourceLocation)
+            } catch {
+                Issue.record("Expected DecodingError.typeMismatch, got \(error)", sourceLocation: sourceLocation)
+            }
+        }
+        expectTypeMismatch([Int].self, from: dictionaryPlist, expecting: [Any].self)
+        expectTypeMismatch([String : Int].self, from: stringPlist, expecting: [String : Any].self)
+        expectTypeMismatch([Int].self, from: stringPlist, expecting: [Any].self)
+    }
+
     @Test func xmlReals() throws {
         let xml = "<plist><array><real>1.5</real><real>2</real><real>  -3.14</real><real>1.000000000000000000000001</real><real>31415.9e-4</real><real>-iNf</real><real>infInItY</real></array></plist>"
         let array = try PropertyListDecoder().decode([Float].self, from: xml.data(using: .utf8)!)

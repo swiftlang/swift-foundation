@@ -20,11 +20,6 @@ import FoundationInternationalization
 import Foundation
 #endif
 
-// Benchmarks for `ListFormatStyle`. These call the public API, so swapping
-// between the Swift implementation and the ICU bridge is a build-flag concern:
-// the default build uses the Swift implementation; pass
-// `FOUNDATION_LIST_FORMAT_ICU` (both `-Xswiftc` and `-Xcc`) to build the ICU
-// bridge instead, and diff the runs.
 func listFormatBenchmarks() {
     typealias Style = ListFormatStyle<StringStyle, [String]>
 

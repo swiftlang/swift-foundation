@@ -21,29 +21,29 @@
 //   - LOCALES      : comma-separated locale list ("" = include all)
 //   - FALLBACK     : locale used when a runtime lookup misses (default: "root")
 //
-// The fallback locale is auto-included in the kept set, as is "root" — the
-// latter is required because the runtime walk always terminates there.
+// The fallback locale is auto-included in the kept set, as is "root", the
+// runtime's last resort.
 //
 // The tables are emitted as `static let` constants on a `_ListFormatData` enum.
 // `static let` (inside a type, not top-level `let`) lets the compiler bake the
-// numeric tables into read-only `__TEXT,__const` and the `StaticString` pools
-// into `__DATA_CONST`, with no load-time initializer and no per-access
-// `swift_once` guard in the package build. `StaticString` gives compile-time
-// UTF-8 bytes the runtime wraps into a `Span<UInt8>` with no allocation.
+// tables into read-only `__TEXT,__const`, with no load-time initializer and no
+// per-access `swift_once` guard in the package build.
 //
 // The Swift data exposes (all `internal`: the lookup code that reads them lives
 // in the same module, in a hand-written companion file, so nothing crosses the
 // module boundary — keeping the numeric tables baked in read-only data even in
 // the framework's library-evolution build):
-//   - A pattern string pool (`patterns`) as `InlineArray<N, StaticString>`
-//   - A locale string pool (`locales`) — every locale identifier referenced by
-//     a slot or parent entry lives here exactly once. Slot and parent entries
-//     reference locales by `UInt16` index into this pool. Pooling keeps the
-//     per-entry overhead down to 4 bytes.
+//   - A pattern string pool (`patternBytes`, `patternOffsets`): the UTF-8 bytes
+//     of every pattern, and where each one starts. Pattern `i` is the bytes from
+//     `patternOffsets[i]` up to `patternOffsets[i + 1]`.
+//   - A locale string pool (`localeBytes`, `localeOffsets`) in the same form —
+//     every locale identifier referenced by a locale or redirect entry lives
+//     here exactly once. Entries reference locales by `UInt16` index into it.
 //   - A row table (`rows`), each `_ListFormatRow` referencing 4 pattern indexes
-//   - Six sparse slot tables (`slot<Slot>`), each sorted by locale identifier
-//     for binary search
-//   - A sparse parent map (`parents`), sorted by child for binary search
+//   - A locale table (`locales`), sorted by locale identifier for binary search,
+//     mapping each listed locale to its resolved rows in `slotRows`, one row
+//     per slot
+//   - A sparse redirect map (`redirects`), sorted by source for binary search
 //   - A `fallbackLocale` constant holding the configured fallback
 //
 // The declarations are wrapped in `#if !FOUNDATION_LIST_FORMAT_ICU`.
@@ -69,7 +69,10 @@ struct PackedData {
     let rows: [ListFormatDataSchema.Row]
     let localePool: [String]
     let localeID: [String: Int]
-    let slots: [(swiftName: String, map: [String: Int])]
+    // Each listed locale's index into `slotRows`.
+    let localeSlotRows: [String: Int]
+    // Each distinct set of resolved rows, one row per slot in `listFormatSlotNames` order.
+    let slotRows: [[Int]]
     // Explicit locale redirects consulted during the fallback walk: CLDR
     // <parentLocales> overrides merged with the locale aliases. Both are "when
     // you see this locale, go to that one instead" — an alias fires because the
@@ -93,11 +96,11 @@ func readOptions() -> Options {
         fatalError("OUTPUT_SWIFT environment variable not set")
     }
     let localesArg = env["LOCALES"] ?? ""
-    let fallback = env["FALLBACK"] ?? "root"
+    let fallback = (env["FALLBACK"] ?? "root").replacingOccurrences(of: "-", with: "_")
     let requestedLocales: Set<String>? =
         localesArg.isEmpty
         ? nil
-        : Set(localesArg.split(separator: ",").map(String.init))
+        : Set(localesArg.split(separator: ",").map { $0.replacingOccurrences(of: "-", with: "_") })
     return Options(
         inputPath: inputPath,
         outputSwiftPath: outputSwiftPath,
@@ -133,8 +136,8 @@ func loadData(_ path: String) -> ListFormatDataSchema {
 // to what those locales still reach, and pool the locale strings. Progress
 // counts go to stderr as the work proceeds.
 func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
-    // Build the set of locales to retain. `root` is always kept (terminating the
-    // runtime walk); the fallback locale is auto-included so callers don't have
+    // Build the set of locales to list. `root` is always listed (the runtime's
+    // last resort); the fallback locale is auto-included so callers don't have
     // to remember to list it.
     let keepAll = options.requestedLocales == nil
     var kept: Set<String> = options.requestedLocales ?? []
@@ -142,60 +145,102 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
         kept.insert(options.fallback)
         kept.insert("root")
     }
-    func isKept(_ locale: String) -> Bool { keepAll || kept.contains(locale) }
 
-    // Locale aliases redirect a requested identifier to a canonical one
-    // (zh_HK → zh_Hant_HK). Keep an alias when its source survives the subset,
-    // and pull the target into the kept set so the redirect lands on a locale
-    // whose slot data is retained. Under keepAll both are already present, so
-    // this only matters on the --locales subset path.
-    var keptAliases: [String: String] = [:]
-    for (source, target) in data.aliases where isKept(source) {
-        keptAliases[source] = target
-        kept.insert(target)
-    }
-
-    var filteredSlots: [String: [String: Int]] = [:]
-    for (name, map) in data.slots {
-        var filtered: [String: Int] = [:]
-        for (locale, rowId) in map where isKept(locale) {
-            filtered[locale] = rowId
-        }
-        filteredSlots[name] = filtered
-    }
-
-    var filteredParents: [String: String] = [:]
-    for (child, parent) in data.parents where isKept(child) {
-        filteredParents[child] = parent
-    }
-
-    // Merge parent-overrides and aliases into one redirect map: they share the
-    // same shape and are consulted at the same point in the fallback walk. A key
-    // can't legitimately be both (an alias has no data, a parent-override is a
-    // real fallback node), so a clash means the inputs disagree.
-    var redirects = filteredParents
-    for (source, target) in keptAliases {
-        if let existing = redirects[source], existing != target {
+    // Every redirect the data has: parent-overrides, aliases, and script fallback. They share the same shape
+    // and are consulted at the same point in the fallback walk. A key can't legitimately be two of them, so a
+    // clash means the inputs disagree.
+    var candidates = data.parents
+    for (source, target) in data.aliases {
+        if let existing = candidates[source], existing != target {
             fatalError("redirect conflict for \(source): parent \(existing) vs alias \(target)")
         }
-        redirects[source] = target
+        candidates[source] = target
+    }
+    for (source, target) in data.scriptRedirects {
+        precondition(candidates[source] == nil, "redirect conflict for \(source)")
+        candidates[source] = target
+    }
+
+    // A locale's row in each slot, in `listFormatSlotNames` order: the nearest locale in its chain with data for
+    // that slot, over all the data.
+    func resolvedRows(_ locale: String) -> [Int] {
+        listFormatSlotNames.map { name in
+            var current = locale
+            while true {
+                if let row = data.slots[name]?[current] { return row }
+                precondition(current != "root", "root has no \(name) data")
+                current = candidates[current] ?? current.lastIndex(of: "_").map { String(current[..<$0]) } ?? "root"
+            }
+        }
+    }
+
+    // Each listed locale stores its resolved rows, so it needs nothing from its parents. With all locales, list
+    // those with data of their own. Any other identifier resolves to the first listed locale in its chain, which
+    // has the same rows.
+    var listed = kept
+    if keepAll {
+        listed = Set(data.slots.values.flatMap { $0.keys })
+        listed.insert("root")
+    }
+    let fallback = options.fallback
+    // The listed locale an identifier resolves to, as the runtime does, or the fallback locale.
+    func resolve(_ locale: String, _ redirects: [String: String]) -> String {
+        var current = locale
+        while !listed.contains(current) {
+            if let target = redirects[current] {
+                current = target
+            } else if let underscore = current.lastIndex(of: "_") {
+                current = String(current[..<underscore])
+            } else {
+                return fallback
+            }
+        }
+        return current
+    }
+    // A language ICU builds uses root's rows where it has none of its own, so with a fallback locale, list it.
+    if keepAll && fallback != "root" {
+        for language in data.languages where resolve(language, candidates) == fallback && language != fallback {
+            listed.insert(language)
+        }
+    }
+    // Keep only the redirects that change the rows an identifier gets.
+    let redirects = candidates.filter { source, _ in
+        var without = candidates
+        without[source] = nil
+        return resolvedRows(resolve(source, candidates)) != resolvedRows(resolve(source, without))
+    }
+    // Dropping a redirect can change another that went through it.
+    for source in candidates.keys {
+        precondition(resolvedRows(resolve(source, redirects)) == resolvedRows(resolve(source, candidates)), "trimming redirects changed \(source)")
+    }
+    if keepAll {
+        // Every identifier of a language ICU builds must get the rows the sparse walk gives it.
+        let languages = Set(data.languages).union(["root"])
+        for locale in Set(candidates.keys).union(candidates.values).union(data.slots.values.flatMap { $0.keys }).union(data.languages) where languages.contains(String(locale.prefix { $0 != "_" })) {
+            precondition(resolvedRows(resolve(locale, redirects)) == resolvedRows(locale), "listing changed \(locale)")
+        }
+    }
+
+    // Store each distinct set of resolved rows once.
+    var slotRows: [[Int]] = []
+    var slotRowIndexes: [[Int]: Int] = [:]
+    var localeSlotRows: [String: Int] = [:]
+    for locale in listed.sorted() {
+        let rows = resolvedRows(locale)
+        if slotRowIndexes[rows] == nil {
+            slotRowIndexes[rows] = slotRows.count
+            slotRows.append(rows)
+        }
+        localeSlotRows[locale] = slotRowIndexes[rows]!
     }
 
     print("  patterns: \(data.patterns.count), rows: \(data.rows.count)", to: &standardError)
-    print("  slot entries kept: \(filteredSlots.values.reduce(0) { $0 + $1.count })", to: &standardError)
-    print("  parent overrides kept: \(filteredParents.count), aliases kept: \(keptAliases.count)", to: &standardError)
+    print("  locales listed: \(listed.count), distinct slot rows: \(slotRows.count)", to: &standardError)
     print("  redirect entries: \(redirects.count)", to: &standardError)
 
-    // Walk the kept slot entries to find which rows are actually reachable, then
-    // walk those rows to find which patterns are actually referenced. Drop the
-    // rest and renumber what's left. When --locales is given, this is where the
-    // big wins come from: the all-locales pattern pool (352) and row table (335)
-    // can collapse to a few dozen entries when only a handful of locales remain.
-    var rowSet = Set<Int>()
-    for (_, map) in filteredSlots {
-        for rowID in map.values { rowSet.insert(rowID) }
-    }
-    let keptRowOldIDs = rowSet.sorted()
+    // Find which rows the listed locales reach, then which patterns those rows
+    // reference. Drop the rest and renumber what's left.
+    let keptRowOldIDs = Set(slotRows.joined()).sorted()
 
     var patternSet = Set<Int>()
     for oldID in keptRowOldIDs {
@@ -220,28 +265,15 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
             pair: patternOldToNew[r.pair]!
         )
     }
-
-    // Rewrite slot entries to reference the renumbered rows.
-    for (name, map) in filteredSlots {
-        var rewritten: [String: Int] = [:]
-        for (locale, oldRowID) in map {
-            rewritten[locale] = rowOldToNew[oldRowID]!
-        }
-        filteredSlots[name] = rewritten
-    }
+    let renumberedSlotRows = slotRows.map { $0.map { rowOldToNew[$0]! } }
 
     print("  patterns reachable: \(filteredPatterns.count)", to: &standardError)
     print("  rows reachable: \(filteredRows.count)", to: &standardError)
 
-    // Every locale string referenced by a slot or redirect entry lives in a
+    // Every locale string referenced by a locale or redirect entry lives in a
     // single pool; entries reference it by index. The pool is sorted
-    // alphabetically so it's easy to diff across builds. Both ends of every
-    // redirect go in, including alias sources (which have no slot data of their
-    // own but are still indexed by a redirect entry).
-    var localeSet = Set<String>()
-    for (_, map) in filteredSlots {
-        for locale in map.keys { localeSet.insert(locale) }
-    }
+    // alphabetically so it's easy to diff across builds.
+    var localeSet = listed
     for (from, to) in redirects {
         localeSet.insert(from)
         localeSet.insert(to)
@@ -251,18 +283,13 @@ func pack(_ data: ListFormatDataSchema, options: Options) -> PackedData {
 
     print("  unique locale strings: \(localePool.count)", to: &standardError)
 
-    // Slot Swift identifiers, paired with their entry maps, in the canonical order.
-    let slots: [(swiftName: String, map: [String: Int])] = listFormatSlotNames.map { slotName in
-        let swiftName = "slot" + slotName.split(separator: "_").map { $0.capitalized }.joined()
-        return (swiftName, filteredSlots[slotName] ?? [:])
-    }
-
     return PackedData(
         patterns: filteredPatterns,
         rows: filteredRows,
         localePool: localePool,
         localeID: localeID,
-        slots: slots,
+        localeSlotRows: localeSlotRows,
+        slotRows: renumberedSlotRows,
         redirects: redirects,
         cldrVersion: data.cldrVersion,
         keepAll: keepAll,
@@ -303,11 +330,10 @@ func renderSwift(_ p: PackedData) -> String {
     var out = banner(p)
     out += "#if !FOUNDATION_LIST_FORMAT_ICU\n\n"
 
-    // Entry struct definitions. `package` so FoundationInternationalization can
-    // reach them across the module boundary; `Sendable` so the `static let`
-    // tables are usable from any isolation. The unlabeled initializers keep the
+    // Entry struct definitions. `Sendable` so the `static let` tables are usable
+    // from any isolation. The unlabeled initializers keep the
     // generated table literals compact.
-    out += "// Row table entry. Each row is four indexes into the `patterns` pool.\n"
+    out += "// Row table entry. Each row is four indexes into the pattern pool.\n"
     out += "internal struct _ListFormatRow: Sendable {\n"
     out += "    internal let start: UInt16\n"
     out += "    internal let middle: UInt16\n"
@@ -321,18 +347,18 @@ func renderSwift(_ p: PackedData) -> String {
     out += "    }\n"
     out += "}\n\n"
 
-    out += "// Sparse slot entry: maps a locale (by index into the `locales` pool)\n"
-    out += "// to a row index. Entries are sorted by locale for binary search.\n"
-    out += "internal struct _ListFormatSlotEntry: Sendable {\n"
+    out += "// Locale table entry: maps a locale (by index into the locale pool)\n"
+    out += "// to its resolved rows' index in `slotRows`. Sorted by locale for binary search.\n"
+    out += "internal struct _ListFormatLocaleEntry: Sendable {\n"
     out += "    internal let locale: UInt16\n"
-    out += "    internal let row: UInt16\n"
-    out += "    internal init(_ locale: UInt16, _ row: UInt16) {\n"
+    out += "    internal let slotRows: UInt16\n"
+    out += "    internal init(_ locale: UInt16, _ slotRows: UInt16) {\n"
     out += "        self.locale = locale\n"
-    out += "        self.row = row\n"
+    out += "        self.slotRows = slotRows\n"
     out += "    }\n"
     out += "}\n\n"
 
-    out += "// A directed pair of locales, both indexes into the `locales` pool. Backs\n"
+    out += "// A directed pair of locales, both indexes into the locale pool. Backs\n"
     out += "// the `redirects` table: a parent-locale override (child → CLDR parent) or\n"
     out += "// an alias (deprecated/under-specified id → canonical target). Sorted by\n"
     out += "// `from` for binary search.\n"
@@ -346,23 +372,17 @@ func renderSwift(_ p: PackedData) -> String {
     out += "}\n\n"
 
     // The data itself. `static let` on an enum (rather than top-level `let`) lets
-    // the compiler bake the numeric tables into read-only `__TEXT,__const` and the
-    // `StaticString` pools into `__DATA_CONST`, with no load-time initializer and
-    // no per-access `swift_once` guard in the package build.
+    // the compiler bake the tables into read-only `__TEXT,__const`, with no
+    // load-time initializer and no per-access `swift_once` guard in the package build.
     out += "internal enum _ListFormatData {\n"
     out += "    // Locale used when a runtime lookup misses.\n"
     out += "    internal static let fallbackLocale: StaticString = \(swiftStringLiteral(p.fallback))\n\n"
 
     // Pattern pool — every unique pattern string lives here exactly once.
-    out += "    // Pattern string pool. Rows reference these by index.\n"
-    out += "    internal static let patterns: InlineArray<\(p.patterns.count), StaticString> = [\n"
-    for pattern in p.patterns {
-        out += "        \(swiftStringLiteral(pattern)),\n"
-    }
-    out += "    ]\n\n"
+    out += stringPool(p.patterns, name: "pattern", comment: "Pattern string pool. Rows reference these by index.")
 
     // Row table — every unique (start, middle, end, pair) combination lives here once.
-    out += "    // Row table. Each row is four indexes into `patterns`.\n"
+    out += "    // Row table. Each row is four indexes into the pattern pool.\n"
     out += "    internal static let rows: InlineArray<\(p.rows.count), _ListFormatRow> = [\n"
     for r in p.rows {
         out += "        _ListFormatRow(\(r.start), \(r.middle), \(r.end), \(r.pair)),\n"
@@ -372,27 +392,24 @@ func renderSwift(_ p: PackedData) -> String {
     // Locale string pool — sorted alphabetically so the locale IDs assigned below
     // follow alphabetical order, keeping the slot tables sortable by ID without
     // changing their lookup order.
-    out += "    // Locale string pool. Slot and parent entries reference these by index.\n"
-    out += "    internal static let locales: InlineArray<\(p.localePool.count), StaticString> = [\n"
-    for locale in p.localePool {
-        out += "        \(swiftStringLiteral(locale)),\n"
+    out += stringPool(p.localePool, name: "locale", comment: "Locale string pool. Locale and redirect entries reference these by index.")
+
+    out += "    // Listed locales, sorted by locale.\n"
+    out += "    internal static let locales: InlineArray<\(p.localeSlotRows.count), _ListFormatLocaleEntry> = [\n"
+    for locale in p.localeSlotRows.keys.sorted() {
+        out += "        _ListFormatLocaleEntry(\(p.localeID[locale]!), \(p.localeSlotRows[locale]!)),\n"
     }
     out += "    ]\n\n"
 
-    // Per-slot sparse tables. Sorted by locale ID (mirroring alphabetical order of
-    // the pooled strings) so binary search can compare the target against
-    // `locales[entry.locale]` byte-wise.
-    out += "    // Sparse slot tables, one per (type, width), sorted by locale.\n"
-    for (swiftName, map) in p.slots {
-        out += "    internal static let \(swiftName): InlineArray<\(map.count), _ListFormatSlotEntry> = [\n"
-        for locale in map.keys.sorted() {
-            out += "        _ListFormatSlotEntry(\(p.localeID[locale]!), \(map[locale]!)),\n"
-        }
-        out += "    ]\n\n"
+    out += "    // Each distinct set of resolved rows: and wide, short, narrow, then or wide, short, narrow.\n"
+    out += "    internal static let slotRows: InlineArray<\(p.slotRows.count * listFormatSlotNames.count), UInt16> = [\n"
+    for rows in p.slotRows {
+        out += "        " + rows.map { "\($0)," }.joined(separator: " ") + "\n"
     }
+    out += "    ]\n\n"
 
     // Redirect map — sorted by source locale for binary search. Both ends pull
-    // their string from `locales`. Holds CLDR <parentLocales> overrides and
+    // their string from the locale pool. Holds CLDR <parentLocales> overrides and
     // locale aliases; the runtime treats them uniformly (consult before
     // truncating in the fallback walk).
     out += "    // Locale redirect map (CLDR <parentLocales> overrides + aliases), sorted by source.\n"
@@ -419,6 +436,28 @@ func writeFile(_ contents: String, to path: String) {
 }
 
 // MARK: - Helpers
+
+// A string pool as two tables: `<name>Bytes`, the UTF-8 bytes of every string,
+// one string per line with the string in a comment, and `<name>Offsets`, where
+// each string starts, plus the end.
+func stringPool(_ strings: [String], name: String, comment: String) -> String {
+    var bytes = ""
+    var offsets = [0]
+    for string in strings {
+        let utf8 = Array(string.utf8)
+        bytes += "        " + utf8.map { String(format: "0x%02X,", $0) }.joined(separator: " ") + " // \(swiftStringLiteral(string))\n"
+        offsets.append(offsets.last! + utf8.count)
+    }
+    precondition(offsets.last! <= Int(UInt16.max), "\(name) pool exceeds UInt16 offsets")
+    var out = "    // \(comment)\n"
+    out += "    internal static let \(name)Bytes: InlineArray<\(offsets.last!), UInt8> = [\n" + bytes + "    ]\n\n"
+    out += "    // Where each string in `\(name)Bytes` starts, then where the last one ends.\n"
+    out += "    internal static let \(name)Offsets: InlineArray<\(offsets.count), UInt16> = [\n"
+    for start in stride(from: 0, to: offsets.count, by: 16) {
+        out += "        " + offsets[start..<min(start + 16, offsets.count)].map { "\($0)," }.joined(separator: " ") + "\n"
+    }
+    return out + "    ]\n\n"
+}
 
 func swiftStringLiteral(_ s: String) -> String {
     var out = "\""
@@ -448,6 +487,10 @@ func swiftStringLiteral(_ s: String) -> String {
 func build() {
     let options = readOptions()
     let data = loadData(options.inputPath)
+    guard options.fallback == "root" || data.languages.contains(String(options.fallback.prefix { $0 != "_" })) else {
+        print("error: --fallback=\(options.fallback) isn't a language in the data", to: &standardError)
+        exit(1)
+    }
     let packed = pack(data, options: options)
     writeFile(renderSwift(packed), to: options.outputSwiftPath)
 }

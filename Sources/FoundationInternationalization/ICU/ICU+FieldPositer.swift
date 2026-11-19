@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 
 extension ICU {
@@ -62,3 +63,5 @@ extension ICU {
         }
     }
 }
+
+#endif // ICU

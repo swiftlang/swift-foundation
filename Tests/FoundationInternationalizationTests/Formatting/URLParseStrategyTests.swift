@@ -306,6 +306,7 @@ private struct URLParseStrategyPatternMatchingTests {
             expectedValue: nil)
     }
 
+#if ICU
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     @Test func nonConventionalURLPatternMatching() {
         // Test "non-conventional" URLs. The host names of these URLs are encoded
@@ -344,6 +345,7 @@ private struct URLParseStrategyPatternMatchingTests {
             expectedUpperBound: emojiURLText.endIndex,
             expectedValue: emojiURL)
     }
+#endif // ICU
 
     @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
     @Test func regexMatching() {

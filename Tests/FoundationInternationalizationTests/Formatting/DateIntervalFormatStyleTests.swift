@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Date.IntervalFormatStyle")
 private struct DateIntervalFormatStyleTests {
     
@@ -232,3 +234,5 @@ private struct DateIntervalFormatStyleTests {
         }
     }
 }
+
+#endif // ICU

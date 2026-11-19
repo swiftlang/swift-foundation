@@ -11,7 +11,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# Generates Sources/FoundationInternationalization/Formatting/ListFormatData.json
+# Generates Sources/_FoundationInternationalizationData/ListFormatData.json
 # from a CLDR XML checkout. The CLDR_PATH environment variable must point at
 # the CLDR root (the directory containing common/main/ and common/supplemental/),
 # e.g. /path/to/cldr.
@@ -25,7 +25,7 @@ set -eu
 declare -r commandName="$(basename "$0")"
 declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
 declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
-declare -r targetFileRelativePath="Sources/FoundationInternationalization/Formatting/ListFormatData.json"
+declare -r targetFileRelativePath="Sources/_FoundationInternationalizationData/ListFormatData.json"
 
 if [[ -z "${CLDR_PATH:-}" ]]; then
   echo "error: CLDR_PATH environment variable is not set." 1>&2
@@ -42,19 +42,23 @@ fi
 
 echo "Generating ${targetFileRelativePath} from ${CLDR_PATH}..." 1>&2
 
-# Compile the schema + impl as a two-file module and run the result. Building a
-# real module with swiftc (rather than piping both files through `swift` in
-# immediate mode) keeps compilation deterministic and makes diagnostics point at
-# the original files with correct line numbers. `-parse-as-library` lets the
-# impl's `@main` provide the entry point instead of top-level script code.
+# Compile the schema, the shared locale fallback, and the impl as one module
+# and run the result. Building a real module with swiftc (rather than piping
+# the files through `swift` in immediate mode) keeps compilation deterministic
+# and makes diagnostics point at the original files with correct line numbers.
+# `-parse-as-library` lets the impl's `@main` provide the entry point instead
+# of top-level script code.
 bindir=$(mktemp -d -t "${commandName}.XXXXXX")
 trap 'rm -rf "${bindir}"' EXIT
 tool="${bindir}/${commandName}"
 swiftc -parse-as-library \
     "${utilsDir}/list-format-data-schema.swift" \
+    "${utilsDir}/cldr-locale-fallback.swift" \
     "${utilsDir}/${commandName}-impl.swift" \
     -o "${tool}"
 
-"${tool}" > "${foundationRepoDir}/${targetFileRelativePath}"
+# Write to a temporary file first, so a failed run leaves the target as it was.
+"${tool}" > "${bindir}/output.json"
+mv "${bindir}/output.json" "${foundationRepoDir}/${targetFileRelativePath}"
 
 echo "Done." 1>&2

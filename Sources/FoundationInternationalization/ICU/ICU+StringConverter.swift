@@ -13,6 +13,7 @@
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #endif
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 #if FOUNDATION_FRAMEWORK
@@ -284,3 +285,5 @@ func _icuStringEncodingConvert_impl(string: String, using encoding: String.Encod
     return converter.encode(string: string, allowLossyConversion: allowLossyConversion)
 }
 #endif
+
+#endif // ICU

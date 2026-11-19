@@ -28,6 +28,7 @@ extension String {
 @Suite("String (Locale)")
 private struct StringLocaleTests {
 
+#if ICU
     @Test func capitalize_localized() {
         var locale: Locale?
         func test(_ string: String, _ expected: String, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -158,5 +159,6 @@ private struct StringLocaleTests {
         _ = input.capitalized(with: Locale(identifier: "en_US"))
         _ = input.capitalized(with: Locale(identifier: "en_US"))
     }
+#endif // ICU
 }
 

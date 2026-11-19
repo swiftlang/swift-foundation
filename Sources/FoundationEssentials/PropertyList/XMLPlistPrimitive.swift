@@ -10,14 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import _FoundationRefs
-#endif
-
-#if !FOUNDATION_FRAMEWORK && canImport(Darwin)
-internal import BasicContainers
-#endif
-
 #if !hasFeature(Embedded)
 
 

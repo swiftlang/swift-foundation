@@ -20,6 +20,8 @@ import Testing
 #endif
 
 /// Tests that need a named time zone or the locale data, which the FoundationEssentials tests cannot load.
+#if ICU
+
 @Suite("Fixed Month Calendar Time Zones")
 private struct FixedMonthCalendarTimeZoneTests {
 
@@ -176,3 +178,5 @@ private struct FixedMonthCalendarTimeZoneTests {
         #expect(text.hasPrefix("\(fields.month ?? 0)/\(fields.day ?? 0)/"), "\(identifier): fields \(fields.month ?? 0)/\(fields.day ?? 0), text \(text)")
     }
 }
+
+#endif // ICU

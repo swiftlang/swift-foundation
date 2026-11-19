@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Decimal {
 #if FOUNDATION_FRAMEWORK || hasFeature(Embedded)
@@ -184,3 +186,5 @@ public extension Decimal.ParseStrategy where Format == Decimal.FormatStyle.Curre
         self.lenient = lenient
     }
 }
+
+#endif // ICU

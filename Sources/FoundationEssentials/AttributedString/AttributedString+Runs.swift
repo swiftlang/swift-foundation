@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+#if canImport(CollectionsInternal)
 @_spi(Unstable) internal import CollectionsInternal
 #elseif canImport(_RopeModule)
 internal import _RopeModule
@@ -361,7 +361,7 @@ extension AttributedString.Runs: BidirectionalCollection {
         #endif
     }
     
-    @available(FoundationPreview 6.2, *)
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     @usableFromInline
     internal func _distance(from start: Index, to end: Index) -> Int {
         guard _isDiscontiguous else {

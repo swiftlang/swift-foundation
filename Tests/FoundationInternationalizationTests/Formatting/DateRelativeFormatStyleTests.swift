@@ -15,6 +15,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Date.RelativeFormatStyle")
 private struct DateRelativeFormatStyleTests {
 
@@ -990,3 +992,5 @@ private struct TestDateAnchoredRelativeDiscreteConformance {
     }
 #endif
 }
+
+#endif // ICU

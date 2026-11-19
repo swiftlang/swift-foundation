@@ -569,6 +569,16 @@ internal struct BPlistPrimitive: ~Escapable, ~Sendable {
         }
     }
 
+    /// Validated byte range of an `.asciiString` object's payload within `bplistData`, for callers that need `(offset, count)` rather than a `Span`.
+    var asciiStringPayloadRange: Range<Int> {
+        get throws {
+            guard type == .asciiString else {
+                throw BPlistError.typeMismatchOrInvalid(expected: "ASCII string", actual: type)
+            }
+            return try payloadRange(unitSize: MemoryLayout<UInt8>.size, for: "ASCII string")
+        }
+    }
+
     var isStringType: Bool {
         switch type {
         case .utf16String, .asciiString: true

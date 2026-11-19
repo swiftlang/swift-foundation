@@ -56,7 +56,7 @@ public struct UUID : Hashable, Equatable, CustomStringConvertible, Sendable {
     internal var _storage: [16 of UInt8]
 
     /// Returns the UUID as bytes.
-    public var uuid: uuid_t {
+    public private(set) var uuid: uuid_t {
         get {
             return unsafeBitCast(_storage, to: uuid_t.self)
         }

@@ -19,6 +19,8 @@ import Testing
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+#if ICU
+
 @Suite("URL (Internationalization)")
 private struct URLInternationalizationTests {
     @Test func urlHostUIDNAEncoding() {
@@ -172,3 +174,5 @@ private struct URLInternationalizationTests {
         #expect(url?.path == "/Users/foo bar/more spaces/rela tive%3Fqu ery")
     }
 }
+
+#endif // ICU

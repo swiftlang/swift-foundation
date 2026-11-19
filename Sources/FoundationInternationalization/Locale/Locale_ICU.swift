@@ -21,6 +21,7 @@ internal import _ForSwiftFoundation
 internal import os
 #endif
 
+#if ICU
 internal import _FoundationICU
 internal import Synchronization
 
@@ -203,7 +204,11 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
             // If CFBundleAllowMixedLocalizations is set, don't do any checking of the user's preferences for locale-matching purposes (32264371)
 #if FOUNDATION_FRAMEWORK
             // Do not call the usual 'objectForInfoDictionaryKey' method, as it localizes the Info.plist content, which recurisvely calls back into Locale
-            let allowMixed = _generouslyInterpretedInfoDictionaryBoolean(Bundle.main._object(forUnlocalizedInfoDictionaryKey: "CFBundleAllowMixedLocalizations"))
+            let allowMixed = if _foundation_swift_cfbundle_enabled() {
+                Bundle.main.inner.allowMixedLocalizations
+            } else {
+                _generouslyInterpretedInfoDictionaryBoolean(Bundle.main._object(forUnlocalizedInfoDictionaryKey: "CFBundleAllowMixedLocalizations"))
+            }
 #else
             let allowMixed = false
 #endif
@@ -660,7 +665,6 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
     }
 
     // MARK: - Exemplar Character Set
-#if FOUNDATION_FRAMEWORK
     var exemplarCharacterSet: CharacterSet? {
         var status = U_ZERO_ERROR
         let data = ulocdata_open(identifier, &status)
@@ -705,14 +709,15 @@ internal final class _LocaleICU: _LocaleProtocol, Sendable {
                 let r = Unicode.Scalar(UInt32(exactly: start)!)!...Unicode.Scalar(UInt32(exactly: end)!)!
                 characterSet.insert(charactersIn: r)
             } else {
-                let s = String(UnicodeScalarType(utf16CodeUnits: buffer.baseAddress!, count: Int(len)))
+                guard let s = String(validating: UnsafeBufferPointer(start: buffer.baseAddress, count: Int(len)), as: UTF16.self) else {
+                    return nil
+                }
                 characterSet.insert(charactersIn: s)
             }
         }
 
         return characterSet
     }
-#endif
 
     // MARK: - LocaleCalendarIdentifier
 
@@ -1761,3 +1766,5 @@ extension Locale {
     }
 
 }
+
+#endif // ICU

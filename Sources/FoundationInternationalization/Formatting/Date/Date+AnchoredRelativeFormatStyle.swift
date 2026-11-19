@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 // MARK: Date.AnchoredRelativeFormatStyle
@@ -279,3 +280,5 @@ extension Date {
 @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
 extension Date.AnchoredRelativeFormatStyle : Codable {}
 #endif // !hasFeature(Embedded)
+
+#endif // ICU
