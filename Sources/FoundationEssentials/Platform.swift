@@ -59,11 +59,11 @@ import stdlib_h
 internal import unistd
 
 fileprivate let _pageSize: Int = Int(getpagesize())
+#elseif canImport(_FoundationEmbeddedExtras)
+import _FoundationEmbeddedExtras
+fileprivate let _pageSize: Int = Int(getpagesize())
 #elseif canImport(stdlib_h)
 import stdlib_h
-#elseif canImport(_FoundationPlatformExtras)
-import _FoundationPlatformExtras
-fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
 
 #if canImport(Bionic)
@@ -530,10 +530,10 @@ extension Platform {
     static let memset = _FoundationDarwinExtras.memset
     static let memcpy = _FoundationDarwinExtras.memcpy
     static let memcmp = _FoundationDarwinExtras.memcmp
-#elseif canImport(_FoundationPlatformExtras)
-    static let calloc = _FoundationPlatformExtras.calloc
-    static let malloc = _FoundationPlatformExtras.malloc
-    static let memcmp = _FoundationPlatformExtras.memcmp
+#elseif canImport(_FoundationEmbeddedExtras)
+    static let calloc = _FoundationEmbeddedExtras.calloc
+    static let malloc = _FoundationEmbeddedExtras.malloc
+    static let memcmp = _FoundationEmbeddedExtras.memcmp
 #elseif !NO_CSHIMS
     // Fall back to the imported C headers
     static let calloc = _FoundationCShims.calloc

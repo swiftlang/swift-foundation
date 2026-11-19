@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_FILESYSTEM
+
 #if !FOUNDATION_FRAMEWORK
 
 internal import Synchronization
@@ -436,3 +438,5 @@ open class FileManager : @unchecked Sendable {
 }
 
 #endif
+
+#endif // !NO_FILESYSTEM

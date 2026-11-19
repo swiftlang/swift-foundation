@@ -26,6 +26,8 @@ import CRT
 @preconcurrency import WASILibc
 #elseif os(Emscripten)
 @preconcurrency import EmscriptenLibc
+#elseif canImport(math_h)
+import math_h
 #endif
 
 /// `Docs/Chinese_Calendar_Math.md` explains how all of this works: the two time scales and delta-T, the solar longitude and new-moon series, how a moment becomes a day, and the precision limits. Shared astronomical and Gregorian day-number toolkit for the non-arithmetic calendars (Chinese today; Islamic and Hindu variants can build on it). Solar/lunar theory follows Reingold & Dershowitz, Calendrical Calculations (built on the Meeus and Bretagnon & Simon series); all APIs are calendar-agnostic.

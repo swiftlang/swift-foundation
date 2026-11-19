@@ -24,8 +24,10 @@ import WinSDK
 @preconcurrency import WASILibc
 #elseif os(Emscripten)
 @preconcurrency import EmscriptenLibc
-#elseif canImport(_FoundationPlatformExtras)
-import _FoundationPlatformExtras
+#elseif canImport(time_h)
+import time_h
+#elseif canImport(_FoundationEmbeddedExtras)
+import _FoundationEmbeddedExtras
 #endif
 
 #if !FOUNDATION_FRAMEWORK

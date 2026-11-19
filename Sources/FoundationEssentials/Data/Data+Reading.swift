@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK || !NO_FILESYSTEM
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -588,3 +590,5 @@ extension Data {
         self = try readDataFromFile(path: path, reportProgress: reportProgress, maxLength: nil, options: options)
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK || !NO_FILESYSTEM
