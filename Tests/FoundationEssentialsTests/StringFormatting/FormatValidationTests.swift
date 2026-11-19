@@ -91,7 +91,8 @@ struct FormatValidationTests {
             try validatedFormat("Count: %@", validFormatSpecifiers: "Count: %d", arguments: [Int32(1)])
         } throws: { error in
             let cocoa = try #require(error as? CocoaError)
-            return cocoa.code == .formatting && String(describing: cocoa).contains("Format specifier '%@' in format string 'Count: %@' has a kind that is incompatible with 'Count: %d'")
+            let description = try #require(cocoa.userInfo[NSDebugDescriptionErrorKey] as? String)
+            return cocoa.code == .formatting && description.contains("Format specifier '%@' in format string 'Count: %@' has a kind that is incompatible with 'Count: %d'")
         }
     }
 
