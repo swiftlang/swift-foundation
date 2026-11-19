@@ -704,7 +704,7 @@ extension _CalendarFixedMonth {
             }
         }
 
-        // The Islamic months have at most 30 days. ICU reports 31 for all Islamic calendars, because its astronomical one can make a month of 31 days, and this class reports the same.
+        // The Islamic months have at most 30 days. `maximumRange(of: .day)` keeps 31, the value that these calendars always reported, so that callers see no change.
         var maximumDayRange: Range<Int> {
             switch self {
             case .coptic, .ethiopicAmeteMihret, .ethiopicAmeteAlem: return 1..<31

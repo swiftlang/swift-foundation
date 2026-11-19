@@ -289,7 +289,7 @@ private struct FixedMonthCalendarTests {
         #expect(tabular.dateInterval(of: .era, for: Self.date(rataDie: 100_000)) == nil)
         #expect(tabular.ordinality(of: .day, in: .era, for: Self.date(rataDie: 100_000)) == nil)
 
-        // The era starts on the first day of year 1, 622-07-19, as for civil. ICU starts its Umm al-Qura era one day earlier, on the last day of year 0, so its counts in `.era` can differ by one.
+        // The era starts on the first day of year 1, 622-07-19, as for civil.
         let ummAlQura = Self.calendar(.islamicUmmAlQura)
         #expect(ummAlQura.dateInterval(of: .era, for: today) == DateInterval(start: Self.date(rataDie: 227_015, hour: 0), duration: maximum))
         #expect(ummAlQura.dateInterval(of: .era, for: Self.date(rataDie: 100_000)) == nil)
