@@ -225,7 +225,7 @@ struct StringFormattingTests {
         }
 
         withTemporaryAllocation(of: UInt8.self, capacity: 10) { buffer in
-            buffer.append(copying: "ABCDEFGHIJ".utf8.span)
+            buffer._append(copying: "ABCDEFGHIJ".utf8.span)
 
             buffer.span.withUnsafeBufferPointer {
                 // It is valid for the c string to be non-null terminated when an explicit precision is specified
