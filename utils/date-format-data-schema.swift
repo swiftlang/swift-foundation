@@ -10,28 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Codable schema for DateFormatData.json, the intermediate form between CLDR
-// XML (stage 1, utils/update-date-format-data) and the Swift tables (stage 2,
-// utils/build-date-format-data). Both stages compile this file.
+// Codable schema for DateFormatData.json, the intermediate form between CLDR XML (stage 1, utils/update-locale-data) and the Swift tables (stage 2, utils/build-locale-data). Both stages compile this file.
 
 import Foundation
 
-/// A `TextOutputStream` over standard error, for progress and diagnostics.
-internal struct StandardError: TextOutputStream {
-    mutating func write(_ string: String) {
-        guard let data = string.data(using: .utf8) else { return }
-        FileHandle.standardError.write(data)
-    }
-}
-internal var standardError = StandardError()
 
 internal struct DateFormatDataSchema: Codable {
     /// Provenance, e.g. "CLDR 48.0".
     let generatedFrom: String
     let cldrVersion: String
-
-    /// Numeric numbering systems: identifier → its ten digits, "0" through "9".
-    let numberingSystems: [String: [String]]
 
     /// Days 1 through 31 in the `hanidays` numbering system, which Apple's ICU uses for the day field under `numbers=hanidays`.
     let hanidaysDays: [String]
@@ -55,10 +42,7 @@ internal struct DateFormatDataSchema: Codable {
 
     /// Languages, or languages and regions, whose default script isn't Latin, e.g. sr → Cyrl, az_RU → Cyrl.
     let defaultScripts: [String: String]
-
-    /// Regions ICU accepts in an `rg` keyword, e.g. US.
-    let validRegions: [String]
 }
 
 /// The groups, in table order.
-internal let dateFormatGroups = ["numbers", "months", "weekdays", "quarters", "eras", "dayPeriods", "gmt", "capitalization"]
+internal let dateFormatGroups = ["months", "weekdays", "quarters", "eras", "dayPeriods", "gmt", "capitalization"]

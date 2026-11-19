@@ -208,7 +208,7 @@ var package = Package(
         // FoundationInternationalization
         .target(
             name: "_FoundationInternationalizationData",
-            exclude: ["CMakeLists.txt", "DateFormatData.json", "ListFormatData.json"],
+            exclude: ["CMakeLists.txt", "DateFormatData.json", "ListFormatData.json", "LocaleNumberData.json"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport"),
                 .enableExperimentalFeature("Lifetimes"),

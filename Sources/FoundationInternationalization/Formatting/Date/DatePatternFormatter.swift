@@ -27,9 +27,12 @@ final class DatePatternFormatter : Sendable {
     let pattern: String
     let calendar: Calendar
     let locale: DateFormatLocale
-    let numbers: DateFormatNumbers
+    let digits: LocaleNumbers.Digits
+    let minusSign: DataString<_LocaleNumberData>
     /// Whether the digits are ASCII 0-9.
     let asciiDigits: Bool
+    /// Whether the day field uses Chinese day numerals, for `numbers=hanidays`.
+    let usesHanidays: Bool
     let capitalizationContext: FormatStyleCapitalizationContext
     let caseLanguage: CaseLanguage
     /// The calendar components the pattern's fields read.
@@ -46,9 +49,13 @@ final class DatePatternFormatter : Sendable {
         unsupportedCalendar = isSupported ? nil : "\(info.calendarIdentifier.cldrIdentifier)_CALENDAR_IS_UNSUPPORTED"
         pattern = info.pattern
         let identifier = DataLocaleIdentifier(info.localeIdentifier)
-        locale = DateFormatLocale(identifier)
-        numbers = locale.numbers(identifier)
-        asciiDigits = numbers.hasASCIIDigits
+        let localeIndex = _LocaleIDData.localeIndex(forBaseName: identifier.baseName)
+        locale = DateFormatLocale(localeIndex: localeIndex)
+        let localeNumbers = LocaleNumbers(identifier, localeIndex: localeIndex)
+        digits = localeNumbers.digits
+        minusSign = localeNumbers.minusSign
+        asciiDigits = digits.hasASCIIDigits
+        usesHanidays = identifier.numbers == "hanidays"
         capitalizationContext = info.capitalizationContext
         caseLanguage = CaseLanguage(identifier)
         var calendar = Calendar(identifier: info.calendarIdentifier)
@@ -377,9 +384,9 @@ final class DatePatternFormatter : Sendable {
             default: appendNumber(components.month, minimumDigits: count, to: &bytes)
             }
         case UInt8(ascii: "d"):
-            if numbers.usesHanidays {
+            if usesHanidays {
                 // Spell out the day, without padding.
-                DateFormatNumbers.hanidaysDay(components.day).append(to: &bytes)
+                DateFormatLocale.hanidaysDay(components.day).append(to: &bytes)
             } else {
                 appendNumber(components.day, minimumDigits: count, to: &bytes)
             }
@@ -529,7 +536,7 @@ final class DatePatternFormatter : Sendable {
     /// Appends `value` in the locale's digits, zero-padded to `minimumDigits`, keeping at most the low `maximumDigits` digits.
     private func appendNumber(_ value: Int, minimumDigits: Int, maximumDigits: Int = 10, to bytes: inout [UInt8]) {
         if value < 0 {
-            numbers.minusSign.append(to: &bytes)
+            minusSign.append(to: &bytes)
         }
         // Keep the low `maximumDigits` digits, writing the most significant first.
         let magnitude = value.magnitude
@@ -552,7 +559,7 @@ final class DatePatternFormatter : Sendable {
         if asciiDigits {
             bytes.append(UInt8(ascii: "0") + UInt8(digit))
         } else {
-            numbers.appendDigit(digit, to: &bytes)
+            digits.appendDigit(digit, to: &bytes)
         }
     }
 

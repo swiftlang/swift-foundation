@@ -10,10 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Reads CLDR XML and writes DateFormatData.json: the Gregorian names, number
-// symbols, and GMT formats the Swift date pattern formatter reads, resolved
-// through CLDR inheritance for every locale, as ICU's data build and runtime
-// resolve them.
+// Reads CLDR XML and writes the date format JSON to standard output. The JSON has the localized Gregorian names, such as months and weekdays, and the GMT formats. The Swift date pattern formatter reads them. The tool resolves each value through inheritance for every locale.
 //
 // Resolution:
 //   - Only the locales ICU builds are included (see icuLocales).
@@ -27,10 +24,6 @@
 //   - When no locale in the chain has a name, root's width and context aliases
 //     apply (e.g. stand-alone abbreviated months use the format ones), and the
 //     search starts again from the original locale.
-//   - Numbering systems and minus signs follow ICU's NumberingSystem and
-//     DecimalFormatSymbols: numbers=native/traditional/finance fall back to
-//     native/default, and a numbering system without its own minus sign uses
-//     the locale's Latin one.
 //
 // Each group's resolved blocks are deduplicated, so locales with identical
 // months, for example, share one block.
@@ -40,8 +33,6 @@ import Foundation
 import FoundationXML
 #endif
 
-let markers: Set<String> = ["\u{2191}\u{2191}\u{2191}", "\u{2205}\u{2205}\u{2205}"]
-
 // MARK: - Slots
 
 let monthContexts = ["format", "stand-alone"]
@@ -50,7 +41,6 @@ let weekdayWidths = ["abbreviated", "narrow", "short", "wide"]
 let weekdayTypes = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
 let eraElements = ["abbreviated": "eraAbbr", "narrow": "eraNarrow", "wide": "eraNames"]
 let dayPeriodTypes = ["am", "pm", "noon"]
-let otherNumberingSystemTypes = ["native", "traditional", "finance"]
 /// The contextTransforms usages ICU's date formatting reads, in table order.
 let capitalizationUsages = ["month-format-except-narrow", "month-standalone-except-narrow", "month-narrow",
                             "day-format-except-narrow", "day-standalone-except-narrow", "day-narrow",
@@ -86,71 +76,14 @@ struct LocaleValues {
     var names: [String: String] = [:]
     /// "group|context|width" → "context|width" (root only).
     var aliases: [String: String] = [:]
-    var defaultNumberingSystem: String?
-    var otherNumberingSystems: [String: String] = [:]
-    /// Numbering system → minus sign.
-    var minusSigns: [String: String] = [:]
-    /// Numbering systems whose symbols are an alias to the Latin ones.
-    var latinSymbolAliases: Set<String> = []
     /// contextTransforms usage → whether to titlecase for UI lists and menus, then for standalone use, as "10".
     /// Nil where the locale has no contextTransforms; an empty table still hides its parent's, as in ICU.
     var contextTransforms: [String: String]?
 }
 
-extension XMLElement {
-    func children(_ name: String) -> [XMLElement] {
-        elements(forName: name)
-    }
-
-    func child(_ name: String, type: String? = nil) -> XMLElement? {
-        children(name).first { type == nil || $0.attribute(forName: "type")?.stringValue == type }
-    }
-
-    func attribute(_ name: String) -> String? {
-        attribute(forName: name)?.stringValue
-    }
-
-    /// The element's text, unless it's a marker, an alt value, or a draft CLDR skips.
-    var usableValue: String? {
-        guard attribute("alt") == nil, !excludedDrafts.contains(attribute("draft") ?? ""), let text = stringValue, !markers.contains(text) else {
-            return nil
-        }
-        return text
-    }
-}
-
 func parseLocale(_ url: URL) throws -> LocaleValues {
-    let document: XMLDocument
-    do {
-        document = try XMLDocument(contentsOf: url)
-    } catch {
-        throw CLDRFileError.xmlParse(url, error)
-    }
     var values = LocaleValues()
-    guard let ldml = document.rootElement() else { return values }
-
-    if let numbers = ldml.child("numbers") {
-        values.defaultNumberingSystem = numbers.children("defaultNumberingSystem").lazy.compactMap(\.usableValue).first
-        if let others = numbers.child("otherNumberingSystems") {
-            for type in otherNumberingSystemTypes {
-                if let value = others.children(type).lazy.compactMap(\.usableValue).first {
-                    values.otherNumberingSystems[type] = value
-                }
-            }
-        }
-        for symbols in numbers.children("symbols") where symbols.attribute("alt") == nil {
-            let system = symbols.attribute("numberSystem") ?? "latn"
-            if let alias = symbols.child("alias") {
-                guard alias.attribute("path") == "../symbols[@numberSystem='latn']" else {
-                    fatalError("unhandled symbols alias \(alias.attribute("path") ?? "") in \(url.lastPathComponent)")
-                }
-                values.latinSymbolAliases.insert(system)
-            }
-            if let minus = symbols.children("minusSign").lazy.compactMap(\.usableValue).first {
-                values.minusSigns[system] = minus
-            }
-        }
-    }
+    guard let ldml = try loadDocument(url).rootElement() else { return values }
 
     if let contextTransforms = ldml.child("contextTransforms") {
         var usages: [String: String] = [:]
@@ -247,39 +180,6 @@ func aliasTarget(_ path: String, context: String, contextTag: String, widthTag: 
         return "\(targetContext)|\(width)"
     }
     fatalError("unhandled alias \(path) in \(file.lastPathComponent)")
-}
-
-func loadNumberingSystems(_ url: URL) throws -> [String: [String]] {
-    let document: XMLDocument
-    do {
-        document = try XMLDocument(contentsOf: url)
-    } catch {
-        throw CLDRFileError.xmlParse(url, error)
-    }
-    var systems: [String: [String]] = [:]
-    for case let element as XMLElement in try document.nodes(forXPath: "//numberingSystems/numberingSystem[@type='numeric']") {
-        guard let id = element.attribute("id"), let digits = element.attribute("digits") else { continue }
-        let scalars = digits.unicodeScalars.map { String($0) }
-        precondition(scalars.count == 10, "numbering system \(id) doesn't have 10 digits")
-        systems[id] = scalars
-    }
-    return systems
-}
-
-/// The regions ICU accepts in an `rg` keyword: the first two letters of CLDR's whole-region subdivisions, such as uszzzz.
-func loadValidRegions(_ url: URL) throws -> [String] {
-    let document: XMLDocument
-    do {
-        document = try XMLDocument(contentsOf: url)
-    } catch {
-        throw CLDRFileError.xmlParse(url, error)
-    }
-    guard let element = try document.nodes(forXPath: "//idValidity/id[@type='subdivision'][@idStatus='unknown']").first else {
-        fatalError("no unknown subdivisions in \(url.path)")
-    }
-    // The text nodes only, since `stringValue` would include the item-count comment.
-    let ids = (element.children ?? []).filter { $0.kind == .text }.compactMap(\.stringValue).joined(separator: " ")
-    return Set(ids.split(whereSeparator: \.isWhitespace).map { $0.prefix(2).uppercased() }).sorted()
 }
 
 // MARK: - Day numerals
@@ -384,14 +284,6 @@ struct SpelloutRules {
     }
 }
 
-func detectCLDRVersion(_ cldrURL: URL) -> String {
-    let dtd = (try? String(contentsOf: cldrURL.appendingPathComponent("common/dtd/ldml.dtd"), encoding: .utf8)) ?? ""
-    guard let range = dtd.range(of: #"cldrVersion CDATA #FIXED "[^"]+""#, options: .regularExpression) else {
-        return "unknown"
-    }
-    return String(dtd[range].split(separator: "\"")[1])
-}
-
 // MARK: - Resolution
 
 struct Resolver {
@@ -401,21 +293,7 @@ struct Resolver {
 
     init(locales: [String: LocaleValues], parents: [String: String]) {
         self.locales = locales
-        var chains: [String: [String]] = [:]
-        for locale in locales.keys {
-            var chain: [String] = []
-            var current: String? = locale
-            while let l = current {
-                if let target = localeAliases[l] {
-                    current = target
-                    continue
-                }
-                if locales[l] != nil { chain.append(l) }
-                current = parent(of: l, explicit: parents)
-            }
-            chains[locale] = chain
-        }
-        self.chains = chains
+        chains = resolutionChains(locales: Set(locales.keys), parents: parents)
         self.rootAliases = locales["root"]?.aliases ?? [:]
     }
 
@@ -439,28 +317,6 @@ struct Resolver {
         return flags
     }
 
-    func defaultNumberingSystem(_ locale: String) -> String {
-        chains[locale]!.lazy.compactMap { locales[$0]!.defaultNumberingSystem }.first ?? "latn"
-    }
-
-    /// As ICU's NumberingSystem::createInstance resolves numbers=native/traditional/finance.
-    func otherNumberingSystem(_ locale: String, _ type: String) -> String {
-        if let value = chains[locale]!.lazy.compactMap({ self.locales[$0]!.otherNumberingSystems[type] }).first {
-            return value
-        }
-        return type == "traditional" ? otherNumberingSystem(locale, "native") : defaultNumberingSystem(locale)
-    }
-
-    /// As ICU's DecimalFormatSymbols resolves the minus sign for a numbering system.
-    func minusSign(_ locale: String, _ system: String) -> String {
-        if system != "latn" {
-            for l in chains[locale]! {
-                if locales[l]!.latinSymbolAliases.contains(system) { break }
-                if let minus = locales[l]!.minusSigns[system] { return minus }
-            }
-        }
-        return chains[locale]!.lazy.compactMap { self.locales[$0]!.minusSigns["latn"] }.first ?? "-"
-    }
 }
 
 // MARK: - Driver
@@ -473,28 +329,19 @@ struct GenerateDateFormatData {
             exit(1)
         }
         let cldrURL = URL(fileURLWithPath: cldrPath, isDirectory: true)
-        let mainURL = cldrURL.appendingPathComponent("common/main", isDirectory: true)
         let supplementalURL = cldrURL.appendingPathComponent("common/supplemental", isDirectory: true)
 
         print("  loading supplemental data…", to: &standardError)
         let parents = try loadParentMap(supplementalURL: supplementalURL.appendingPathComponent("supplementalData.xml"))
-        let numberingSystems = try loadNumberingSystems(supplementalURL.appendingPathComponent("numberingSystems.xml"))
         let likelySubtags = try loadLikelySubtags(supplementalURL: supplementalURL.appendingPathComponent("likelySubtags.xml"))
-        let validRegions = try loadValidRegions(cldrURL.appendingPathComponent("common/validity/subdivision.xml"))
-        precondition(validRegions.contains("US") && validRegions.contains("XK") && !validRegions.contains("XX") && !validRegions.contains("EU"), "unexpected valid regions")
 
         print("  parsing locale files…", to: &standardError)
-        let files = try FileManager.default.contentsOfDirectory(at: mainURL, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "xml" }
-        let available = Set(files.map { $0.deletingPathExtension().lastPathComponent })
-        let included = icuLocales(available: available, parents: parents, likelySubtags: likelySubtags)
-        print("  \(included.count) of \(available.count) CLDR locales are ICU locales", to: &standardError)
+        let (files, localesWithoutData) = try loadICULocaleFiles(cldrURL: cldrURL, parents: parents, likelySubtags: likelySubtags)
         var locales: [String: LocaleValues] = [:]
-        for file in files where included.contains(file.deletingPathExtension().lastPathComponent) {
-            locales[file.deletingPathExtension().lastPathComponent] = try parseLocale(file)
+        for (locale, url) in files {
+            locales[locale] = try parseLocale(url)
         }
-        // Locales ICU writes without data, such as alias targets CLDR doesn't have.
-        for locale in included.subtracting(available) {
+        for locale in localesWithoutData {
             locales[locale] = LocaleValues()
         }
         for (locale, values) in locales where locale != "root" && !values.aliases.isEmpty {
@@ -505,44 +352,24 @@ struct GenerateDateFormatData {
         let resolver = Resolver(locales: locales, parents: parents)
         let sortedLocales = locales.keys.sorted()
 
-        // Numbering systems with a minus sign of their own for some locale get a slot each.
-        var minusSystems = Set<String>()
-        for locale in sortedLocales {
-            let latin = resolver.minusSign(locale, "latn")
-            for system in numberingSystems.keys where system != "latn" && resolver.minusSign(locale, system) != latin {
-                minusSystems.insert(system)
-            }
-        }
-        let numberSlots = ["default"] + otherNumberingSystemTypes + (["latn"] + minusSystems.sorted()).map { "minus.\($0)" }
-
         var groupSlots: [String: [String]] = [:]
         var groupBlocks: [String: [[String?]]] = [:]
         var localeBlocks: [String: [String: Int]] = [:]
         for group in dateFormatGroups {
-            let slots = group == "numbers" ? numberSlots : nameSlots(group)
+            let slots = nameSlots(group)
             groupSlots[group] = slots
-            var blocks: [[String?]] = []
-            var blockIndex: [[String?]: Int] = [:]
+            var table = BlockTable()
             for locale in sortedLocales {
                 let block: [String?]
-                if group == "numbers" {
-                    block = [resolver.defaultNumberingSystem(locale)]
-                        + otherNumberingSystemTypes.map { resolver.otherNumberingSystem(locale, $0) }
-                        + (["latn"] + minusSystems.sorted()).map { resolver.minusSign(locale, $0) }
-                } else if group == "capitalization" {
+                if group == "capitalization" {
                     block = slots.map { resolver.capitalization(locale, $0) }
                 } else {
                     block = slots.map { resolver.name(locale, $0) }
                 }
-                let index = blockIndex[block] ?? {
-                    blocks.append(block)
-                    blockIndex[block] = blocks.count - 1
-                    return blocks.count - 1
-                }()
-                localeBlocks[locale, default: [:]][group] = index
+                localeBlocks[locale, default: [:]][group] = table.index(of: block)
             }
-            groupBlocks[group] = blocks
-            print("  \(group): \(slots.count) slots, \(blocks.count) distinct blocks", to: &standardError)
+            groupBlocks[group] = table.blocks
+            print("  \(group): \(slots.count) slots, \(table.blocks.count) distinct blocks", to: &standardError)
         }
 
         // Known values, to catch a resolver that reads the data wrongly.
@@ -555,11 +382,6 @@ struct GenerateDateFormatData {
         check("en", "months", "months|stand-alone|narrow|9", "S")
         check("de", "weekdays", "days|format|abbreviated|thu", "Do.")
         check("de_AT", "months", "months|format|wide|1", "Jänner")
-        check("fa", "numbers", "default", "arabext")
-        check("fa", "numbers", "minus.arabext", "\u{200E}\u{2212}")
-        check("ar_EG", "numbers", "default", "arab")
-        check("ar", "numbers", "default", "latn")
-        check("sv", "numbers", "minus.latn", "\u{2212}")
         check("cs", "capitalization", "month-standalone-except-narrow", "10")
         check("fr", "capitalization", "month-format-except-narrow", "01")
         check("pt", "capitalization", "day-format-except-narrow", "11")
@@ -576,19 +398,14 @@ struct GenerateDateFormatData {
         let schema = DateFormatDataSchema(
             generatedFrom: "CLDR \(detectCLDRVersion(cldrURL))",
             cldrVersion: detectCLDRVersion(cldrURL),
-            numberingSystems: numberingSystems,
             hanidaysDays: hanidays,
             groupSlots: groupSlots,
             groupBlocks: groupBlocks,
             locales: localeBlocks,
             parents: parents,
             aliases: localeAliases,
-            defaultScripts: defaultScripts(likelySubtags: likelySubtags),
-            validRegions: validRegions
+            defaultScripts: defaultScripts(likelySubtags: likelySubtags)
         )
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
-        FileHandle.standardOutput.write(try encoder.encode(schema))
-        FileHandle.standardOutput.write(Data("\n".utf8))
+        try writeJSON(schema)
     }
 }

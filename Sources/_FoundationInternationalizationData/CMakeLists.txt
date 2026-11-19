@@ -14,10 +14,15 @@
 
 add_library(_FoundationInternationalizationData STATIC
     DataLocaleIdentifier.swift
+    DataString.swift
     DateFormatData.swift
     DateFormatLookup.swift
     ListFormatData.swift
-    ListFormatLookup.swift)
+    ListFormatLookup.swift
+    LocaleIDData.swift
+    LocaleIDLookup.swift
+    LocaleNumberData.swift
+    LocaleNumberLookup.swift)
 
 target_compile_options(_FoundationInternationalizationData PRIVATE
     "SHELL:$<$<COMPILE_LANGUAGE:Swift>:-Xfrontend -enable-experimental-feature -Xfrontend AccessLevelOnImport>"

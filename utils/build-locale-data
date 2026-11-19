@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Builds DateFormatData.swift, LocaleNumberData.swift, LocaleIDData.swift, and ListFormatData.swift, the `static let` constant tables of the _FoundationInternationalizationData library, from DateFormatData.json, LocaleNumberData.json, and ListFormatData.json. LocaleIDData.swift holds the locale IDs and redirects that the date and number tables share.
+#
+# Usage:
+#   build-locale-data [--locales=en,es,...] [--fallback=en_001] [--output-dir=path]
+#
+# --locales: the comma-separated locales to include. The default is all locales.
+# --fallback: the locale for an identifier that resolves to none of the included locales. The tool adds it to the included locales. Without it, the runtime uses root.
+# --output-dir: the directory for the generated Swift files. The default is Sources/_FoundationInternationalizationData.
+#
+# All the tables get the same locales and fallback, so that an identifier gets its localized date names, its digits, and its list patterns from the same locale.
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r dataDir="${foundationRepoDir}/Sources/_FoundationInternationalizationData"
+
+LOCALES=""
+FALLBACK=""
+OUTPUT_DIR="${dataDir}"
+
+for arg in "$@"; do
+  case "$arg" in
+    --locales=*)       LOCALES="${arg#--locales=}" ;;
+    --fallback=*)      FALLBACK="${arg#--fallback=}" ;;
+    --output-dir=*)    OUTPUT_DIR="${arg#--output-dir=}" ;;
+    --help|-h)
+      echo "Usage: ${commandName} [--locales=en,es,...] [--fallback=en_001] [--output-dir=path]" 1>&2
+      exit 0
+      ;;
+    *)
+      echo "error: unknown argument: ${arg}" 1>&2
+      echo "Try --help." 1>&2
+      exit 1
+      ;;
+  esac
+done
+
+for table in DateFormatData LocaleNumberData ListFormatData; do
+  if [[ ! -f "${dataDir}/${table}.json" ]]; then
+    echo "error: input JSON not found at ${dataDir}/${table}.json" 1>&2
+    echo "Run utils/update-locale-data first to generate it from CLDR XML." 1>&2
+    exit 1
+  fi
+done
+
+echo "Building locale data" 1>&2
+echo "  output:  ${OUTPUT_DIR}" 1>&2
+if [[ -n "${LOCALES}" ]]; then
+  echo "  locales: ${LOCALES} (+ root${FALLBACK:+, ${FALLBACK}})" 1>&2
+else
+  echo "  locales: all" 1>&2
+fi
+echo "  fallback: ${FALLBACK:-root}" 1>&2
+
+# Compile each tool with swiftc, rather than run it with `swift`, so that diagnostics point at the original files.
+bindir=$(mktemp -d -t "${commandName}.XXXXXX")
+trap 'rm -rf "${bindir}"' EXIT
+
+build() {
+  local table="$1" schema="$2" impl="$3"
+  echo "${table}:" 1>&2
+  swiftc -parse-as-library \
+      "${utilsDir}/${schema}" \
+      "${utilsDir}/cldr-locale-fallback.swift" \
+      "${utilsDir}/cldr-data-tables.swift" \
+      "${utilsDir}/${impl}" \
+      -o "${bindir}/${table}"
+  env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${dataDir}/${table}.json" OUTPUT_SWIFT="${bindir}/${table}.swift" \
+    "${bindir}/${table}"
+}
+
+build DateFormatData date-format-data-schema.swift build-date-format-data-impl.swift
+build LocaleNumberData locale-number-data-schema.swift build-locale-number-data-impl.swift
+
+echo "LocaleIDData:" 1>&2
+swiftc -parse-as-library \
+    "${utilsDir}/cldr-locale-fallback.swift" \
+    "${utilsDir}/cldr-data-tables.swift" \
+    "${utilsDir}/build-locale-id-data-impl.swift" \
+    -o "${bindir}/LocaleIDData"
+env LOCALES="${LOCALES}" FALLBACK="${FALLBACK}" INPUT="${dataDir}" OUTPUT_SWIFT="${bindir}/LocaleIDData.swift" \
+  "${bindir}/LocaleIDData"
+
+# The list format tool reads an empty FALLBACK as a locale named "", so pass root explicitly.
+echo "ListFormatData:" 1>&2
+swiftc -parse-as-library \
+    "${utilsDir}/list-format-data-schema.swift" \
+    "${utilsDir}/cldr-locale-fallback.swift" \
+    "${utilsDir}/build-list-format-data-impl.swift" \
+    -o "${bindir}/ListFormatData"
+env LOCALES="${LOCALES}" FALLBACK="${FALLBACK:-root}" INPUT="${dataDir}/ListFormatData.json" OUTPUT_SWIFT="${bindir}/ListFormatData.swift" \
+  "${bindir}/ListFormatData"
+
+# Move the tables only after all the tools succeed. The date and number tables index into the locale ID table, so a failed run must not leave a mix of old and new tables.
+mkdir -p "${OUTPUT_DIR}"
+for table in DateFormatData LocaleNumberData LocaleIDData ListFormatData; do
+  mv "${bindir}/${table}.swift" "${OUTPUT_DIR}/${table}.swift"
+done
+
+echo "Done." 1>&2
