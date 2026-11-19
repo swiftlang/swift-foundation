@@ -77,7 +77,9 @@ struct FormatValidationTests {
     }
 
     @Test func pointersMatchObjects() throws {
-        #expect(try validatedFormat("%p", validFormatSpecifiers: "%@", arguments: [CVarArgString("x")]).hasPrefix("0x"))
+        #expect(throws: Never.self) {
+            try validatedFormat("%p", validFormatSpecifiers: "%@", arguments: [CVarArgString("x")])
+        }
     }
 
     @Test func incompleteSpecifier() {

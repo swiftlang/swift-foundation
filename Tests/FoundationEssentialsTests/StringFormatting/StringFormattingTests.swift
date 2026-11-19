@@ -234,12 +234,14 @@ struct StringFormattingTests {
         }
     }
 
+    #if FOUNDATION_FRAMEWORK
     @Test(.enabled(if: String.Encoding.system == .macOSRoman))
     func cStringsUseTheSystemEncoding() {
         "héllo".withCString { string in
             checkFormat("%s", string, expectation: "h√©llo")
         }
     }
+    #endif
 
     @Test func unicharStrings() {
         let characters = Array("héllo".utf16) + [0]

@@ -72,7 +72,13 @@ struct LocalizedStringFormattingTests {
         checkFormat("%g", 1234.5, locale: "en_US", expectation: "1,234.5")
         checkFormat("%g", 1234.5, locale: "de_DE", expectation: "1.234,5")
         checkFormat("%.3g", 3.14159, locale: "de_DE", expectation: "3,14")
+        #if os(Windows)
+        // Windows always pads %a to the full width when precision is not specified
+        checkFormat("%a", 1.5, locale: "de_DE", expectation: "0x1,8000000000000p+0")
+        #else
+        // Darwin/Linux always use the shortest exact form
         checkFormat("%a", 1.5, locale: "de_DE", expectation: "0x1,8p+0")
+        #endif
         checkFormat("%f", Double.nan, locale: "en_US", expectation: "NaN")
         checkFormat("%f", Double.infinity, locale: "de_DE", expectation: "∞")
     }
