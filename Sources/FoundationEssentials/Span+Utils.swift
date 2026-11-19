@@ -288,8 +288,8 @@ extension String {
 extension Array {
     package init(copying span: borrowing Span<Element>) {
         self = Self.init(capacity: span.count) { outputSpan in
-            for i in 0..<span.count {
-                outputSpan.append(span[i])
+            for e in span {
+                outputSpan.append(e)
             }
         }
     }
