@@ -72,8 +72,8 @@ internal import _FoundationDarwinExtras.POSIX.sys.mman
 @usableFromInline let memcpy = Bionic.memcpy
 #elseif canImport(string_h)
 import string_h
-#elseif canImport(_FoundationPlatformExtras)
-import _FoundationPlatformExtras
+#elseif canImport(_FoundationEmbeddedExtras)
+import _FoundationEmbeddedExtras
 #endif
 
 #if os(Windows)

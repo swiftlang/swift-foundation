@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !NO_PROCESS
 
 /// A collection of information about the current process.
 public final class ProcessInfo: Sendable {
@@ -164,4 +164,4 @@ extension ProcessInfo {
     public var systemUptime: TimeInterval { _processInfo.systemUptime }
 }
 
-#endif // !FOUNDATION_FRAMEWORK
+#endif // !FOUNDATION_FRAMEWORK && !NO_PROCESS

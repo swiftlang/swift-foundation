@@ -28,6 +28,8 @@ import WinSDK
 @preconcurrency import EmscriptenLibc
 #endif
 
+#if !NO_POSIX_ERROR_CODE
+
 #if FOUNDATION_FRAMEWORK
 /// Describes an error in the POSIX error domain.
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
@@ -690,3 +692,5 @@ extension POSIXError {
     }
     #endif
 }
+
+#endif // !NO_POSIX_ERROR_CODE

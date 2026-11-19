@@ -16,7 +16,7 @@
 
 #include "_CShimsTargetConditionals.h"
 
-#if TARGET_OS_MAC && (!defined(TARGET_OS_EXCLAVEKIT) || !TARGET_OS_EXCLAVEKIT)
+#if TARGET_OS_MAC && __has_include(<sys/attr.h>) && (!defined(TARGET_OS_EXCLAVEKIT) || !TARGET_OS_EXCLAVEKIT)
 
 #include <stdio.h>
 #include <sys/attr.h>
