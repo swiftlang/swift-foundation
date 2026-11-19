@@ -16,6 +16,12 @@ target_sources(FoundationEssentials PRIVATE
     ActorQueueManager.swift
     AsyncMessage.swift
     AsyncMessage+AsyncSequence.swift
+    BloomFilter.swift
+    ImmortalNameCache.swift
+    IntrusiveHashTable.swift
     MainActorMessage.swift
     NotificationCenter.swift
-    NotificationCenterMessage.swift)
+    NotificationCenterMessage.swift
+    NotificationRegistrar.swift
+    SlotMap.swift
+    StableStorage.swift)
