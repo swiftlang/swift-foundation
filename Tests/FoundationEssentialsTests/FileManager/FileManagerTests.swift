@@ -607,21 +607,24 @@ private struct FileManagerTests {
         try body(device + "\\")
     }
 
-    @Test func moveDirectoryBetweenDriveRoots() async throws {
+    @Test(arguments: [#"parent\source"#, #"parent\\source"#])
+    func moveDirectoryBetweenDriveRoots(_ relativeSource: String) async throws {
         let contents = Data("nested file".utf8)
         try await FilePlayground {
-            Directory("source") {
-                Directory("nested 日本語") {
-                    File("file with spaces.txt", contents: contents)
+            Directory("parent") {
+                Directory("source") {
+                    Directory("nested 日本語") {
+                        File("file with spaces.txt", contents: contents)
+                    }
+                    Directory("empty") {}
                 }
-                Directory("empty") {}
             }
         }.test(captureDelegateCalls: true) { fileManager in
             try withDriveAlias(for: fileManager.currentDirectoryPath) { drive in
-                let source = fileManager.currentDirectoryPath.appendingPathComponent("source")
+                let source = "\(fileManager.currentDirectoryPath)\\\(relativeSource)"
                 let destination = drive + "moved"
                 try fileManager.moveItem(atPath: source, toPath: destination)
-                #expect(!fileManager.fileExists(atPath: source))
+                #expect(!fileManager.fileExists(atPath: "parent/source"))
                 #expect(fileManager.delegateCaptures.shouldCopy.isEmpty)
                 #expect(fileManager.delegateCaptures.shouldRemove.isEmpty)
                 #expect(try fileManager.subpathsOfDirectory(atPath: "moved").sorted() == ["empty", "nested 日本語", "nested 日本語/file with spaces.txt"])
@@ -657,6 +660,39 @@ private struct FileManagerTests {
                     }
                 }
                 #expect(fileManager.contents(atPath: source.appendingPathComponent("locked")) == Data("unchanged".utf8))
+            }
+        }
+    }
+
+    @Test func moveDirectoryBetweenDriveRootsReportsSourceRemovalFailure() async throws {
+        let contents = Data("copied before removal".utf8)
+        try await FilePlayground {
+            Directory("source") {
+                File("locked", contents: contents)
+            }
+        }.test { fileManager in
+            try withDriveAlias(for: fileManager.currentDirectoryPath) { drive in
+                let source = fileManager.currentDirectoryPath.appendingPathComponent("source")
+                let destination = drive + "moved"
+                let sourceFile = source.appendingPathComponent("locked")
+
+                // Allow copying the file while preventing its removal.
+                let handle = try #require(sourceFile.withCString(encodedAs: UTF16.self) {
+                    WinSDK.CreateFileW($0, DWORD(WinSDK.GENERIC_READ), DWORD(WinSDK.FILE_SHARE_READ | WinSDK.FILE_SHARE_WRITE), nil, DWORD(WinSDK.OPEN_EXISTING), DWORD(WinSDK.FILE_ATTRIBUTE_NORMAL), nil)
+                })
+                try #require(handle != WinSDK.INVALID_HANDLE_VALUE)
+                defer { WinSDK.CloseHandle(handle) }
+
+                let error = try #require(throws: CocoaError.self) {
+                    try fileManager.moveItem(atPath: source, toPath: destination)
+                }
+                #expect(error.code == .fileWriteNoPermission)
+                #expect(error.filePath == URL(fileURLWithPath: source).path)
+                #expect(error.userInfo["NSDestinationFilePath"] as? String == URL(fileURLWithPath: destination).path)
+                #expect(error.userInfo["NSUserStringVariant"] as? String == "Move")
+                #expect((error.underlying as? CocoaError)?.code == error.code)
+                #expect(fileManager.fileExists(atPath: sourceFile))
+                #expect(fileManager.contents(atPath: "moved/locked") == contents)
             }
         }
     }

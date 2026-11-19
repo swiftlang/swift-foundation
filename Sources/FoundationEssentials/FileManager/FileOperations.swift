@@ -634,9 +634,9 @@ enum _FileOperations {
                                 }
                             }
                         } else {
-                            var stack: [String] = [source]
+                            var stack: [(entry: String, destinationParent: String, fileName: String)] = [(source, destination, "")]
                             var copiedAllItems = true
-                            while let entry = stack.popLast() {
+                            while let (entry, destinationParent, fileName) = stack.popLast() {
                                 do {
                                     try entry.withNTPathRepresentation { pwszEntry in
                                         var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
@@ -645,8 +645,7 @@ enum _FileOperations {
                                         }
 
                                         var pwszDestination: PWSTR? = nil
-                                        let relativePath = String(entry.dropFirst(source.count).drop(while: { $0 == "/" || $0 == "\\" }))
-                                        guard SUCCEEDED(PathAllocCombine(destination, relativePath, PATHCCH_ALLOW_LONG_PATHS, &pwszDestination)) else {
+                                        guard SUCCEEDED(PathAllocCombine(destinationParent, fileName, PATHCCH_ALLOW_LONG_PATHS, &pwszDestination)), let pwszDestination else {
                                             throw CocoaError.moveFileError(GetLastError(), src, dst)
                                         }
                                         defer { LocalFree(pwszDestination) }
@@ -655,7 +654,7 @@ enum _FileOperations {
                                             let aliasee = try fileManager.destinationOfSymbolicLink(atPath: entry)
 
                                             // TODO(compnerd) - is there a way to avoid the round-trip of decoding, encoding here?
-                                            let destination = String(decodingCString: pwszDestination!, as: UTF16.self)
+                                            let destination = String(decodingCString: pwszDestination, as: UTF16.self)
 
                                             var faDestinationAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
                                             if GetFileAttributesExW(pwszDestination, GetFileExInfoStandard, &faDestinationAttributes) {
@@ -667,8 +666,9 @@ enum _FileOperations {
                                                 guard CreateDirectoryW(pwszDestination, nil) else {
                                                     throw CocoaError.moveFileError(GetLastError(), src, dst)
                                                 }
-                                                for child in _Win32DirectoryContentsSequence(path: entry, appendSlashForDirectory: true) {
-                                                    stack.append(entry.appendingPathComponent(child.fileName))
+                                                let destination = String(decodingCString: pwszDestination, as: UTF16.self)
+                                                for child in _Win32DirectoryContentsSequence(path: entry, appendSlashForDirectory: false, prefix: [entry]) {
+                                                    stack.append((child.fileNameWithPrefix, destination, child.fileName))
                                                 }
                                             } else {
                                                 guard CopyFileW(pwszEntry, pwszDestination, true) else {
@@ -685,7 +685,16 @@ enum _FileOperations {
                                 }
                             }
                             if copiedAllItems {
-                                try removeFile(source, with: nil)
+                                do {
+                                    try removeFile(source, with: nil)
+                                } catch let removeError as CocoaError {
+                                    throw CocoaError(removeError.code, userInfo: [
+                                        NSFilePathErrorKey : src.path,
+                                        NSDestinationFilePathErrorKey : dst.path,
+                                        NSUserStringVariantErrorKey : "Move",
+                                        NSUnderlyingErrorKey : removeError
+                                    ])
+                                }
                             }
                         }
                     }
