@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // `ParseEventSource` walker over a pre-scanned `JSONPrimitive` tree.
 // Emits raw byte views for strings/numbers; the sink materializes.
@@ -198,6 +197,5 @@ struct JSONPrimitiveSource: ParseEventSource, ~Copyable, ~Escapable {
         }
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

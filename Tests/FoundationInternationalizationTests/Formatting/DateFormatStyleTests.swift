@@ -17,6 +17,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Date.FormatStyle")
 private struct DateFormatStyleTests {
     let referenceDate = Date(timeIntervalSinceReferenceDate: 0)
@@ -245,10 +247,11 @@ private struct DateFormatStyleTests {
         #expect(date.formatted(style.era(.narrow)) == "A")
 
         #expect(date.formatted(style.year(.defaultDigits)) == "1970")
-        #expect(date.formatted(style.year(.twoDigits)) == "70")
+        // Only verify that there are exact two digits instead of verifying the content of the whole string in case ICU/CLDR updates format to include other symbols, which they did in ICU-79
+        #expect(date.formatted(style.year(.twoDigits)).filter(\.isNumber).count == 2)
         #expect(date.formatted(style.year(.padded(0))) == "1970")
         #expect(date.formatted(style.year(.padded(1))) == "1970")
-        #expect(date.formatted(style.year(.padded(2))) == "70")
+        #expect(date.formatted(style.year(.padded(2))).filter(\.isNumber).count == 2)
         #expect(date.formatted(style.year(.padded(3))) == "1970")
         #expect(date.formatted(style.year(.padded(999))) == "0000001970")
 
@@ -1849,3 +1852,5 @@ private struct TestDateVerbatimStyleDiscreteConformance {
             ])
     }
 }
+
+#endif // ICU

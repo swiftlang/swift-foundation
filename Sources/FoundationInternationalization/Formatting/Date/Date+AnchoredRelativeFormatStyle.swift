@@ -14,6 +14,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 // MARK: Date.AnchoredRelativeFormatStyle
@@ -22,7 +23,7 @@ internal import _FoundationICU
 extension Date {
     /// A relative format style that is detached from the system time, and instead
     /// formats an anchor date relative to the format input.
-    public struct AnchoredRelativeFormatStyle : Codable, Hashable, Sendable {
+    public struct AnchoredRelativeFormatStyle : Hashable, Sendable {
         public typealias Presentation = Date.RelativeFormatStyle.Presentation
         public typealias UnitsStyle = Date.RelativeFormatStyle.UnitsStyle
         public typealias Field = Date.RelativeFormatStyle.Field
@@ -274,3 +275,10 @@ extension Date {
         }
     }
 }
+
+#if !hasFeature(Embedded)
+@available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+extension Date.AnchoredRelativeFormatStyle : Codable {}
+#endif // !hasFeature(Embedded)
+
+#endif // ICU

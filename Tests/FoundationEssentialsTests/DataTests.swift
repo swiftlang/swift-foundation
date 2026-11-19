@@ -414,6 +414,7 @@ private final class DataTests {
         }
         expectEmptyRepresentation(data)
         #expect(data.count == 0)
+        #expect(capacity(data) == 0)
 
         data = Data()
         try? data.insert(addingCount: 1, at: 0) {
@@ -460,6 +461,12 @@ private final class DataTests {
         expectSliceIfLegacyABI(data)
         #expect(data.count == 25)
         #expect(data[2] == insertedValue)
+
+        data = Data(0..<23)
+        data.insert(addingCount: 20, at: 20) { _ in
+            // Insert nothing
+        }
+        #expect(unslicedCount(data) == data.count)
     }
 
     @Test func insertWithRawSpan() {
@@ -1210,7 +1217,7 @@ private final class DataTests {
     @Test func appendToSlicedInlineSlicesWithOutputRawSpan() {
         let appendedValue: UInt8 = (7..<252).randomElement()!
 
-        let data = Data(0..<100)
+        var data = Data(0..<100)
         #expect(data.count <= capacity(data))
         var slice = data[20..<80]
         #expect(slice.count <= capacity(slice))
@@ -1225,6 +1232,14 @@ private final class DataTests {
             $0.append(appendedValue)
         }
         #expect(slice.last == appendedValue)
+
+        data = Data(repeating: 1, count: 32)[0 ..< 16]
+        data.append(addingCount: 24) { span in
+            for _ in 0..<24 { span.append(2) }
+        }
+        #expect(data.count == 40)
+        #expect(unslicedCount(data) <= capacity(data))
+        data.append(contentsOf: Data(repeating: 3, count: 8))
     }
 
     @Test func appendWithOutputRawSpanExtendSlice() {
@@ -4005,6 +4020,19 @@ private func capacity(_ data: consuming Data) -> Int {
     }
     #else
     data._representation._storage.capacity
+    #endif
+}
+
+private func unslicedCount(_ data: Data) -> Int {
+    #if DATA_LEGACY_ABI
+    switch data._representation {
+    case .empty: 0
+    case .inline(let inline): inline.count
+    case .slice(let slice): slice.storage.length
+    case .large(let slice): slice.storage.length
+    }
+    #else
+    data._representation._storage.length
     #endif
 }
 

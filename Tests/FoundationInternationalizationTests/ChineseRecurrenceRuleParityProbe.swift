@@ -19,6 +19,8 @@ import Testing
 @testable import FoundationEssentials
 #endif
 
+#if ICU
+
 @Suite("Chinese RecurrenceRule Parity Probe")
 private struct ChineseRecurrenceRuleParityProbe {
 
@@ -170,3 +172,5 @@ private struct ChineseRecurrenceRuleParityProbe {
         #expect(failures.isEmpty, "\(failures.count) failures: \(failures.prefix(10))")
     }
 }
+
+#endif // ICU

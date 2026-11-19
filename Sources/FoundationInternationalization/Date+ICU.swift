@@ -13,6 +13,7 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
 /// Internal extensions on Date, for interop with ICU.
@@ -38,3 +39,5 @@ extension Date {
         self = Date(timeIntervalSince1970: udate / 1000)
     }
 }
+
+#endif // ICU

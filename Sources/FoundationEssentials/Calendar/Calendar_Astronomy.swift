@@ -10,12 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 // Below is for sin/cos
 
 #if canImport(Darwin)
-internal import os
+import Darwin
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #elseif canImport(Glibc)
@@ -297,5 +295,3 @@ internal enum _CalendarAstronomy {
         nthNewMoon(numberOfNewMoonAtOrAfter(moment) - 1)
     }
 }
-
-#endif // !hasFeature(Embedded)

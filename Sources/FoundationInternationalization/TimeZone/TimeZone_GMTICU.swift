@@ -14,9 +14,10 @@
 import FoundationEssentials
 #endif
 
+#if ICU
 internal import _FoundationICU
 
-#if !FOUNDATION_FRAMEWORK
+#if !FOUNDATION_FRAMEWORK && !hasFeature(Embedded)
 @_dynamicReplacement(for: _timeZoneGMTClass())
 private func _timeZoneGMTClass_localized() -> _TimeZoneProtocol.Type {
     return _TimeZoneGMTICU.self
@@ -117,3 +118,5 @@ internal final class _TimeZoneGMTICU : _TimeZoneProtocol, @unchecked Sendable {
         return result
     }
 }
+
+#endif // ICU

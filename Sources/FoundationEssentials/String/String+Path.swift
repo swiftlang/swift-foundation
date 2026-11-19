@@ -346,7 +346,7 @@ extension String {
 
 // MARK: - Filesystem String Extensions
 
-#if !NO_FILESYSTEM && !hasFeature(Embedded)
+#if !NO_FILESYSTEM
     
     internal static func homeDirectoryPath() -> String {
         #if os(Windows)
@@ -649,6 +649,10 @@ extension String {
             defer { CloseHandle(hFile) }
 
             let dwLength: DWORD = GetFinalPathNameByHandleW(hFile, nil, 0, VOLUME_NAME_DOS)
+            // Opening the handle can succeed for paths that have no DOS name, such as `\\.\NUL` or a volume without a drive letter.
+            guard dwLength > 0 else {
+                return nil
+            }
             return withUnsafeTemporaryAllocation(of: WCHAR.self, capacity: Int(dwLength)) {
                 guard GetFinalPathNameByHandleW(hFile, $0.baseAddress, dwLength, VOLUME_NAME_DOS) == dwLength - 1 else {
                     return nil
@@ -671,6 +675,9 @@ extension String {
                 buffer.initialize(repeating: 0)
                 defer { buffer.deinitialize() }
                 var fullLength = Platform.copyCString(dst: buffer.baseAddress!, src: fsPtr, size: FileManager.MAX_PATH_SIZE) + 1 // Includes null byte
+                if fullLength > buffer.count {
+                    return nil
+                }
                 return withUnsafeTemporaryAllocation(of: CChar.self, capacity: FileManager.MAX_PATH_SIZE) { linkBuffer -> String? in
                     linkBuffer.initialize(repeating: 0)
                     defer { linkBuffer.deinitialize() }
@@ -752,7 +759,7 @@ extension String {
         return result._standardizingPath
     }
 
-#endif // !NO_FILESYSTEM && !hasFeature(Embedded)
+#endif // !NO_FILESYSTEM
 
 }
 

@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // `JSONPrimitive` is the JSON analog of `XMLPlistPrimitive` / `BPlistPrimitive`: a `~Escapable` cursor into a single node of a structurally-parsed JSON payload that allows faster access to random elements within it.
 
@@ -62,7 +61,7 @@ internal enum JSONPrimitiveError: Error, Sendable {
 internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
     /// Borrowed reference to the parsed JSON map.
-    let map: Ref<JSONMap<UniqueMapRecords>>
+    let map: Ref<JSONMap>
 
     /// The source JSON bytes, borrowed from the document's data lock.
     let jsonBytes: RawSpan
@@ -71,12 +70,12 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
     let mapOffset: Int
 
     @_lifetime(borrow map, copy jsonBytes)
-    init(map: borrowing JSONMap<UniqueMapRecords>, jsonBytes: RawSpan, mapOffset: Int) {
+    init(map: borrowing JSONMap, jsonBytes: RawSpan, mapOffset: Int) {
         self = .init(mapRef: Ref(map), jsonBytes: jsonBytes, mapOffset: mapOffset)
     }
 
     @_lifetime(copy mapRef, copy jsonBytes)
-    init(mapRef: consuming Ref<JSONMap<UniqueMapRecords>>, jsonBytes: RawSpan, mapOffset: Int) {
+    init(mapRef: consuming Ref<JSONMap>, jsonBytes: RawSpan, mapOffset: Int) {
         self.map = mapRef
         self.jsonBytes = jsonBytes
         self.mapOffset = mapOffset
@@ -176,14 +175,14 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
     /// Iterator over the children of a `.array` primitive.
     internal struct ArrayIterator: ~Escapable, ~Sendable {
-        let map: Ref<JSONMap<UniqueMapRecords>>
+        let map: Ref<JSONMap>
         let jsonBytes: RawSpan
         let count: Int
         var currentOffset: Int
         var elementsRemaining: Int
 
         @_lifetime(copy mapRef, copy jsonBytes)
-        init(mapRef: Ref<JSONMap<UniqueMapRecords>>, jsonBytes: RawSpan, startOffset: Int, count: Int) {
+        init(mapRef: Ref<JSONMap>, jsonBytes: RawSpan, startOffset: Int, count: Int) {
             self.map = mapRef
             self.jsonBytes = jsonBytes
             self.count = count
@@ -217,7 +216,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
 
     /// Iterator over key-value pairs of an `.object` primitive, in source order. `KeyValuePair` records offsets; primitive views are constructed on demand via `key(of:)` / `value(of:)`.
     internal struct DictionaryIterator: ~Escapable, ~Sendable {
-        let map: Ref<JSONMap<UniqueMapRecords>>
+        let map: Ref<JSONMap>
         let jsonBytes: RawSpan
         let count: Int
         var currentOffset: Int
@@ -229,7 +228,7 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         }
 
         @_lifetime(copy mapRef, copy jsonBytes)
-        init(mapRef: Ref<JSONMap<UniqueMapRecords>>, jsonBytes: RawSpan, startOffset: Int, count: Int) {
+        init(mapRef: Ref<JSONMap>, jsonBytes: RawSpan, startOffset: Int, count: Int) {
             self.map = mapRef
             self.jsonBytes = jsonBytes
             self.count = count
@@ -276,27 +275,31 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         let (bytes, hasEscapes) = try self.stringBytes
         return try Self.decodeStringPayload(bytes: bytes, hasEscapes: hasEscapes, json5Mode: json5Mode)
     }
-    
+
     internal static func decodeStringPayload(bytes: borrowing Span<UInt8>, hasEscapes: Bool, json5Mode: Bool) throws -> String {
-        if !hasEscapes {
-            // RFC-8259 forbids unescaped control characters (0x00-0x1F) inside string literals. Scanner leniency means we validate here.
-            // TODO: the pre-scan for control chars is an additional O(n) cost before we validate UTF-8; it'd be nice to merge this with either the scanner pass or the UTF8 validation pass.
-            for byte in bytes where byte < 0x20 {
-                throw JSONPrimitiveError.corruptedValue("string: unescaped control character")
-            }
-            guard let utf8 = try? UTF8Span(validating: copy bytes) else {
+        try withDecodedStringBytes(bytes: bytes, hasEscapes: hasEscapes, json5Mode: json5Mode) { decoded in
+            guard let utf8 = try? UTF8Span(validating: decoded) else {
                 throw JSONPrimitiveError.corruptedValue("string: invalid UTF-8")
             }
             return String(copying: utf8)
+        }
+    }
+
+    /// Runs `body` with the string's bytes after rejecting unescaped control characters and resolving escape sequences. The bytes are not validated as UTF-8; that is the caller's responsibility. The span is only valid for the duration of `body`.
+    internal static func withDecodedStringBytes<R>(bytes: borrowing Span<UInt8>, hasEscapes: Bool, json5Mode: Bool, _ body: (borrowing Span<UInt8>) throws -> R) throws -> R {
+        if !hasEscapes {
+            // RFC-8259 forbids unescaped control characters (0x00-0x1F) inside string literals. Scanner leniency means we validate here.
+            // TODO: the pre-scan for control chars is an additional O(n) cost before we validate UTF-8; it'd be nice to merge this with either the scanner pass or the UTF8 validation pass.
+            for i in bytes.indices where bytes[i] < 0x20 {
+                throw JSONPrimitiveError.corruptedValue("string: unescaped control character")
+            }
+            return try body(bytes)
         }
         // Every escape sequence shrinks the byte count (single-byte escapes 2→1; `\uXXXX` ≤3 UTF-8 for 6 source; surrogate pair 4 UTF-8 for 12 source), so `bytes.count` is a safe upper bound on the output.
         let bytesCopy = copy bytes
         return try withTemporaryAllocation(of: UInt8.self, capacity: bytesCopy.count) { out throws in
             try decodeEscapedString(source: bytesCopy, json5Mode: json5Mode, into: &out)
-            guard let utf8 = try? UTF8Span(validating: out.span) else {
-                throw JSONPrimitiveError.corruptedValue("string: invalid UTF-8")
-            }
-            return String(copying: utf8)
+            return try body(out.span)
         }
     }
 
@@ -544,7 +547,8 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         var value: UInt64 = 0
         var overflow = false
         let postHexPrefixSpan = bytes.extracting(droppingFirst: 2)
-        for c in postHexPrefixSpan {
+        for i in postHexPrefixSpan.indices {
+            let c = postHexPrefixSpan[i]
             let digit: UInt64
             switch c {
             case _asciiNumbers: digit = UInt64(c &- _asciiNumbers.lowerBound)
@@ -686,7 +690,8 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
     /// Only reached when `strtod` returned zero, so folding it into the mantissa walk would pay per-byte bookkeeping on every number to save a walk on a path almost nothing takes. Covered by `test_underflowToZero`.
     @inline(__always)
     private static func isTrueZero(_ bytes: borrowing Span<UInt8>) -> Bool {
-        for b in bytes {
+        for i in bytes.indices {
+            let b = bytes[i]
             if b >= UInt8(ascii: "1") && b <= UInt8(ascii: "9") { return false }
             if b == ._e || b == ._E { return true }
         }
@@ -777,6 +782,5 @@ internal struct JSONPrimitive: ~Escapable, ~Sendable {
         return try makeDecimalLiteral(validating: postSignSpan)
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

@@ -23,6 +23,8 @@ import TestSupport
 @testable import FoundationInternationalization
 #endif // FOUNDATION_FRAMEWORK
 
+#if ICU
+
 @Suite("Locale.Language.Components", .tags(.locale))
 private struct LocaleLanguageComponentsTests {
 
@@ -112,3 +114,5 @@ private struct LocaleLanguageTests {
         verify(lang1: "und-PL", lang2: "pl-Latn-PL", isEqual: true)
     }
 }
+
+#endif // ICU

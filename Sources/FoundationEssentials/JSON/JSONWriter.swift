@@ -154,14 +154,11 @@ internal struct JSONWriter: ~Copyable {
     }
 
     @inline(__always)
-    mutating func serializeStringContents(_ str: String) -> Int {
-        let unquotedStringStart = self.bytes.count
+    mutating func serializeStringContents(_ str: String) {
         var mutStr = str
         mutStr.withUTF8 {
             serializeStringContents(utf8: $0)
         }
-        let unquotedStringLength = unquotedStringStart.distance(to: self.bytes.count)
-        return unquotedStringLength
     }
 
     @inline(__always)

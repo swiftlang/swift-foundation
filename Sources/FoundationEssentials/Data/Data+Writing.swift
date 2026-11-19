@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #if !NO_FILESYSTEM
@@ -878,5 +876,3 @@ extension Data {
 #endif
     }
 }
-
-#endif // !hasFeature(Embedded)

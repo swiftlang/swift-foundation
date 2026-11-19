@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Embedded Swift does not need the deprecated Data API.
 #if !hasFeature(Embedded)
 
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)

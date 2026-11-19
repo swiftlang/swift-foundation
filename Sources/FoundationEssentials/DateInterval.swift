@@ -167,9 +167,8 @@ public struct DateInterval : Comparable, Hashable, Sendable {
     }
 }
 
-#if !hasFeature(Embedded)
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         return "\(start) to \(end)"
     }
@@ -177,7 +176,11 @@ extension DateInterval : CustomStringConvertible, CustomDebugStringConvertible, 
     public var debugDescription: String {
         return description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
+extension DateInterval : CustomReflectable {
     public var customMirror: Mirror {
         var c: [(label: String?, value: Any)] = []
         c.append((label: "start", value: start))
@@ -232,7 +235,6 @@ extension NSDateInterval : _HasCustomAnyHashableRepresentation {
 }
 #endif
 
-// Codable is unavailable in Embedded Swift.
 #if !hasFeature(Embedded)
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
 extension DateInterval : Codable {}

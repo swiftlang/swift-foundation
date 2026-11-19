@@ -2879,7 +2879,8 @@ private let storageMatrixFixtures: [StorageMatrixFixture] = {
     return [empty] + nonEmpty + [universal] + inverses
 }()
 
-@Suite("Character Set: Set Algebra Across Storage Kinds", .tags(.characterSet))
+// The matrix produces hundreds of CPU-heavy cases, so they're serialized to avoid blocking concurrently running tests that need threads.
+@Suite("Character Set: Set Algebra Across Storage Kinds", .serialized, .tags(.characterSet))
 private struct CharacterSetStorageMatrixTests {
 
     @Test(arguments: storageMatrixFixtures)

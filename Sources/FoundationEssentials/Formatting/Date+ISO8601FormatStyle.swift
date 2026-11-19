@@ -540,7 +540,6 @@ extension RegexComponent where Self == Date.ISO8601FormatStyle {
 }
 #endif
 
-// Codable is unavailable in Embedded Swift.
 @_unavailableInEmbedded
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date.ISO8601FormatStyle.TimeZoneSeparator : Codable {}

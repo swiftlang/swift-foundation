@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 /// Adopted by types which can provide a file system representation, for use in reading paths on disk.
 internal protocol FileSystemRepresentable: ~Copyable {
     func withFileSystemRepresentation<R>(_ block: (UnsafePointer<CChar>?) throws -> R) rethrows -> R
@@ -44,5 +42,3 @@ extension String: FileSystemRepresentable {
         nil
     }
 }
-
-#endif // !hasFeature(Embedded)

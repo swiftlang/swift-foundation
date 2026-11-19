@@ -19,6 +19,8 @@ import Testing
 @testable import Foundation
 #endif
 
+#if ICU
+
 @Suite("Decimal (Locale)")
 private struct DecimalLocaleTests {
     
@@ -82,3 +84,5 @@ private struct DecimalLocaleTests {
         #expect(fr == "-123456,789")
     }
 }
+
+#endif // ICU

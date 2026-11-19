@@ -4,7 +4,7 @@
 ## Topics
 
 
-### Accessing the configuratoin
+### Accessing the configuration
 
 - ``encodingConfiguration``
 

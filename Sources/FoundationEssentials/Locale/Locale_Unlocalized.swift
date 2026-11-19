@@ -95,11 +95,9 @@ internal final class _LocaleUnlocalized : _LocaleProtocol, @unchecked Sendable {
         "001"
     }
     
-#if FOUNDATION_FRAMEWORK
     var exemplarCharacterSet: CharacterSet? {
         LocaleCache.cache.fixed(identifier).exemplarCharacterSet
     }
-#endif
     
     var calendar: Calendar {
         Calendar.current

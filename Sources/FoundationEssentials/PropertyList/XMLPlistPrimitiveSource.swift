@@ -12,7 +12,6 @@
 
 #if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK || !os(macOS)
 
 // MARK: - XMLPlistPrimitiveSource
 
@@ -202,6 +201,5 @@ struct XMLPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEvent
         }
     }
 }
-#endif // FOUNDATION_FRAMEWORK || !os(macOS)
 
 #endif // !hasFeature(Embedded)

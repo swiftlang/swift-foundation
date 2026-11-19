@@ -395,10 +395,10 @@ extension Decimal {
     }
 }
 
-// Parsing a decimal from a string uses Character iteration, which is unavailable in Embedded Swift.
-@_unavailableInEmbedded
 extension Decimal {
     // For testing
+    // TODO: Replace with `@available(Unicode)` when the standard library defines the Unicode availability domain (https://github.com/swiftlang/swift/pull/85324).
+    @_unavailableInEmbedded
     internal static func _decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
         do {
             let (result, _, processedCodeUnits) = try Self.__decimal(
@@ -413,6 +413,8 @@ extension Decimal {
     }
 #if !FOUNDATION_FRAMEWORK
     // Make this function available for SwiftCorelibsFoundation
+    // TODO: Replace with `@available(Unicode)` when the standard library defines the Unicode availability domain (https://github.com/swiftlang/swift/pull/85324).
+    @_unavailableInEmbedded
     @_spi(SwiftCorelibsFoundation)
     public static func decimal(from stringView: String.UTF8View, decimalSeparator: String.UTF8View, matchEntireString: Bool) -> (result: Decimal?, processedLength: Int) {
         _decimal(from: stringView, decimalSeparator: decimalSeparator, matchEntireString: matchEntireString)
@@ -427,11 +429,56 @@ extension Decimal {
         case quirkyZero(processedCodeUnits: Int) // Compatibility quirk.
     }
 
+    // Parses a decimal whose separator is a single ASCII byte. This does not use the Unicode data tables.
+    internal static func __decimal(
+        from utf8: Span<UInt8>,
+        asciiDecimalSeparator: UInt8,
+        matchEntireString: Bool
+    ) throws(_ParseError) -> (result: Decimal, inexact: Bool, processedCodeUnits: Int) {
+        try __decimal(from: utf8, matchEntireString: matchEntireString) { utf8, index in
+            index != utf8.count && utf8[unchecked: index] == asciiDecimalSeparator ? index &+ 1 : nil
+        }
+    }
+
+    // Parses a decimal whose separator can be any `Character`. Matching a separator that is not ASCII uses `Character` iteration, which needs the Unicode data tables.
+    // TODO: Replace with `@available(Unicode)` when the standard library defines the Unicode availability domain (https://github.com/swiftlang/swift/pull/85324).
+    @_unavailableInEmbedded
     internal static func __decimal(
         from utf8: Span<UInt8>,
         prevalidatedUTF8: Bool = false,
         decimalSeparator: UTF8Span,
         matchEntireString: Bool
+    ) throws(_ParseError) -> (result: Decimal, inexact: Bool, processedCodeUnits: Int) {
+        let separator = decimalSeparator.span
+        if separator.count == 1 && (separator[unchecked: 0] < 0x80) {
+            return try __decimal(from: utf8, asciiDecimalSeparator: separator[unchecked: 0], matchEntireString: matchEntireString)
+        }
+        return try __decimal(from: utf8, matchEntireString: matchEntireString) { utf8, index throws(_ParseError) in
+            let count = utf8.count
+            do throws(UTF8.ValidationError) {
+                var needle = decimalSeparator.makeCharacterIterator()
+                var haystack = prevalidatedUTF8
+                    ? UTF8Span(unchecked: utf8.extracting(unchecked: index..<count))
+                        .makeCharacterIterator()
+                    : try UTF8Span(validating: utf8.extracting(unchecked: index..<count))
+                        .makeCharacterIterator()
+                while let n = needle.next() {
+                    guard let h = haystack.next(), n == h else {
+                        return nil
+                    }
+                }
+                return index + haystack.currentCodeUnitOffset
+            } catch {
+                throw .invalid
+            }
+        }
+    }
+
+    // `matchDecimalSeparator` returns the index after the decimal separator that starts at the given index, or `nil` if there is no separator there.
+    private static func __decimal(
+        from utf8: Span<UInt8>,
+        matchEntireString: Bool,
+        matchDecimalSeparator: (borrowing Span<UInt8>, Int) throws(_ParseError) -> Int?
     ) throws(_ParseError) -> (result: Decimal, inexact: Bool, processedCodeUnits: Int) {
         let count = utf8.count
         guard count > 0 else { throw .empty }
@@ -446,21 +493,6 @@ extension Decimal {
         func skipWhitespaces(from index: Int) -> Int {
             var i = index
             while i != count && isWhitespace(utf8[unchecked: i]) {
-                i &+= 1
-            }
-            return i
-        }
-
-        func containsASCII(
-            at index: Int,
-            _ needle: Span<UInt8>
-        ) -> Int? {
-            var i = index
-            for j in 0..<needle.count {
-                let codeUnit = needle[unchecked: j]
-                guard i != count, codeUnit == utf8[unchecked: i] else {
-                    return nil
-                }
                 i &+= 1
             }
             return i
@@ -569,31 +601,7 @@ extension Decimal {
             index &+= 1
         }
         // Get the decimal separator.
-        let i: Int?
-        let separator = decimalSeparator.span
-        if separator.count == 1 && (separator[unchecked: 0] < 0x80) {
-            i = containsASCII(at: index, separator)
-        } else {
-            do throws(UTF8.ValidationError) {
-                var needle = decimalSeparator.makeCharacterIterator()
-                var haystack = prevalidatedUTF8
-                    ? UTF8Span(unchecked: utf8.extracting(unchecked: index..<count))
-                        .makeCharacterIterator()
-                    : try UTF8Span(validating: utf8.extracting(unchecked: index..<count))
-                        .makeCharacterIterator()
-                var unmatched = false
-                while let n = needle.next() {
-                    guard let h = haystack.next(), n == h else {
-                        unmatched = true
-                        break
-                    }
-                }
-                i = unmatched ? nil : index + haystack.currentCodeUnitOffset
-            } catch {
-                throw .invalid
-            }
-        }
-        if let i {
+        if let i = try matchDecimalSeparator(utf8, index) {
             index = i
             // Continue building the mantissa.
             while index != utf8.count, let digitValue = digit(utf8[unchecked: index]) {
@@ -707,7 +715,7 @@ extension Decimal {
         do throws(_ParseError) {
             let (result, _, processedCodeUnits) = try Self.__decimal(
                 from: utf8,
-                decimalSeparator: ".".utf8Span,
+                asciiDecimalSeparator: UInt8(ascii: "."),
                 matchEntireString: matchEntireString)
             return .success(result, processedLength: processedCodeUnits)
         } catch .underflow, .overflow, .quirkyZero {

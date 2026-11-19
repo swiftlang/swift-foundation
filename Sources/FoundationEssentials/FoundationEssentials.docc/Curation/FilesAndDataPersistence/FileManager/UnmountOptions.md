@@ -3,15 +3,15 @@
 
 ## Topics
 
-### Initializers
 
-- ``init(rawValue:)``
+### Working with unmount behaviors
 
-### Instance Properties
-
-- ``rawValue``
-
-### Type Properties
 
 - ``allPartitionsAndEjectDisk``
 - ``withoutUI``
+
+### Working with raw values
+
+- ``init(rawValue:)``
+- ``rawValue``
+

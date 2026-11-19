@@ -41,10 +41,6 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     var variantCode: String? { get }
     var regionCode: String? { get }
     
-#if FOUNDATION_FRAMEWORK
-    var exemplarCharacterSet: CharacterSet? { get }
-#endif
-
     var calendar: Calendar { get }
     var calendarIdentifier: Calendar.Identifier { get }
     var collationIdentifier: String? { get }
@@ -96,6 +92,8 @@ package protocol _LocaleProtocol : AnyObject, Sendable, CustomDebugStringConvert
     func customDateFormat(_ style: Date.FormatStyle.DateStyle) -> String?
 #endif
 #endif
+
+    var exemplarCharacterSet: CharacterSet? { get }
 }
 
 extension _LocaleProtocol {

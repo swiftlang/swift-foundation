@@ -14,6 +14,8 @@
 import FoundationEssentials
 #endif
 
+#if ICU
+
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension Date {
     /// A type that represents a fixed date format string using string interpolation.
@@ -41,7 +43,16 @@ extension String {
             return String(repeating: "'", count: 2 * count)
         }
 
-        return "'\(self.replacing("'", with: "''"))'"
+        var result = "'"
+        for character in self {
+            if character == "'" {
+                result += "''"
+            } else {
+                result.append(character)
+            }
+        }
+        result += "'"
+        return result
     }
 }
 
@@ -206,3 +217,5 @@ extension Date.FormatString : ExpressibleByStringInterpolation {
         }
     }
 }
+
+#endif // ICU

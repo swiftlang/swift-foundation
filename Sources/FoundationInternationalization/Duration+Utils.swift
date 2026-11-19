@@ -62,35 +62,6 @@ extension Duration {
         lhs - ((lhs / rhs) * rhs)
     }
 
-    fileprivate static func / (_ lhs: Duration, _ rhs: Int64) -> Duration {
-        // Unfortunately, division between a Duration and an
-        // Int64 is not implemented on 32 bit systems. We thus
-        // repeatedly apply a floating point division until
-        // the remainder is small enough to get a precise result.
-        // This should take no more than three iterations because
-        // Double has 52 fraction bits and Duration is 128 bits.
-        #if arch(i386) || arch(arm) || arch(arm64_32) || arch(wasm32)
-        let absSelf = abs(lhs)
-        let absDivLower = abs(rhs)
-        let absDiv = Duration(secondsComponent: 0, attosecondsComponent: absDivLower)
-        var count = Duration.zero
-        var remainder = abs(lhs)
-
-        while abs(remainder) >= absDiv {
-            count += .seconds(1e-18 * (remainder / absDiv))
-            remainder = absSelf - (count * absDivLower)
-        }
-
-        if remainder < .zero {
-            count -= .init(secondsComponent: 0, attosecondsComponent: 1)
-        }
-
-        return (lhs < .zero) != (rhs < .zero) ? .zero - count : count
-        #else
-        return lhs / (rhs as any BinaryInteger)
-        #endif
-    }
-
     private func roundedTowardZero(toMultipleOf divisor: Duration) -> (duration: Duration, count: Duration) {
         let absSelf = abs(self)
         let (s, _) = absSelf.components

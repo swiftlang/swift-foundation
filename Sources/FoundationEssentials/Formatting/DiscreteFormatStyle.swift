@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
-
 /// A format style that transforms a continuous input into a discrete output and provides
 /// information about its discretization boundaries.
 ///
@@ -288,5 +286,3 @@ extension Duration {
         self + .init(secondsComponent: 0, attosecondsComponent: 1)
     }
 }
-
-#endif // !hasFeature(Embedded)

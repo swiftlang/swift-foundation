@@ -444,6 +444,20 @@ public struct Calendar : Hashable, Equatable, Sendable {
         _calendar = CalendarCache.cache.fixed(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
     }
 
+#if !FOUNDATION_FRAMEWORK
+    /// For use by the `NSCalendar` implementation in swift-corelibs-foundation only.
+    @_spi(SwiftCorelibsFoundation)
+    public init(_identifier identifier: Calendar.Identifier, locale: Locale?, timeZone: TimeZone?, firstWeekday: Int?, minimumDaysInFirstWeek: Int?, gregorianStartDate: Date?) {
+        self.init(identifier: identifier, locale: locale, timeZone: timeZone, firstWeekday: firstWeekday, minimumDaysInFirstWeek: minimumDaysInFirstWeek, gregorianStartDate: gregorianStartDate)
+    }
+
+    /// For use by the `NSCalendar` implementation in swift-corelibs-foundation only.
+    @_spi(SwiftCorelibsFoundation)
+    public var _gregorianStartDate: Date? {
+        _calendar.gregorianStartDate
+    }
+#endif
+
     internal init(inner: any _CalendarProtocol) {
         _calendar = inner
     }
@@ -707,7 +721,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
     /// Same as `dateComponents:from:` but uses the more efficient bitset form of ComponentSet.
     /// Prefixed with `_` to avoid ambiguity at call site with the `Set<Component>` method.
-    internal func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
+    package func _dateComponents(_ components: ComponentSet, from date: Date) -> DateComponents {
         var dc = _calendar.dateComponents(components, from: date.capped)
 
         // Fill out the Calendar field of dateComponents, if requested.
@@ -1611,17 +1625,20 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 }
 
-#if !hasFeature(Embedded)
 @available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
-extension Calendar : CustomDebugStringConvertible, CustomStringConvertible, CustomReflectable {
+extension Calendar : CustomDebugStringConvertible, CustomStringConvertible {
     public var description: String {
-        return "\(identifier) (\(_calendar)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
+        return "\(identifier.debugDescription) (\(_calendar.debugDescription)) locale: \(locale?.identifier ?? "") time zone: \(timeZone) firstWeekday: \(firstWeekday) minDaysInFirstWeek: \(minimumDaysInFirstWeek)"
     }
 
     public var debugDescription: String {
         description
     }
+}
 
+#if !hasFeature(Embedded)
+@available(macOS 10.10, iOS 8.0, watchOS 2.0, tvOS 9.0, *)
+extension Calendar : CustomReflectable {
     public var customMirror: Mirror {
         let c: [(label: String?, value: Any)] = [
           ("identifier", identifier),

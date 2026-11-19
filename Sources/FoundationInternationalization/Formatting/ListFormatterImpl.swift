@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !FOUNDATION_LIST_FORMAT_ICU
+#if ICU && !FOUNDATION_LIST_FORMAT_ICU
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -513,7 +513,6 @@ internal final class ListFormatterImpl: Sendable {
     /// without materializing the wrapped strings.
     @inline(__always)
     private func shouldWrapBidi(_ item: String) -> Bool {
-        var item = item
         // Everything that can disturb the list — strong-RTL characters, Arabic
         // numbers, and (in an RTL list) anything but a Latin letter — is either
         // outside ASCII or trivially classified by byte, so branch on the cheap
@@ -655,4 +654,4 @@ private func _thaiNeedsSpace(adjacentScalar: Unicode.Scalar?) -> Bool {
     return !(0x0E00...0x0E7F).contains(s.value)
 }
 
-#endif // !FOUNDATION_LIST_FORMAT_ICU
+#endif // ICU && !FOUNDATION_LIST_FORMAT_ICU

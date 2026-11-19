@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ICU
 internal import _FoundationICU
 
 #if canImport(FoundationEssentials)
@@ -86,3 +87,5 @@ extension Unicode.Scalar {
         .popDirectionalIsolate,// 22 U_POP_DIRECTIONAL_ISOLATE    (PDI)
     ]
 }
+
+#endif // ICU
