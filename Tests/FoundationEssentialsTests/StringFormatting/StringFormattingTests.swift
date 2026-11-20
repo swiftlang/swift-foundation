@@ -163,7 +163,10 @@ struct StringFormattingTests {
         checkFormat("%f", 0.0, expectation: "0.000000")
         checkFormat("%f", -0.0, expectation: "-0.000000")
         checkFormat("%.2f", 2.675, expectation: "2.67")
+        #if !os(Windows)
+        // Different versions of Windows have different rounding behavior so setting a single expectation is unreliable
         checkFormat("%.0f", 2.5, expectation: "2")
+        #endif
         checkFormat("%.0f", 3.5, expectation: "4")
         checkFormat("%#.0f", 2.0, expectation: "2.")
         checkFormat("%10.3f", 3.14159, expectation: "     3.142")
