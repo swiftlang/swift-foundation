@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-
 /// Provides storage for `Element` that does not move when growing.
 ///
 /// `StableStorage` uses fixed chunks of storage as needed. Free space in an existing chunk is used when available instead of making a new allocation.
@@ -74,5 +72,3 @@ internal struct StableStorage<Element>: ~Copyable {
         freeIndices.append(index)
     }
 }
-
-#endif

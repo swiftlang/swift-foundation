@@ -12,8 +12,6 @@
 
 /// IntrusiveHashTable provides a hash table which handles collisions using a linked list that is stored (intrudes) on user-supplied storage.
 
-#if FOUNDATION_FRAMEWORK
-
 // Hash table which handles collisions using a linked list stored (intruding) inside the elements themselves.
 internal protocol IntrusiveHashTable<Entry>: ~Copyable {
     associatedtype Entry: IntrusiveHashEntry
@@ -97,5 +95,3 @@ internal protocol IntrusiveHashEntry {
     
     static func hash(_ key: Key) -> UInt64
 }
-
-#endif

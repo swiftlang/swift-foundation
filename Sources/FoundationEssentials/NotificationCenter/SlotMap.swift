@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-
 // MARK: - SlotMap
 
 /// SlotMap is a contiguous block of memory storing E.
@@ -194,5 +192,3 @@ extension SlotMap {
         }
     }
 }
-
-#endif

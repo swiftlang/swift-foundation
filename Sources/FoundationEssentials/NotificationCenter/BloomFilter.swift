@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-
 internal import Synchronization
 
 // A bloom filter is a probabilistic data structure designed to quickly check for element existence.
@@ -94,5 +92,3 @@ internal struct InlineBloomFilter<let wordCount: Int>: ~Copyable, Sendable {
         insertCount.store(newInsertCount, ordering: .relaxed)
     }
 }
-
-#endif

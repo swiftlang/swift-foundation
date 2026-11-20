@@ -28,51 +28,6 @@ extension NotificationCenter {
 
 internal import Synchronization
 
-// Dictionary storage with automatic key generation
-private struct AutoDictionary<Value> {
-    private var storage: [UInt64: Value] = [:]
-    private var nextKey: UInt64 = 0
-    private var salvagedKeys: [UInt64] = []
-    
-    // Effectively O(1), worst case O(n)
-    mutating func insert(_ value: Value) -> UInt64 {
-        guard storage.count <= UInt64.max else { fatalError("Exceeded maximum storage size") }
-
-        var key = salvagedKeys.popLast()
-        while(key != nil) {
-            if let key, storage[key] == nil {
-                storage[key] = value
-                return key
-            } else {
-                key = salvagedKeys.popLast()
-            }
-        }
-        
-        while(storage[nextKey] != nil) {
-            if nextKey == UInt64.max { nextKey = 0 }
-            nextKey += 1
-        }
-        
-        storage[nextKey] = value
-        return nextKey
-    }
-    
-    mutating func remove(_ key: UInt64) {
-        if(storage[key] != nil) {
-            storage[key] = nil
-            salvagedKeys.append(key)
-        }
-    }
-
-    func count() -> Int {
-        return storage.count
-    }
-    
-    var values: [Value] {
-        return storage.compactMap(\.value)
-    }
-}
-
 private let _defaultCenter = NotificationCenter()
 
 private struct MessageBox {
@@ -81,78 +36,76 @@ private struct MessageBox {
 }
 
 open class NotificationCenter: @unchecked Sendable {
-    private let registrar: Mutex<[String? /* Notification name */: [ObjectIdentifier? /* object */ : AutoDictionary<@Sendable (MessageBox) -> Void>]]>
+    private let registrar: NotificationRegistrar
     internal lazy var _actorQueueManager = _NotificationCenterActorQueueManager()
     
     public required init() {
-        registrar = .init([:])
+        registrar = .init()
     }
     
     open class var `default`: NotificationCenter {
         return _defaultCenter
     }
 
+    // TODO: remove or refactor the @_spi(SwiftCorelibsFoundation) methods
+    
     // 'M' may be a concrete NotificationCenter message or a Notification passed via swift-corelibs-foundation
     @_spi(SwiftCorelibsFoundation) public func _addObserver<M>(_ name: String?, object: Any?, using block: @escaping @Sendable (M) -> Void) -> _NotificationObserverToken {
         nonisolated(unsafe) let object = object
-        let objectId = object.map { ObjectIdentifier($0 as AnyObject) }
+        let objectPtr = object.map { UnsafeRawPointer(Unmanaged.passUnretained($0 as AnyObject).toOpaque()) }
         
-        let token = registrar.withLock { _registrar in
-            return _registrar[name, default: [:]][objectId, default: AutoDictionary<@Sendable (MessageBox) -> Void>()].insert { box in
-                block(box.message as! M)
-            }
+        let token = registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: objectPtr) { notification in
+            block(notification as! M)
         }
-        
-        return _NotificationObserverToken(token: token, name: name, objectId: objectId)
+
+        return _NotificationObserverToken(token: 0, name: name, objectId: objectId)
     }
     
     @_spi(SwiftCorelibsFoundation) public func _removeObserver(_ token: _NotificationObserverToken) {
-        registrar.withLock { _registrar in
-            _registrar[token.name]?[token.objectId]?.remove(token.token)
-            
-            if _registrar[token.name]?[token.objectId]?.count() == 0 {
-                _registrar[token.name]?.removeValue(forKey: token.objectId)
-                if _registrar[token.name]?.isEmpty == true {
-                    _registrar.removeValue(forKey: token.name)
-                }
-            }
-        }
+//        registrar.withLock { _registrar in
+//            _registrar[token.name]?[token.objectId]?.remove(token.token)
+//            
+//            if _registrar[token.name]?[token.objectId]?.count() == 0 {
+//                _registrar[token.name]?.removeValue(forKey: token.objectId)
+//                if _registrar[token.name]?.isEmpty == true {
+//                    _registrar.removeValue(forKey: token.name)
+//                }
+//            }
+//        }
     }
 
     @_spi(SwiftCorelibsFoundation) public func _post<M>(_ name: String?, subject: Any?, message: M) {
-        // TODO: Darwin calls observers in the order they were added, mixing wildcard and non-wildcard observers.
-        //       It's conceivable some users rely on that ordering.
-        
-        let observers = registrar.withLock { _registrar in
-            var observers: [@Sendable (MessageBox) -> Void] = []
-            let objectId = subject.map { ObjectIdentifier($0 as AnyObject) }
-            
-            // Observers with 'name' and 'object'
-            observers.append(contentsOf: _registrar[name]?[objectId]?.values ?? [])
-            
-            // Observers with wildcard name and 'object'
-            observers.append(contentsOf: _registrar[nil]?[objectId]?.values ?? [])
-
-            if subject != nil {
-                // Observers with wildcard name and wildcard object
-                observers.append(contentsOf: _registrar[nil]?[nil]?.values ?? [])
-                
-                // Observers with 'name' and wildcard object
-                observers.append(contentsOf: _registrar[name]?[nil]?.values ?? [])
-            }
-            
-            return observers
-        }
-        
-        let messageBox = MessageBox(message: message)
-        observers.forEach { $0(messageBox) }
+//        // TODO: Darwin calls observers in the order they were added, mixing wildcard and non-wildcard observers.
+//        //       It's conceivable some users rely on that ordering.
+//        
+//        let observers = registrar.withLock { _registrar in
+//            var observers: [@Sendable (MessageBox) -> Void] = []
+//            let objectId = subject.map { ObjectIdentifier($0 as AnyObject) }
+//            
+//            // Observers with 'name' and 'object'
+//            observers.append(contentsOf: _registrar[name]?[objectId]?.values ?? [])
+//            
+//            // Observers with wildcard name and 'object'
+//            observers.append(contentsOf: _registrar[nil]?[objectId]?.values ?? [])
+//
+//            if subject != nil {
+//                // Observers with wildcard name and wildcard object
+//                observers.append(contentsOf: _registrar[nil]?[nil]?.values ?? [])
+//                
+//                // Observers with 'name' and wildcard object
+//                observers.append(contentsOf: _registrar[name]?[nil]?.values ?? [])
+//            }
+//            
+//            return observers
+//        }
+//        
+//        let messageBox = MessageBox(message: message)
+//        observers.forEach { $0(messageBox) }
     }
     
     // For testing purposes only!
     internal func isEmpty() -> Bool {
-        return registrar.withLock { _registrar in
-            _registrar.isEmpty
-        }
+        return registrar.isEmpty()
     }
     
     internal func _getActorQueueManager() -> _NotificationCenterActorQueueManager {
