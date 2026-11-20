@@ -18,6 +18,14 @@ import Foundation
 import FoundationXML
 #endif
 
+/// A `TextOutputStream` over standard error, for progress and diagnostics.
+internal struct StandardError: TextOutputStream {
+    mutating func write(_ string: String) {
+        FileHandle.standardError.write(Data(string.utf8))
+    }
+}
+internal var standardError = StandardError()
+
 enum CLDRFileError: Error, CustomStringConvertible {
     case xmlParse(URL, Error)
 

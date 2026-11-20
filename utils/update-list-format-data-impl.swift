@@ -11,9 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // Swift script that reads CLDR XML and emits a JSON file containing
-// list-formatting pattern tables for ListFormatStyle. Invoked by the
-// update-list-format-data shell wrapper, which sets up CLDR_PATH and prepends
-// the license/auto-generated header.
+// list-formatting pattern tables for ListFormatStyle. Reads the CLDR root from the CLDR_PATH environment variable, and writes the JSON to standard output.
 //
 // Pipeline:
 //   1. Parse common/supplemental/supplementalData.xml into a parent-locale map.
@@ -28,9 +26,7 @@
 //      parent chain. The explicit parent map ships with the data.
 //   7. Self-check: simulate the runtime lookup against the sparse output and
 //      assert every (locale, slot) still resolves to the original row.
-//   8. Globally intern pattern strings and (start, middle, end, pair) row
-//      tuples across all slots (further dedup). Emit as JSON via the schema
-//      defined in list-format-data-schema.swift.
+//   8. Globally intern pattern strings and (start, middle, end, pair) row tuples across all slots (further dedup). Emit as JSON with the schema.
 //
 // Contextual rules (Spanish y→e, o→u; Hebrew ו prefix; Thai joiner) are NOT
 // tagged in the data. They're a function of (locale.language, type, pattern),
@@ -372,7 +368,7 @@ private func shouldEscape(_ scalar: Unicode.Scalar) -> Bool {
 }
 
 // Mirror of the runtime fallback walk. Must match the algorithm in
-// ListFormatPatterns.swift exactly, or sparse data lookups will diverge.
+// `ListFormatPatterns` exactly, or sparse data lookups will diverge.
 func lookup(_ locale: String, in index: [String: UInt8], parentMap: [String: String]) -> UInt8? {
     var current: String? = locale
     while let l = current {

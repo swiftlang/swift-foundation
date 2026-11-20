@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the Swift.org open source project
+##
+## Copyright (c) 2026 Apple Inc. and the Swift project authors
+## Licensed under Apache License v2.0 with Runtime Library Exception
+##
+## See https://swift.org/LICENSE.txt for license information
+## See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+##
+##===----------------------------------------------------------------------===##
+
+# Generates DateFormatData.json, LocaleNumberData.json, and ListFormatData.json in Sources/_FoundationInternationalizationData from a CLDR XML checkout. Set the CLDR_PATH environment variable to the CLDR root, the directory that contains common/main/ and common/supplemental/, such as /path/to/cldr.
+#
+# The JSON files are the intermediate form for the locale data pipeline. utils/build-locale-data reads them and writes the Swift tables.
+
+set -eu
+
+declare -r commandName="$(basename "$0")"
+declare -r utilsDir="$(cd "$(dirname "$0")" && pwd)"
+declare -r foundationRepoDir="$(cd "${utilsDir}/.." && pwd)"
+declare -r dataDir="${foundationRepoDir}/Sources/_FoundationInternationalizationData"
+
+if [[ -z "${CLDR_PATH:-}" ]]; then
+  echo "error: CLDR_PATH environment variable is not set." 1>&2
+  echo "Set it to the root of a CLDR checkout, such as:" 1>&2
+  echo "  CLDR_PATH=/path/to/cldr ${commandName}" 1>&2
+  exit 1
+fi
+
+if [[ ! -d "${CLDR_PATH}/common/main" || ! -d "${CLDR_PATH}/common/supplemental" ]]; then
+  echo "error: CLDR_PATH does not point at a CLDR root." 1>&2
+  echo "Expected ${CLDR_PATH}/common/main and ${CLDR_PATH}/common/supplemental." 1>&2
+  exit 1
+fi
+
+echo "Generating locale data JSON from ${CLDR_PATH}..." 1>&2
+
+# Compile each tool with swiftc, rather than run it with `swift`, so that diagnostics point at the original files.
+bindir=$(mktemp -d -t "${commandName}.XXXXXX")
+trap 'rm -rf "${bindir}"' EXIT
+
+generate() {
+  local table="$1" schema="$2" impl="$3"
+  echo "${table}.json:" 1>&2
+  swiftc -parse-as-library \
+      "${utilsDir}/${schema}" \
+      "${utilsDir}/cldr-locale-fallback.swift" \
+      "${utilsDir}/cldr-xml.swift" \
+      "${utilsDir}/${impl}" \
+      -o "${bindir}/${table}"
+  "${bindir}/${table}" > "${bindir}/${table}.json"
+}
+
+generate DateFormatData date-format-data-schema.swift update-date-format-data-impl.swift
+generate LocaleNumberData locale-number-data-schema.swift update-locale-number-data-impl.swift
+
+echo "ListFormatData.json:" 1>&2
+swiftc -parse-as-library \
+    "${utilsDir}/list-format-data-schema.swift" \
+    "${utilsDir}/cldr-locale-fallback.swift" \
+    "${utilsDir}/update-list-format-data-impl.swift" \
+    -o "${bindir}/ListFormatData"
+"${bindir}/ListFormatData" > "${bindir}/ListFormatData.json"
+
+# Move the files only after all the runs succeed, so a failed run leaves the targets as they were.
+mv "${bindir}/DateFormatData.json" "${dataDir}/DateFormatData.json"
+mv "${bindir}/LocaleNumberData.json" "${dataDir}/LocaleNumberData.json"
+mv "${bindir}/ListFormatData.json" "${dataDir}/ListFormatData.json"
+
+echo "Done." 1>&2

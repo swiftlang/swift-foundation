@@ -1,0 +1,7295 @@
+{
+  "aliases" : {
+    "ars" : "ar_SA",
+    "az_AZ" : "az_Latn_AZ",
+    "bs_BA" : "bs_Latn_BA",
+    "en_NH" : "en_VU",
+    "en_RH" : "en_ZW",
+    "ff_CM" : "ff_Latn_CM",
+    "ff_GN" : "ff_Latn_GN",
+    "ff_MR" : "ff_Latn_MR",
+    "ff_SN" : "ff_Latn_SN",
+    "in" : "id",
+    "in_ID" : "id_ID",
+    "iw" : "he",
+    "iw_IL" : "he_IL",
+    "ks_Aran" : "ks_Arab",
+    "ks_IN" : "ks_Aran_IN",
+    "ku_SY" : "ku_Latn_SY",
+    "kxv_IN" : "kxv_Latn_IN",
+    "mni_IN" : "mni_Beng_IN",
+    "mo" : "ro",
+    "no_NO" : "no",
+    "no_NO_NY" : "nn_NO",
+    "pa_Aran" : "pa_Arab",
+    "pa_IN" : "pa_Guru_IN",
+    "pa_PK" : "pa_Aran_PK",
+    "sat_IN" : "sat_Olck_IN",
+    "sd_IN" : "sd_Deva_IN",
+    "sd_PK" : "sd_Arab_PK",
+    "sh" : "sr_Latn",
+    "sh_BA" : "sr_Latn_BA",
+    "sh_CS" : "sr_Latn_RS",
+    "sh_YU" : "sr_Latn_RS",
+    "shi_MA" : "shi_Tfng_MA",
+    "sr_BA" : "sr_Cyrl_BA",
+    "sr_CS" : "sr_RS",
+    "sr_Cyrl_CS" : "sr_Cyrl_RS",
+    "sr_Cyrl_YU" : "sr_Cyrl_RS",
+    "sr_Latn_CS" : "sr_Latn_RS",
+    "sr_Latn_YU" : "sr_Latn_RS",
+    "sr_ME" : "sr_Latn_ME",
+    "sr_RS" : "sr_Cyrl_RS",
+    "sr_XK" : "sr_Cyrl_XK",
+    "sr_YU" : "sr_RS",
+    "su_ID" : "su_Latn_ID",
+    "tl" : "fil",
+    "tl_PH" : "fil_PH",
+    "ur_Aran" : "ur_Arab",
+    "ur_Aran_IN" : "ur_Arab_IN",
+    "ur_IN" : "ur_Aran_IN",
+    "ur_PK" : "ur_Aran_PK",
+    "uz_AF" : "uz_Arab_AF",
+    "uz_UZ" : "uz_Latn_UZ",
+    "vai_LR" : "vai_Vaii_LR",
+    "wuu" : "zh",
+    "yue_CN" : "yue_Hans_CN",
+    "yue_HK" : "yue_Hant_HK",
+    "zh_CN" : "zh_Hans_CN",
+    "zh_HK" : "zh_Hant_HK",
+    "zh_JP" : "zh_Hans_JP",
+    "zh_MO" : "zh_Hant_MO",
+    "zh_SG" : "zh_Hans_SG",
+    "zh_TW" : "zh_Hant_TW"
+  },
+  "cldrVersion" : "48",
+  "defaultScripts" : {
+    "aaf" : "Mlym",
+    "aao" : "Arab",
+    "aat" : "Grek",
+    "ab" : "Cyrl",
+    "abh" : "Arab",
+    "abl" : "Rjng",
+    "abq" : "Cyrl",
+    "abv" : "Arab",
+    "acm" : "Arab",
+    "acq" : "Arab",
+    "acw" : "Arab",
+    "acx" : "Arab",
+    "adf" : "Arab",
+    "adx" : "Tibt",
+    "ady" : "Cyrl",
+    "ae" : "Avst",
+    "aeb" : "Arab",
+    "aec" : "Arab",
+    "aee" : "Arab",
+    "aeq" : "Arab",
+    "afb" : "Arab",
+    "agi" : "Deva",
+    "agj" : "Ethi",
+    "agx" : "Cyrl",
+    "ahg" : "Ethi",
+    "aho" : "Ahom",
+    "ahr" : "Deva",
+    "aib" : "Arab",
+    "aii" : "Syrc",
+    "aij" : "Hebr",
+    "ain" : "Kana",
+    "aio" : "Mymr",
+    "aiq" : "Arab",
+    "akk" : "Xsux",
+    "akv" : "Cyrl",
+    "alk" : "Laoo",
+    "all" : "Mlym",
+    "alr" : "Cyrl",
+    "alt" : "Cyrl",
+    "alw" : "Ethi",
+    "am" : "Ethi",
+    "ams" : "Jpan",
+    "amw" : "Syrc",
+    "ani" : "Cyrl",
+    "anp" : "Deva",
+    "anq" : "Deva",
+    "anr" : "Deva",
+    "anu" : "Ethi",
+    "aot" : "Beng",
+    "apc" : "Arab",
+    "apd" : "Arab",
+    "aph" : "Deva",
+    "aqc" : "Cyrl",
+    "ar" : "Arab",
+    "arc" : "Armi",
+    "arq" : "Arab",
+    "ars" : "Arab",
+    "ary" : "Arab",
+    "arz" : "Arab",
+    "as" : "Beng",
+    "ase" : "Sgnw",
+    "ask" : "Arab",
+    "asr" : "Deva",
+    "atn" : "Arab",
+    "atv" : "Cyrl",
+    "auj" : "Arab",
+    "auz" : "Arab",
+    "av" : "Cyrl",
+    "avd" : "Arab",
+    "avl" : "Arab",
+    "awa" : "Deva",
+    "awn" : "Ethi",
+    "axm" : "Armn",
+    "ayh" : "Arab",
+    "ayl" : "Arab",
+    "ayn" : "Arab",
+    "ayp" : "Arab",
+    "az_IQ" : "Arab",
+    "az_IR" : "Arab",
+    "az_RU" : "Cyrl",
+    "azb" : "Arab",
+    "ba" : "Cyrl",
+    "bal" : "Arab",
+    "bap" : "Deva",
+    "bax" : "Bamu",
+    "bbl" : "Geor",
+    "bcq" : "Ethi",
+    "bdv" : "Orya",
+    "bdz" : "Arab",
+    "be" : "Cyrl",
+    "bee" : "Deva",
+    "bej" : "Arab",
+    "ber" : "Tfng",
+    "bfb" : "Deva",
+    "bfq" : "Taml",
+    "bft" : "Arab",
+    "bfu" : "Tibt",
+    "bfw" : "Orya",
+    "bfy" : "Deva",
+    "bfz" : "Deva",
+    "bg" : "Cyrl",
+    "bgc" : "Deva",
+    "bgd" : "Deva",
+    "bgn" : "Arab",
+    "bgp" : "Arab",
+    "bgq" : "Deva",
+    "bgw" : "Deva",
+    "bgx" : "Grek",
+    "bha" : "Deva",
+    "bhb" : "Deva",
+    "bhd" : "Deva",
+    "bhe" : "Arab",
+    "bhh" : "Cyrl",
+    "bhi" : "Deva",
+    "bhj" : "Deva",
+    "bhm" : "Arab",
+    "bhn" : "Syrc",
+    "bho" : "Deva",
+    "bht" : "Deva",
+    "bhu" : "Deva",
+    "bix" : "Deva",
+    "biy" : "Deva",
+    "bjf" : "Syrc",
+    "bjj" : "Deva",
+    "bjm" : "Arab",
+    "bkk" : "Tibt",
+    "blk" : "Mymr",
+    "blt" : "Tavt",
+    "bmj" : "Deva",
+    "bn" : "Beng",
+    "bns" : "Deva",
+    "bo" : "Tibt",
+    "bph" : "Cyrl",
+    "bpx" : "Deva",
+    "bpy" : "Beng",
+    "bqi" : "Arab",
+    "bra" : "Deva",
+    "brb" : "Khmr",
+    "brd" : "Deva",
+    "brh" : "Arab",
+    "brk" : "Arab",
+    "bro" : "Tibt",
+    "brv" : "Laoo",
+    "brw" : "Knda",
+    "brx" : "Deva",
+    "bsh" : "Arab",
+    "bsk" : "Arab",
+    "bst" : "Ethi",
+    "btd" : "Batk",
+    "btm" : "Batk",
+    "btv" : "Deva",
+    "bua" : "Cyrl",
+    "bwe" : "Mymr",
+    "bxm" : "Cyrl",
+    "bxu" : "Mong",
+    "byh" : "Deva",
+    "byn" : "Ethi",
+    "byw" : "Deva",
+    "bzi" : "Thai",
+    "cbn" : "Thai",
+    "ccp" : "Cakm",
+    "cde" : "Telu",
+    "cdh" : "Deva",
+    "cdi" : "Gujr",
+    "cdj" : "Deva",
+    "cdm" : "Deva",
+    "cdn" : "Deva",
+    "cdo" : "Hans",
+    "cdz" : "Beng",
+    "ce" : "Cyrl",
+    "cgk" : "Tibt",
+    "chg" : "Arab",
+    "chm" : "Cyrl",
+    "chr" : "Cher",
+    "chx" : "Deva",
+    "cih" : "Deva",
+    "cja" : "Arab",
+    "cji" : "Cyrl",
+    "cjm" : "Cham",
+    "cjy" : "Hans",
+    "ckb" : "Arab",
+    "ckt" : "Cyrl",
+    "clh" : "Arab",
+    "clw" : "Cyrl",
+    "cmg" : "Soyo",
+    "cna" : "Tibt",
+    "cnp" : "Hans",
+    "cog" : "Thai",
+    "cop" : "Copt",
+    "cpg" : "Grek",
+    "cr" : "Cans",
+    "crh" : "Cyrl",
+    "crj" : "Cans",
+    "crk" : "Cans",
+    "crl" : "Cans",
+    "crm" : "Cans",
+    "csh" : "Mymr",
+    "csp" : "Hans",
+    "csw" : "Cans",
+    "ctd" : "Pauc",
+    "ctg" : "Beng",
+    "ctn" : "Deva",
+    "ctt" : "Taml",
+    "cty" : "Taml",
+    "cu" : "Cyrl",
+    "cuu" : "Lana",
+    "cv" : "Cyrl",
+    "cwd" : "Cans",
+    "czh" : "Hans",
+    "czk" : "Hebr",
+    "daq" : "Deva",
+    "dar" : "Cyrl",
+    "dcc" : "Arab",
+    "ddo" : "Cyrl",
+    "def" : "Arab",
+    "deh" : "Arab",
+    "der" : "Beng",
+    "dgl" : "Arab",
+    "dhi" : "Deva",
+    "dhn" : "Gujr",
+    "dho" : "Gujr",
+    "dhw" : "Deva",
+    "dka" : "Tibt",
+    "dlg" : "Cyrl",
+    "dmf" : "Medf",
+    "dmk" : "Arab",
+    "dml" : "Arab",
+    "dng" : "Cyrl",
+    "dnu" : "Mymr",
+    "dnv" : "Mymr",
+    "doi" : "Deva",
+    "dox" : "Ethi",
+    "dre" : "Tibt",
+    "drq" : "Deva",
+    "drs" : "Ethi",
+    "dry" : "Deva",
+    "dso" : "Orya",
+    "dty" : "Deva",
+    "dub" : "Gujr",
+    "duh" : "Deva",
+    "dus" : "Deva",
+    "dv" : "Thaa",
+    "dwk" : "Orya",
+    "dwz" : "Deva",
+    "dz" : "Tibt",
+    "dzl" : "Tibt",
+    "ecr" : "Grek",
+    "ecy" : "Cprt",
+    "egy" : "Egyp",
+    "eky" : "Kali",
+    "el" : "Grek",
+    "emg" : "Deva",
+    "emu" : "Deva",
+    "enf" : "Cyrl",
+    "enh" : "Cyrl",
+    "era" : "Taml",
+    "esg" : "Gonm",
+    "esh" : "Arab",
+    "ett" : "Ital",
+    "eve" : "Cyrl",
+    "evn" : "Cyrl",
+    "fa" : "Arab",
+    "fay" : "Arab",
+    "faz" : "Arab",
+    "fia" : "Arab",
+    "fmu" : "Deva",
+    "fub" : "Arab",
+    "gan" : "Hans",
+    "gaq" : "Orya",
+    "gas" : "Gujr",
+    "gau" : "Telu",
+    "gbj" : "Orya",
+    "gbk" : "Deva",
+    "gbl" : "Gujr",
+    "gbm" : "Deva",
+    "gbz" : "Arab",
+    "gdb" : "Orya",
+    "gdo" : "Cyrl",
+    "gdx" : "Deva",
+    "gez" : "Ethi",
+    "ggg" : "Arab",
+    "gha" : "Arab",
+    "ghe" : "Deva",
+    "gho" : "Tfng",
+    "ghr" : "Arab",
+    "ght" : "Tibt",
+    "gig" : "Arab",
+    "gin" : "Cyrl",
+    "gjk" : "Arab",
+    "gju" : "Arab",
+    "gld" : "Cyrl",
+    "glh" : "Arab",
+    "glk" : "Arab",
+    "gml" : "Latf",
+    "gmv" : "Ethi",
+    "gmy" : "Linb",
+    "goe" : "Tibt",
+    "gof" : "Ethi",
+    "goj" : "Deva",
+    "gok" : "Deva",
+    "gon" : "Deva",
+    "got" : "Goth",
+    "gra" : "Deva",
+    "grc" : "Grek",
+    "grr" : "Arab",
+    "grt" : "Beng",
+    "gru" : "Ethi",
+    "gu" : "Gujr",
+    "gvr" : "Deva",
+    "gwc" : "Arab",
+    "gwf" : "Arab",
+    "gwt" : "Arab",
+    "gyo" : "Deva",
+    "gzi" : "Arab",
+    "ha_CM" : "Arab",
+    "ha_SD" : "Arab",
+    "hac" : "Arab",
+    "hak" : "Hans",
+    "hak_TW" : "Hant",
+    "har" : "Ethi",
+    "haz" : "Arab",
+    "hbo" : "Hebr",
+    "hdy" : "Ethi",
+    "he" : "Hebr",
+    "hi" : "Deva",
+    "hif" : "Deva",
+    "hii" : "Takr",
+    "hit" : "Xsux",
+    "hkh" : "Arab",
+    "hlb" : "Deva",
+    "hlu" : "Hluw",
+    "hmd" : "Plrd",
+    "hmj" : "Bopo",
+    "hmn" : "Hmng",
+    "hmq" : "Bopo",
+    "hnd" : "Arab",
+    "hne" : "Deva",
+    "hnj" : "Hmnp",
+    "hnm" : "Hans",
+    "hno" : "Arab",
+    "hoc" : "Deva",
+    "hoh" : "Arab",
+    "hoj" : "Deva",
+    "how" : "Hani",
+    "hoy" : "Deva",
+    "hpo" : "Mymr",
+    "hrt" : "Syrc",
+    "hrz" : "Arab",
+    "hsn" : "Hans",
+    "hss" : "Arab",
+    "htx" : "Xsux",
+    "hut" : "Deva",
+    "huy" : "Hebr",
+    "huz" : "Cyrl",
+    "hy" : "Armn",
+    "hyw" : "Armn",
+    "ii" : "Yiii",
+    "imy" : "Lyci",
+    "inh" : "Cyrl",
+    "int" : "Mymr",
+    "ior" : "Ethi",
+    "iru" : "Taml",
+    "isk" : "Arab",
+    "itk" : "Hebr",
+    "itl" : "Cyrl",
+    "iu" : "Cans",
+    "iw" : "Hebr",
+    "ja" : "Jpan",
+    "jad" : "Arab",
+    "jat" : "Arab",
+    "jbe" : "Hebr",
+    "jbn" : "Arab",
+    "jct" : "Cyrl",
+    "jda" : "Tibt",
+    "jdg" : "Arab",
+    "jdt" : "Cyrl",
+    "jee" : "Deva",
+    "jge" : "Geor",
+    "ji" : "Hebr",
+    "jje" : "Hang",
+    "jkm" : "Mymr",
+    "jml" : "Deva",
+    "jna" : "Takr",
+    "jnd" : "Arab",
+    "jnl" : "Deva",
+    "jns" : "Deva",
+    "jog" : "Arab",
+    "jpa" : "Hebr",
+    "jpr" : "Hebr",
+    "jrb" : "Hebr",
+    "jul" : "Deva",
+    "jun" : "Orya",
+    "juy" : "Orya",
+    "jya" : "Tibt",
+    "jye" : "Hebr",
+    "ka" : "Geor",
+    "kaa" : "Cyrl",
+    "kap" : "Cyrl",
+    "kaw" : "Bali",
+    "kbd" : "Cyrl",
+    "kbg" : "Tibt",
+    "kbu" : "Arab",
+    "kby" : "Arab",
+    "kca" : "Cyrl",
+    "kcy" : "Arab",
+    "kdq" : "Beng",
+    "kdt" : "Thai",
+    "ket" : "Cyrl",
+    "kev" : "Mlym",
+    "kex" : "Deva",
+    "key" : "Telu",
+    "kfa" : "Knda",
+    "kfb" : "Deva",
+    "kfc" : "Telu",
+    "kfd" : "Knda",
+    "kfe" : "Taml",
+    "kfg" : "Knda",
+    "kfh" : "Mlym",
+    "kfi" : "Taml",
+    "kfk" : "Deva",
+    "kfm" : "Arab",
+    "kfp" : "Deva",
+    "kfq" : "Deva",
+    "kfr" : "Deva",
+    "kfs" : "Deva",
+    "kfu" : "Deva",
+    "kfx" : "Deva",
+    "kfy" : "Deva",
+    "kgj" : "Deva",
+    "kgy" : "Tibt",
+    "khb" : "Talu",
+    "khf" : "Thai",
+    "khg" : "Tibt",
+    "khn" : "Deva",
+    "kho" : "Brah",
+    "kht" : "Mymr",
+    "khv" : "Cyrl",
+    "khw" : "Arab",
+    "kif" : "Deva",
+    "kim" : "Cyrl",
+    "kip" : "Deva",
+    "kjg" : "Laoo",
+    "kjh" : "Cyrl",
+    "kjl" : "Deva",
+    "kjo" : "Deva",
+    "kjp" : "Mymr",
+    "kjt" : "Thai",
+    "kjz" : "Tibt",
+    "kk" : "Cyrl",
+    "kk_AF" : "Arab",
+    "kk_CN" : "Arab",
+    "kk_IR" : "Arab",
+    "kk_MN" : "Arab",
+    "kkf" : "Tibt",
+    "kkh" : "Lana",
+    "kkt" : "Deva",
+    "kle" : "Deva",
+    "klj" : "Arab",
+    "klr" : "Deva",
+    "km" : "Khmr",
+    "kmj" : "Deva",
+    "kmz" : "Arab",
+    "kn" : "Knda",
+    "knn" : "Deva",
+    "ko" : "Kore",
+    "koi" : "Cyrl",
+    "kok" : "Deva",
+    "kpt" : "Cyrl",
+    "kpy" : "Cyrl",
+    "kqd" : "Syrc",
+    "kqy" : "Ethi",
+    "kra" : "Deva",
+    "krc" : "Cyrl",
+    "krk" : "Cyrl",
+    "krr" : "Khmr",
+    "kru" : "Deva",
+    "krv" : "Khmr",
+    "ks" : "Aran",
+    "ksu" : "Mymr",
+    "ksw" : "Mymr",
+    "ksz" : "Deva",
+    "ktb" : "Ethi",
+    "kte" : "Deva",
+    "ktl" : "Arab",
+    "ktp" : "Plrd",
+    "ku_AM" : "Cyrl",
+    "ku_AZ" : "Cyrl",
+    "ku_GE" : "Cyrl",
+    "ku_IQ" : "Arab",
+    "ku_IR" : "Arab",
+    "ku_LB" : "Arab",
+    "ku_TM" : "Cyrl",
+    "kuf" : "Laoo",
+    "kum" : "Cyrl",
+    "kv" : "Cyrl",
+    "kva" : "Cyrl",
+    "kvq" : "Mymr",
+    "kvt" : "Mymr",
+    "kvx" : "Arab",
+    "kvy" : "Kali",
+    "kwx" : "Deva",
+    "kxf" : "Mymr",
+    "kxk" : "Mymr",
+    "kxm" : "Thai",
+    "kxp" : "Arab",
+    "ky" : "Cyrl",
+    "ky_CN" : "Arab",
+    "kyu" : "Kali",
+    "kyv" : "Deva",
+    "kyw" : "Deva",
+    "lab" : "Lina",
+    "lad" : "Hebr",
+    "lae" : "Deva",
+    "lah" : "Arab",
+    "lbe" : "Cyrl",
+    "lbf" : "Deva",
+    "lbj" : "Tibt",
+    "lbm" : "Deva",
+    "lbo" : "Laoo",
+    "lbr" : "Deva",
+    "lcp" : "Thai",
+    "lep" : "Lepc",
+    "lez" : "Cyrl",
+    "lhm" : "Deva",
+    "lhs" : "Syrc",
+    "lif" : "Deva",
+    "lis" : "Lisu",
+    "lkh" : "Tibt",
+    "lki" : "Arab",
+    "lmh" : "Deva",
+    "lmn" : "Telu",
+    "lo" : "Laoo",
+    "loy" : "Deva",
+    "lpo" : "Plrd",
+    "lrc" : "Arab",
+    "lrk" : "Arab",
+    "lrl" : "Arab",
+    "lsa" : "Arab",
+    "lsd" : "Hebr",
+    "lss" : "Arab",
+    "ltc" : "Hant",
+    "luh" : "Hans",
+    "luk" : "Tibt",
+    "luu" : "Deva",
+    "luv" : "Arab",
+    "luz" : "Arab",
+    "lwl" : "Thai",
+    "lwm" : "Thai",
+    "lya" : "Tibt",
+    "lzh" : "Hant",
+    "lzz_GE" : "Geor",
+    "mag" : "Deva",
+    "mai" : "Deva",
+    "mby" : "Arab",
+    "mde" : "Arab",
+    "mdf" : "Cyrl",
+    "mdx" : "Ethi",
+    "mdy" : "Ethi",
+    "mey" : "Arab",
+    "mfa" : "Arab",
+    "mfi" : "Arab",
+    "mga" : "Latg",
+    "mgp" : "Deva",
+    "mhj" : "Arab",
+    "mid" : "Mand",
+    "mjl" : "Deva",
+    "mjq" : "Mlym",
+    "mjr" : "Mlym",
+    "mjt" : "Deva",
+    "mju" : "Telu",
+    "mjv" : "Mlym",
+    "mjz" : "Deva",
+    "mk" : "Cyrl",
+    "mkb" : "Deva",
+    "mke" : "Deva",
+    "mki" : "Arab",
+    "mkm" : "Thai",
+    "ml" : "Mlym",
+    "mlf" : "Thai",
+    "mn" : "Cyrl",
+    "mn_CN" : "Mong",
+    "mnc" : "Mong",
+    "mni" : "Beng",
+    "mnj" : "Arab",
+    "mns" : "Cyrl",
+    "mnw" : "Mymr",
+    "mpz" : "Thai",
+    "mr" : "Deva",
+    "mra" : "Thai",
+    "mrd" : "Deva",
+    "mrj" : "Cyrl",
+    "mro" : "Mroo",
+    "mrr" : "Deva",
+    "ms_CC" : "Arab",
+    "mtm" : "Cyrl",
+    "mtr" : "Deva",
+    "mud" : "Cyrl",
+    "muk" : "Tibt",
+    "mut" : "Deva",
+    "muv" : "Taml",
+    "muz" : "Ethi",
+    "mve" : "Arab",
+    "mvf" : "Mong",
+    "mvy" : "Arab",
+    "mvz" : "Ethi",
+    "mwr" : "Deva",
+    "mwt" : "Mymr",
+    "mww" : "Hmnp",
+    "my" : "Mymr",
+    "mym" : "Ethi",
+    "myv" : "Cyrl",
+    "myz" : "Mand",
+    "mzb" : "Arab",
+    "mzn" : "Arab",
+    "nan" : "Hans",
+    "nan_MO" : "Hant",
+    "nan_TW" : "Hant",
+    "nao" : "Deva",
+    "ncd" : "Deva",
+    "ncq" : "Laoo",
+    "ndf" : "Cyrl",
+    "ne" : "Deva",
+    "neg" : "Cyrl",
+    "neh" : "Tibt",
+    "nei" : "Xsux",
+    "new" : "Deva",
+    "ngt" : "Laoo",
+    "nio" : "Cyrl",
+    "nit" : "Telu",
+    "niv" : "Cyrl",
+    "nli" : "Arab",
+    "nlm" : "Arab",
+    "nlx" : "Deva",
+    "nmm" : "Deva",
+    "nnp" : "Wcho",
+    "nod" : "Lana",
+    "noe" : "Deva",
+    "nog" : "Cyrl",
+    "noi" : "Deva",
+    "non" : "Runr",
+    "nos" : "Yiii",
+    "npb" : "Tibt",
+    "nqo" : "Nkoo",
+    "nrn" : "Runr",
+    "nsd" : "Yiii",
+    "nsf" : "Yiii",
+    "nsk" : "Cans",
+    "nst" : "Tnsa",
+    "nsv" : "Yiii",
+    "nty" : "Yiii",
+    "ntz" : "Arab",
+    "nwc" : "Newa",
+    "nwx" : "Deva",
+    "nyl" : "Thai",
+    "nyq" : "Arab",
+    "nyw" : "Thai",
+    "oaa" : "Cyrl",
+    "oac" : "Cyrl",
+    "oar" : "Syrc",
+    "oav" : "Geor",
+    "obm" : "Phnx",
+    "obr" : "Mymr",
+    "odk" : "Arab",
+    "oht" : "Xsux",
+    "oj" : "Cans",
+    "ojs" : "Cans",
+    "okm" : "Hang",
+    "oko" : "Hani",
+    "okz" : "Khmr",
+    "ola" : "Deva",
+    "ole" : "Tibt",
+    "omk" : "Cyrl",
+    "omp" : "Mtei",
+    "omr" : "Modi",
+    "omx" : "Mymr",
+    "oon" : "Deva",
+    "or" : "Orya",
+    "ort" : "Telu",
+    "oru" : "Arab",
+    "orv" : "Cyrl",
+    "os" : "Cyrl",
+    "osa" : "Osge",
+    "osc" : "Ital",
+    "osi" : "Java",
+    "ota" : "Arab",
+    "otb" : "Tibt",
+    "otk" : "Orkh",
+    "oty" : "Gran",
+    "oui" : "Ougr",
+    "oyb" : "Laoo",
+    "pa" : "Guru",
+    "pa_PK" : "Aran",
+    "pal" : "Phli",
+    "paq" : "Cyrl",
+    "pbt" : "Arab",
+    "pcb" : "Khmr",
+    "pce" : "Mymr",
+    "pcf" : "Mlym",
+    "pcg" : "Mlym",
+    "pch" : "Deva",
+    "pci" : "Deva",
+    "pcj" : "Telu",
+    "peg" : "Orya",
+    "peo" : "Xpeo",
+    "pgd" : "Khar",
+    "pgg" : "Deva",
+    "pgl" : "Ogam",
+    "pgn" : "Ital",
+    "phd" : "Deva",
+    "phk" : "Mymr",
+    "phl" : "Arab",
+    "phn" : "Phnx",
+    "pho" : "Laoo",
+    "phr" : "Arab",
+    "pht" : "Thai",
+    "phu" : "Thai",
+    "phv" : "Arab",
+    "phw" : "Deva",
+    "pi_IN" : "Deva",
+    "pi_LK" : "Sinh",
+    "pi_MM" : "Mymr",
+    "pi_TH" : "Thai",
+    "pka" : "Brah",
+    "pkr" : "Mlym",
+    "plk" : "Arab",
+    "pll" : "Mymr",
+    "pmh" : "Brah",
+    "pnt" : "Grek",
+    "pnt_RU" : "Cyrl",
+    "prc" : "Arab",
+    "prd" : "Arab",
+    "prt" : "Thai",
+    "prx" : "Arab",
+    "ps" : "Arab",
+    "psh" : "Arab",
+    "psi" : "Arab",
+    "pst" : "Arab",
+    "psu" : "Brah",
+    "pum" : "Deva",
+    "pwo" : "Mymr",
+    "pwr" : "Deva",
+    "pww" : "Thai",
+    "pyx" : "Mymr",
+    "qxq" : "Arab",
+    "raa" : "Deva",
+    "rab" : "Deva",
+    "raf" : "Deva",
+    "rah" : "Beng",
+    "raj" : "Deva",
+    "rav" : "Deva",
+    "rbb" : "Mymr",
+    "rdb" : "Arab",
+    "rei" : "Orya",
+    "rhg" : "Rohg",
+    "rji" : "Deva",
+    "rjs" : "Deva",
+    "rka" : "Khmr",
+    "rki" : "Mymr",
+    "rkt" : "Beng",
+    "rmi" : "Armn",
+    "rmt" : "Arab",
+    "rmz" : "Mymr",
+    "rsk" : "Cyrl",
+    "rtw" : "Deva",
+    "ru" : "Cyrl",
+    "rue" : "Cyrl",
+    "rut" : "Cyrl",
+    "rwr" : "Deva",
+    "ryu" : "Kana",
+    "sa" : "Deva",
+    "sah" : "Cyrl",
+    "sam" : "Samr",
+    "sat" : "Olck",
+    "saz" : "Saur",
+    "sbn" : "Arab",
+    "sbu" : "Tibt",
+    "sck" : "Deva",
+    "scl" : "Arab",
+    "scp" : "Deva",
+    "sct" : "Laoo",
+    "scu" : "Takr",
+    "scx" : "Grek",
+    "sd" : "Arab",
+    "sd_IN" : "Deva",
+    "sdb" : "Arab",
+    "sdf" : "Arab",
+    "sdg" : "Arab",
+    "sdh" : "Arab",
+    "sdr" : "Beng",
+    "sds" : "Arab",
+    "sel" : "Cyrl",
+    "sfm" : "Plrd",
+    "sgh" : "Cyrl",
+    "sgj" : "Deva",
+    "sgr" : "Arab",
+    "sgt" : "Tibt",
+    "sgw" : "Ethi",
+    "sgy" : "Arab",
+    "shd" : "Arab",
+    "shi" : "Tfng",
+    "shm" : "Arab",
+    "shn" : "Mymr",
+    "shu" : "Arab",
+    "shv" : "Arab",
+    "si" : "Sinh",
+    "sia" : "Cyrl",
+    "sip" : "Tibt",
+    "siy" : "Arab",
+    "siz" : "Arab",
+    "sjc" : "Hans",
+    "sjd" : "Cyrl",
+    "sjp" : "Deva",
+    "sjt" : "Cyrl",
+    "skb" : "Thai",
+    "skj" : "Deva",
+    "skr" : "Arab",
+    "smh" : "Yiii",
+    "smp" : "Samr",
+    "smu" : "Khmr",
+    "smy" : "Arab",
+    "soa" : "Tavt",
+    "sog" : "Sogd",
+    "soi" : "Deva",
+    "sou" : "Thai",
+    "spt" : "Tibt",
+    "spv" : "Orya",
+    "sqo" : "Arab",
+    "sqq" : "Laoo",
+    "sqt" : "Arab",
+    "sr" : "Cyrl",
+    "srb" : "Sora",
+    "srh" : "Arab",
+    "srx" : "Deva",
+    "srz" : "Arab",
+    "ssh" : "Arab",
+    "sss" : "Laoo",
+    "sts" : "Arab",
+    "stu" : "Lana",
+    "stu_CN" : "Tale",
+    "stv" : "Ethi",
+    "sty" : "Cyrl",
+    "suz" : "Deva",
+    "sva" : "Geor",
+    "swb" : "Arab",
+    "swi" : "Hani",
+    "swv" : "Deva",
+    "sxu" : "Runr",
+    "syc" : "Syrc",
+    "syl" : "Beng",
+    "syn" : "Syrc",
+    "syr" : "Syrc",
+    "syw" : "Deva",
+    "ta" : "Taml",
+    "tab" : "Cyrl",
+    "taj" : "Deva",
+    "tbk" : "Tagb",
+    "tcn" : "Deva",
+    "tco" : "Mymr",
+    "tcx" : "Taml",
+    "tcy" : "Knda",
+    "tda" : "Tfng",
+    "tdb" : "Deva",
+    "tdd" : "Tale",
+    "tdg" : "Deva",
+    "tdh" : "Deva",
+    "te" : "Telu",
+    "tes" : "Java",
+    "tg" : "Cyrl",
+    "tg_PK" : "Arab",
+    "tge" : "Deva",
+    "tgf" : "Tibt",
+    "th" : "Thai",
+    "the" : "Deva",
+    "thf" : "Deva",
+    "thi" : "Tale",
+    "thl" : "Deva",
+    "thm" : "Thai",
+    "thq" : "Deva",
+    "thr" : "Deva",
+    "ths" : "Deva",
+    "ti" : "Ethi",
+    "tig" : "Ethi",
+    "tij" : "Deva",
+    "tin" : "Cyrl",
+    "tjl" : "Mymr",
+    "tjo" : "Arab",
+    "tkb" : "Deva",
+    "tks" : "Arab",
+    "tkt" : "Deva",
+    "tmr" : "Syrc",
+    "tnv" : "Cakm",
+    "tov" : "Arab",
+    "tpu" : "Khmr",
+    "tra" : "Arab",
+    "trg" : "Hebr",
+    "trm" : "Arab",
+    "trw" : "Arab",
+    "tsd" : "Grek",
+    "tsj" : "Tibt",
+    "tt" : "Cyrl",
+    "tth" : "Laoo",
+    "tto" : "Laoo",
+    "tts" : "Thai",
+    "ttz" : "Deva",
+    "tvn" : "Mymr",
+    "twm" : "Tibt",
+    "txg" : "Tang",
+    "txo" : "Toto",
+    "tyr" : "Tavt",
+    "tyv" : "Cyrl",
+    "ude" : "Cyrl",
+    "udg" : "Mlym",
+    "udi" : "Cyrl",
+    "udm" : "Cyrl",
+    "ug" : "Arab",
+    "ug_KZ" : "Cyrl",
+    "ug_MN" : "Cyrl",
+    "uga" : "Ugar",
+    "ugh" : "Cyrl",
+    "ugo" : "Thai",
+    "uk" : "Cyrl",
+    "uki" : "Orya",
+    "ulc" : "Cyrl",
+    "unr" : "Beng",
+    "unr_NP" : "Deva",
+    "unx" : "Beng",
+    "ur" : "Aran",
+    "ur_IN" : "Aran",
+    "ur_PK" : "Aran",
+    "urk" : "Thai",
+    "ush" : "Arab",
+    "uum" : "Grek",
+    "uz_AF" : "Arab",
+    "uz_CN" : "Cyrl",
+    "uzs" : "Arab",
+    "vaa" : "Taml",
+    "vaf" : "Arab",
+    "vah" : "Deva",
+    "vai" : "Vaii",
+    "vas" : "Deva",
+    "vav" : "Deva",
+    "vay" : "Deva",
+    "vgr" : "Arab",
+    "vjk" : "Deva",
+    "vmd" : "Knda",
+    "vmh" : "Arab",
+    "wal" : "Ethi",
+    "wbk" : "Arab",
+    "wbq" : "Telu",
+    "wbr" : "Deva",
+    "wle" : "Ethi",
+    "wlo" : "Arab",
+    "wme" : "Deva",
+    "wne" : "Arab",
+    "wni" : "Arab",
+    "wsg" : "Gong",
+    "wsv" : "Arab",
+    "wtm" : "Deva",
+    "wuu" : "Hans",
+    "xag" : "Aghb",
+    "xal" : "Cyrl",
+    "xan" : "Ethi",
+    "xas" : "Cyrl",
+    "xco" : "Chrs",
+    "xcr" : "Cari",
+    "xdq" : "Cyrl",
+    "xhe" : "Arab",
+    "xhm" : "Khmr",
+    "xis" : "Orya",
+    "xka" : "Arab",
+    "xkc" : "Arab",
+    "xkf" : "Tibt",
+    "xkj" : "Arab",
+    "xkp" : "Arab",
+    "xlc" : "Lyci",
+    "xld" : "Lydi",
+    "xly" : "Elym",
+    "xmf" : "Geor",
+    "xmn" : "Mani",
+    "xmr" : "Merc",
+    "xna" : "Narb",
+    "xnr" : "Deva",
+    "xpg" : "Grek",
+    "xpi" : "Ogam",
+    "xpm" : "Cyrl",
+    "xpr" : "Prti",
+    "xrm" : "Cyrl",
+    "xrn" : "Cyrl",
+    "xsa" : "Sarb",
+    "xsd" : "Sidt",
+    "xsr" : "Deva",
+    "xtq" : "Brah",
+    "xub" : "Taml",
+    "xuj" : "Taml",
+    "xve" : "Ital",
+    "xvi" : "Arab",
+    "xwo" : "Cyrl",
+    "xzh" : "Marc",
+    "yai" : "Cyrl",
+    "ybh" : "Deva",
+    "ybi" : "Deva",
+    "ydg" : "Arab",
+    "yea" : "Mlym",
+    "yej" : "Grek",
+    "yeu" : "Telu",
+    "ygp" : "Plrd",
+    "yhd" : "Hebr",
+    "yi" : "Hebr",
+    "yig" : "Yiii",
+    "yih" : "Hebr",
+    "yiv" : "Yiii",
+    "ykg" : "Cyrl",
+    "ykh" : "Cyrl",
+    "yna" : "Plrd",
+    "ynk" : "Cyrl",
+    "yoi" : "Jpan",
+    "yoy" : "Thai",
+    "yrk" : "Cyrl",
+    "ysd" : "Yiii",
+    "ysn" : "Yiii",
+    "ysp" : "Yiii",
+    "ysr" : "Cyrl",
+    "ysy" : "Plrd",
+    "yud" : "Hebr",
+    "yue" : "Hant",
+    "yue_CN" : "Hans",
+    "yug" : "Cyrl",
+    "yux" : "Cyrl",
+    "ywq" : "Plrd",
+    "ywu" : "Plrd",
+    "zau" : "Tibt",
+    "zba" : "Arab",
+    "zch" : "Hani",
+    "zdj" : "Arab",
+    "zeh" : "Hani",
+    "zen" : "Tfng",
+    "zgb" : "Hani",
+    "zgh" : "Tfng",
+    "zgm" : "Hani",
+    "zgn" : "Hani",
+    "zh" : "Hans",
+    "zh_AU" : "Hant",
+    "zh_BN" : "Hant",
+    "zh_GB" : "Hant",
+    "zh_GF" : "Hant",
+    "zh_HK" : "Hant",
+    "zh_ID" : "Hant",
+    "zh_MO" : "Hant",
+    "zh_MY" : "Hans",
+    "zh_PA" : "Hant",
+    "zh_PF" : "Hant",
+    "zh_PH" : "Hant",
+    "zh_SR" : "Hant",
+    "zh_TH" : "Hant",
+    "zh_TW" : "Hant",
+    "zh_US" : "Hans",
+    "zh_VN" : "Hant",
+    "zhd" : "Hani",
+    "zko" : "Cyrl",
+    "zkt" : "Kits",
+    "zkz" : "Cyrl",
+    "zlj" : "Hani",
+    "zln" : "Hani",
+    "zlq" : "Hani",
+    "zqe" : "Hani",
+    "zrg" : "Orya",
+    "zrp" : "Hebr",
+    "zum" : "Arab",
+    "zwa" : "Ethi",
+    "zyg" : "Hani",
+    "zyn" : "Hani",
+    "zzj" : "Hani"
+  },
+  "generatedFrom" : "CLDR 48",
+  "groupBlocks" : {
+    "symbols" : [
+      [
+        "-",
+        "؜-",
+        "‎-‎"
+      ],
+      [
+        "‎-",
+        "؜-",
+        "‎-‎"
+      ],
+      [
+        "-",
+        "‏-",
+        "‎-‎"
+      ],
+      [
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "−",
+        "؜-",
+        "‎-‎"
+      ],
+      [
+        "−",
+        "-",
+        "‎-‎"
+      ],
+      [
+        "‎−",
+        "؜-",
+        "‎−"
+      ],
+      [
+        "-",
+        "؜-",
+        "-"
+      ],
+      [
+        "−",
+        "؜−",
+        "‎−‎"
+      ],
+      [
+        "‎−",
+        "؜-",
+        "‎-‎"
+      ],
+      [
+        "-",
+        "-",
+        "‎-‎"
+      ]
+    ],
+    "systems" : [
+      [
+        "latn",
+        "latn",
+        "latn",
+        "latn"
+      ],
+      [
+        "latn",
+        "latn",
+        "ethi",
+        "latn"
+      ],
+      [
+        "latn",
+        "arab",
+        "arab",
+        "latn"
+      ],
+      [
+        "arab",
+        "arab",
+        "arab",
+        "arab"
+      ],
+      [
+        "beng",
+        "beng",
+        "beng",
+        "beng"
+      ],
+      [
+        "deva",
+        "latn",
+        "latn",
+        "deva"
+      ],
+      [
+        "latn",
+        "beng",
+        "beng",
+        "latn"
+      ],
+      [
+        "latn",
+        "tibt",
+        "tibt",
+        "latn"
+      ],
+      [
+        "latn",
+        "deva",
+        "deva",
+        "latn"
+      ],
+      [
+        "cakm",
+        "cakm",
+        "cakm",
+        "cakm"
+      ],
+      [
+        "tibt",
+        "tibt",
+        "tibt",
+        "tibt"
+      ],
+      [
+        "latn",
+        "latn",
+        "grek",
+        "latn"
+      ],
+      [
+        "arabext",
+        "arabext",
+        "arabext",
+        "arabext"
+      ],
+      [
+        "adlm",
+        "adlm",
+        "adlm",
+        "adlm"
+      ],
+      [
+        "latn",
+        "gujr",
+        "gujr",
+        "latn"
+      ],
+      [
+        "latn",
+        "latn",
+        "hebr",
+        "latn"
+      ],
+      [
+        "latn",
+        "latn",
+        "armn",
+        "latn"
+      ],
+      [
+        "latn",
+        "latn",
+        "jpan",
+        "jpanfin"
+      ],
+      [
+        "latn",
+        "java",
+        "java",
+        "latn"
+      ],
+      [
+        "latn",
+        "latn",
+        "geor",
+        "latn"
+      ],
+      [
+        "latn",
+        "khmr",
+        "khmr",
+        "latn"
+      ],
+      [
+        "latn",
+        "knda",
+        "knda",
+        "latn"
+      ],
+      [
+        "latn",
+        "orya",
+        "orya",
+        "latn"
+      ],
+      [
+        "latn",
+        "telu",
+        "telu",
+        "latn"
+      ],
+      [
+        "latn",
+        "laoo",
+        "laoo",
+        "latn"
+      ],
+      [
+        "latn",
+        "mlym",
+        "mlym",
+        "latn"
+      ],
+      [
+        "beng",
+        "latn",
+        "latn",
+        "beng"
+      ],
+      [
+        "mtei",
+        "latn",
+        "latn",
+        "mtei"
+      ],
+      [
+        "mymr",
+        "mymr",
+        "mymr",
+        "mymr"
+      ],
+      [
+        "deva",
+        "deva",
+        "deva",
+        "deva"
+      ],
+      [
+        "nkoo",
+        "nkoo",
+        "nkoo",
+        "nkoo"
+      ],
+      [
+        "latn",
+        "guru",
+        "guru",
+        "latn"
+      ],
+      [
+        "olck",
+        "latn",
+        "latn",
+        "olck"
+      ],
+      [
+        "latn",
+        "tamldec",
+        "taml",
+        "latn"
+      ],
+      [
+        "latn",
+        "thai",
+        "thai",
+        "latn"
+      ],
+      [
+        "latn",
+        "arabext",
+        "arabext",
+        "latn"
+      ],
+      [
+        "latn",
+        "vaii",
+        "vaii",
+        "latn"
+      ],
+      [
+        "latn",
+        "hanidec",
+        "hant",
+        "hantfin"
+      ],
+      [
+        "latn",
+        "hanidec",
+        "hans",
+        "hansfin"
+      ]
+    ]
+  },
+  "groupSlots" : {
+    "symbols" : [
+      "latn|minusSign",
+      "arab|minusSign",
+      "arabext|minusSign"
+    ],
+    "systems" : [
+      "default",
+      "native",
+      "traditional",
+      "finance"
+    ]
+  },
+  "locales" : {
+    "acf" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "af" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "af_NA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "af_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "agq" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "agq_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ain" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ain_JP" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ak" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ak_GH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "am" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "am_ET" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "apw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "apw_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ar" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_001" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_AE" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_BH" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_DJ" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_DZ" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_EG" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_EH" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_ER" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_IL" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_IQ" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_JO" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_KM" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_KW" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_LB" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_LY" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_MA" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_MR" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_OM" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_PS" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_QA" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_SA" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_SD" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_SO" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_SS" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_SY" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_TD" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "ar_TN" : {
+      "symbols" : 1,
+      "systems" : 2
+    },
+    "ar_YE" : {
+      "symbols" : 1,
+      "systems" : 3
+    },
+    "arn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "arn_CL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "as" : {
+      "symbols" : 0,
+      "systems" : 4
+    },
+    "as_IN" : {
+      "symbols" : 0,
+      "systems" : 4
+    },
+    "asa" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "asa_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ast" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "ast_ES" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "az" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "az_Cyrl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "az_Cyrl_AZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "az_Latn" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "az_Latn_AZ" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "ba" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ba_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bas" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bas_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "be" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "be_BY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bem" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bem_ZM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ber" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ber_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ber_Latn_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ber_Tfng" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ber_Tfng_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bez" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bez_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bg_BG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bgc" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "bgc_IN" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "bho" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "bho_IN" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "bla" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "blo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "blo_BJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bm_ML" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bn" : {
+      "symbols" : 0,
+      "systems" : 6
+    },
+    "bn_BD" : {
+      "symbols" : 0,
+      "systems" : 6
+    },
+    "bn_IN" : {
+      "symbols" : 0,
+      "systems" : 6
+    },
+    "bo" : {
+      "symbols" : 0,
+      "systems" : 7
+    },
+    "bo_CN" : {
+      "symbols" : 0,
+      "systems" : 7
+    },
+    "bo_IN" : {
+      "symbols" : 0,
+      "systems" : 7
+    },
+    "br" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "br_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "brx" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "brx_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "bs" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bs_Cyrl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bs_Cyrl_BA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bs_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bs_Latn_BA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bua" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "bua_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "byn" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "byn_ER" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "ca" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ca_AD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ca_ES" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ca_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ca_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ccp" : {
+      "symbols" : 0,
+      "systems" : 9
+    },
+    "ccp_BD" : {
+      "symbols" : 0,
+      "systems" : 9
+    },
+    "ccp_IN" : {
+      "symbols" : 0,
+      "systems" : 9
+    },
+    "ce" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ce_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ceb" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ceb_PH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cgg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cgg_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cho" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cho_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "chr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "chr_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cic" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cic_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ckb" : {
+      "symbols" : 2,
+      "systems" : 3
+    },
+    "ckb_IQ" : {
+      "symbols" : 2,
+      "systems" : 3
+    },
+    "ckb_IR" : {
+      "symbols" : 2,
+      "systems" : 3
+    },
+    "co" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "co_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "com" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "crj" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "crk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "crl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "crm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cs" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cs_CZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cst" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "csw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "csw_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cv_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cwd" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cy" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "cy_GB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "da" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "da_DK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "da_GL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dav" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dav_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_AT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_BE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_DE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_LI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "de_LU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dje" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dje_NE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "doi" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "doi_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "dsb" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dsb_DE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dua" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dua_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dv" : {
+      "symbols" : 0,
+      "systems" : 2
+    },
+    "dv_MV" : {
+      "symbols" : 0,
+      "systems" : 2
+    },
+    "dyo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dyo_SN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "dz" : {
+      "symbols" : 0,
+      "systems" : 10
+    },
+    "dz_BT" : {
+      "symbols" : 0,
+      "systems" : 10
+    },
+    "ebu" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ebu_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ee" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ee_GH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ee_TG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "el" : {
+      "symbols" : 0,
+      "systems" : 11
+    },
+    "el_CY" : {
+      "symbols" : 0,
+      "systems" : 11
+    },
+    "el_GR" : {
+      "symbols" : 0,
+      "systems" : 11
+    },
+    "en" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_001" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_150" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_AU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_BZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CX" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_CZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_DE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_DG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_DK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_DM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_EE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_ER" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_ES" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_FI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_FJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_FK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_FM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_GY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_HK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_HU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_ID" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_IE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_IL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_IM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_IO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_JE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_JM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_JP" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_KI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_KN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_KR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_KY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_LC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_LR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_LS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_LT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_LV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MP" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MX" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_MY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_NZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_PW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_RO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_RW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SX" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_SZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_UA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_UM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_US_POSIX" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_VC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_VG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_VI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_VU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_WS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_ZM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "en_ZW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "eo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "eo_001" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_419" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_AG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_AR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_BZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_CL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_CO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_CR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_CU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_CW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_DM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_DO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_EA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_EC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_ES" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_GD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_GQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_GT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_GY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_HN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_HT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_IC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_KN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_KY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_LC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_MX" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_NI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_PA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_PE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_PH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_PR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_PY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_SV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_TC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_TT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_UY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_VC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_VE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_VG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "es_VI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "et" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "et_EE" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "eu" : {
+      "symbols" : 5,
+      "systems" : 0
+    },
+    "eu_ES" : {
+      "symbols" : 5,
+      "systems" : 0
+    },
+    "ewo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ewo_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fa" : {
+      "symbols" : 6,
+      "systems" : 12
+    },
+    "fa_AF" : {
+      "symbols" : 6,
+      "systems" : 12
+    },
+    "fa_IR" : {
+      "symbols" : 6,
+      "systems" : 12
+    },
+    "ff" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Adlm" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_BF" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_CM" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_GH" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_GM" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_GN" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_GW" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_LR" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_MR" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_NE" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_NG" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_SL" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Adlm_SN" : {
+      "symbols" : 0,
+      "systems" : 13
+    },
+    "ff_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_BF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_GH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_GM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_GN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_GW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_LR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_MR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_NE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_NG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_SL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ff_Latn_SN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fi" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "fi_FI" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "fil" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fil_PH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fla" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fo" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "fo_DK" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "fo_FO" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "fr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_BE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_BF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_BI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_BJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_BL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_DJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_DZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_GA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_GF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_GN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_GP" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_GQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_HT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_KM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_LU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_ML" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_MU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_NC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_NE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_PF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_PM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_RE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_RW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_SC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_SN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_SY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_TD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_TG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_TN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_VU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_WF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fr_YT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fur" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fur_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fy" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "fy_NL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ga" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ga_GB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ga_IE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gaa" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gaa_GH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gcf" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gd" : {
+      "symbols" : 7,
+      "systems" : 0
+    },
+    "gd_GB" : {
+      "symbols" : 7,
+      "systems" : 0
+    },
+    "gl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gl_ES" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gn_PY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gsw" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "gsw_CH" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "gsw_FR" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "gsw_LI" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "gu" : {
+      "symbols" : 0,
+      "systems" : 14
+    },
+    "gu_IN" : {
+      "symbols" : 0,
+      "systems" : 14
+    },
+    "guz" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "guz_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "gv_IM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ha" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "ha_GH" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "ha_NE" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "ha_NG" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "haw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "haw_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hch" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "he" : {
+      "symbols" : 1,
+      "systems" : 15
+    },
+    "he_IL" : {
+      "symbols" : 1,
+      "systems" : 15
+    },
+    "hi" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "hi_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "hi_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hi_Latn_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hmn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hmn_CN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hr" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "hr_BA" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "hr_HR" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "hsb" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hsb_DE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ht" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ht_HT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hu" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hu_HU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "hy" : {
+      "symbols" : 0,
+      "systems" : 16
+    },
+    "hy_AM" : {
+      "symbols" : 0,
+      "systems" : 16
+    },
+    "ia" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ia_001" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "id" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "id_ID" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ie" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ie_EE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ig" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "ig_NG" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "ii" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ii_CN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "inh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "io" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "io_001" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "is" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "is_IS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "isc" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "it" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "it_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "it_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "it_SM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "it_VA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "iu" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "iu_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ja" : {
+      "symbols" : 0,
+      "systems" : 17
+    },
+    "ja_JP" : {
+      "symbols" : 0,
+      "systems" : 17
+    },
+    "jbo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "jbo_001" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "jgo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "jgo_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "jmc" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "jmc_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "jv" : {
+      "symbols" : 0,
+      "systems" : 18
+    },
+    "jv_ID" : {
+      "symbols" : 0,
+      "systems" : 18
+    },
+    "ka" : {
+      "symbols" : 0,
+      "systems" : 19
+    },
+    "ka_GE" : {
+      "symbols" : 0,
+      "systems" : 19
+    },
+    "kab" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kab_DZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kaj" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kaj_NG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kam" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kam_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kcg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kcg_NG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kde" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kde_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kea" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kea_CV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kgp" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kgp_BR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "khq" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "khq_ML" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ki" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ki_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kio" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kk_Arab" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kk_Arab_CN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kk_Cyrl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kk_Cyrl_KZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kk_KZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kkj" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kkj_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kl_GL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kln" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kln_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "km" : {
+      "symbols" : 0,
+      "systems" : 20
+    },
+    "km_KH" : {
+      "symbols" : 0,
+      "systems" : 20
+    },
+    "kn" : {
+      "symbols" : 0,
+      "systems" : 21
+    },
+    "kn_IN" : {
+      "symbols" : 0,
+      "systems" : 21
+    },
+    "ko" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "ko_CN" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "ko_KP" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "ko_KR" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "kok" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "kok_Deva" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "kok_Deva_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "kok_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kok_Latn_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kpe" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kpe_GN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kpe_LR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ks" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "ks_Arab" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "ks_Arab_IN" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "ks_Aran_IN" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "ks_Deva" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ks_Deva_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ksb" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ksb_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ksf" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ksf_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ksh" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "ksh_DE" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "ku" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ku_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ku_Latn_IQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ku_Latn_SY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ku_Latn_TR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ku_TR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kw_GB" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kxv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kxv_Deva" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "kxv_Deva_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "kxv_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kxv_Latn_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "kxv_Orya" : {
+      "symbols" : 0,
+      "systems" : 22
+    },
+    "kxv_Orya_IN" : {
+      "symbols" : 0,
+      "systems" : 22
+    },
+    "kxv_Telu" : {
+      "symbols" : 0,
+      "systems" : 23
+    },
+    "kxv_Telu_IN" : {
+      "symbols" : 0,
+      "systems" : 23
+    },
+    "ky" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ky_KG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lag" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lag_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lb" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lb_LU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lg_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lij" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lij_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lkt" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lkt_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lmo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lmo_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ln" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ln_AO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ln_CD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ln_CF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ln_CG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lo" : {
+      "symbols" : 0,
+      "systems" : 24
+    },
+    "lo_LA" : {
+      "symbols" : 0,
+      "systems" : 24
+    },
+    "lrc" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "lrc_IQ" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "lrc_IR" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "lt" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "lt_LT" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "lu" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lu_CD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "luo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "luo_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lut" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "luy" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "luy_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "lv_LV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mai" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "mai_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "mas" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mas_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mas_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mer" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mer_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mfe" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mfe_MU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mg_MG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mgh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mgh_MZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mgo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mgo_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mi" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mi_NZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mic" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mic_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mid" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mid_IQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mk_MK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ml" : {
+      "symbols" : 0,
+      "systems" : 25
+    },
+    "ml_IN" : {
+      "symbols" : 0,
+      "systems" : 25
+    },
+    "mn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mn_MN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mni" : {
+      "symbols" : 0,
+      "systems" : 26
+    },
+    "mni_Beng" : {
+      "symbols" : 0,
+      "systems" : 26
+    },
+    "mni_Beng_IN" : {
+      "symbols" : 0,
+      "systems" : 26
+    },
+    "mni_Mtei" : {
+      "symbols" : 0,
+      "systems" : 27
+    },
+    "mni_Mtei_IN" : {
+      "symbols" : 0,
+      "systems" : 27
+    },
+    "moh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "moh_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mr" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "mr_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "ms" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ms_Arab" : {
+      "symbols" : 0,
+      "systems" : 2
+    },
+    "ms_Arab_BN" : {
+      "symbols" : 0,
+      "systems" : 2
+    },
+    "ms_Arab_MY" : {
+      "symbols" : 0,
+      "systems" : 2
+    },
+    "ms_BN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ms_ID" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ms_MY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ms_SG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mt" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mt_MT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mua" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mua_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mus" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mus_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "my" : {
+      "symbols" : 0,
+      "systems" : 28
+    },
+    "my_MM" : {
+      "symbols" : 0,
+      "systems" : 28
+    },
+    "myv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "myv_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "mzn" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "mzn_IR" : {
+      "symbols" : 0,
+      "systems" : 12
+    },
+    "naq" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "naq_NA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nb" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "nb_NO" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "nb_SJ" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "nd" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nd_ZW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nds" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nds_DE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nds_NL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ne" : {
+      "symbols" : 0,
+      "systems" : 29
+    },
+    "ne_IN" : {
+      "symbols" : 0,
+      "systems" : 29
+    },
+    "ne_NP" : {
+      "symbols" : 0,
+      "systems" : 29
+    },
+    "nez" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_AW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_BE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_BQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_CW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_NL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_SR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nl_SX" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nmg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nmg_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nn" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "nn_NO" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "nnh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nnh_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nnp" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nnp_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "no" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "nqo" : {
+      "symbols" : 0,
+      "systems" : 30
+    },
+    "nqo_GN" : {
+      "symbols" : 0,
+      "systems" : 30
+    },
+    "nr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nr_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nso" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nso_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nus" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nus_SS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nv_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ny" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ny_MW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nyn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "nyn_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "oc" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "oc_ES" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "oc_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "om" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "om_ET" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "om_KE" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "or" : {
+      "symbols" : 0,
+      "systems" : 22
+    },
+    "or_IN" : {
+      "symbols" : 0,
+      "systems" : 22
+    },
+    "os" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "os_GE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "os_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "osa" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "osa_US" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pa" : {
+      "symbols" : 3,
+      "systems" : 31
+    },
+    "pa_Arab" : {
+      "symbols" : 1,
+      "systems" : 12
+    },
+    "pa_Arab_PK" : {
+      "symbols" : 1,
+      "systems" : 12
+    },
+    "pa_Aran_PK" : {
+      "symbols" : 1,
+      "systems" : 12
+    },
+    "pa_Guru" : {
+      "symbols" : 3,
+      "systems" : 31
+    },
+    "pa_Guru_IN" : {
+      "symbols" : 3,
+      "systems" : 31
+    },
+    "pcm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pcm_NG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pl_PL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pms" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pms_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pqm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pqm_CA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "prg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "prg_PL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ps" : {
+      "symbols" : 9,
+      "systems" : 12
+    },
+    "ps_AF" : {
+      "symbols" : 9,
+      "systems" : 12
+    },
+    "ps_PK" : {
+      "symbols" : 9,
+      "systems" : 12
+    },
+    "pt" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_AO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_BR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_CV" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_FR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_GQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_GW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_LU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_MO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_MZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_PT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_ST" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "pt_TL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "qu" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "qu_BO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "qu_EC" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "qu_PE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "raj" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "raj_IN" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "rej" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rej_ID" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rej_Rjng" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rej_Rjng_ID" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rhg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rhg_Rohg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rhg_Rohg_BD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rhg_Rohg_MM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rm_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rn_BI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ro" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ro_MD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ro_RO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rof" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rof_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "root" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru_BY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru_KG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru_KZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru_MD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ru_UA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rw_RW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rwk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "rwk_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sa" : {
+      "symbols" : 0,
+      "systems" : 29
+    },
+    "sa_IN" : {
+      "symbols" : 0,
+      "systems" : 29
+    },
+    "sah" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sah_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "saq" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "saq_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sat" : {
+      "symbols" : 0,
+      "systems" : 32
+    },
+    "sat_Deva" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "sat_Deva_IN" : {
+      "symbols" : 0,
+      "systems" : 5
+    },
+    "sat_Olck" : {
+      "symbols" : 0,
+      "systems" : 32
+    },
+    "sat_Olck_IN" : {
+      "symbols" : 0,
+      "systems" : 32
+    },
+    "sbp" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sbp_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sc" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sc_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "scn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "scn_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sd" : {
+      "symbols" : 0,
+      "systems" : 3
+    },
+    "sd_Arab" : {
+      "symbols" : 0,
+      "systems" : 3
+    },
+    "sd_Arab_PK" : {
+      "symbols" : 0,
+      "systems" : 3
+    },
+    "sd_Deva" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sd_Deva_IN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "se" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "se_FI" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "se_NO" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "se_SE" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "seh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "seh_MZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ses" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ses_ML" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sg_CF" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shi" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shi_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shi_Latn_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shi_Tfng" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shi_Tfng_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shn_MM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shn_TH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "shp" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "si" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "si_LK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sjd" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sje" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sju" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sk_SK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sl" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "sl_SI" : {
+      "symbols" : 4,
+      "systems" : 0
+    },
+    "sm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sm_AS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sm_WS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "smn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "smn_FI" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sn_ZW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "so" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "so_DJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "so_ET" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "so_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "so_SO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sq" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sq_AL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sq_MK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sq_XK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Cyrl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Cyrl_BA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Cyrl_ME" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Cyrl_RS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Cyrl_XK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Latn_BA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Latn_ME" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Latn_RS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sr_Latn_XK" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "srs" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ss" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ss_SZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ss_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "st" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "st_LS" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "st_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "su" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "su_Latn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "su_Latn_ID" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sv" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "sv_AX" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "sv_FI" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "sv_SE" : {
+      "symbols" : 8,
+      "systems" : 0
+    },
+    "sw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sw_CD" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sw_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sw_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "sw_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "syr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "syr_IQ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "syr_SY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "szl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "szl_PL" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ta" : {
+      "symbols" : 0,
+      "systems" : 33
+    },
+    "ta_IN" : {
+      "symbols" : 0,
+      "systems" : 33
+    },
+    "ta_LK" : {
+      "symbols" : 0,
+      "systems" : 33
+    },
+    "ta_MY" : {
+      "symbols" : 0,
+      "systems" : 33
+    },
+    "ta_SG" : {
+      "symbols" : 0,
+      "systems" : 33
+    },
+    "te" : {
+      "symbols" : 0,
+      "systems" : 23
+    },
+    "te_IN" : {
+      "symbols" : 0,
+      "systems" : 23
+    },
+    "teo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "teo_KE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "teo_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tg" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tg_TJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "th" : {
+      "symbols" : 0,
+      "systems" : 34
+    },
+    "th_TH" : {
+      "symbols" : 0,
+      "systems" : 34
+    },
+    "ti" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "ti_ER" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "ti_ET" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "tig" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "tig_ER" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "tk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tk_TM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tn" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tn_BW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tn_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "to" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "to_TO" : {
+      "symbols" : 2,
+      "systems" : 0
+    },
+    "tok" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tok_001" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tr" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tr_CY" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tr_TR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "trv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "trv_TW" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ts" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ts_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tt" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tt_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "twq" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "twq_NE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tyv" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tyv_RU" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tzm" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "tzm_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ug" : {
+      "symbols" : 0,
+      "systems" : 35
+    },
+    "ug_CN" : {
+      "symbols" : 0,
+      "systems" : 35
+    },
+    "uk" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "uk_UA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ur" : {
+      "symbols" : 1,
+      "systems" : 35
+    },
+    "ur_Arab" : {
+      "symbols" : 1,
+      "systems" : 35
+    },
+    "ur_Arab_IN" : {
+      "symbols" : 1,
+      "systems" : 35
+    },
+    "ur_Arab_PK" : {
+      "symbols" : 1,
+      "systems" : 35
+    },
+    "ur_Aran_PK" : {
+      "symbols" : 1,
+      "systems" : 35
+    },
+    "uz" : {
+      "symbols" : 7,
+      "systems" : 0
+    },
+    "uz_Arab" : {
+      "symbols" : 9,
+      "systems" : 12
+    },
+    "uz_Arab_AF" : {
+      "symbols" : 9,
+      "systems" : 12
+    },
+    "uz_Cyrl" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "uz_Cyrl_UZ" : {
+      "symbols" : 3,
+      "systems" : 0
+    },
+    "uz_Latn" : {
+      "symbols" : 7,
+      "systems" : 0
+    },
+    "uz_Latn_UZ" : {
+      "symbols" : 7,
+      "systems" : 0
+    },
+    "vai" : {
+      "symbols" : 0,
+      "systems" : 36
+    },
+    "vai_Latn" : {
+      "symbols" : 0,
+      "systems" : 36
+    },
+    "vai_Latn_LR" : {
+      "symbols" : 0,
+      "systems" : 36
+    },
+    "vai_Vaii" : {
+      "symbols" : 0,
+      "systems" : 36
+    },
+    "vai_Vaii_LR" : {
+      "symbols" : 0,
+      "systems" : 36
+    },
+    "ve" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "ve_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vec" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vec_IT" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vi" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vi_VN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vmw" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vmw_MZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vun" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "vun_TZ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "wa" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "wa_BE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "wae" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "wae_CH" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "wal" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "wal_ET" : {
+      "symbols" : 0,
+      "systems" : 1
+    },
+    "wo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "wo_SN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "xh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "xh_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "xnr" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "xnr_IN" : {
+      "symbols" : 0,
+      "systems" : 8
+    },
+    "xog" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "xog_UG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yav" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yav_CM" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yi" : {
+      "symbols" : 0,
+      "systems" : 15
+    },
+    "yi_UA" : {
+      "symbols" : 0,
+      "systems" : 15
+    },
+    "yo" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yo_BJ" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yo_NG" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yrl" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yrl_BR" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yrl_CO" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yrl_VE" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "yue" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "yue_Hans" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "yue_Hans_CN" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "yue_Hant" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "yue_Hant_CN" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "yue_Hant_HK" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "yue_Hant_MO" : {
+      "symbols" : 0,
+      "systems" : 37
+    },
+    "za" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "za_CN" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "zgh" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "zgh_MA" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "zh" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans_CN" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans_HK" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans_JP" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans_MO" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans_MY" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hans_SG" : {
+      "symbols" : 0,
+      "systems" : 38
+    },
+    "zh_Hant" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zh_Hant_CN" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zh_Hant_HK" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zh_Hant_JP" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zh_Hant_MO" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zh_Hant_MY" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zh_Hant_TW" : {
+      "symbols" : 10,
+      "systems" : 37
+    },
+    "zu" : {
+      "symbols" : 0,
+      "systems" : 0
+    },
+    "zu_ZA" : {
+      "symbols" : 0,
+      "systems" : 0
+    }
+  },
+  "numberingSystems" : {
+    "adlm" : [
+      "𞥐",
+      "𞥑",
+      "𞥒",
+      "𞥓",
+      "𞥔",
+      "𞥕",
+      "𞥖",
+      "𞥗",
+      "𞥘",
+      "𞥙"
+    ],
+    "ahom" : [
+      "𑜰",
+      "𑜱",
+      "𑜲",
+      "𑜳",
+      "𑜴",
+      "𑜵",
+      "𑜶",
+      "𑜷",
+      "𑜸",
+      "𑜹"
+    ],
+    "arab" : [
+      "٠",
+      "١",
+      "٢",
+      "٣",
+      "٤",
+      "٥",
+      "٦",
+      "٧",
+      "٨",
+      "٩"
+    ],
+    "arabext" : [
+      "۰",
+      "۱",
+      "۲",
+      "۳",
+      "۴",
+      "۵",
+      "۶",
+      "۷",
+      "۸",
+      "۹"
+    ],
+    "bali" : [
+      "᭐",
+      "᭑",
+      "᭒",
+      "᭓",
+      "᭔",
+      "᭕",
+      "᭖",
+      "᭗",
+      "᭘",
+      "᭙"
+    ],
+    "beng" : [
+      "০",
+      "১",
+      "২",
+      "৩",
+      "৪",
+      "৫",
+      "৬",
+      "৭",
+      "৮",
+      "৯"
+    ],
+    "bhks" : [
+      "𑱐",
+      "𑱑",
+      "𑱒",
+      "𑱓",
+      "𑱔",
+      "𑱕",
+      "𑱖",
+      "𑱗",
+      "𑱘",
+      "𑱙"
+    ],
+    "brah" : [
+      "𑁦",
+      "𑁧",
+      "𑁨",
+      "𑁩",
+      "𑁪",
+      "𑁫",
+      "𑁬",
+      "𑁭",
+      "𑁮",
+      "𑁯"
+    ],
+    "cakm" : [
+      "𑄶",
+      "𑄷",
+      "𑄸",
+      "𑄹",
+      "𑄺",
+      "𑄻",
+      "𑄼",
+      "𑄽",
+      "𑄾",
+      "𑄿"
+    ],
+    "cham" : [
+      "꩐",
+      "꩑",
+      "꩒",
+      "꩓",
+      "꩔",
+      "꩕",
+      "꩖",
+      "꩗",
+      "꩘",
+      "꩙"
+    ],
+    "deva" : [
+      "०",
+      "१",
+      "२",
+      "३",
+      "४",
+      "५",
+      "६",
+      "७",
+      "८",
+      "९"
+    ],
+    "diak" : [
+      "𑥐",
+      "𑥑",
+      "𑥒",
+      "𑥓",
+      "𑥔",
+      "𑥕",
+      "𑥖",
+      "𑥗",
+      "𑥘",
+      "𑥙"
+    ],
+    "fullwide" : [
+      "０",
+      "１",
+      "２",
+      "３",
+      "４",
+      "５",
+      "６",
+      "７",
+      "８",
+      "９"
+    ],
+    "gara" : [
+      "𐵀",
+      "𐵁",
+      "𐵂",
+      "𐵃",
+      "𐵄",
+      "𐵅",
+      "𐵆",
+      "𐵇",
+      "𐵈",
+      "𐵉"
+    ],
+    "gong" : [
+      "𑶠",
+      "𑶡",
+      "𑶢",
+      "𑶣",
+      "𑶤",
+      "𑶥",
+      "𑶦",
+      "𑶧",
+      "𑶨",
+      "𑶩"
+    ],
+    "gonm" : [
+      "𑵐",
+      "𑵑",
+      "𑵒",
+      "𑵓",
+      "𑵔",
+      "𑵕",
+      "𑵖",
+      "𑵗",
+      "𑵘",
+      "𑵙"
+    ],
+    "gujr" : [
+      "૦",
+      "૧",
+      "૨",
+      "૩",
+      "૪",
+      "૫",
+      "૬",
+      "૭",
+      "૮",
+      "૯"
+    ],
+    "gukh" : [
+      "𖄰",
+      "𖄱",
+      "𖄲",
+      "𖄳",
+      "𖄴",
+      "𖄵",
+      "𖄶",
+      "𖄷",
+      "𖄸",
+      "𖄹"
+    ],
+    "guru" : [
+      "੦",
+      "੧",
+      "੨",
+      "੩",
+      "੪",
+      "੫",
+      "੬",
+      "੭",
+      "੮",
+      "੯"
+    ],
+    "hanidec" : [
+      "〇",
+      "一",
+      "二",
+      "三",
+      "四",
+      "五",
+      "六",
+      "七",
+      "八",
+      "九"
+    ],
+    "hmng" : [
+      "𖭐",
+      "𖭑",
+      "𖭒",
+      "𖭓",
+      "𖭔",
+      "𖭕",
+      "𖭖",
+      "𖭗",
+      "𖭘",
+      "𖭙"
+    ],
+    "hmnp" : [
+      "𞅀",
+      "𞅁",
+      "𞅂",
+      "𞅃",
+      "𞅄",
+      "𞅅",
+      "𞅆",
+      "𞅇",
+      "𞅈",
+      "𞅉"
+    ],
+    "java" : [
+      "꧐",
+      "꧑",
+      "꧒",
+      "꧓",
+      "꧔",
+      "꧕",
+      "꧖",
+      "꧗",
+      "꧘",
+      "꧙"
+    ],
+    "kali" : [
+      "꤀",
+      "꤁",
+      "꤂",
+      "꤃",
+      "꤄",
+      "꤅",
+      "꤆",
+      "꤇",
+      "꤈",
+      "꤉"
+    ],
+    "kawi" : [
+      "𑽐",
+      "𑽑",
+      "𑽒",
+      "𑽓",
+      "𑽔",
+      "𑽕",
+      "𑽖",
+      "𑽗",
+      "𑽘",
+      "𑽙"
+    ],
+    "khmr" : [
+      "០",
+      "១",
+      "២",
+      "៣",
+      "៤",
+      "៥",
+      "៦",
+      "៧",
+      "៨",
+      "៩"
+    ],
+    "knda" : [
+      "೦",
+      "೧",
+      "೨",
+      "೩",
+      "೪",
+      "೫",
+      "೬",
+      "೭",
+      "೮",
+      "೯"
+    ],
+    "krai" : [
+      "𖵰",
+      "𖵱",
+      "𖵲",
+      "𖵳",
+      "𖵴",
+      "𖵵",
+      "𖵶",
+      "𖵷",
+      "𖵸",
+      "𖵹"
+    ],
+    "lana" : [
+      "᪀",
+      "᪁",
+      "᪂",
+      "᪃",
+      "᪄",
+      "᪅",
+      "᪆",
+      "᪇",
+      "᪈",
+      "᪉"
+    ],
+    "lanatham" : [
+      "᪐",
+      "᪑",
+      "᪒",
+      "᪓",
+      "᪔",
+      "᪕",
+      "᪖",
+      "᪗",
+      "᪘",
+      "᪙"
+    ],
+    "laoo" : [
+      "໐",
+      "໑",
+      "໒",
+      "໓",
+      "໔",
+      "໕",
+      "໖",
+      "໗",
+      "໘",
+      "໙"
+    ],
+    "latn" : [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "lepc" : [
+      "᱀",
+      "᱁",
+      "᱂",
+      "᱃",
+      "᱄",
+      "᱅",
+      "᱆",
+      "᱇",
+      "᱈",
+      "᱉"
+    ],
+    "limb" : [
+      "᥆",
+      "᥇",
+      "᥈",
+      "᥉",
+      "᥊",
+      "᥋",
+      "᥌",
+      "᥍",
+      "᥎",
+      "᥏"
+    ],
+    "mathbold" : [
+      "𝟎",
+      "𝟏",
+      "𝟐",
+      "𝟑",
+      "𝟒",
+      "𝟓",
+      "𝟔",
+      "𝟕",
+      "𝟖",
+      "𝟗"
+    ],
+    "mathdbl" : [
+      "𝟘",
+      "𝟙",
+      "𝟚",
+      "𝟛",
+      "𝟜",
+      "𝟝",
+      "𝟞",
+      "𝟟",
+      "𝟠",
+      "𝟡"
+    ],
+    "mathmono" : [
+      "𝟶",
+      "𝟷",
+      "𝟸",
+      "𝟹",
+      "𝟺",
+      "𝟻",
+      "𝟼",
+      "𝟽",
+      "𝟾",
+      "𝟿"
+    ],
+    "mathsanb" : [
+      "𝟬",
+      "𝟭",
+      "𝟮",
+      "𝟯",
+      "𝟰",
+      "𝟱",
+      "𝟲",
+      "𝟳",
+      "𝟴",
+      "𝟵"
+    ],
+    "mathsans" : [
+      "𝟢",
+      "𝟣",
+      "𝟤",
+      "𝟥",
+      "𝟦",
+      "𝟧",
+      "𝟨",
+      "𝟩",
+      "𝟪",
+      "𝟫"
+    ],
+    "mlym" : [
+      "൦",
+      "൧",
+      "൨",
+      "൩",
+      "൪",
+      "൫",
+      "൬",
+      "൭",
+      "൮",
+      "൯"
+    ],
+    "modi" : [
+      "𑙐",
+      "𑙑",
+      "𑙒",
+      "𑙓",
+      "𑙔",
+      "𑙕",
+      "𑙖",
+      "𑙗",
+      "𑙘",
+      "𑙙"
+    ],
+    "mong" : [
+      "᠐",
+      "᠑",
+      "᠒",
+      "᠓",
+      "᠔",
+      "᠕",
+      "᠖",
+      "᠗",
+      "᠘",
+      "᠙"
+    ],
+    "mroo" : [
+      "𖩠",
+      "𖩡",
+      "𖩢",
+      "𖩣",
+      "𖩤",
+      "𖩥",
+      "𖩦",
+      "𖩧",
+      "𖩨",
+      "𖩩"
+    ],
+    "mtei" : [
+      "꯰",
+      "꯱",
+      "꯲",
+      "꯳",
+      "꯴",
+      "꯵",
+      "꯶",
+      "꯷",
+      "꯸",
+      "꯹"
+    ],
+    "mymr" : [
+      "၀",
+      "၁",
+      "၂",
+      "၃",
+      "၄",
+      "၅",
+      "၆",
+      "၇",
+      "၈",
+      "၉"
+    ],
+    "mymrepka" : [
+      "𑛚",
+      "𑛛",
+      "𑛜",
+      "𑛝",
+      "𑛞",
+      "𑛟",
+      "𑛠",
+      "𑛡",
+      "𑛢",
+      "𑛣"
+    ],
+    "mymrpao" : [
+      "𑛐",
+      "𑛑",
+      "𑛒",
+      "𑛓",
+      "𑛔",
+      "𑛕",
+      "𑛖",
+      "𑛗",
+      "𑛘",
+      "𑛙"
+    ],
+    "mymrshan" : [
+      "႐",
+      "႑",
+      "႒",
+      "႓",
+      "႔",
+      "႕",
+      "႖",
+      "႗",
+      "႘",
+      "႙"
+    ],
+    "mymrtlng" : [
+      "꧰",
+      "꧱",
+      "꧲",
+      "꧳",
+      "꧴",
+      "꧵",
+      "꧶",
+      "꧷",
+      "꧸",
+      "꧹"
+    ],
+    "nagm" : [
+      "𞓰",
+      "𞓱",
+      "𞓲",
+      "𞓳",
+      "𞓴",
+      "𞓵",
+      "𞓶",
+      "𞓷",
+      "𞓸",
+      "𞓹"
+    ],
+    "newa" : [
+      "𑑐",
+      "𑑑",
+      "𑑒",
+      "𑑓",
+      "𑑔",
+      "𑑕",
+      "𑑖",
+      "𑑗",
+      "𑑘",
+      "𑑙"
+    ],
+    "nkoo" : [
+      "߀",
+      "߁",
+      "߂",
+      "߃",
+      "߄",
+      "߅",
+      "߆",
+      "߇",
+      "߈",
+      "߉"
+    ],
+    "olck" : [
+      "᱐",
+      "᱑",
+      "᱒",
+      "᱓",
+      "᱔",
+      "᱕",
+      "᱖",
+      "᱗",
+      "᱘",
+      "᱙"
+    ],
+    "onao" : [
+      "𞗱",
+      "𞗲",
+      "𞗳",
+      "𞗴",
+      "𞗵",
+      "𞗶",
+      "𞗷",
+      "𞗸",
+      "𞗹",
+      "𞗺"
+    ],
+    "orya" : [
+      "୦",
+      "୧",
+      "୨",
+      "୩",
+      "୪",
+      "୫",
+      "୬",
+      "୭",
+      "୮",
+      "୯"
+    ],
+    "osma" : [
+      "𐒠",
+      "𐒡",
+      "𐒢",
+      "𐒣",
+      "𐒤",
+      "𐒥",
+      "𐒦",
+      "𐒧",
+      "𐒨",
+      "𐒩"
+    ],
+    "outlined" : [
+      "𜳰",
+      "𜳱",
+      "𜳲",
+      "𜳳",
+      "𜳴",
+      "𜳵",
+      "𜳶",
+      "𜳷",
+      "𜳸",
+      "𜳹"
+    ],
+    "rohg" : [
+      "𐴰",
+      "𐴱",
+      "𐴲",
+      "𐴳",
+      "𐴴",
+      "𐴵",
+      "𐴶",
+      "𐴷",
+      "𐴸",
+      "𐴹"
+    ],
+    "saur" : [
+      "꣐",
+      "꣑",
+      "꣒",
+      "꣓",
+      "꣔",
+      "꣕",
+      "꣖",
+      "꣗",
+      "꣘",
+      "꣙"
+    ],
+    "segment" : [
+      "🯰",
+      "🯱",
+      "🯲",
+      "🯳",
+      "🯴",
+      "🯵",
+      "🯶",
+      "🯷",
+      "🯸",
+      "🯹"
+    ],
+    "shrd" : [
+      "𑇐",
+      "𑇑",
+      "𑇒",
+      "𑇓",
+      "𑇔",
+      "𑇕",
+      "𑇖",
+      "𑇗",
+      "𑇘",
+      "𑇙"
+    ],
+    "sind" : [
+      "𑋰",
+      "𑋱",
+      "𑋲",
+      "𑋳",
+      "𑋴",
+      "𑋵",
+      "𑋶",
+      "𑋷",
+      "𑋸",
+      "𑋹"
+    ],
+    "sinh" : [
+      "෦",
+      "෧",
+      "෨",
+      "෩",
+      "෪",
+      "෫",
+      "෬",
+      "෭",
+      "෮",
+      "෯"
+    ],
+    "sora" : [
+      "𑃰",
+      "𑃱",
+      "𑃲",
+      "𑃳",
+      "𑃴",
+      "𑃵",
+      "𑃶",
+      "𑃷",
+      "𑃸",
+      "𑃹"
+    ],
+    "sund" : [
+      "᮰",
+      "᮱",
+      "᮲",
+      "᮳",
+      "᮴",
+      "᮵",
+      "᮶",
+      "᮷",
+      "᮸",
+      "᮹"
+    ],
+    "sunu" : [
+      "𑯰",
+      "𑯱",
+      "𑯲",
+      "𑯳",
+      "𑯴",
+      "𑯵",
+      "𑯶",
+      "𑯷",
+      "𑯸",
+      "𑯹"
+    ],
+    "takr" : [
+      "𑛀",
+      "𑛁",
+      "𑛂",
+      "𑛃",
+      "𑛄",
+      "𑛅",
+      "𑛆",
+      "𑛇",
+      "𑛈",
+      "𑛉"
+    ],
+    "talu" : [
+      "᧐",
+      "᧑",
+      "᧒",
+      "᧓",
+      "᧔",
+      "᧕",
+      "᧖",
+      "᧗",
+      "᧘",
+      "᧙"
+    ],
+    "tamldec" : [
+      "௦",
+      "௧",
+      "௨",
+      "௩",
+      "௪",
+      "௫",
+      "௬",
+      "௭",
+      "௮",
+      "௯"
+    ],
+    "telu" : [
+      "౦",
+      "౧",
+      "౨",
+      "౩",
+      "౪",
+      "౫",
+      "౬",
+      "౭",
+      "౮",
+      "౯"
+    ],
+    "thai" : [
+      "๐",
+      "๑",
+      "๒",
+      "๓",
+      "๔",
+      "๕",
+      "๖",
+      "๗",
+      "๘",
+      "๙"
+    ],
+    "tibt" : [
+      "༠",
+      "༡",
+      "༢",
+      "༣",
+      "༤",
+      "༥",
+      "༦",
+      "༧",
+      "༨",
+      "༩"
+    ],
+    "tirh" : [
+      "𑓐",
+      "𑓑",
+      "𑓒",
+      "𑓓",
+      "𑓔",
+      "𑓕",
+      "𑓖",
+      "𑓗",
+      "𑓘",
+      "𑓙"
+    ],
+    "tnsa" : [
+      "𖫀",
+      "𖫁",
+      "𖫂",
+      "𖫃",
+      "𖫄",
+      "𖫅",
+      "𖫆",
+      "𖫇",
+      "𖫈",
+      "𖫉"
+    ],
+    "tols" : [
+      "𑷠",
+      "𑷡",
+      "𑷢",
+      "𑷣",
+      "𑷤",
+      "𑷥",
+      "𑷦",
+      "𑷧",
+      "𑷨",
+      "𑷩"
+    ],
+    "vaii" : [
+      "꘠",
+      "꘡",
+      "꘢",
+      "꘣",
+      "꘤",
+      "꘥",
+      "꘦",
+      "꘧",
+      "꘨",
+      "꘩"
+    ],
+    "wara" : [
+      "𑣠",
+      "𑣡",
+      "𑣢",
+      "𑣣",
+      "𑣤",
+      "𑣥",
+      "𑣦",
+      "𑣧",
+      "𑣨",
+      "𑣩"
+    ],
+    "wcho" : [
+      "𞋰",
+      "𞋱",
+      "𞋲",
+      "𞋳",
+      "𞋴",
+      "𞋵",
+      "𞋶",
+      "𞋷",
+      "𞋸",
+      "𞋹"
+    ]
+  },
+  "parents" : {
+    "ar_Latn" : "root",
+    "as_Latn" : "root",
+    "az_Arab" : "root",
+    "az_Cyrl" : "root",
+    "bal_Latn" : "root",
+    "ber_Latn" : "root",
+    "blt_Latn" : "root",
+    "bm_Nkoo" : "root",
+    "bn_Latn" : "root",
+    "bs_Cyrl" : "root",
+    "byn_Latn" : "root",
+    "cu_Glag" : "root",
+    "dje_Arab" : "root",
+    "dyo_Arab" : "root",
+    "el_Latn" : "root",
+    "en_150" : "en_001",
+    "en_AD" : "en_150",
+    "en_AF" : "en_001",
+    "en_AG" : "en_001",
+    "en_AI" : "en_001",
+    "en_AL" : "en_150",
+    "en_AM" : "en_001",
+    "en_AO" : "en_001",
+    "en_AR" : "en_001",
+    "en_AT" : "en_150",
+    "en_AU" : "en_001",
+    "en_AW" : "en_001",
+    "en_AX" : "en_001",
+    "en_AZ" : "en_001",
+    "en_BA" : "en_150",
+    "en_BB" : "en_001",
+    "en_BD" : "en_001",
+    "en_BE" : "en_150",
+    "en_BF" : "en_001",
+    "en_BG" : "en_150",
+    "en_BH" : "en_001",
+    "en_BJ" : "en_001",
+    "en_BL" : "en_001",
+    "en_BM" : "en_001",
+    "en_BN" : "en_001",
+    "en_BO" : "en_001",
+    "en_BQ" : "en_001",
+    "en_BR" : "en_001",
+    "en_BS" : "en_001",
+    "en_BW" : "en_001",
+    "en_BY" : "en_150",
+    "en_BZ" : "en_001",
+    "en_CC" : "en_001",
+    "en_CD" : "en_001",
+    "en_CF" : "en_001",
+    "en_CG" : "en_001",
+    "en_CH" : "en_150",
+    "en_CI" : "en_001",
+    "en_CK" : "en_001",
+    "en_CM" : "en_001",
+    "en_CR" : "en_001",
+    "en_CU" : "en_001",
+    "en_CV" : "en_001",
+    "en_CX" : "en_001",
+    "en_CY" : "en_001",
+    "en_CZ" : "en_150",
+    "en_DE" : "en_150",
+    "en_DG" : "en_001",
+    "en_DK" : "en_150",
+    "en_DM" : "en_001",
+    "en_DO" : "en_001",
+    "en_DZ" : "en_001",
+    "en_Dsrt" : "root",
+    "en_EC" : "en_001",
+    "en_EE" : "en_150",
+    "en_EG" : "en_001",
+    "en_EH" : "en_001",
+    "en_ER" : "en_001",
+    "en_ES" : "en_150",
+    "en_ET" : "en_001",
+    "en_FI" : "en_150",
+    "en_FJ" : "en_001",
+    "en_FK" : "en_001",
+    "en_FM" : "en_001",
+    "en_FO" : "en_150",
+    "en_FR" : "en_150",
+    "en_GA" : "en_001",
+    "en_GB" : "en_001",
+    "en_GD" : "en_001",
+    "en_GE" : "en_150",
+    "en_GF" : "en_001",
+    "en_GG" : "en_001",
+    "en_GH" : "en_001",
+    "en_GI" : "en_001",
+    "en_GL" : "en_150",
+    "en_GM" : "en_001",
+    "en_GN" : "en_001",
+    "en_GP" : "en_001",
+    "en_GQ" : "en_001",
+    "en_GR" : "en_150",
+    "en_GS" : "en_001",
+    "en_GT" : "en_001",
+    "en_GY" : "en_001",
+    "en_HK" : "en_001",
+    "en_HN" : "en_001",
+    "en_HR" : "en_150",
+    "en_HT" : "en_001",
+    "en_HU" : "en_150",
+    "en_IC" : "en_001",
+    "en_ID" : "en_001",
+    "en_IE" : "en_001",
+    "en_IL" : "en_001",
+    "en_IM" : "en_001",
+    "en_IN" : "en_001",
+    "en_IO" : "en_001",
+    "en_IQ" : "en_001",
+    "en_IS" : "en_150",
+    "en_IT" : "en_150",
+    "en_JE" : "en_001",
+    "en_JM" : "en_001",
+    "en_JO" : "en_001",
+    "en_KE" : "en_001",
+    "en_KG" : "en_001",
+    "en_KH" : "en_001",
+    "en_KI" : "en_001",
+    "en_KM" : "en_001",
+    "en_KN" : "en_001",
+    "en_KW" : "en_001",
+    "en_KY" : "en_001",
+    "en_KZ" : "en_001",
+    "en_LA" : "en_001",
+    "en_LB" : "en_001",
+    "en_LC" : "en_001",
+    "en_LI" : "en_150",
+    "en_LK" : "en_001",
+    "en_LR" : "en_001",
+    "en_LS" : "en_001",
+    "en_LT" : "en_150",
+    "en_LU" : "en_150",
+    "en_LV" : "en_150",
+    "en_LY" : "en_001",
+    "en_MA" : "en_001",
+    "en_MC" : "en_150",
+    "en_MD" : "en_150",
+    "en_ME" : "en_150",
+    "en_MF" : "en_001",
+    "en_MG" : "en_001",
+    "en_MK" : "en_150",
+    "en_ML" : "en_001",
+    "en_MM" : "en_001",
+    "en_MN" : "en_001",
+    "en_MO" : "en_001",
+    "en_MQ" : "en_001",
+    "en_MR" : "en_001",
+    "en_MS" : "en_001",
+    "en_MT" : "en_001",
+    "en_MU" : "en_001",
+    "en_MV" : "en_001",
+    "en_MW" : "en_001",
+    "en_MY" : "en_001",
+    "en_MZ" : "en_001",
+    "en_NA" : "en_001",
+    "en_NC" : "en_001",
+    "en_NE" : "en_001",
+    "en_NF" : "en_001",
+    "en_NG" : "en_001",
+    "en_NI" : "en_001",
+    "en_NL" : "en_150",
+    "en_NO" : "en_150",
+    "en_NP" : "en_001",
+    "en_NR" : "en_001",
+    "en_NU" : "en_001",
+    "en_NZ" : "en_001",
+    "en_OM" : "en_001",
+    "en_PE" : "en_001",
+    "en_PF" : "en_001",
+    "en_PG" : "en_001",
+    "en_PK" : "en_001",
+    "en_PL" : "en_150",
+    "en_PM" : "en_001",
+    "en_PN" : "en_001",
+    "en_PS" : "en_001",
+    "en_PT" : "en_150",
+    "en_PW" : "en_001",
+    "en_QA" : "en_001",
+    "en_RE" : "en_001",
+    "en_RO" : "en_150",
+    "en_RS" : "en_150",
+    "en_RU" : "en_150",
+    "en_RW" : "en_001",
+    "en_SB" : "en_001",
+    "en_SC" : "en_001",
+    "en_SD" : "en_001",
+    "en_SE" : "en_150",
+    "en_SG" : "en_001",
+    "en_SH" : "en_001",
+    "en_SI" : "en_150",
+    "en_SJ" : "en_001",
+    "en_SK" : "en_150",
+    "en_SL" : "en_001",
+    "en_SM" : "en_001",
+    "en_SN" : "en_001",
+    "en_SO" : "en_001",
+    "en_SS" : "en_001",
+    "en_ST" : "en_001",
+    "en_SV" : "en_001",
+    "en_SX" : "en_001",
+    "en_SY" : "en_001",
+    "en_SZ" : "en_001",
+    "en_Shaw" : "root",
+    "en_TC" : "en_001",
+    "en_TD" : "en_001",
+    "en_TF" : "en_001",
+    "en_TG" : "en_001",
+    "en_TH" : "en_001",
+    "en_TJ" : "en_001",
+    "en_TK" : "en_001",
+    "en_TL" : "en_001",
+    "en_TM" : "en_001",
+    "en_TN" : "en_001",
+    "en_TO" : "en_001",
+    "en_TT" : "en_001",
+    "en_TV" : "en_001",
+    "en_TZ" : "en_001",
+    "en_UA" : "en_150",
+    "en_UG" : "en_001",
+    "en_UY" : "en_001",
+    "en_UZ" : "en_001",
+    "en_VA" : "en_150",
+    "en_VC" : "en_001",
+    "en_VE" : "en_001",
+    "en_VG" : "en_001",
+    "en_VN" : "en_001",
+    "en_VU" : "en_001",
+    "en_WF" : "en_001",
+    "en_WS" : "en_001",
+    "en_YE" : "en_001",
+    "en_YT" : "en_001",
+    "en_ZA" : "en_001",
+    "en_ZM" : "en_001",
+    "en_ZW" : "en_001",
+    "es_AG" : "es_419",
+    "es_AI" : "es_419",
+    "es_AR" : "es_419",
+    "es_AW" : "es_419",
+    "es_BB" : "es_419",
+    "es_BL" : "es_419",
+    "es_BM" : "es_419",
+    "es_BO" : "es_419",
+    "es_BQ" : "es_419",
+    "es_BR" : "es_419",
+    "es_BS" : "es_419",
+    "es_BZ" : "es_419",
+    "es_CA" : "es_419",
+    "es_CL" : "es_419",
+    "es_CO" : "es_419",
+    "es_CR" : "es_419",
+    "es_CU" : "es_419",
+    "es_CW" : "es_419",
+    "es_DM" : "es_419",
+    "es_DO" : "es_419",
+    "es_EC" : "es_419",
+    "es_FK" : "es_419",
+    "es_GD" : "es_419",
+    "es_GF" : "es_419",
+    "es_GL" : "es_419",
+    "es_GP" : "es_419",
+    "es_GT" : "es_419",
+    "es_GY" : "es_419",
+    "es_HN" : "es_419",
+    "es_HT" : "es_419",
+    "es_JP" : "es_419",
+    "es_KN" : "es_419",
+    "es_KY" : "es_419",
+    "es_LC" : "es_419",
+    "es_MF" : "es_419",
+    "es_MQ" : "es_419",
+    "es_MS" : "es_419",
+    "es_MX" : "es_419",
+    "es_NI" : "es_419",
+    "es_PA" : "es_419",
+    "es_PE" : "es_419",
+    "es_PM" : "es_419",
+    "es_PR" : "es_419",
+    "es_PY" : "es_419",
+    "es_SR" : "es_419",
+    "es_SV" : "es_419",
+    "es_SX" : "es_419",
+    "es_TC" : "es_419",
+    "es_TT" : "es_419",
+    "es_US" : "es_419",
+    "es_UY" : "es_419",
+    "es_VC" : "es_419",
+    "es_VE" : "es_419",
+    "es_VG" : "es_419",
+    "es_VI" : "es_419",
+    "ff_Adlm" : "root",
+    "ff_Arab" : "root",
+    "gu_Latn" : "root",
+    "ha_Arab" : "root",
+    "he_Latn" : "root",
+    "hi_Latn" : "en_IN",
+    "ht" : "fr_HT",
+    "iu_Latn" : "root",
+    "ja_Latn" : "root",
+    "kaa_Latn" : "root",
+    "kk_Arab" : "root",
+    "kn_Latn" : "root",
+    "kok_Latn" : "root",
+    "ks_Deva" : "root",
+    "ku_Arab" : "root",
+    "kxv_Deva" : "root",
+    "kxv_Orya" : "root",
+    "kxv_Telu" : "root",
+    "ky_Arab" : "root",
+    "ky_Latn" : "root",
+    "ml_Arab" : "root",
+    "ml_Latn" : "root",
+    "mn_Mong" : "root",
+    "mni_Mtei" : "root",
+    "mr_Latn" : "root",
+    "ms_Arab" : "root",
+    "nb" : "no",
+    "nn" : "no",
+    "no_NO" : "no",
+    "or_Latn" : "root",
+    "pa_Arab" : "root",
+    "pa_Latn" : "root",
+    "pt_AO" : "pt_PT",
+    "pt_CH" : "pt_PT",
+    "pt_CV" : "pt_PT",
+    "pt_FR" : "pt_PT",
+    "pt_GQ" : "pt_PT",
+    "pt_GW" : "pt_PT",
+    "pt_LU" : "pt_PT",
+    "pt_MO" : "pt_PT",
+    "pt_MZ" : "pt_PT",
+    "pt_ST" : "pt_PT",
+    "pt_TL" : "pt_PT",
+    "rej_Rjng" : "root",
+    "ru_Latn" : "root",
+    "sa_Latn" : "root",
+    "sat_Deva" : "root",
+    "sd_Deva" : "root",
+    "sd_Khoj" : "root",
+    "sd_Sind" : "root",
+    "shi_Latn" : "root",
+    "so_Arab" : "root",
+    "sr_Latn" : "root",
+    "suz_Sunu" : "root",
+    "sw_Arab" : "root",
+    "ta_Latn" : "root",
+    "te_Latn" : "root",
+    "tg_Arab" : "root",
+    "ug_Cyrl" : "root",
+    "ur_Latn" : "root",
+    "uz_Arab" : "root",
+    "uz_Cyrl" : "root",
+    "vai_Latn" : "root",
+    "wo_Arab" : "root",
+    "yi_Latn" : "root",
+    "yo_Arab" : "root",
+    "yue_Hans" : "root",
+    "zh_Hant" : "root",
+    "zh_Hant_MO" : "zh_Hant_HK",
+    "zh_Latn" : "root"
+  },
+  "validRegions" : [
+    "AC",
+    "AD",
+    "AE",
+    "AF",
+    "AG",
+    "AI",
+    "AL",
+    "AM",
+    "AO",
+    "AQ",
+    "AR",
+    "AS",
+    "AT",
+    "AU",
+    "AW",
+    "AX",
+    "AZ",
+    "BA",
+    "BB",
+    "BD",
+    "BE",
+    "BF",
+    "BG",
+    "BH",
+    "BI",
+    "BJ",
+    "BL",
+    "BM",
+    "BN",
+    "BO",
+    "BQ",
+    "BR",
+    "BS",
+    "BT",
+    "BV",
+    "BW",
+    "BY",
+    "BZ",
+    "CA",
+    "CC",
+    "CD",
+    "CF",
+    "CG",
+    "CH",
+    "CI",
+    "CK",
+    "CL",
+    "CM",
+    "CN",
+    "CO",
+    "CP",
+    "CQ",
+    "CR",
+    "CU",
+    "CV",
+    "CW",
+    "CX",
+    "CY",
+    "CZ",
+    "DE",
+    "DG",
+    "DJ",
+    "DK",
+    "DM",
+    "DO",
+    "DZ",
+    "EA",
+    "EC",
+    "EE",
+    "EG",
+    "EH",
+    "ER",
+    "ES",
+    "ET",
+    "FI",
+    "FJ",
+    "FK",
+    "FM",
+    "FO",
+    "FR",
+    "GA",
+    "GB",
+    "GD",
+    "GE",
+    "GF",
+    "GG",
+    "GH",
+    "GI",
+    "GL",
+    "GM",
+    "GN",
+    "GP",
+    "GQ",
+    "GR",
+    "GS",
+    "GT",
+    "GU",
+    "GW",
+    "GY",
+    "HK",
+    "HM",
+    "HN",
+    "HR",
+    "HT",
+    "HU",
+    "IC",
+    "ID",
+    "IE",
+    "IL",
+    "IM",
+    "IN",
+    "IO",
+    "IQ",
+    "IR",
+    "IS",
+    "IT",
+    "JE",
+    "JM",
+    "JO",
+    "JP",
+    "KE",
+    "KG",
+    "KH",
+    "KI",
+    "KM",
+    "KN",
+    "KP",
+    "KR",
+    "KW",
+    "KY",
+    "KZ",
+    "LA",
+    "LB",
+    "LC",
+    "LI",
+    "LK",
+    "LR",
+    "LS",
+    "LT",
+    "LU",
+    "LV",
+    "LY",
+    "MA",
+    "MC",
+    "MD",
+    "ME",
+    "MF",
+    "MG",
+    "MH",
+    "MK",
+    "ML",
+    "MM",
+    "MN",
+    "MO",
+    "MP",
+    "MQ",
+    "MR",
+    "MS",
+    "MT",
+    "MU",
+    "MV",
+    "MW",
+    "MX",
+    "MY",
+    "MZ",
+    "NA",
+    "NC",
+    "NE",
+    "NF",
+    "NG",
+    "NI",
+    "NL",
+    "NO",
+    "NP",
+    "NR",
+    "NU",
+    "NZ",
+    "OM",
+    "PA",
+    "PE",
+    "PF",
+    "PG",
+    "PH",
+    "PK",
+    "PL",
+    "PM",
+    "PN",
+    "PR",
+    "PS",
+    "PT",
+    "PW",
+    "PY",
+    "QA",
+    "RE",
+    "RO",
+    "RS",
+    "RU",
+    "RW",
+    "SA",
+    "SB",
+    "SC",
+    "SD",
+    "SE",
+    "SG",
+    "SH",
+    "SI",
+    "SJ",
+    "SK",
+    "SL",
+    "SM",
+    "SN",
+    "SO",
+    "SR",
+    "SS",
+    "ST",
+    "SV",
+    "SX",
+    "SY",
+    "SZ",
+    "TA",
+    "TC",
+    "TD",
+    "TF",
+    "TG",
+    "TH",
+    "TJ",
+    "TK",
+    "TL",
+    "TM",
+    "TN",
+    "TO",
+    "TR",
+    "TT",
+    "TV",
+    "TW",
+    "TZ",
+    "UA",
+    "UG",
+    "UM",
+    "US",
+    "UY",
+    "UZ",
+    "VA",
+    "VC",
+    "VE",
+    "VG",
+    "VI",
+    "VN",
+    "VU",
+    "WF",
+    "WS",
+    "XK",
+    "YE",
+    "YT",
+    "ZA",
+    "ZM",
+    "ZW"
+  ]
+}
