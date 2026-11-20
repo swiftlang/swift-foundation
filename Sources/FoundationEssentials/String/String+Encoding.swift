@@ -123,3 +123,37 @@ extension String.Encoding : CustomStringConvertible {
 #endif
     }
 }
+
+#if FOUNDATION_FRAMEWORK
+internal import CoreFoundation_Private.ForFoundationOnly
+
+extension String.Encoding {
+    static var system: Self {
+        let cf = CFStringGetSystemEncoding()
+        let ns = CFStringConvertEncodingToNSStringEncoding(cf)
+        return Self(rawValue: ns)
+    }
+
+    static var eightBit: Self {
+        let cf = __CFStringGetEightBitStringEncoding()
+        let ns = CFStringConvertEncodingToNSStringEncoding(cf)
+        return Self(rawValue: ns)
+    }
+}
+#else
+extension String.Encoding {
+    static var system: Self {
+        #if canImport(Darwin)
+        .macOSRoman
+        #elseif os(Linux) || os(WASI)
+        .utf8
+        #elseif os(Windows)
+        .windowsCP1252
+        #else
+        .isoLatin1
+        #endif
+    }
+
+    static var eightBit: Self { .ascii }
+}
+#endif
