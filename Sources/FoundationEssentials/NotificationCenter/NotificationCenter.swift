@@ -30,11 +30,6 @@ internal import Synchronization
 
 private let _defaultCenter = NotificationCenter()
 
-private struct MessageBox {
-    // Equivalent to storing Message in Notification.userInfo
-    let message: Any
-}
-
 open class NotificationCenter: @unchecked Sendable {
     private let registrar: NotificationRegistrar
     internal lazy var _actorQueueManager = _NotificationCenterActorQueueManager()
@@ -49,58 +44,32 @@ open class NotificationCenter: @unchecked Sendable {
 
     // TODO: remove or refactor the @_spi(SwiftCorelibsFoundation) methods
     
-    // 'M' may be a concrete NotificationCenter message or a Notification passed via swift-corelibs-foundation
-    @_spi(SwiftCorelibsFoundation) public func _addObserver<M>(_ name: String?, object: Any?, using block: @escaping @Sendable (M) -> Void) -> _NotificationObserverToken {
-        nonisolated(unsafe) let object = object
+    @_spi(SwiftCorelibsFoundation) public func _addObserver(_ name: String?, object: Any?, using block: @escaping @Sendable (Notification) -> Void) -> UInt64 {
+        // Value types are boxed, so they don't match reliably
         let objectPtr = object.map { UnsafeRawPointer(Unmanaged.passUnretained($0 as AnyObject).toOpaque()) }
-        
-        let token = registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: objectPtr) { notification in
-            block(notification as! M)
+        return registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: objectPtr, using: block).rawValue
+    }
+
+    @_spi(SwiftCorelibsFoundation) public func _removeObserver(_ token: UInt64) {
+        registrar.removeObserver(Token(token))
+    }
+
+    @_spi(SwiftCorelibsFoundation) public func _post(_ notification: Notification) {
+        _post(notification.name.rawValue, object: notification.object) { notification }
+    }
+
+    internal func _post(_ name: String, object: Any?, makeNotification: () -> Notification) {
+        let nameHash = _notificationNameHashFor(name)
+        guard let object else {
+            registrar.post(nameHash: nameHash, name: name, object: nil, makeNotification: makeNotification)
+            return
         }
 
-        return _NotificationObserverToken(token: 0, name: name, objectId: objectId)
-    }
-    
-    @_spi(SwiftCorelibsFoundation) public func _removeObserver(_ token: _NotificationObserverToken) {
-//        registrar.withLock { _registrar in
-//            _registrar[token.name]?[token.objectId]?.remove(token.token)
-//            
-//            if _registrar[token.name]?[token.objectId]?.count() == 0 {
-//                _registrar[token.name]?.removeValue(forKey: token.objectId)
-//                if _registrar[token.name]?.isEmpty == true {
-//                    _registrar.removeValue(forKey: token.name)
-//                }
-//            }
-//        }
-    }
-
-    @_spi(SwiftCorelibsFoundation) public func _post<M>(_ name: String?, subject: Any?, message: M) {
-//        // TODO: Darwin calls observers in the order they were added, mixing wildcard and non-wildcard observers.
-//        //       It's conceivable some users rely on that ordering.
-//        
-//        let observers = registrar.withLock { _registrar in
-//            var observers: [@Sendable (MessageBox) -> Void] = []
-//            let objectId = subject.map { ObjectIdentifier($0 as AnyObject) }
-//            
-//            // Observers with 'name' and 'object'
-//            observers.append(contentsOf: _registrar[name]?[objectId]?.values ?? [])
-//            
-//            // Observers with wildcard name and 'object'
-//            observers.append(contentsOf: _registrar[nil]?[objectId]?.values ?? [])
-//
-//            if subject != nil {
-//                // Observers with wildcard name and wildcard object
-//                observers.append(contentsOf: _registrar[nil]?[nil]?.values ?? [])
-//                
-//                // Observers with 'name' and wildcard object
-//                observers.append(contentsOf: _registrar[name]?[nil]?.values ?? [])
-//            }
-//            
-//            return observers
-//        }
-//        
-//        let messageBox = MessageBox(message: message)
-//        observers.forEach { $0(messageBox) }
+        // The registrar only retains the object once it has matched observers, so keep the box alive for the whole post
+        let boxed = object as AnyObject
+        withExtendedLifetime(boxed) {
+            registrar.post(nameHash: nameHash, name: name, object: .object(Unmanaged.passUnretained(boxed)), makeNotification: makeNotification)
+        }
     }
     
     // For testing purposes only!
@@ -122,14 +91,6 @@ extension NotificationCenter: Equatable {
 extension NotificationCenter: CustomStringConvertible {
     public var description: String {
         return "<NotificationCenter 0x\(String(UInt(bitPattern: ObjectIdentifier(self)), radix: 16))>"
-    }
-}
-
-extension NotificationCenter {
-    @_spi(SwiftCorelibsFoundation) public struct _NotificationObserverToken: Equatable, Hashable, Sendable {
-        let token: UInt64
-        public let name: String?
-        public let objectId: ObjectIdentifier?
     }
 }
 

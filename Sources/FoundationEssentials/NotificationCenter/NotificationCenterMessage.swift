@@ -54,7 +54,7 @@ extension NotificationCenter {
 
 extension NotificationCenter {
 #if !FOUNDATION_FRAMEWORK
-    internal typealias _NSNotificationObserverToken = _NotificationObserverToken
+    internal typealias _NSNotificationObserverToken = UInt64
 #endif
     
     /// A unique token representing a single observer registration in a notification center.

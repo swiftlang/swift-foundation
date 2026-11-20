@@ -181,7 +181,6 @@ extension NotificationCenter {
         subject: Message.Subject?,
         observer: @escaping @MainActor (Message) -> Void
     ) -> ObservationToken {
-#if FOUNDATION_FRAMEWORK
         nonisolated(unsafe) let observer = observer
         return ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { notification in
             nonisolated(unsafe) let notification = notification
@@ -191,27 +190,24 @@ extension NotificationCenter {
                 }
             }
         })
-#else
-        return ObservationToken(center: self, token: _addObserver(Message.name, object: subject, using: observer))
-#endif
     }
 
-#if FOUNDATION_FRAMEWORK
     @MainActor
     fileprivate static func _messageFromNotification<Message: NotificationCenter.MainActorMessage>(_ notification: Notification) -> Message? {
         if let m = notification.userInfo?[NotificationMessageKey.key] as? Message {
             // Message posted, message observed
             return m
-        } else if let m = Message.makeMessage(notification) {
+        }
+#if FOUNDATION_FRAMEWORK
+        if let m = Message.makeMessage(notification) {
             // Notification posted, message observed
             return m
-        } else {
-            // Notification posted, unable to make a message
-            os_log(.fault, log: _NSRuntimeIssuesLog(), "Unable to deliver Notification to Message observer because \(String(describing: Message.self)).makeMessage() returned nil. If this is unexpected, check or provide an implementation of makeMessage() which returns a non-nil value for this notification's payload.")
-            return nil
         }
-    }
+        // Notification posted, unable to make a message
+        os_log(.fault, log: _NSRuntimeIssuesLog(), "Unable to deliver Notification to Message observer because \(String(describing: Message.self)).makeMessage() returned nil. If this is unexpected, check or provide an implementation of makeMessage() which returns a non-nil value for this notification's payload.")
 #endif
+        return nil
+    }
     
     @MainActor
     fileprivate func _post<M: MainActorMessage>(message: M, subject: M.Subject? = nil) {
@@ -227,7 +223,9 @@ extension NotificationCenter {
         
         post(notification)
 #else
-        _post(M.name, subject: subject, message: message)
+        _post(M.name, object: subject) {
+            Notification(name: Notification.Name(M.name), object: subject, userInfo: [NotificationMessageKey.key: message])
+        }
 #endif
     }
 }
