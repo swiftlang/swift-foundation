@@ -214,6 +214,15 @@ let package = Package(
             ]
         ),
         .executableTarget(
+            name: "PropertyListBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/PropertyList",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
             name: "SortComparatorBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/SortComparator",
