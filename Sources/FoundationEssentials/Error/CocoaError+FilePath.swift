@@ -10,6 +10,8 @@
  //
  //===----------------------------------------------------------------------===//
 
+#if FOUNDATION_FRAMEWORK || !NO_FILESYSTEM
+
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 #endif
@@ -265,3 +267,5 @@ extension CocoaError {
         #endif
     }
 }
+
+#endif // FOUNDATION_FRAMEWORK || !NO_FILESYSTEM

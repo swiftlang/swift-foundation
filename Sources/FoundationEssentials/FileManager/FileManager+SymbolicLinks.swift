@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_FILESYSTEM
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -218,3 +220,5 @@ extension _FileManagerImpl {
 #endif
     }
 }
+
+#endif // !NO_FILESYSTEM

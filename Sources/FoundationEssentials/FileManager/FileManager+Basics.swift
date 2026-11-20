@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_FILESYSTEM
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Android)
@@ -378,3 +380,5 @@ extension FileManager {
     @nonobjc
     static var MAX_PATH_SIZE: Int { 1026 }
 }
+
+#endif // !NO_FILESYSTEM

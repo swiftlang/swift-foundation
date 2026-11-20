@@ -23,8 +23,10 @@ import WinSDK
 @preconcurrency import WASILibc
 #elseif os(Emscripten)
 @preconcurrency import EmscriptenLibc
-#elseif canImport(_FoundationPlatformExtras)
-import _FoundationPlatformExtras
+#elseif canImport(time_h)
+import time_h
+#elseif canImport(_FoundationEmbeddedExtras)
+import _FoundationEmbeddedExtras
 #endif
 
 internal import Synchronization
@@ -458,7 +460,11 @@ extension UUID {
     // MARK: - Monotonic timestamp
 
     /// Tracks the last combined timestamp value to ensure monotonically increasing v7 UUIDs within a process.
+#if _hasAtomicBitWidth(_64)
     private static let _lastTimestamp = Atomic<UInt64>(0)
+#else
+    private static let _lastTimestamp = Mutex<UInt64>(0)
+#endif
 
     /// Returns a combined 60-bit timestamp, which is guaranteed to be strictly greater than any previously returned value. If the clock hasn't advanced since the last call, the previous value is incremented by 1.
     private static func _nextMonotonicTimestamp(offset: Duration) -> UInt64 {
@@ -466,6 +472,7 @@ extension UUID {
         let (ms, subMS) = elapsed._uuidTimestampComponents
         
         let current = ms << 12 | UInt64(subMS)
+#if _hasAtomicBitWidth(_64)
         var old = _lastTimestamp.load(ordering: .relaxed)
         
         while true {
@@ -480,6 +487,12 @@ extension UUID {
             }
             old = original
         }
+#else
+        return _lastTimestamp.withLock { last in
+            last = Swift.max(current, last &+ 1)
+            return last
+        }
+#endif
     }
 }
 

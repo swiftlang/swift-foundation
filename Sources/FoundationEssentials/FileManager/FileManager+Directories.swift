@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !NO_FILESYSTEM
+
 #if FOUNDATION_FRAMEWORK
 internal import containermanager
 internal import _ForSwiftFoundation
@@ -606,3 +608,5 @@ extension URL {
         #endif
     }
 }
+
+#endif // !NO_FILESYSTEM

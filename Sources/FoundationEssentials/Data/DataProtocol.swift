@@ -26,8 +26,8 @@ import ucrt
 @preconcurrency import EmscriptenLibc
 #elseif canImport(stdlib_h)
 import stdlib_h
-#elseif canImport(_FoundationPlatformExtras)
-import _FoundationPlatformExtras
+#elseif canImport(_FoundationEmbeddedExtras)
+import _FoundationEmbeddedExtras
 #endif
 
 //===--- DataProtocol -----------------------------------------------------===//
