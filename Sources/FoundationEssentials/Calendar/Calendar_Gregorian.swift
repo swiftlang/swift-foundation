@@ -3169,6 +3169,15 @@ package final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable {
 }
 
 
+extension Calendar {
+    static var sufficientlyProlepticISO8601Calendar: Self {
+        // This date constant is carefully chosen to be the earliest Julian date we consider valid in Calendar_Gregorian.
+        let gregorianStartDate = Date(timeIntervalSinceReferenceDate: -184_304_880_835_200)
+        return Calendar(identifier: .iso8601, locale: nil, timeZone: .gmt, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: gregorianStartDate)
+    }
+}
+
+
 extension Date {
     func wholeSecondsTowards(_ otherDate: Date) -> Date? {
         guard self != otherDate else {

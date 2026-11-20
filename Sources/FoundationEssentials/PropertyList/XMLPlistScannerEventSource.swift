@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 
 // MARK: - XMLPlistScannerEventSource
@@ -421,4 +420,3 @@ struct XMLPlistScannerEventSource: ParseEventSource<NullFilter>, ~Copyable, ~Esc
     private var xmlCDATAOpeningMarker: StaticString { "<![CDATA[" }
 }
 
-#endif // !hasFeature(Embedded)

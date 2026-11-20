@@ -10,6 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A value of an old-style property list. It has only the kinds of value that the format has, so that code that reads the format does not need `Any`.
+internal enum OpenStepPlistValue {
+    case string(String)
+    case data(Data)
+    case array([OpenStepPlistValue])
+    case dictionary([String : OpenStepPlistValue])
+}
+
+#if !hasFeature(Embedded)
+extension OpenStepPlistValue {
+    /// The value as the `Any` that `PropertyListDecoder` and the property list functions of its clients use: a `String`, `Data`, `[Any]` or `[String : Any]`.
+    var anyValue: Any {
+        switch self {
+        case .string(let string): string
+        case .data(let data): data
+        case .array(let array): array.map { $0.anyValue }
+        case .dictionary(let dictionary): dictionary.mapValues { $0.anyValue }
+        }
+    }
+}
+#endif
+
 private struct _ParseInfo {
     let utf16 : String.UTF16View
     var curr : String.UTF16View.Index
@@ -32,7 +54,7 @@ private struct _ParseInfo {
     }
 }
 
-internal func __ParseOldStylePropertyList(utf16: String.UTF16View) throws -> Any {
+internal func __ParseOldStylePropertyList(utf16: String.UTF16View) throws -> OpenStepPlistValue {
     let length = utf16.count
     guard length > 0 else {
         throw OpenStepPlistError("Conversion of string failed. The string is empty.")
@@ -41,13 +63,13 @@ internal func __ParseOldStylePropertyList(utf16: String.UTF16View) throws -> Any
     var parseInfo = _ParseInfo(utf16: utf16, curr: utf16.startIndex)
 
     guard advanceToNonSpace(&parseInfo) else {
-        return [String:Any]()
+        return .dictionary([:])
     }
 
     var result = parsePlistObject(&parseInfo, requireObject: true, depth: 0)
     if result != nil {
         if advanceToNonSpace(&parseInfo) {
-            if result is String {
+            if case .string = result {
                 // Reset info and keep parsing
                 // Check for a strings file (looks like a dictionary without the opening/closing curly braces). With no closing brace to look for, the content has to run to the end of the input.
                 parseInfo = _ParseInfo(utf16: utf16, curr: utf16.startIndex)
@@ -64,7 +86,7 @@ internal func __ParseOldStylePropertyList(utf16: String.UTF16View) throws -> Any
     return result
 }
 
-private func parsePlistObject(_ pInfo: inout _ParseInfo, requireObject: Bool, depth: UInt32) -> Any? {
+private func parsePlistObject(_ pInfo: inout _ParseInfo, requireObject: Bool, depth: UInt32) -> OpenStepPlistValue? {
     guard depthIsValid(&pInfo, depth: depth) else {
         return nil
     }
@@ -85,10 +107,10 @@ private func parsePlistObject(_ pInfo: inout _ParseInfo, requireObject: Bool, de
     } else if ch == UInt16(ascii: "<") {
         return parsePlistData(&pInfo)
     } else if ch == UInt16(ascii: "'") || ch == UInt16(ascii: "\"") {
-        return parseQuotedPlistString(&pInfo, quote: ch)
+        return parseQuotedPlistString(&pInfo, quote: ch).map { .string($0) }
     } else if isValidUnquotedStringCharacter(ch) {
         pInfo.retreat()
-        return parseUnquotedPlistString(&pInfo)
+        return parseUnquotedPlistString(&pInfo).map { .string($0) }
     } else {
         pInfo.retreat() // Must back off the character we just read
         if requireObject {
@@ -98,7 +120,7 @@ private func parsePlistObject(_ pInfo: inout _ParseInfo, requireObject: Bool, de
     }
 }
 
-private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String:Any]? {
+private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> OpenStepPlistValue? {
     guard let dict = parsePlistDictContent(&pInfo, depth: depth, expectsEOFTermination: false) else {
         return nil
     }
@@ -108,8 +130,8 @@ private func parsePlistDict(_ pInfo: inout _ParseInfo, depth: UInt32) -> [String
 }
 
 // `expectsEOFTermination` is true when the dictionary is ended by the end of the input rather than by a closing brace, as in a strings file.
-private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32, expectsEOFTermination: Bool) -> [String:Any]? {
-    var dict = [String:Any]()
+private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32, expectsEOFTermination: Bool) -> OpenStepPlistValue? {
+    var dict = [String : OpenStepPlistValue]()
 
     while let key = parsePlistKeyOrEndOfDictionary(&pInfo, expectsEOFTermination: expectsEOFTermination) {
         guard advanceToNonSpace(&pInfo) else {
@@ -117,11 +139,11 @@ private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32, exp
             return nil
         }
 
-        var value : Any
+        var value : OpenStepPlistValue
         if pInfo.currChar == UInt16(ascii: ";") {
             /* This is a strings file using the shortcut format */
             /* although this check here really applies to all plists. */
-            value = key
+            value = .string(key)
         } else if pInfo.currChar == UInt16(ascii: "=") {
             pInfo.advance()
             guard let v = parsePlistObject(&pInfo, requireObject: true, depth: depth + 1) else {
@@ -151,11 +173,11 @@ private func parsePlistDictContent(_ pInfo: inout _ParseInfo, depth: UInt32, exp
     // this is a success path, so clear errors (NOTE: this seems weird, but is historical)
     pInfo.err = nil
 
-    return dict
+    return .dictionary(dict)
 }
 
-private func parsePlistArray(_ pInfo: inout _ParseInfo, depth: UInt32) -> [Any]? {
-    var array = [Any]()
+private func parsePlistArray(_ pInfo: inout _ParseInfo, depth: UInt32) -> OpenStepPlistValue? {
+    var array = [OpenStepPlistValue]()
 
     while let obj = parsePlistObject(&pInfo, requireObject: false, depth: depth + 1) {
         array.append(obj)
@@ -181,7 +203,7 @@ private func parsePlistArray(_ pInfo: inout _ParseInfo, depth: UInt32) -> [Any]?
     pInfo.err = nil
 
     pInfo.advance() // consume the )
-    return array
+    return .array(array)
 }
 
 // Parses the next key of a dictionary's contents, or recognizes the end of that dictionary. `expectsEOFTermination` is true when the dictionary is ended by the end of the input rather than by a closing brace, as in a strings file. Returns nil if no key is found. Sets pInfo.err if that nil is caused by a parsing error instead of the legitimate end of the dictionary.
@@ -382,7 +404,7 @@ private func isValidUnquotedStringCharacter(_ x: UInt16) -> Bool {
     }
 }
 
-private func parsePlistData(_ pInfo: inout _ParseInfo) -> Data? {
+private func parsePlistData(_ pInfo: inout _ParseInfo) -> OpenStepPlistValue? {
     var result = Data()
 
     while true {
@@ -416,7 +438,7 @@ private func parsePlistData(_ pInfo: inout _ParseInfo) -> Data? {
     }
 
     pInfo.advance() // Move past '>'
-    return result
+    return .data(result)
 }
 
 private func getDataBytes(_ pInfo: inout _ParseInfo, bytes: UnsafeMutableBufferPointer<UInt8>) -> Int {
@@ -559,9 +581,11 @@ internal struct OpenStepPlistError: Swift.Error, Equatable {
         self.debugDescription = desc
     }
 
+#if !hasFeature(Embedded)
     var cocoaError: CocoaError {
         .init(.propertyListReadCorrupt, userInfo: [
             NSDebugDescriptionErrorKey : self.debugDescription
         ])
     }
+#endif
 }

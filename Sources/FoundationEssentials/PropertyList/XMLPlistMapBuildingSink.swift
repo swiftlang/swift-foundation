@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 
 // MARK: - XMLPlistMapBuildingSink
@@ -236,4 +235,3 @@ struct XMLPlistMapBuildingSink: ParseEventSink, ~Copyable {
     func releaseValueFragment(_ fragment: consuming Void) {}
 }
 
-#endif // !hasFeature(Embedded)

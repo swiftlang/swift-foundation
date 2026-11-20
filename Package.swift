@@ -140,6 +140,7 @@ var package = Package(
           exclude: [
             "Bytes/CMakeLists.txt",
             "Formatting/CMakeLists.txt",
+            "StringFormatting/CMakeLists.txt",
             "PropertyList/CMakeLists.txt",
             "Decimal/CMakeLists.txt",
             "String/CMakeLists.txt",
@@ -212,6 +213,7 @@ var package = Package(
                 "TimeZone/CMakeLists.txt",
                 "ICU/CMakeLists.txt",
                 "Formatting/CMakeLists.txt",
+                "StringFormatting/CMakeLists.txt",
                 "Locale/CMakeLists.txt",
                 "Calendar/CMakeLists.txt",
                 "CMakeLists.txt",
