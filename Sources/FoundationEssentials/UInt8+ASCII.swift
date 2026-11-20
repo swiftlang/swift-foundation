@@ -103,7 +103,12 @@ extension UInt8 {
     }
 
     package var isDigit: Bool {
-        _asciiNumbers.contains(self)
+        switch self {
+        case _asciiNumbers:
+            return true
+        default:
+            return false
+        }
     }
 
     package var isAlphanumeric: Bool {

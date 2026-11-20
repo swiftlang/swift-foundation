@@ -130,12 +130,6 @@ internal final class _LocaleImpl : _LocaleProtocol, Sendable {
         _variant?.identifier
     }
     
-#if FOUNDATION_FRAMEWORK
-    var exemplarCharacterSet: CharacterSet? {
-        _icu.exemplarCharacterSet
-    }
-#endif
-    
     var calendar: Calendar {
         let calendarIdentifier = self.calendarIdentifier
         var calendar = Calendar(identifier: calendarIdentifier)
