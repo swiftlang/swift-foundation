@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 internal import Synchronization
 
@@ -29,14 +28,6 @@ private let falseBytes : StaticString = "false"
 private let docType : StaticString = "DOCTYPE"
 private let cdSect : StaticString = "<![CDATA["
 private let cfuid : StaticString = "CF$UID"
-
-extension Calendar {
-    static var sufficientlyProlepticISO8601Calendar: Self {
-        // This date constant is carefully chosen to be the earliest Julian date we consider valid in Calendar_Gregorian.
-        let gregorianStartDate = Date(timeIntervalSinceReferenceDate: -184_304_880_835_200)
-        return Calendar(identifier: .iso8601, locale: nil, timeZone: .gmt, firstWeekday: nil, minimumDaysInFirstWeek: nil, gregorianStartDate: gregorianStartDate)
-    }
-}
 
 enum XMLPlistTag {
     case plist
@@ -112,6 +103,9 @@ enum XMLPlistTag {
         }
     }
 }
+
+#if !hasFeature(Embedded)
+// The decoder-facing parts below use `Decoder`-related types that Embedded Swift does not have.
 
 class XMLPlistLegacyDecodingDocument : PlistDecodingDocument, @unchecked Sendable {
     let map: XMLPlistMap
@@ -674,6 +668,8 @@ extension XMLPlistMapValue: DecodingErrorValueTypeDebugStringConvertible {
         }
     }
 }
+
+#endif // !hasFeature(Embedded)
 
 internal struct XMLPlistScanner: ~Copyable {
     var reader : BufferReader
@@ -1379,4 +1375,3 @@ extension BufferView<UInt8> {
     }
 }
 
-#endif // !hasFeature(Embedded)
