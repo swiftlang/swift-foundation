@@ -52,6 +52,7 @@ struct StringFormattingTests {
     }
 
     @Test func integers() {
+        // Note: long-sized specifiers are not tested on Windows below because Windows treats long as a 32bit value even on 64bit platforms and string formatting does not yet rationalize that
         for format in ["%hhd", "%hhi"] {
             checkFormat(format, Int8(0), expectation: "0")
             checkFormat(format, Int8(42), expectation: "42")
@@ -73,6 +74,7 @@ struct StringFormattingTests {
             checkFormat(format, Int32.max, expectation: Int32.max.description)
             checkFormat(format, Int32.min, expectation: Int32.min.description)
         }
+        #if !os(Windows)
         for format in ["%ld", "%li"] {
             checkFormat(format, Int(0), expectation: "0")
             checkFormat(format, Int(42), expectation: "42")
@@ -80,6 +82,7 @@ struct StringFormattingTests {
             checkFormat(format, Int.max, expectation: Int.max.description)
             checkFormat(format, Int.min, expectation: Int.min.description)
         }
+        #endif
         for format in ["%lld", "%lli"] {
             checkFormat(format, Int64(0), expectation: "0")
             checkFormat(format, Int64(42), expectation: "42")
@@ -98,9 +101,11 @@ struct StringFormattingTests {
         checkFormat("%u", UInt32(0), expectation: "0")
         checkFormat("%u", UInt32(42), expectation: "42")
         checkFormat("%u", UInt32.max, expectation: UInt32.max.description)
+        #if !os(Windows)
         checkFormat("%lu", UInt(0), expectation: "0")
         checkFormat("%lu", UInt(42), expectation: "42")
         checkFormat("%lu", UInt.max, expectation: UInt.max.description)
+        #endif
         checkFormat("%llu", UInt64(0), expectation: "0")
         checkFormat("%llu", UInt64(42), expectation: "42")
         checkFormat("%llu", UInt64.max, expectation: UInt64.max.description)
@@ -113,7 +118,9 @@ struct StringFormattingTests {
         checkFormat("%#x", Int32(0), expectation: "0")
         checkFormat("%#X", Int32(0), expectation: "0")
         checkFormat("%x", Int32(-1), expectation: "ffffffff")
+        #if !os(Windows)
         checkFormat("%lx", -1, expectation: "ffffffffffffffff")
+        #endif
 
         checkFormat("%o", Int32(8), expectation: "10")
         checkFormat("%#o", Int32(8), expectation: "010")
@@ -178,8 +185,15 @@ struct StringFormattingTests {
         checkFormat("%G", 1e-10, expectation: "1E-10")
         checkFormat("%#g", 1.0, expectation: "1.00000")
         checkFormat("%.3g", 3.14159, expectation: "3.14")
+        #if os(Windows)
+        // Windows always pads %a to the full width when precision is not specified
+        checkFormat("%a", 1.0, expectation: "0x1.0000000000000p+0")
+        checkFormat("%A", -0.75, expectation: "-0X1.8000000000000P-1")
+        #else
+        // Darwin/Linux always use the shortest exact form
         checkFormat("%a", 1.0, expectation: "0x1p+0")
         checkFormat("%A", -0.75, expectation: "-0X1.8P-1")
+        #endif
         checkFormat("%.2a", 1.0 / 3.0, expectation: "0x1.55p-2")
         checkFormat("%f", Double.nan, expectation: "nan")
         checkFormat("%F", Double.nan, expectation: "NAN")
@@ -216,6 +230,8 @@ struct StringFormattingTests {
         checkFormat("%@%%", CVarArgString("100"), expectation: "100%")
     }
 
+    #if !os(Windows)
+    // %s uses the system encoding (windowsCP1252 on Windows) which is not supported in swift-foundation yet
     @Test func cStrings() {
         "hello".withCString { string in
             checkFormat("%s", string, expectation: "hello")
@@ -233,6 +249,7 @@ struct StringFormattingTests {
             }
         }
     }
+    #endif
 
     #if FOUNDATION_FRAMEWORK
     @Test(.enabled(if: String.Encoding.system == .macOSRoman))
@@ -264,8 +281,14 @@ struct StringFormattingTests {
 
     @Test func pointers() {
         let pointer = OpaquePointer(bitPattern: 0x1234)!
+        #if os(Windows)
+        // Windows (currently) formats pointers with consistent width and no leading "0x"
+        checkFormat("%p", pointer, expectation: "0000000000001234")
+        checkFormat("%10p", pointer, expectation: "0000000000001234")
+        #else
         checkFormat("%p", pointer, expectation: "0x1234")
         checkFormat("%10p", pointer, expectation: "    0x1234")
+        #endif
     }
 
     #if FOUNDATION_FRAMEWORK
