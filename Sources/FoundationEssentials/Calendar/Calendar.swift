@@ -1299,11 +1299,21 @@ public struct Calendar : Hashable, Equatable, Sendable {
             var current = start
             var stop = false
             while !stop {
-                guard let next = _calendar.nextDate(after: current, matching: components, direction: direction) else {
+                var next = _calendar.nextDate(after: current, matching: components, direction: direction)
+                var exactMatch = true
+                if next == nil {
+                    // The calendar does not answer this step, so the general search finds the next date.
+                    _enumerateDates(startingAfter: current, previouslyReturnedMatchDate: current == start ? nil : current, matching: components, matchingPolicy: matchingPolicy, repeatedTimePolicy: repeatedTimePolicy, direction: direction) { date, exact, innerStop in
+                        next = date
+                        exactMatch = exact
+                        innerStop = true
+                    }
+                }
+                guard let next else {
                     block(nil, false, &stop)
                     return
                 }
-                block(next, true, &stop)
+                block(next, exactMatch, &stop)
                 current = next
             }
             return
