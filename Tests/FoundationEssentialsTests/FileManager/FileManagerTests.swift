@@ -779,6 +779,35 @@ private struct FileManagerTests {
         }
     }
     
+    // Requires Unix search permissions; Emscripten does not yet support atomic writes.
+    #if !os(Windows) && !os(WASI) && !os(Emscripten)
+    @Test(.disabled(if: isUnixRoot, "Root bypasses directory search permissions"))
+    func atomicWriteWithoutCWDSearch() async throws {
+        try await FilePlayground {
+            Directory("current") {}
+            Directory("destination") {}
+        }.test { manager in
+            let directory = URL(filePath: manager.currentDirectoryPath)
+            let current = directory.appendingPathComponent("current")
+            let destination = directory.appendingPathComponent("destination/data")
+            try #require(manager.changeCurrentDirectoryPath(current.path))
+            defer {
+                try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: current.path)
+                #expect(manager.changeCurrentDirectoryPath(directory.path))
+            }
+            try manager.setAttributes([.posixPermissions: 0o000], ofItemAtPath: current.path)
+            // FilePlayground serializes CWD changes; the writable destination is outside this directory.
+            #expect(!manager.isExecutableFile(atPath: current.path))
+
+            try Data("initial".utf8).write(to: destination, options: .atomic)
+            #expect(try Data(contentsOf: destination) == Data("initial".utf8))
+            try Data("replacement".utf8).write(to: destination, options: .atomic)
+            #expect(try Data(contentsOf: destination) == Data("replacement".utf8))
+            #expect(try manager.contentsOfDirectory(atPath: destination.deletingLastPathComponent().path) == ["data"])
+        }
+    }
+    #endif
+
     @Test(.disabled(if: isUnixRoot, "This test is not available when running as the root user - root users can always access anything"))
     func fileAccessAtPath() async throws {
         try await FilePlayground {
