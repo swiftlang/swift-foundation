@@ -675,14 +675,16 @@ extension Substring {
         let anchored = options.contains(.anchored)
         let backwards = options.contains(.backwards)
 
-        let result: Range<Index>?
-        if options.contains(.literal) {
-            result = unicodeScalars._range(of: strToFind.unicodeScalars, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
-        } else {
-            result = _range(of: strToFind, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
+        let literal = options.contains(.literal)
+        if isContiguousUTF8, strToFind.isContiguousUTF8, (literal && !(toHalfWidth || diacriticsInsensitive || caseFold)) || strToFind.utf8Span.isKnownASCII || strToFind.utf8.allSatisfy({ $0 < 0x80 }) {
+            return utf8Range(of: strToFind, options: options)
         }
 
-        return result
+        if literal {
+            return unicodeScalars._range(of: strToFind.unicodeScalars, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
+        } else {
+            return _range(of: strToFind, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
+        }
     }
 
     func _components(separatedBy separator: Substring, options: String.CompareOptions = []) throws -> [String] {
@@ -812,4 +814,150 @@ internal func _allASCII(_ input: UnsafeBufferPointer<UInt8>) -> Bool {
         i &+= 1
     }
     return true
+}
+
+// MARK: - UTF-8 search
+
+extension Substring {
+    private enum UTF8Comparison {
+        case match(end: Int)
+        case noMatch
+        /// Non-ASCII text at this position can change the result, so the characters must be compared.
+        case compareCharacters
+    }
+
+    /// Finds the same range as the character search when the string to find is ASCII, or when the search is `.literal` without other options. It tries the same start positions in the same order, but compares UTF-8 code units, and compares characters only next to non-ASCII text.
+    private func utf8Range(of strToFind: Substring, options: String.CompareOptions) -> Range<Index>? {
+        guard let startOffsets = startOffsets(of: strToFind, options: options) else {
+            return nil
+        }
+        let haystack = utf8Span.span
+        let needle = strToFind.utf8Span.span
+        let backwards = options.contains(.backwards)
+        let caseFold = options.contains(.caseInsensitive)
+        let firstByte = caseFold ? needle[0]._lowercased : needle[0]
+        for offset in stride(from: startOffsets.first, through: startOffsets.last, by: backwards ? -1 : 1) {
+            // Most positions do not match on the first code unit. An ASCII code unit that differs from the first one of the string to find cannot start a match.
+            let byte = haystack[offset]
+            if byte < 0x80 && (caseFold ? byte._lowercased : byte) != firstByte {
+                continue
+            }
+            let range: Range<Index>
+            switch Self.compareCodeUnits(haystack, at: offset, with: needle, options: options) {
+            case .noMatch:
+                continue
+            case .match(let end):
+                range = utf8Index(offset) ..< utf8Index(end)
+            case .compareCharacters:
+                guard let characterRange = characterRange(of: strToFind, at: utf8Index(offset), options: options) else {
+                    continue
+                }
+                range = characterRange
+            }
+            // Like the character search, an anchored backwards search stops at the first match from the end, and finds nothing if that match does not reach the end.
+            return options.contains(.anchored) && backwards && range.upperBound != endIndex ? nil : range
+        }
+        return nil
+    }
+
+    /// The UTF-8 offsets of the first and the last start position that the character search tries.
+    private func startOffsets(of strToFind: Substring, options: String.CompareOptions) -> (first: Int, last: Int)? {
+        let anchored = options.contains(.anchored)
+        let backwards = options.contains(.backwards)
+        if anchored && !backwards {
+            return (0, 0)
+        }
+        // The character search tries every start position when the options can change the length of a match. Otherwise it skips the positions too close to the end.
+        let lengthVariants = options.contains(.caseInsensitive) || options.contains(.diacriticInsensitive)
+        let literal = options.contains(.literal)
+        let lastStart: Index?
+        if lengthVariants {
+            lastStart = literal ? unicodeScalars.index(before: endIndex) : index(before: endIndex)
+        } else {
+            lastStart = literal ? unicodeScalars._index(endIndex, backwardsOffsetByCountOf: strToFind.unicodeScalars) : _index(endIndex, backwardsOffsetByCountOf: strToFind)
+        }
+        guard let lastStart else {
+            return nil
+        }
+        let lastOffset = utf8.distance(from: startIndex, to: lastStart)
+        if !backwards {
+            return (0, lastOffset)
+        }
+        return (lastOffset, anchored && !lengthVariants ? lastOffset : 0)
+    }
+
+    /// Compares the string to find with the code units at `offset`. For an ASCII string to find, the code units decide only when the match and its neighbors are ASCII. The caller has already checked that an ASCII code unit at `offset` matches the first code unit of the string to find.
+    private static func compareCodeUnits(_ haystack: Span<UInt8>, at offset: Int, with needle: Span<UInt8>, options: String.CompareOptions) -> UTF8Comparison {
+        let literal = options.contains(.literal)
+        let caseFold = options.contains(.caseInsensitive)
+        let hasTransforms = caseFold || options.contains(.diacriticInsensitive) || options.contains(.widthInsensitive)
+        let end = offset + needle.count
+        if literal && !hasTransforms {
+            // Equal scalars have equal code units.
+            guard end <= haystack.count else {
+                return .noMatch
+            }
+            for i in needle.indices where haystack[offset + i] != needle[i] {
+                return .noMatch
+            }
+            return .match(end: end)
+        }
+
+        let byte = haystack[offset]
+        if byte >= 0x80 {
+            // A non-ASCII character can match an ASCII one when an option transforms it, or when it is canonically equivalent to it. Only three scalars are: U+037E, U+1FEF and U+212A, whose canonical decompositions are ";", "`" and "K".
+            let canMatch = hasTransforms || (!literal && (needle[0] == ._semicolon || needle[0] == UInt8(ascii: "`") || needle[0] == UInt8(ascii: "K")))
+            let startsScalar = byte & 0xC0 != 0x80
+            return canMatch && startsScalar ? .compareCharacters : .noMatch
+        }
+        // The only two ASCII scalars that form one character are "\r\n". A non-ASCII scalar can join an ASCII one into a larger character.
+        if !literal && offset > 0 {
+            if haystack[offset - 1] >= 0x80 {
+                return .compareCharacters
+            }
+            if haystack[offset - 1] == ._return && byte == ._newline {
+                return .noMatch
+            }
+        }
+        for i in needle.indices {
+            guard offset + i < haystack.count else {
+                return .noMatch
+            }
+            let byte = haystack[offset + i]
+            if byte >= 0x80 {
+                return .compareCharacters
+            }
+            if byte != needle[i] && !(caseFold && byte._lowercased == needle[i]._lowercased) {
+                return .noMatch
+            }
+        }
+        if end < haystack.count {
+            if haystack[end] >= 0x80 {
+                return .compareCharacters
+            }
+            if !literal && haystack[end - 1] == ._return && haystack[end] == ._newline {
+                return .noMatch
+            }
+        }
+        return .match(end: end)
+    }
+
+    /// Compares the characters, or the scalars for `.literal`, at one start position, the way the character search does.
+    private func characterRange(of strToFind: Substring, at position: Index, options: String.CompareOptions) -> Range<Index>? {
+        let toHalfWidth = options.contains(.widthInsensitive)
+        let diacriticsInsensitive = options.contains(.diacriticInsensitive)
+        let caseFold = options.contains(.caseInsensitive)
+        if options.contains(.literal) {
+            return self[position...].unicodeScalars._range(of: strToFind.unicodeScalars, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: true, backwards: false)
+        }
+        // A position inside a character is not a start position.
+        guard _index(roundingDown: position) == position else {
+            return nil
+        }
+        return self[position...]._range(of: strToFind, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: true, backwards: false)
+    }
+
+    private func utf8Index(_ offset: Int) -> Index {
+        utf8.index(startIndex, offsetBy: offset)
+    }
 }
