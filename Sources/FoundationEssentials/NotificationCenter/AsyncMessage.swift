@@ -177,7 +177,7 @@ extension NotificationCenter {
 extension NotificationCenter {
     fileprivate func _addAsyncObserver<Message: AsyncMessage>(
         _ messageType: Message.Type,
-        subject: Message.Subject?,
+        subject: AnyObject?,
         observer: @escaping @Sendable (Message) async -> Void
     ) -> ObservationToken {
         ObservationToken(center: self, token: _addObserver(Message.name, object: subject) { payload in
@@ -206,7 +206,7 @@ extension NotificationCenter {
         return nil
     }
     
-    fileprivate func _post<M: AsyncMessage>(message: M, subject: M.Subject? = nil) {
+    fileprivate func _post<M: AsyncMessage>(message: M, subject: AnyObject? = nil) {
 #if FOUNDATION_FRAMEWORK
         var notification = M.makeNotification(message)
 

@@ -41,23 +41,29 @@ open class NotificationCenter: @unchecked Sendable {
     open class var `default`: NotificationCenter {
         return _defaultCenter
     }
-
+    
     // TODO: remove or refactor the @_spi(SwiftCorelibsFoundation) methods
     
-    @_spi(SwiftCorelibsFoundation) public func _addObserver(_ name: String?, object: Any?, using block: @escaping @Sendable (Notification) -> Void) -> UInt64 {
-        // Value types are boxed, so they don't match reliably
-        let objectPtr = object.map { UnsafeRawPointer(Unmanaged.passUnretained($0 as AnyObject).toOpaque()) }
-        return registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: objectPtr, using: block).rawValue
+    @_spi(SwiftCorelibsFoundation) public func _addObserver(_ name: String?, object: AnyObject?, using block: @escaping @Sendable (Notification) -> Void) -> UInt64 {
+        return registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: Self._objectPointer(object), using: block).rawValue
+    }
+    
+    @_spi(SwiftCorelibsFoundation) public func _addBlockObserver(_ name: String?, object: AnyObject?, using block: @escaping @Sendable (Notification) -> Void) -> AnyObject {
+        return registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: Self._objectPointer(object), queue: nil, using: block)
     }
 
     @_spi(SwiftCorelibsFoundation) public func _removeObserver(_ token: UInt64) {
         registrar.removeObserver(Token(token))
     }
-
+    
+    @_spi(SwiftCorelibsFoundation) public func _removeObserver(_ observer: AnyObject, name: String?, object: AnyObject?) {
+        registrar.removeObserver(observer, name: name, object: Self._objectPointer(object))
+    }
+    
     @_spi(SwiftCorelibsFoundation) public func _post(_ notification: Notification) {
         _post(notification.name.rawValue, object: notification.object) { notification }
     }
-
+    
     internal func _post(_ name: String, object: Any?, makeNotification: () -> Notification) {
         let nameHash = _notificationNameHashFor(name)
         guard let object else {
@@ -79,6 +85,10 @@ open class NotificationCenter: @unchecked Sendable {
     
     internal func _getActorQueueManager() -> _NotificationCenterActorQueueManager {
         return _actorQueueManager
+    }
+    
+    static func _objectPointer(_ object: AnyObject?) -> UnsafeRawPointer? {
+        object.map { UnsafeRawPointer(Unmanaged.passUnretained($0).toOpaque()) }
     }
 }
 

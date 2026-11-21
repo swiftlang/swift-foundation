@@ -178,7 +178,7 @@ extension NotificationCenter {
 
 extension NotificationCenter {
     fileprivate func _addMainActorObserver<Message: MainActorMessage>(
-        subject: Message.Subject?,
+        subject: AnyObject?,
         observer: @escaping @MainActor (Message) -> Void
     ) -> ObservationToken {
         nonisolated(unsafe) let observer = observer
@@ -210,7 +210,7 @@ extension NotificationCenter {
     }
     
     @MainActor
-    fileprivate func _post<M: MainActorMessage>(message: M, subject: M.Subject? = nil) {
+    fileprivate func _post<M: MainActorMessage>(message: M, subject: AnyObject? = nil) {
 #if FOUNDATION_FRAMEWORK
         var notification = M.makeNotification(message)
 

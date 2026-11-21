@@ -200,6 +200,27 @@ private struct NotificationCenterTests {
 
         center._removeObserver(observer)
     }
+    
+    @Test func internalBlockObserverRemovalByNameAndObject() {
+        nonisolated(unsafe) var fired = 0
+        
+        let name = "test_blockObserverRemoval_name"
+        let center = NotificationCenter()
+        let testObject = TestObject()
+        
+        let observer: AnyObject = center._addBlockObserver(name, object: testObject) { _ in fired += 1 }
+        
+        // A different name or object leaves the registration in place
+        center._removeObserver(observer, name: "test_blockObserverRemoval_other", object: nil)
+        center._removeObserver(observer, name: nil, object: TestObject())
+        center._post(Notification(name: Notification.Name(name), object: testObject))
+        #expect(fired == 1)
+        
+        center._removeObserver(observer, name: name, object: testObject)
+        center._post(Notification(name: Notification.Name(name), object: testObject))
+        #expect(fired == 1)
+        #expect(center.isEmpty())
+    }
 #endif
     
     @MainActor
