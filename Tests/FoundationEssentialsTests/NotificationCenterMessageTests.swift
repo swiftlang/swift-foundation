@@ -363,6 +363,38 @@ private struct NotificationCenterMessageTests {
         if let secondToken { center.removeObserver(secondToken) }
     }
 
+    @Test func concurrentRemoveObserverIsIdempotent() async throws {
+        // Removing the same token from many tasks at once must unregister it exactly once: a racing second removal must not unregister a new observer whose registration reused the freed token value.
+        let center = NotificationCenter()
+
+        for _ in 0..<50 {
+            let token = center.addObserver(of: nil, for: AsyncTestMessage.self) { _ in }
+
+            await withTaskGroup(of: Void.self) { group in
+                for _ in 0..<12 {
+                    group.addTask {
+                        center.removeObserver(token)
+
+                        // Registering while the removals above are in flight can reuse the token value they are racing to clear.
+                        let newToken = center.addObserver(of: nil, for: AsyncTestMessage.self) { _ in }
+                        center.removeObserver(newToken)
+                    }
+                }
+            }
+
+            center.post(AsyncTestMessage(payloadInt: 42, payloadString: "xyz"))
+        }
+
+        // An observer registered after the concurrent removals must still work.
+        await confirmation("expected message to be observed") { messageObserved in
+            let token = center.addObserver(of: nil, for: AsyncTestMessage.self) { _ in
+                messageObserved()
+            }
+            center.post(AsyncTestMessage(payloadInt: 1, payloadString: "One"))
+            center.removeObserver(token)
+        }
+    }
+
     @MainActor
     @Test func asyncMessageObservesInSeparateIsolation() async throws {
         enum TaskSignifier {
