@@ -288,7 +288,7 @@ internal struct BuiltInUnicodeScalarSet {
                 return nil
             }
             
-            let data = getCFUniCharBitmapDataArray().advanced(by: tableIndex).pointee
+            let data = Self.bitmapData(at: tableIndex)
 
             guard plane < data._numPlanes, let planePtr = data._planes[plane] else {
                 return nil
@@ -417,12 +417,19 @@ internal struct BuiltInUnicodeScalarSet {
         case .illegal:
             return 17
         default:
-            precondition(_bitmapTableIndex != nil)
-            let data = getCFUniCharBitmapDataArray().advanced(by: _bitmapTableIndex!).pointee
-            return Int(data._numPlanes)
+            guard let tableIndex = _bitmapTableIndex else {
+                preconditionFailure("\(charset) has no bitmap table")
+            }
+            return Int(Self.bitmapData(at: tableIndex)._numPlanes)
         }
     }
     
+    // Read the C tables only here, and do not inline this function. The tables are `static` in a C header, so every source file that reads them, directly or through inlined code, can get its own copy in the binary.
+    @inline(never)
+    private static func bitmapData(at tableIndex: Int) -> __CFUniCharBitmapData {
+        getCFUniCharBitmapDataArray().advanced(by: tableIndex).pointee
+    }
+
     // MARK: Helper methods
     internal func isWhitespace(_ scalar: Unicode.Scalar) -> Bool {
         return (scalar.value == 0x0020) || (scalar.value == 0x0009) || (scalar.value == 0x00A0) || (scalar.value == 0x1680) || (scalar.value >= 0x2000 && scalar.value <= 0x200B) || (scalar.value == 0x202F) || (scalar.value == 0x205F) || (scalar.value == 0x3000)
