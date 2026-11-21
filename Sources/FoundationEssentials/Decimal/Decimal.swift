@@ -39,7 +39,7 @@ public struct Decimal: Sendable {
     // of the value. Whether the irrelevant mantissa bits of such a value are
     // preserved by operations is unspecified. For now, `compact` preserves the
     // mantissa bits and doesn't set `_isCompact`, and `significand` gives a
-    // zero value with the mantissa bits preserved.
+    // zero or NaN value with the mantissa bits preserved.
     //
     // A value with `_length != 0` is nonzero and finite. In such cases, _all_
     // of the mantissa's 128 bits are part of the value. To re-emphasize the
