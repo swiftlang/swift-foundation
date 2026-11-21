@@ -271,7 +271,7 @@ private func createTemporaryFile(destDirfd: Int32, destinationPath: String, inPa
 #if os(Windows)
             assert(destDirfd == -1, "openat is unavailable on Windows")
             fd = try String(cString: templateFileSystemRep).withNTPathRepresentation {
-                openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR, options: options)
+                openFileDescriptorProtected(path: $0, flags: _O_BINARY | _O_CREAT | _O_EXCL | _O_RDWR | _O_NOINHERIT, options: options)
             }
 #else
             if destDirfd == -1 {
