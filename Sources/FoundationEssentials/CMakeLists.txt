@@ -52,7 +52,6 @@ add_subdirectory(ProcessInfo)
 add_subdirectory(ProgressManager)
 add_subdirectory(PropertyList)
 add_subdirectory(String)
-add_subdirectory(StringFormatting)
 add_subdirectory(TimeZone)
 add_subdirectory(URL)
 

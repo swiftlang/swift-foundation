@@ -28,7 +28,6 @@ add_subdirectory(ICU)
 add_subdirectory(Locale)
 add_subdirectory(Predicate)
 add_subdirectory(String)
-add_subdirectory(StringFormatting)
 add_subdirectory(TimeZone)
 
 target_compile_options(FoundationInternationalization PRIVATE
