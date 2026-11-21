@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 
 // MARK: - XMLPlistPrimitiveSource
@@ -202,4 +201,3 @@ struct XMLPlistPrimitiveSource<Filter: ParseEventFilter & ~Copyable>: ParseEvent
     }
 }
 
-#endif // !hasFeature(Embedded)

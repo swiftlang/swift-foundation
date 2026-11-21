@@ -12,7 +12,7 @@
 
 extension UInt8 {
     
-    internal static var _space: UInt8 { UInt8(ascii: " ") }
+    package static var _space: UInt8 { UInt8(ascii: " ") }
     internal static var _return: UInt8 { UInt8(ascii: "\r") }
     internal static var _newline: UInt8 { UInt8(ascii: "\n") }
     internal static var _tab: UInt8 { UInt8(ascii: "\t") }
@@ -36,11 +36,12 @@ extension UInt8 {
     internal static var _slash: UInt8 { UInt8(ascii: "/") }
 
     internal static var _equal: UInt8 { UInt8(ascii: "=") }
-    internal static var _minus: UInt8 { UInt8(ascii: "-") }
+    package static var _minus: UInt8 { UInt8(ascii: "-") }
     internal static var _plus: UInt8 { UInt8(ascii: "+") }
     internal static var _question: UInt8 { UInt8(ascii: "?") }
     internal static var _exclamation: UInt8 { UInt8(ascii: "!") }
     internal static var _ampersand: UInt8 { UInt8(ascii: "&") }
+    package static var _at: UInt8 { UInt8(ascii: "@") }
     internal static var _pipe: UInt8 { UInt8(ascii: "|") }
     internal static var _percent: UInt8 { UInt8(ascii: "%") }
     internal static var _period: UInt8 { UInt8(ascii: ".") }
@@ -54,7 +55,7 @@ extension UInt8 {
     internal static var _asterisk: UInt8 { UInt8(ascii: "*") }
     internal static var _singleQuote: UInt8 { UInt8(ascii: "'") }
     internal static var _dollar: UInt8 { UInt8(ascii: "$") }
-    internal static var _underscore: UInt8 { UInt8(ascii: "_") }
+    package static var _underscore: UInt8 { UInt8(ascii: "_") }
 
     /// One past the last ASCII control-character code point.
     internal static var _asciiFirstPrintable: UInt8 { 0x20 }
@@ -64,8 +65,8 @@ extension UInt8 {
         return Int(self &- UInt8(ascii: "0"))
     }
 
-    internal var isLetter: Bool? {
-        return (0x41 ... 0x5a) ~= self || (0x61 ... 0x7a) ~= self
+    package var isLetter: Bool {
+        _allLettersUpper.contains(self) || _allLettersLower.contains(self)
     }
 
     /// Equivalent to `isspace()` in the C locale: space, `\t`, `\n`, `\v`, `\f`, `\r`.
@@ -99,6 +100,19 @@ extension UInt8 {
         default:
             return nil
         }
+    }
+
+    package var isDigit: Bool {
+        switch self {
+        case _asciiNumbers:
+            return true
+        default:
+            return false
+        }
+    }
+
+    package var isAlphanumeric: Bool {
+        isLetter || isDigit
     }
 
     internal var isValidHexDigit: Bool {

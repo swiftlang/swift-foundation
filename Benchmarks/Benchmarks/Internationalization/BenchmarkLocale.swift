@@ -50,11 +50,99 @@ func localeBenchmarks() {
 
     let identifiers = Locale.availableIdentifiers
     let allComponents = identifiers.map { Locale.Components(identifier: $0) }
+    let allLocales = identifiers.map { Locale(identifier: $0) }
+    let keywordLocales = [
+        "en_US@calendar=japanese", "de_DE@collation=phonebook;calendar=gregorian", "ar_SA@numbers=arab;rg=gbzzzz", "ja_JP_TRADITIONAL@numbers=latn",
+        "th_TH@calendar=buddhist;hours=h23", "zh_Hant_TW@calendar=roc;numbers=hanidec", "en_US_POSIX@fw=mon", "he_IL@calendar=hebrew;numbers=hebr",
+    ].map { Locale(identifier: $0) }
     Benchmark("LocaleInitFromComponents") { benchmark in
         for components in allComponents {
             let locale = Locale(components: components)
             let components2 = Locale.Components(locale: locale)
             let locale2 = Locale(components: components2) // cache hit
+        }
+    }
+
+    Benchmark("LocaleInitFromIdentifier") { benchmark in
+        for identifier in identifiers {
+            let locale = Locale(identifier: identifier)
+            blackHole(locale)
+        }
+    }
+
+    Benchmark("LocaleInitFromIdentifierAndGetLanguage") { benchmark in
+        for identifier in identifiers {
+            let locale = Locale(identifier: identifier)
+            let language = locale.language
+            blackHole(language)
+        }
+    }
+
+    Benchmark("LocaleInitFromIdentifierAndGetRegion") { benchmark in
+        for identifier in identifiers {
+            let locale = Locale(identifier: identifier)
+            let region = locale.region
+            blackHole(region)
+        }
+    }
+
+    Benchmark("LocaleLanguageCode") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.language.languageCode)
+        }
+    }
+
+    Benchmark("LocaleRegion") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.region)
+        }
+    }
+
+    Benchmark("LocaleVariant") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.variant)
+        }
+    }
+
+    Benchmark("LocaleIdentifier") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.identifier)
+        }
+    }
+
+    Benchmark("LocaleIdentifierICU") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.identifier(.icu))
+        }
+    }
+
+    Benchmark("LocaleCalendar") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.calendar.identifier)
+        }
+    }
+
+    Benchmark("LocaleNumberingSystem") { benchmark in
+        for locale in allLocales {
+            blackHole(locale.numberingSystem)
+        }
+    }
+
+    Benchmark("LocaleKeywordCalendar") { benchmark in
+        for locale in keywordLocales {
+            blackHole(locale.calendar.identifier)
+        }
+    }
+
+    Benchmark("LocaleKeywordNumberingSystem") { benchmark in
+        for locale in keywordLocales {
+            blackHole(locale.numberingSystem)
+        }
+    }
+
+    Benchmark("LocaleKeywordRegion") { benchmark in
+        for locale in keywordLocales {
+            blackHole(locale.region)
         }
     }
 

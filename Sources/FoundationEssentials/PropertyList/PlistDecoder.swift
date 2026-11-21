@@ -10,6 +10,219 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// The error for data that cannot be read as the text of a property list.
+struct PropertyListFormatError: Error {
+    let message: String
+}
+
+private func plistFormatError(_ message: String) -> any Error {
+#if hasFeature(Embedded)
+    PropertyListFormatError(message: message)
+#else
+    DecodingError._dataCorrupted(message, for: .root)
+#endif
+}
+
+enum PropertyListFormatDetection {
+    /// Whether `buffer` is big enough to be a binary property list, and starts with its magic number.
+    private static func hasBinaryPropertyListMagicAndSize(_ buffer: BufferView<UInt8>) -> Bool {
+        guard buffer.count >= MemoryLayout<BPlistTrailer>.size + 8 + 1 else {
+            return false
+        }
+        return buffer.withUnsafeRawPointer { pointer, _ in
+            Platform.memcmp(pointer, "bplist0", 7) == 0
+        }
+    }
+
+    @inline(__always)
+    private static func findXMLTagOpening(in buffer: BufferView<UInt8>) -> BufferView<UInt8>.Index? {
+        buffer.withUnsafeRawPointer { bufPtr, bufCount in
+            guard bufCount >= 5 && Platform.memcmp(bufPtr, "<?xml", 5) == 0 else {
+                return nil
+            }
+            return buffer.index(buffer.startIndex, offsetBy: 5)
+        }
+    }
+    
+    @inline(__always)
+    private static func findEncodingLocation(in buffer: BufferView<UInt8>) throws -> BufferView<UInt8>.Index? {
+        var idx = buffer.startIndex
+        let endIdx = buffer.endIndex
+        
+        while idx < endIdx {
+            let ch = buffer[unchecked: idx]
+            
+            // Looks like the end of the <?xml...> tag. No explicit encoding found.
+            if ch == UInt8(ascii: "?") || ch == UInt8(ascii: ">") {
+                return nil
+            }
+
+            let subBuffer = buffer[idx...]
+            let match = try subBuffer.withUnsafeRawPointer { bufPtr, bufCount -> BufferView<UInt8>.Index? in
+                guard bufCount > 9 else {
+                    throw plistFormatError("End of buffer while looking for encoding name")
+                }
+                if Platform.memcmp(bufPtr, "encoding=", 9) == 0 {
+                    return buffer.index(idx, offsetBy: 9)
+                }
+                return nil
+            }
+            if let match {
+                return match
+            } else {
+                buffer.formIndex(after: &idx)
+            }
+        }
+        
+        // Reached of the input without finding 'encoding'
+        return nil
+    }
+    
+    private static func readQuotedEncoding(in buffer: BufferView<UInt8>) throws -> String.Encoding {
+        guard let quote = buffer.first,
+              quote == UInt8(ascii: "'") || quote == UInt8(ascii: "\"") else {
+            return .utf8
+        }
+
+        // Move past the quote character
+        let baseIdx = buffer.index(after: buffer.startIndex)
+        
+        let endIdx = buffer.endIndex
+        var idx = baseIdx
+        while idx < endIdx && buffer[unchecked: idx] != quote {
+            buffer.formIndex(after: &idx)
+        }
+        
+        return try buffer[unchecked: baseIdx..<idx].withUnsafePointer { ptr, encodingLength in
+            if encodingLength == 5, Platform.strncasecmp_clocale(ptr, "utf-8", 5) == 0 {
+                return .utf8
+            }
+            
+#if FOUNDATION_FRAMEWORK
+            guard let encodingName = String(bytes: UnsafeBufferPointer(start: ptr, count: encodingLength), encoding: .isoLatin1) else {
+                throw plistFormatError("Encountered unknown encoding")
+            }
+            let enc = CFStringConvertIANACharSetNameToEncoding(encodingName as CFString)
+            guard enc != kCFStringEncodingInvalidId else {
+                throw plistFormatError("Encountered unknown encoding \(encodingName)")
+            }
+
+            return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(enc))
+#else
+            // TODO: For now, FoundationEssentials only has support for utf-8.
+            throw plistFormatError("Encountered unknown encoding")
+#endif
+        }
+
+    }
+    
+    private static func scanForExplicitXMLEncoding(in buffer: BufferView<UInt8>) throws -> String.Encoding {
+        // Scan for the <?xml.... ?> opening
+        guard let postOpeningIdx = findXMLTagOpening(in: buffer) else {
+            return .utf8
+        }
+        
+        // Found "<?xml"; now we scan for "encoding"
+        guard let postEncodingIdx = try findEncodingLocation(in: buffer[postOpeningIdx...]) else {
+            return .utf8
+        }
+        
+        // Read the quoted encoding value and convert it into a String.Encoding.
+        return try readQuotedEncoding(in: buffer[postEncodingIdx...])
+    }
+
+    static func detectEncoding(of buffer: BufferView<UInt8>) throws -> (encoding: String.Encoding, bomLength: Int) {
+        // Try detecting BOM first.
+        let length = buffer.count
+        let byte0 = (length > 0) ? buffer[uncheckedOffset: 0] : nil
+        let byte1 = (length > 1) ? buffer[uncheckedOffset: 1] : nil
+        let byte2 = (length > 2) ? buffer[uncheckedOffset: 2] : nil
+        let byte3 = (length > 3) ? buffer[uncheckedOffset: 3] : nil
+        switch (byte0, byte1, byte2, byte3) {
+        case (0, 0, 0xFE, 0xFF):
+            return (.utf32BigEndian, 4)
+        case (0xFE, 0xFF, 0, 0):
+            return (.utf32LittleEndian, 4)
+        case (0xFE, 0xFF, _, _):
+            return (.utf16BigEndian, 2)
+        case (0xFF, 0xFE, _, _):
+            return (.utf16LittleEndian, 2)
+        case (0xEF, 0xBB, 0xBF, _):
+            return (.utf8, 3)
+        default:
+            return try (scanForExplicitXMLEncoding(in: buffer), bomLength: 0)
+        }
+    }
+
+    static func detectFormatAndConvertEncoding<T>(for data: Data,
+                                                  binaryPlist: (BufferView<UInt8>) throws -> T,
+                                                  xml: (BufferView<UInt8>) throws -> T,
+                                                  openstep: (String.UTF16View) throws -> T) rethrows -> T {
+        try data.withBufferView { buffer in
+            
+            // Binary plist always begins with the same literal bytes, which isn't valid in any of the other formats.
+            if Self.hasBinaryPropertyListMagicAndSize(buffer) {
+                return try binaryPlist(buffer)
+            }
+            
+            // Try to deduce the text encoding of the file so that we can determine if it's XML or not.
+            let (encoding, bomLength) = try detectEncoding(of: buffer)
+            let postBOMIndex = buffer.index(buffer.startIndex, offsetBy: bomLength)
+            let postBOMBuffer = buffer[unchecked: postBOMIndex...]
+            
+#if !hasFeature(Embedded)
+            var result: T?
+            try PropertyListFormatDetection.withUTF8Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf8Buffer in
+                if XMLPlistScanner.detectPossibleXMLPlist(for: utf8Buffer) {
+                    result = try xml(utf8Buffer)
+                }
+            }
+            if let result {
+                return result
+            }
+#endif
+            
+            // If it doesn't appear to be XML or binary, then we assume it's an OpenStep plist and try to parse it with that format.
+            return try PropertyListFormatDetection.withUTF16Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf16View in
+                try openstep(utf16View)
+            }
+        }
+    }
+
+    static func withUTF8Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (BufferView<UInt8>) throws -> T ) throws -> T {
+        if sourceEncoding == .utf8 {
+            return try closure(buffer)
+        } else {
+            // TODO: This FOUNDATION_FRAMEWORK-only initializer cannot be used by FoundationPreview. Only UTF-8 encoded xml plists are supported there right now. (See readQuotedEncoding(in:).)
+            guard var string = String(bytes: buffer, encoding: sourceEncoding) else {
+                throw plistFormatError("Cannot convert input to UTF-8")
+            }
+            return try string.withUTF8 {
+                try closure(BufferView(unsafeBufferPointer: $0)!)
+            }
+        }
+    }
+
+    static func withUTF16Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (String.UTF16View) throws -> T ) throws -> T {
+        // If we were careful with endianness, we could avoid some copies here.
+        guard let string = String(bytes: buffer, encoding: sourceEncoding) else {
+            throw plistFormatError("Cannot convert input to UTF-16")
+        }
+        return try closure(string.utf16)
+    }
+    
+    /// Parse `data` as an old-style (OpenStep) property list, and return the dictionaries, arrays, strings and data in it. Binary and XML property lists are errors.
+    static func parseOpenStepPropertyList(from data: Data) throws -> OpenStepPlistValue {
+        try detectFormatAndConvertEncoding(for: data, binaryPlist: { _ -> OpenStepPlistValue in
+            throw OpenStepPlistError("The property list is in the binary format.")
+        }, xml: { _ -> OpenStepPlistValue in
+            throw OpenStepPlistError("The property list is in the XML format.")
+        }, openstep: { utf16View in
+            try __ParseOldStylePropertyList(utf16: utf16View)
+        })
+    }
+}
+
 #if !hasFeature(Embedded)
 
 #if FOUNDATION_FRAMEWORK
@@ -149,7 +362,7 @@ open class PropertyListDecoder {
     }
     
     private func _decode<T>(_ doDecode: (any _PlistDecoderEntryPointProtocol) throws -> T, from data: Data, format: inout PropertyListDecoder.PropertyListFormat) throws -> T {
-        return try Self.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
+        return try PropertyListFormatDetection.detectFormatAndConvertEncoding(for: data, binaryPlist: { utf8Buffer in
             // Enabled by feature flag; falls back to `BPlistLegacyDecodingFormat` when off.
             if foundation_swift_bplist_deserialization_enabled() {
                 // The decode, and the copy-in of the backing bytes if the document escapes, must happen while `utf8Buffer` is still valid.
@@ -242,7 +455,7 @@ open class PropertyListDecoder {
         }, openstep: { utf16View in
             let value: Any
             do {
-                value = try __ParseOldStylePropertyList(utf16: utf16View)
+                value = try __ParseOldStylePropertyList(utf16: utf16View).anyValue
             } catch let error as OpenStepPlistError {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "The given data was not a valid property list.", underlyingError: error.cocoaError))
             }
@@ -251,191 +464,10 @@ open class PropertyListDecoder {
             return try doDecode(decoder)
         })
     }
-    
-    @inline(__always)
-    private static func findXMLTagOpening(in buffer: BufferView<UInt8>) -> BufferView<UInt8>.Index? {
-        buffer.withUnsafeRawPointer { bufPtr, bufCount in
-            guard bufCount >= 5 && Platform.memcmp(bufPtr, "<?xml", 5) == 0 else {
-                return nil
-            }
-            return buffer.index(buffer.startIndex, offsetBy: 5)
-        }
-    }
-    
-    @inline(__always)
-    private static func findEncodingLocation(in buffer: BufferView<UInt8>) throws -> BufferView<UInt8>.Index? {
-        var idx = buffer.startIndex
-        let endIdx = buffer.endIndex
-        
-        while idx < endIdx {
-            let ch = buffer[unchecked: idx]
-            
-            // Looks like the end of the <?xml...> tag. No explicit encoding found.
-            if ch == UInt8(ascii: "?") || ch == UInt8(ascii: ">") {
-                return nil
-            }
-
-            let subBuffer = buffer[idx...]
-            let match = try subBuffer.withUnsafeRawPointer { bufPtr, bufCount -> BufferView<UInt8>.Index? in
-                guard bufCount > 9 else {
-                    throw DecodingError._dataCorrupted("End of buffer while looking for encoding name", for: .root)
-                }
-                if Platform.memcmp(bufPtr, "encoding=", 9) == 0 {
-                    return buffer.index(idx, offsetBy: 9)
-                }
-                return nil
-            }
-            if let match {
-                return match
-            } else {
-                buffer.formIndex(after: &idx)
-            }
-        }
-        
-        // Reached of the input without finding 'encoding'
-        return nil
-    }
-    
-    private static func readQuotedEncoding(in buffer: BufferView<UInt8>) throws -> String.Encoding {
-        guard let quote = buffer.first,
-              quote == UInt8(ascii: "'") || quote == UInt8(ascii: "\"") else {
-            return .utf8
-        }
-
-        // Move past the quote character
-        let baseIdx = buffer.index(after: buffer.startIndex)
-        
-        let endIdx = buffer.endIndex
-        var idx = baseIdx
-        while idx < endIdx && buffer[unchecked: idx] != quote {
-            buffer.formIndex(after: &idx)
-        }
-        
-        return try buffer[unchecked: baseIdx..<idx].withUnsafePointer { ptr, encodingLength in
-            if encodingLength == 5, Platform.strncasecmp_clocale(ptr, "utf-8", 5) == 0 {
-                return .utf8
-            }
-            
-#if FOUNDATION_FRAMEWORK
-            guard let encodingName = String(bytes: UnsafeBufferPointer(start: ptr, count: encodingLength), encoding: .isoLatin1) else {
-                throw DecodingError._dataCorrupted("Encountered unknown encoding", for: .root)
-            }
-            let enc = CFStringConvertIANACharSetNameToEncoding(encodingName as CFString)
-            guard enc != kCFStringEncodingInvalidId else {
-                throw DecodingError._dataCorrupted("Encountered unknown encoding \(encodingName)", for: .root)
-            }
-
-            return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(enc))
-#else
-            // TODO: For now, FoundationEssentials only has support for utf-8.
-            throw DecodingError._dataCorrupted("Encountered unknown encoding", for: .root)
-#endif
-        }
-
-    }
-    
-    private static func scanForExplicitXMLEncoding(in buffer: BufferView<UInt8>) throws -> String.Encoding {
-        // Scan for the <?xml.... ?> opening
-        guard let postOpeningIdx = findXMLTagOpening(in: buffer) else {
-            return .utf8
-        }
-        
-        // Found "<?xml"; now we scan for "encoding"
-        guard let postEncodingIdx = try findEncodingLocation(in: buffer[postOpeningIdx...]) else {
-            return .utf8
-        }
-        
-        // Read the quoted encoding value and convert it into a String.Encoding.
-        return try readQuotedEncoding(in: buffer[postEncodingIdx...])
-    }
-
-    static func detectEncoding(of buffer: BufferView<UInt8>) throws -> (encoding: String.Encoding, bomLength: Int) {
-        // Try detecting BOM first.
-        let length = buffer.count
-        let byte0 = (length > 0) ? buffer[uncheckedOffset: 0] : nil
-        let byte1 = (length > 1) ? buffer[uncheckedOffset: 1] : nil
-        let byte2 = (length > 2) ? buffer[uncheckedOffset: 2] : nil
-        let byte3 = (length > 3) ? buffer[uncheckedOffset: 3] : nil
-        switch (byte0, byte1, byte2, byte3) {
-        case (0, 0, 0xFE, 0xFF):
-            return (.utf32BigEndian, 4)
-        case (0xFE, 0xFF, 0, 0):
-            return (.utf32LittleEndian, 4)
-        case (0xFE, 0xFF, _, _):
-            return (.utf16BigEndian, 2)
-        case (0xFF, 0xFE, _, _):
-            return (.utf16LittleEndian, 2)
-        case (0xEF, 0xBB, 0xBF, _):
-            return (.utf8, 3)
-        default:
-            return try (scanForExplicitXMLEncoding(in: buffer), bomLength: 0)
-        }
-    }
-
-    static func detectFormatAndConvertEncoding<T>(for data: Data,
-                                                  binaryPlist: (BufferView<UInt8>) throws -> T,
-                                                  xml: (BufferView<UInt8>) throws -> T,
-                                                  openstep: (String.UTF16View) throws -> T) rethrows -> T {
-        try data.withBufferView { buffer in
-            
-            // Binary plist always begins with the same literal bytes, which isn't valid in any of the other formats.
-            if BPlistScanner.validateBPlistMagicAndSize(in: buffer) {
-                return try binaryPlist(buffer)
-            }
-            
-            // Try to deduce the text encoding of the file so that we can determine if it's XML or not.
-            let (encoding, bomLength) = try detectEncoding(of: buffer)
-            let postBOMIndex = buffer.index(buffer.startIndex, offsetBy: bomLength)
-            let postBOMBuffer = buffer[unchecked: postBOMIndex...]
-            
-            var result: T?
-            try Self.withUTF8Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf8Buffer in
-                if XMLPlistScanner.detectPossibleXMLPlist(for: utf8Buffer) {
-                    result = try xml(utf8Buffer)
-                }
-            }
-            if let result {
-                return result
-            }
-            
-            // If it doesn't appear to be XML or binary, then we assume it's an OpenStep plist and try to parse it with that format.
-            return try Self.withUTF16Representation(of: postBOMBuffer, sourceEncoding: encoding) { utf16View in
-                try openstep(utf16View)
-            }
-        }
-    }
-
-    static func withUTF8Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (BufferView<UInt8>) throws -> T ) throws -> T {
-        if sourceEncoding == .utf8 {
-            return try closure(buffer)
-        } else {
-            // TODO: This FOUNDATION_FRAMEWORK-only initializer cannot be used by FoundationPreview. Only UTF-8 encoded xml plists are supported there right now. (See readQuotedEncoding(in:).)
-            guard var string = String(bytes: buffer, encoding: sourceEncoding) else {
-                throw DecodingError._dataCorrupted("Cannot convert input to UTF-8", for: .root)
-            }
-            return try string.withUTF8 {
-                try closure(BufferView(unsafeBufferPointer: $0)!)
-            }
-        }
-    }
-
-    static func withUTF16Representation<T>(of buffer: BufferView<UInt8>, sourceEncoding: String.Encoding, _ closure: (String.UTF16View) throws -> T ) throws -> T {
-        // If we were careful with endianness, we could avoid some copies here.
-        guard let string = String(bytes: buffer, encoding: sourceEncoding) else {
-            throw DecodingError._dataCorrupted("Cannot convert input to UTF-16", for: .root)
-        }
-        return try closure(string.utf16)
-    }
 
     /// Parse `data` as an old-style (OpenStep) property list, and return the dictionaries, arrays, strings and data in it. Binary and XML property lists are errors.
     internal static func parseOpenStepPropertyList(from data: Data) throws -> Any {
-        try detectFormatAndConvertEncoding(for: data, binaryPlist: { _ -> Any in
-            throw OpenStepPlistError("The property list is in the binary format.")
-        }, xml: { _ -> Any in
-            throw OpenStepPlistError("The property list is in the XML format.")
-        }, openstep: { utf16View in
-            try __ParseOldStylePropertyList(utf16: utf16View)
-        })
+        try PropertyListFormatDetection.parseOpenStepPropertyList(from: data).anyValue
     }
 
 #if FOUNDATION_FRAMEWORK

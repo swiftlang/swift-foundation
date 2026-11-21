@@ -11,6 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 extension Span where Element: ~Copyable {
+    /// Returns the first index at or after `start` whose element satisfies `predicate`, or `nil` if there is none.
+    package func firstIndex(from start: Int = 0, where predicate: (borrowing Element) throws -> Bool) rethrows -> Int? {
+        var i = start
+        while i < count {
+            if try predicate(self[i]) {
+                return i
+            }
+            i += 1
+        }
+
+        return nil
+    }
+
     func lastIndex(where predicate: (borrowing Element) throws -> Bool) rethrows -> Int? {
         guard !isEmpty else {
             return nil
@@ -66,8 +79,8 @@ extension Span where Element: Equatable & ~Copyable {
     func lastIndex(of element: borrowing Element) -> Int? {
         lastIndex { $0 == element }
     }
-
-    func elementsEqual(_ other: Span<Element>) -> Bool {
+    
+    package func elementsEqual(_ other: Span<Element>) -> Bool {
         guard count == other.count else {
             return false
         }
@@ -143,6 +156,14 @@ extension Span where Element == UInt8 {
     @inline(__always)
     package func equals(_ other: StaticString) -> Bool {
         count == other.utf8CodeUnitCount && starts(with: other)
+    }
+
+    /// Returns whether this span comes before `other` in byte order.
+    package func lexicographicallyPrecedes(_ other: Span<Element>) -> Bool {
+        for i in 0..<Swift.min(count, other.count) where self[i] != other[i] {
+            return self[i] < other[i]
+        }
+        return count < other.count
     }
 }
 
@@ -288,8 +309,8 @@ extension String {
 extension Array {
     package init(copying span: borrowing Span<Element>) {
         self = Self.init(capacity: span.count) { outputSpan in
-            for i in 0..<span.count {
-                outputSpan.append(span[i])
+            for e in span {
+                outputSpan.append(e)
             }
         }
     }

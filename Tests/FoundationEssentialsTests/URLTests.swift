@@ -901,7 +901,7 @@ private struct URLTests {
         let cwd = URL.currentDirectory()
         var iter = cwd.path().utf8.makeIterator()
         if iter.next() == ._slash,
-           let driveLetter = iter.next(), driveLetter.isLetter!,
+           let driveLetter = iter.next(), driveLetter.isLetter,
            iter.next() == ._colon {
             let path = #"\\?\"# + "\(Unicode.Scalar(driveLetter))" + #":\"#
             url = URL(filePath: path, directoryHint: .isDirectory)

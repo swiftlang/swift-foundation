@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !hasFeature(Embedded)
 
 typealias XMLPlistMapOffset = Int
 
@@ -209,4 +208,3 @@ internal struct XMLPlistMap: ~Copyable {
     }
 }
 
-#endif // !hasFeature(Embedded)
