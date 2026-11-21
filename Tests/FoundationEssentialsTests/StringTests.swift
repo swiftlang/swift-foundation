@@ -1600,6 +1600,55 @@ private struct StringTests {
         #expect(String.Encoding(ianaName: "utf-32le") == .utf32LittleEndian)
         #expect(String.Encoding(ianaName: "foo-bar-baz") == nil)
     }
+
+    // MARK: - Creating strings from C strings
+
+    @Test(arguments: [
+        ([0x66, 0x6F, 0x6F, 0x00], "foo"),
+        ([0x66, 0x6F, 0x6F, 0x20, 0xE3, 0x81, 0x82, 0x00], "foo あ"),
+        ([0xEF, 0xBB, 0xBF, 0x61, 0x00], "\u{FEFF}a"), // Keeps the byte order mark
+        ([0x00], ""),
+        ([0x61, 0x00, 0x62, 0x00], "a"), // Stops at the first null byte
+        ([0xFF, 0x00], nil), // Byte that never appears in UTF-8
+        ([0x61, 0xC3, 0x00], nil), // Sequence cut off by the null byte
+        ([0xC0, 0x80, 0x00], nil), // Overlong encoding of U+0000
+        ([0xED, 0xA0, 0x80, 0x00], nil), // Encoded surrogate U+D800
+    ] as [([UInt8], String?)])
+    func initUTF8String(_ bytes: [UInt8], _ expected: String?) throws {
+        let cString = bytes.map { CChar(bitPattern: $0) }
+        try cString.withUnsafeBufferPointer {
+            let pointer = try #require($0.baseAddress)
+            #expect(String(utf8String: pointer) == expected)
+        }
+        #expect(String(utf8String: cString) == expected)
+    }
+
+    @available(*, deprecated)
+    @Test func initUTF8StringFromString() {
+        #expect(String(utf8String: "a\0b") == "a")
+    }
+
+    @available(*, deprecated)
+    @Test func initUTF8StringFromNullCChar() {
+        var nullCharacter: CChar = 0
+        #expect(String(utf8String: &nullCharacter) == "")
+    }
+
+#if FOUNDATION_EXIT_TESTS
+    @Test func initUTF8StringFromArrayWithoutNullTerminator() async {
+        await #expect(processExitsWith: .failure) {
+            _ = String(utf8String: [CChar(0x61)])
+        }
+    }
+
+    @available(*, deprecated)
+    @Test func initUTF8StringFromNonNullCChar() async {
+        await #expect(processExitsWith: .failure) {
+            var character = CChar(0x61)
+            _ = String(utf8String: &character)
+        }
+    }
+#endif
 }
 
 // MARK: - Helper functions
@@ -1877,21 +1926,6 @@ struct StringTestsStdlib {
             #expect("foo, a basmati bar!" ==
                         String(cString: $0, encoding: String.defaultCStringEncoding))
         }
-    }
-
-    @Test func init_utf8String() {
-        let s = "foo あいう"
-        let up = UnsafeMutablePointer<UInt8>.allocate(capacity: 100)
-        var i = 0
-        for b in s.utf8 {
-            up[i] = b
-            i += 1
-        }
-        up[i] = 0
-        let cstr = UnsafeMutableRawPointer(up)
-            .bindMemory(to: CChar.self, capacity: 100)
-        #expect(s == String(utf8String: cstr))
-        up.deallocate()
     }
 
     @Test func canBeConvertedToEncoding() {
