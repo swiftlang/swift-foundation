@@ -239,11 +239,6 @@ extension _CharacterSet {
                         } else {
                             self.annex.setCharacterSet(annexPlane, forPlane: planeIndex)
                         }
-                    } else {
-                        // Handles case where annexPlane doesn't exist yet
-                        let newPlane = _CharacterSet()
-                        newPlane.insert(charactersIn: planeRange)
-                        self.annex.setCharacterSet(newPlane, forPlane: planeIndex)
                     }
                 } else {
                     let annexPlane = getAnnexPlaneCharacterSet(planeIndex)
@@ -268,17 +263,6 @@ extension _CharacterSet {
                         } else {
                             self.annex.setCharacterSet(annexPlane, forPlane: planeIndex)
                         }
-                    } else {
-                        // Handles case where annexPlane doesn't exist yet
-                        let newPlane = _CharacterSet()
-                        newPlane.makeBitmap()
-                        guard case .bitmap(var bitmapBacked) = newPlane.storage else {
-                            continue
-                        }
-                        
-                        var mutableSpan = bitmapBacked.mutableSpan
-                        _CharacterSet.addCharacters(to: &mutableSpan, firstChar: planeRangeStart, lastChar: planeRangeEnd)
-                        self.annex.setCharacterSet(newPlane, forPlane: planeIndex)
                     }
                 } else {
                     let annexPlane = getAnnexPlaneCharacterSet(planeIndex)
