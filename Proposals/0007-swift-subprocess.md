@@ -300,7 +300,7 @@ public func run<
 ///   - platformOptions: The platform specific options to use
 ///     when running the executable.
 ///   - input: The input to send to the executable.
-///   - output: How to manage the executable standard ouput.
+///   - output: How to manage the executable standard output.
 ///   - error: How to manager executable standard error.
 ///   - body: The custom execution body to manually control the running process
 /// - Returns a ExecutableResult type containing the return value
