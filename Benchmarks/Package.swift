@@ -123,6 +123,15 @@ let package = Package(
             ]
         ),
         .executableTarget(
+            name: "NotificationCenterBenchmarks",
+            dependencies: targetDependency,
+            path: "Benchmarks/NotificationCenter",
+            swiftSettings: swiftSettings,
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
+        .executableTarget(
             name: "DataBenchmarks",
             dependencies: targetDependency,
             path: "Benchmarks/Data",
