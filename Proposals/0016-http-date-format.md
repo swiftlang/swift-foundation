@@ -28,7 +28,7 @@ We propose to add two additional format styles to `FoundationEssentials` . This 
 
 Both styles allow formatting (creating a `String`) and parsing (taking a `String`).
 
-A principal design goal is to ensure that it is very cheap to parse and serialize these header formats. Thefore, the implementation is focused on performance and safety.
+A principal design goal is to ensure that it is very cheap to parse and serialize these header formats. Therefore, the implementation is focused on performance and safety.
 
 ## Detailed design
 
