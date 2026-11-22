@@ -204,7 +204,7 @@ The `AttributeScopes.FoundationAttributes.WritingDirectionAttribute` may be adde
 
 This could be accomplished using a simple `invalidationCondition` with value `.textChanged` on the `WritingDirectionAttribute`. However, that would mean that even after explicitly setting the writing direction to a value that was not determined via character analysis, the writing direction attribute would invalidate every time the character changes. Instead, we would only want this behavior in the scenario where the attribute value was actually determined via character analysis.
 
-For the writing direction to behave correctly, both for the case case of an explicit writing direction and one determined via character analysis, a second attribute would be needed:
+For the writing direction to behave correctly, both for the case of an explicit writing direction and one determined via character analysis, a second attribute would be needed:
 
 `AttributeScopes.FoundationAttributes.WritingDirectionAnalysisAttribute` would have `runBoundaries` `paragraph`, `inheritedByAddedText = false`, and `invalidationCondition` `.textChanged`, so it essentially resets to `nil` every time the characters change.
 

@@ -13,7 +13,7 @@
 
 ## Introduction
 
-In [SF-0009](0009-calendar-recurrence-rule.md) we introduced `Calendar.RecurrenceRule`. With this API, we can find occurences of a recurring event in a given range:
+In [SF-0009](0009-calendar-recurrence-rule.md) we introduced `Calendar.RecurrenceRule`. With this API, we can find occurrences of a recurring event in a given range:
 
 ```swift
 let birthday   = Date(timeIntervalSince1970: 813283200.0)  // 1995-10-10T00:00:00-0000
