@@ -219,8 +219,9 @@ extension NotificationCenter {
         
         post(notification)
 #else
-        _post(M.name, object: subject) {
-            Notification(name: Notification.Name(M.name), object: subject, userInfo: [NotificationMessageKey.key: message])
+        let name = M.name
+        _post(name, object: subject) {
+            Notification(name: Notification.Name(name), object: subject, userInfo: [NotificationMessageKey.key: message])
         }
 #endif
     }

@@ -42,8 +42,6 @@ open class NotificationCenter: @unchecked Sendable {
         return _defaultCenter
     }
     
-    // TODO: remove or refactor the @_spi(SwiftCorelibsFoundation) methods
-    
     @_spi(SwiftCorelibsFoundation) public func _addObserver(_ name: String?, object: AnyObject?, using block: @escaping @Sendable (Notification) -> Void) -> UInt64 {
         return registrar.addObserver(nameHash: _notificationNameHashFor(name), name: name, object: Self._objectPointer(object), using: block).rawValue
     }
@@ -87,7 +85,7 @@ open class NotificationCenter: @unchecked Sendable {
         return _actorQueueManager
     }
     
-    static func _objectPointer(_ object: AnyObject?) -> UnsafeRawPointer? {
+    private static func _objectPointer(_ object: AnyObject?) -> UnsafeObjectPtr? {
         object.map { UnsafeRawPointer(Unmanaged.passUnretained($0).toOpaque()) }
     }
 }

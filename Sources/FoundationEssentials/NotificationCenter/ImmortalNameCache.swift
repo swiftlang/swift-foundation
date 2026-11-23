@@ -16,7 +16,6 @@
 internal import Synchronization
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
-#endif
 
 /// Shared among all registrars in a process
 fileprivate let immortalNameCache = ImmortalNameCache<1024>()
@@ -53,7 +52,6 @@ internal struct ImmortalNameCache<let capacity: Int>: ~Copyable, Sendable {
 }
 
 extension ImmortalNameCache {
-#if FOUNDATION_FRAMEWORK
     // Returns name hash from the cache if any, and inserts missing immortal strings.
     // Note: Swift string literals can hit too in certain cases such as a short ASCII literal (NSTaggedPointerString) or an ASCII string with 16 bytes or more (NSIndirectTaggedPointerString).
     @inline(__always)
@@ -64,20 +62,8 @@ extension ImmortalNameCache {
         if _isImmortalString(ptr) { insert(ptr, hash: h) }
         return h
     }
-#else
-    @inline(__always)
-    func nameHash(for name: String) -> Int {
-//        let ptr = UnsafeRawPointer(Unmanaged.passUnretained(name).toOpaque())
-//        if let h = lookup(ptr) { return h }
-//        let h = name.hash
-//        if _isImmortalString(ptr) { insert(ptr, hash: h) }
-//        return h
-        return name.hashValue
-    }
-#endif
 }
 
-#if FOUNDATION_FRAMEWORK
 @inline(__always)
 internal func _notificationNameHashFor(_ name: NSString) -> Int {
     immortalNameCache.nameHash(for: name)
@@ -88,18 +74,20 @@ internal func _notificationNameHashFor(_ name: NSString?) -> Int? {
     guard let name else { return nil }
     return _notificationNameHashFor(name) as Int
 }
+
 #else
 
 @inline(__always)
 internal func _notificationNameHashFor(_ name: String) -> Int {
-    immortalNameCache.nameHash(for: name)
+    return name.hashValue
 }
 
 @inline(__always)
 internal func _notificationNameHashFor(_ name: String?) -> Int? {
     guard let name else { return nil }
-    return immortalNameCache.nameHash(for: name) as Int
+    return name.hashValue
 }
+
 #endif
 
 #endif

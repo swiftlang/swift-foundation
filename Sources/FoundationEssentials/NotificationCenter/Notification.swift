@@ -12,7 +12,7 @@
 
 #if !FOUNDATION_FRAMEWORK
 
-// `Notification` relies on `AnyHashable` which is not available in embedded. Use NotificationCenter.Message APIs for embedded notification support.
+// `Notification` relies on `AnyHashable` which is not available in embedded
 #if !hasFeature(Embedded)
 
 @available(*, unavailable)
@@ -21,7 +21,7 @@ extension Notification : @unchecked Sendable { }
 /**
  `Notification` encapsulates information broadcast to observers via a `NotificationCenter`.
  */
-public struct Notification : Equatable, Hashable {
+public struct Notification : Equatable, Hashable, CustomStringConvertible, CustomDebugStringConvertible {
     /// A tag identifying the notification.
     public var name: Name
     
@@ -109,38 +109,6 @@ extension Notification : CustomReflectable {
         return Mirror(self, children: children, displayStyle: .class)
     }
 }
-
-//extension Notification : ReferenceConvertible {
-//    public typealias ReferenceType = NSNotification
-//}
-
-//extension Notification : _ObjectiveCBridgeable {
-//    public static func _getObjectiveCType() -> Any.Type {
-//        return NSNotification.self
-//    }
-//    
-//    @_semantics("convertToObjectiveC")
-//    public func _bridgeToObjectiveC() -> NSNotification {
-//        return NSNotification(name: name, object: object, userInfo: userInfo)
-//    }
-//    
-//    public static func _forceBridgeFromObjectiveC(_ x: NSNotification, result: inout Notification?) {
-//        if !_conditionallyBridgeFromObjectiveC(x, result: &result) {
-//            fatalError("Unable to bridge \(NSNotification.self) to \(self)")
-//        }
-//    }
-//    
-//    public static func _conditionallyBridgeFromObjectiveC(_ x: NSNotification, result: inout Notification?) -> Bool {
-//        result = Notification(name: x.name, object: x.object, userInfo: x.userInfo)
-//        return true
-//    }
-//    
-//    public static func _unconditionallyBridgeFromObjectiveC(_ source: NSNotification?) -> Notification {
-//        var result: Notification? = nil
-//        _forceBridgeFromObjectiveC(source!, result: &result)
-//        return result!
-//    }
-//}
 
 #endif
 

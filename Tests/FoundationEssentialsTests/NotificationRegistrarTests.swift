@@ -642,6 +642,7 @@ private struct InlineBloomFilterTests {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
 @Suite("ImmortalNameCache")
 private struct ImmortalNameCacheTests {
     let a = UnsafeRawPointer(bitPattern: 0x1000)!
@@ -675,7 +676,6 @@ private struct ImmortalNameCacheTests {
         #expect(lookupB == 222)
     }
     
-#if FOUNDATION_FRAMEWORK
     // NSString subclass that is neither a constant nor a tagged pointer string
     final class ImpostorString: NSString {
         override var length: Int { 1 }
@@ -711,5 +711,5 @@ private struct ImmortalNameCacheTests {
         #expect(first == constant.hash)
         #expect(second == constant.hash)
     }
-#endif
 }
+#endif
