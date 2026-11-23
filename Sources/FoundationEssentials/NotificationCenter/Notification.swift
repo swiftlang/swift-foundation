@@ -12,6 +12,9 @@
 
 #if !FOUNDATION_FRAMEWORK
 
+// `Notification` relies on `AnyHashable` which is not available in embedded. Use NotificationCenter.Message APIs for embedded notification support.
+#if !hasFeature(Embedded)
+
 @available(*, unavailable)
 extension Notification : @unchecked Sendable { }
 
@@ -138,5 +141,7 @@ extension Notification : CustomReflectable {
 //        return result!
 //    }
 //}
+
+#endif
 
 #endif

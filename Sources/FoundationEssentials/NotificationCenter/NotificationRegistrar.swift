@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// `NotificationRegistrar` is not yet available for embedded.
+#if !hasFeature(Embedded)
+
 /// NotificationRegistrar is the core of NotificationCenter, storing registrations and calling them with notifications based on posted parameters.
 ///
 /// It has a few moving parts:
@@ -1216,3 +1219,5 @@ fileprivate func callOutToObserver(_ handler: borrowing DeliveryCollector.Delive
 @inline(__always) internal func fibonacciIndex(_ key: UInt64, count: Int) -> Int {
     Int(truncatingIfNeeded: fibonacciHash(key) >> UInt64(64 - count.trailingZeroBitCount))
 }
+
+#endif

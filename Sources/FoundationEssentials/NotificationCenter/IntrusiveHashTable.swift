@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
+
 /// IntrusiveHashTable provides a hash table which handles collisions using a linked list that is stored (intrudes) on user-supplied storage.
 
 // Hash table which handles collisions using a linked list stored (intruding) inside the elements themselves.
@@ -95,3 +98,5 @@ internal protocol IntrusiveHashEntry {
     
     static func hash(_ key: Key) -> UInt64
 }
+
+#endif

@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
+
 internal import Synchronization
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
@@ -97,4 +100,6 @@ internal func _notificationNameHashFor(_ name: String?) -> Int? {
     guard let name else { return nil }
     return immortalNameCache.nameHash(for: name) as Int
 }
+#endif
+
 #endif

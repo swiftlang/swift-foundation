@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
+
 // MARK: - SlotMap
 
 /// SlotMap is a contiguous block of memory storing E.
@@ -192,3 +195,5 @@ extension SlotMap {
         }
     }
 }
+
+#endif

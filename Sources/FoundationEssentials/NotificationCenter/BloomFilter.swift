@@ -12,6 +12,9 @@
 
 internal import Synchronization
 
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
+
 // A bloom filter is a probabilistic data structure designed to quickly check for element existence.
 //
 // The filter can indicate whether an element *might be present* or is *definitely not present*. As the filter fills up, the false positive rate increases but the filter never delivers false negatives. Bloom filters are useful in avoiding expensive operations by quickly determining if an element is not present.
@@ -92,3 +95,5 @@ internal struct InlineBloomFilter<let wordCount: Int>: ~Copyable, Sendable {
         insertCount.store(newInsertCount, ordering: .relaxed)
     }
 }
+
+#endif
