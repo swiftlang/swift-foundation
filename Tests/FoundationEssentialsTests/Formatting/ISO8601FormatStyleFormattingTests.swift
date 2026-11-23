@@ -79,6 +79,20 @@ private struct ISO8601FormatStyleFormattingTests {
         
     }
 
+    @Test(arguments: 1...7)
+    func iso8601WeekDateWeekday(isoWeekday: Int) throws {
+        // 2024-01-01 is the Monday of 2024-W01.
+        let date = Date(timeIntervalSince1970: 1_704_067_200 + TimeInterval(isoWeekday - 1) * 86_400)
+        let components = DateComponents(weekday: isoWeekday % 7 + 1, weekOfYear: 1, yearForWeekOfYear: 2024)
+        let dateStyle = Date.ISO8601FormatStyle().year().weekOfYear().day()
+        let componentsStyle = DateComponents.ISO8601FormatStyle().year().weekOfYear().day()
+
+        #expect(dateStyle.format(date) == "2024-W01-0\(isoWeekday)")
+        #expect(dateStyle.dateSeparator(.omitted).format(date) == "2024W010\(isoWeekday)")
+        #expect(componentsStyle.format(components) == "2024-W01-0\(isoWeekday)")
+        #expect(try dateStyle.parse(dateStyle.format(date)) == date)
+    }
+
     @Test func iso8601ComponentsFormatMissingPieces() throws {
         // Example code from the proposal
         let components = DateComponents(year: 1999, month: 12, day: 31)
