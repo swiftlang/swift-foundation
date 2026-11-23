@@ -253,11 +253,11 @@ extension DateComponents.ISO8601FormatStyle : FormatStyle {
                 
                 if formatFields.contains(.weekOfYear) {
                     var weekday = components.weekday ?? 1
-                    // Weekday is always less than 10. Our weekdays are offset by 1.
+                    // Weekday is always less than 10. ISO 8601 weekdays run from 1 (Monday) to 7 (Sunday), while Calendar weekdays start with 1 for Sunday.
                     if weekday >= 10 {
                         weekday = 10
                     }
-                    buffer.append(weekday - 1, zeroPad: 2)
+                    buffer.append(weekday == 1 ? 7 : weekday - 1, zeroPad: 2)
                 } else if formatFields.contains(.month) {
                     let day = components.day ?? 1
                     buffer.append(day, zeroPad: 2)
