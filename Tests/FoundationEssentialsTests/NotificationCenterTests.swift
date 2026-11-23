@@ -38,52 +38,47 @@ private struct NotificationCenterTests {
         let notificationName = "test_postNotification_name"
         let center = NotificationCenter()
         let testObject = TestObject()
-        let message = MainActorTestMessage(payloadInt: 1, payloadString: "one")
         
         // name and object
-        var token = center._addObserver(notificationName, object: testObject) { (message: MainActorTestMessage) in
-            #expect(message.payloadInt == 1)
-            #expect(message.payloadString == "one")
+        var token = center._addObserver(notificationName, object: testObject) { notification in
+            #expect(notification.name.rawValue == notificationName)
             flag = true
         }
         flag = false
-        center._post(notificationName, subject: testObject, message: message)
+        center._post(Notification(name: Notification.Name(notificationName), object: testObject))
         #expect(flag)
         center._removeObserver(token)
         
         // nil name and object
-        token = center._addObserver(nil, object: testObject) { (message: MainActorTestMessage) in
-            #expect(message.payloadInt == 1)
-            #expect(message.payloadString == "one")
+        token = center._addObserver(nil, object: testObject) { notification in
+            #expect(notification.name.rawValue == notificationName)
 
             flag = true
         }
         flag = false
-        center._post(notificationName, subject: testObject, message: message)
+        center._post(Notification(name: Notification.Name(notificationName), object: testObject))
         #expect(flag)
         center._removeObserver(token)
 
         // nil name and nil object
-        token = center._addObserver(nil, object: nil) { (message: MainActorTestMessage) in
-            #expect(message.payloadInt == 1)
-            #expect(message.payloadString == "one")
+        token = center._addObserver(nil, object: nil) { notification in
+            #expect(notification.name.rawValue == notificationName)
 
             flag = true
         }
         flag = false
-        center._post(notificationName, subject: testObject, message: message)
+        center._post(Notification(name: Notification.Name(notificationName), object: testObject))
         #expect(flag)
         center._removeObserver(token)
 
         // name and nil object
-        token = center._addObserver(notificationName, object: nil) { (message: MainActorTestMessage) in
-            #expect(message.payloadInt == 1)
-            #expect(message.payloadString == "one")
+        token = center._addObserver(notificationName, object: nil) { notification in
+            #expect(notification.name.rawValue == notificationName)
 
             flag = true
         }
         flag = false
-        center._post(notificationName, subject: testObject, message: message)
+        center._post(Notification(name: Notification.Name(notificationName), object: testObject))
         #expect(flag)
         center._removeObserver(token)
     }
@@ -94,22 +89,20 @@ private struct NotificationCenterTests {
         let notificationName = "test_postNotification_name"
         let center = NotificationCenter()
         let testObject = TestObject()
-        let message = MainActorTestMessage(payloadInt: 1, payloadString: "one")
         
-        let token = center._addObserver(notificationName, object: testObject) { (message: MainActorTestMessage) in
-            #expect(message.payloadInt == 1)
-            #expect(message.payloadString == "one")
+        let token = center._addObserver(notificationName, object: testObject) { notification in
+            #expect(notification.name.rawValue == notificationName)
 
             flag = true
         }
         
         flag = false
-        center._post(notificationName, subject: testObject, message: message)
+        center._post(Notification(name: Notification.Name(notificationName), object: testObject))
         #expect(flag)
         center._removeObserver(token)
         
         flag = false
-        center._post(notificationName, subject: testObject, message: message)
+        center._post(Notification(name: Notification.Name(notificationName), object: testObject))
         #expect(!flag)
     }
 
@@ -118,67 +111,42 @@ private struct NotificationCenterTests {
         let name = "test_postNotificationForObject_name"
         let testObject = TestObject()
         let testObject2 = TestObject()
-        let message = MainActorTestMessage(payloadInt: 1, payloadString: "one")
 
         nonisolated(unsafe) var flag = true
         
-        let observer = center._addObserver(name, object: testObject) { (message: MainActorTestMessage) in
+        let observer = center._addObserver(name, object: testObject) { notification in
             flag = false
         }
         
-        center._post(name, subject: testObject2, message: message)
+        center._post(Notification(name: Notification.Name(name), object: testObject2))
         #expect(flag)
         
         center._removeObserver(observer)
     }
 
-    @Test func internalPostNotificationForValue() {
-        let center = NotificationCenter()
-        let name = "test_postNotificationForObject_name"
-        let message = MainActorTestMessage(payloadInt: 1, payloadString: "one")
-
-        nonisolated(unsafe) var literal5Observed = false
-        nonisolated(unsafe) var literal1024Observed = false
-        
-        let literal5Observer = center._addObserver(name, object: 5) { (message: MainActorTestMessage) in
-            literal5Observed = true
-        }
-        let literal1024Observer = center._addObserver(name, object: 1024) { (message: MainActorTestMessage) in
-            literal1024Observed = true
-        }
-        
-        center._post(name, subject: 5, message: message)
-        #expect(literal5Observed)
-        #expect(!literal1024Observed)
-        
-        center._removeObserver(literal5Observer)
-        center._removeObserver(literal1024Observer)
-    }
-
     @Test func internalPostMultipleNotifications() {
         let center = NotificationCenter()
         let name = "test_postMultipleNotifications_name"
-        let message = MainActorTestMessage(payloadInt: 1, payloadString: "one")
         
         nonisolated(unsafe) var observer1Called = false
 
-        let observer1 = center._addObserver(name, object: nil) { (message: MainActorTestMessage) in
+        let observer1 = center._addObserver(name, object: nil) { notification in
             observer1Called = true
         }
         
         nonisolated(unsafe) var observer2Called = false
-        let observer2 = center._addObserver(name, object: nil) { (message: MainActorTestMessage) in
+        let observer2 = center._addObserver(name, object: nil) { notification in
             observer2Called = true
         }
         
         nonisolated(unsafe) var observer3Called = false
-        let observer3 = center._addObserver(name, object: nil) { (message: MainActorTestMessage) in
+        let observer3 = center._addObserver(name, object: nil) { notification in
             observer3Called = true
         }
         
         center._removeObserver(observer2)
         
-        center._post(name, subject: nil, message: message)
+        center._post(Notification(name: Notification.Name(name), object: nil))
         #expect(observer1Called)
         #expect(!observer2Called)
         #expect(observer3Called)
@@ -191,24 +159,23 @@ private struct NotificationCenterTests {
         let center = NotificationCenter()
         let name = "test_addObserverForNilName_name"
         let invalidName = "test_addObserverForNilName_name_invalid"
-        let message = MainActorTestMessage(payloadInt: 1, payloadString: "one")
         
         nonisolated(unsafe) var flag1 = false
-        let observer1 = center._addObserver(name, object: nil) { (message: MainActorTestMessage) in
+        let observer1 = center._addObserver(name, object: nil) { notification in
             flag1 = true
         }
         
         nonisolated(unsafe) var flag2 = true
-        let observer2 = center._addObserver(invalidName, object: nil) { (message: MainActorTestMessage) in
+        let observer2 = center._addObserver(invalidName, object: nil) { notification in
             flag2 = false
         }
         
         nonisolated(unsafe) var flag3 = false
-        let observer3 = center._addObserver(nil, object: nil) { (message: MainActorTestMessage) in
+        let observer3 = center._addObserver(nil, object: nil) { notification in
             flag3 = true
         }
         
-        center._post(name, subject: nil, message: message)
+        center._post(Notification(name: Notification.Name(name), object: nil))
         #expect(flag1)
         #expect(flag2)
         #expect(flag3)
@@ -216,6 +183,43 @@ private struct NotificationCenterTests {
         center._removeObserver(observer1)
         center._removeObserver(observer2)
         center._removeObserver(observer3)
+    }
+
+    @MainActor
+    @Test func internalWildcardNameObserverReceivesMessagePost() {
+        nonisolated(unsafe) var receivedName: String?
+
+        let center = NotificationCenter()
+
+        let observer = center._addObserver(nil, object: nil) { notification in
+            receivedName = notification.name.rawValue
+        }
+
+        center.post(MainActorTestMessage(payloadInt: 1, payloadString: "one"))
+        #expect(receivedName == _typeName(MainActorTestMessage.self))
+
+        center._removeObserver(observer)
+    }
+    
+    @Test func internalBlockObserverRemovalByNameAndObject() {
+        nonisolated(unsafe) var fired = 0
+        
+        let name = "test_blockObserverRemoval_name"
+        let center = NotificationCenter()
+        let testObject = TestObject()
+        
+        let observer: AnyObject = center._addBlockObserver(name, object: testObject) { _ in fired += 1 }
+        
+        // A different name or object leaves the registration in place
+        center._removeObserver(observer, name: "test_blockObserverRemoval_other", object: nil)
+        center._removeObserver(observer, name: nil, object: TestObject())
+        center._post(Notification(name: Notification.Name(name), object: testObject))
+        #expect(fired == 1)
+        
+        center._removeObserver(observer, name: name, object: testObject)
+        center._post(Notification(name: Notification.Name(name), object: testObject))
+        #expect(fired == 1)
+        #expect(center.isEmpty())
     }
 #endif
     

@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// `NotificationRegistrar` is not yet available for embedded.
+#if !hasFeature(Embedded)
+
 /// NotificationRegistrar is the core of NotificationCenter, storing registrations and calling them with notifications based on posted parameters.
 ///
 /// It has a few moving parts:
@@ -20,9 +23,6 @@
 /// **ObserverTable**: Observer object reference storage, de-duped across multiple registrations, with StableStorage to ensure weak pointers are never moved during registrar growth. These may be shared across many registrations. BlockObservers (created by an addObserver variant with no 'observer' parameter) are also stored here.
 /// **RegistrationFilter**: Collection of bloom filters and flags used to quickly return from post() when there are no relevant registrations
 /// **DeliveryCollector**: Used by post to store registration callbacks that need to be called for a given post. Notification postings are re-entrant so each notification delivery must be copied to be used outside the registrar lock.
-
-// NotificationRegistrar is Foundation framework-only until swift-foundation merge is complete.
-#if FOUNDATION_FRAMEWORK
 
 internal import Synchronization
 
@@ -45,6 +45,7 @@ typealias ObserverQueue = OperationQueue
 typealias NotificationType = Notification
 typealias RegistrarStringType = String
 typealias ObserverBlock = @Sendable (NotificationType) -> Void
+typealias ObserverQueue = Never
 #endif
 
 // MARK: - Helpers
@@ -660,20 +661,14 @@ fileprivate struct Registration {
     }
     
     static var vacant: Registration {
-#if FOUNDATION_FRAMEWORK
         Registration(handler: .closure({ _ in }, nil), nameIndex: .anyNameIndex, object: nil, observerEntry: .noEntry)
-#else
-        Registration(handler: .closure({ _ in }), nameIndex: .anyNameIndex, object: nil, observerEntry: .noEntry)
-#endif
     }
     
     fileprivate enum Handler {
-    #if FOUNDATION_FRAMEWORK
         case closure(ObserverBlock, ObserverQueue?)
+    #if FOUNDATION_FRAMEWORK
         case selector(Selector, Observer) // selector first saves on the memory layout
         case function(RawCFNotificationCallback, observer: Observer)
-    #else
-        case closure(ObserverBlock)
     #endif
         
         #if FOUNDATION_FRAMEWORK
@@ -1132,23 +1127,18 @@ fileprivate struct DeliveryCollector: ~Copyable {
     #endif
     
         init?(_ handler: Registration.Handler, _ token: Token, cfCenter: UnsafeRawPointer?) {
-    #if FOUNDATION_FRAMEWORK
             switch handler {
             case .closure(let block, let queue):
                 self.handler = .closure(block, queue)
+#if FOUNDATION_FRAMEWORK
             case .selector(let selector, let reference):
                 guard let observer = Delivery.Handler.Observer(reference) else { return nil }
                 self.handler = .selector(observer, selector)
             case .function(let callback, let reference):
                 guard let observer = Delivery.Handler.Observer(reference) else { return nil }
                 self.handler = .function(callback, center: cfCenter, observer: observer)
+#endif
             }
-    #else
-            switch handler {
-            case .closure(let block):
-                self.handler = .closure(block)
-            }
-    #endif
         
             self.token = token
         }
@@ -1162,39 +1152,33 @@ fileprivate struct DeliveryCollector: ~Copyable {
             #endif
                 return true
             }
-            
+
+            case closure(ObserverBlock, ObserverQueue?)
             #if FOUNDATION_FRAMEWORK
             typealias SelectorIMP = @convention(c) (AnyObject, Selector, NSNotification?) -> Void
-            
-            case closure(ObserverBlock, ObserverQueue?)
             case selector(Handler.Observer, Selector)
             case function(RawCFNotificationCallback, center: UnsafeRawPointer?, observer: Handler.Observer)
-            #else
-            case closure(ObserverBlock)
             #endif
             
-            func dispatch(name: RegistrarStringType, object: UnsafeObjectPtr?, userInfo: AnyObject?, notification: () -> NotificationType) {
+            func dispatch(name: RegistrarStringType, object: UnsafeObjectPtr?, userInfo: AnyObject?, notification: NotificationType?) {
                 switch self {
-            #if FOUNDATION_FRAMEWORK
                 case .closure(let block, _):
-                    block(notification())
+                    block(notification!)
+            #if FOUNDATION_FRAMEWORK
                 case .selector(.strong(let observer), let selector):
                     guard let cls = object_getClass(observer) else { break }
                     let fn = unsafeBitCast(class_getMethodImplementation(cls, selector), to: SelectorIMP.self)
-                    fn(observer, selector, notification())
+                    fn(observer, selector, notification!)
                 case .selector(.raw(let pointer), let selector):
                     Unmanaged<AnyObject>.fromOpaque(pointer!)._withUnsafeGuaranteedRef { observer in
                         guard let cls = object_getClass(observer) else { return }
                         let fn = unsafeBitCast(class_getMethodImplementation(cls, selector), to: SelectorIMP.self)
-                        fn(observer, selector, notification())
+                        fn(observer, selector, notification!)
                     }
                 case .function(let callback, let center, .strong(let observer)):
                     callback(center, UnsafeRawPointer(observer), UnsafeRawPointer(name), object, UnsafeRawPointer(userInfo))
                 case .function(let callback, let center, .raw(let observer)):
                     callback(center, observer, UnsafeRawPointer(name), object, UnsafeRawPointer(userInfo))
-            #else
-                case .closure(let block):
-                    block(notification())
             #endif
                 }
             }
@@ -1223,7 +1207,7 @@ fileprivate struct DeliveryCollector: ~Copyable {
 // Call-stack canary. Do not optimize - the value is in seeing the silgen name in the callstack during debugging.
 @_silgen_name("__NOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__") @inline(never) @_optimize(none)
 fileprivate func callOutToObserver(_ handler: borrowing DeliveryCollector.Delivery.Handler, name: RegistrarStringType, object: UnsafeObjectPtr?, userInfo: AnyObject?, notification: borrowing NotificationType?) {
-    handler.dispatch(name: name, object: object, userInfo: userInfo, notification: { (copy notification)! })
+    handler.dispatch(name: name, object: object, userInfo: userInfo, notification: notification)
 }
 
 // A few areas of NotificationRegistrar and its supporting types use Fibonacci hashing which is faster than Hasher if you don't need the seed

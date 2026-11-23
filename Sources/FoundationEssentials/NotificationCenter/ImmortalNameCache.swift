@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
 
 internal import Synchronization
+#if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
 
 /// Shared among all registrars in a process
@@ -72,5 +74,20 @@ internal func _notificationNameHashFor(_ name: NSString?) -> Int? {
     guard let name else { return nil }
     return _notificationNameHashFor(name) as Int
 }
+
+#else
+
+@inline(__always)
+internal func _notificationNameHashFor(_ name: String) -> Int {
+    return name.hashValue
+}
+
+@inline(__always)
+internal func _notificationNameHashFor(_ name: String?) -> Int? {
+    guard let name else { return nil }
+    return name.hashValue
+}
+
+#endif
 
 #endif

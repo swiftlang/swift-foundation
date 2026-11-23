@@ -20,6 +20,7 @@ target_sources(FoundationEssentials PRIVATE
     ImmortalNameCache.swift
     IntrusiveHashTable.swift
     MainActorMessage.swift
+    Notification.swift
     NotificationCenter.swift
     NotificationCenterMessage.swift
     NotificationRegistrar.swift

@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
 
 /// Provides storage for `Element` that does not move when growing.
 ///

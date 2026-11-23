@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-
 internal import Synchronization
+
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
 
 // A bloom filter is a probabilistic data structure designed to quickly check for element existence.
 //

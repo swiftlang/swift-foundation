@@ -11,11 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-
 @testable import Foundation
+#else
+@testable import FoundationEssentials
+#endif
 
 import Testing
 import Synchronization
+
+fileprivate func makeNotification(_ name: String) -> NotificationType {
+#if FOUNDATION_FRAMEWORK
+    NSNotification(name: Notification.Name(name), object: nil)
+#else
+    Notification(name: Notification.Name(name))
+#endif
+}
 
 @Suite("NotificationRegistrar")
 private struct NotificationRegistrarTests {
@@ -30,18 +40,18 @@ private struct NotificationRegistrarTests {
         let b = registrar.addObserver(nameHash: h, name: "B", object: nil, queue: nil) { _ in bFired += 1 }
         
         // Same hash, different names should not cross-deliver
-        registrar.post(nameHash: h, name: "A", object: nil) { NSNotification(name: Notification.Name("A"), object: nil) }
+        registrar.post(nameHash: h, name: "A", object: nil) { makeNotification("A") }
         #expect(aFired == 1)
         #expect(bFired == 0)
         
-        registrar.post(nameHash: h, name: "B", object: nil) { NSNotification(name: Notification.Name("B"), object: nil) }
+        registrar.post(nameHash: h, name: "B", object: nil) { makeNotification("B") }
         #expect(aFired == 1)
         #expect(bFired == 1)
         
         registrar.removeObserver(a, name: nil, object: nil)
         
-        registrar.post(nameHash: h, name: "A", object: nil) { NSNotification(name: Notification.Name("A"), object: nil) }
-        registrar.post(nameHash: h, name: "B", object: nil) { NSNotification(name: Notification.Name("B"), object: nil) }
+        registrar.post(nameHash: h, name: "A", object: nil) { makeNotification("A") }
+        registrar.post(nameHash: h, name: "B", object: nil) { makeNotification("B") }
         
         #expect(aFired == 1)
         #expect(bFired == 2) // B should still fire
@@ -292,11 +302,11 @@ private struct NotificationRegistrarTests {
         }
         
         #expect(weakHandle == nil)
-        registrar.post(nameHash: 1, name: "n", object: nil) { NSNotification(name: Notification.Name("n"), object: nil) }
+        registrar.post(nameHash: 1, name: "n", object: nil) { makeNotification("n") }
         #expect(fired == 1)
         
         registrar.removeObserver(token)
-        registrar.post(nameHash: 1, name: "n", object: nil) { NSNotification(name: Notification.Name("n"), object: nil) }
+        registrar.post(nameHash: 1, name: "n", object: nil) { makeNotification("n") }
         #expect(fired == 1)
         #expect(registrar.isEmpty())
     }
@@ -315,7 +325,7 @@ private struct NotificationRegistrarTests {
     }
     
     private func post(_ registrar: NotificationRegistrar, object: UnsafeRawPointer?) {
-        registrar.post(nameHash: 1, name: "n", object: object.map(PostedObject.pointer)) { NSNotification(name: Notification.Name("n"), object: nil) }
+        registrar.post(nameHash: 1, name: "n", object: object.map(PostedObject.pointer)) { makeNotification("n") }
     }
     
     @Test func nilNameObserverReceivesUnobservedNames() {
@@ -384,7 +394,7 @@ private struct NotificationRegistrarTests {
         
         post(registrar, object: liveObject)
         registrar.post(nameHash: 7, name: "named", object: nil) {
-            NSNotification(name: Notification.Name("named"), object: nil)
+            makeNotification("named")
         }
         
         #expect(objectFired == 1)
@@ -632,6 +642,7 @@ private struct InlineBloomFilterTests {
     }
 }
 
+#if FOUNDATION_FRAMEWORK
 @Suite("ImmortalNameCache")
 private struct ImmortalNameCacheTests {
     let a = UnsafeRawPointer(bitPattern: 0x1000)!
@@ -701,5 +712,4 @@ private struct ImmortalNameCacheTests {
         #expect(second == constant.hash)
     }
 }
-
 #endif

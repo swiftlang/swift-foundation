@@ -125,19 +125,13 @@ extension NotificationCenter {
         
         init(center: NotificationCenter, object: AnyObject?, bufferSize: Int) {
             self.state = Mutex(State(bufferSize: bufferSize))
-            
-#if FOUNDATION_FRAMEWORK
+
             let observerBlock: @Sendable (Notification) -> Void =  { [weak self] notification in
                 guard let message: Message = NotificationCenter._messageFromNotification(notification) else { return }
-                
+
                 self?.observationCallback(message)
             }
-#else
-            let observerBlock: @Sendable (Message) -> Void =  { [weak self] message in
-                self?.observationCallback(message)
-            }
-#endif
-            
+
             let token = center._addObserver(Message.name, object: object, using: observerBlock)
 
             self.state.withLock { _state in

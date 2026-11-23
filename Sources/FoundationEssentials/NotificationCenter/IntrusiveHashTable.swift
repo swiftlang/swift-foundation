@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// IntrusiveHashTable provides a hash table which handles collisions using a linked list that is stored (intrudes) on user-supplied storage.
+// This type supports `NotificationRegistrar`, which is not yet available in embedded mode.
+#if !hasFeature(Embedded)
 
-#if FOUNDATION_FRAMEWORK
+/// IntrusiveHashTable provides a hash table which handles collisions using a linked list that is stored (intrudes) on user-supplied storage.
 
 // Hash table which handles collisions using a linked list stored (intruding) inside the elements themselves.
 internal protocol IntrusiveHashTable<Entry>: ~Copyable {
