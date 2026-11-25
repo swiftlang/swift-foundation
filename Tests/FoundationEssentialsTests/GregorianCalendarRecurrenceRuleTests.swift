@@ -748,6 +748,80 @@ private struct GregorianCalendarRecurrenceRuleTests {
         #expect(dates.next() == Date(timeIntervalSince1970: 1769731200.0)) // 2026-01-30T00:00:00-0000
     }
 
+    @Test func yearlyRecurrenceWithOrdinalWeekdayExpansion() {
+        // The 20th Monday of the year (RRULE:FREQ=YEARLY;BYDAY=20MO)
+        let start = Date(timeIntervalSince1970: 864032400.0) // 1997-05-19T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly)
+        rule.weekdays = [.nth(20, .monday)]
+
+        let results = Array(rule.recurrences(of: start).prefix(3))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 864032400.0), // 1997-05-19T09:00:00-0000
+            Date(timeIntervalSince1970: 895482000.0), // 1998-05-18T09:00:00-0000
+            Date(timeIntervalSince1970: 926931600.0), // 1999-05-17T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func yearlyRecurrenceWithOrdinalWeekdayOutsideFirstMonth() {
+        // The fifth Monday of the year (RRULE:FREQ=YEARLY;BYDAY=5MO), which is in February
+        let start = Date(timeIntervalSince1970: 852109200.0) // 1997-01-01T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly)
+        rule.weekdays = [.nth(5, .monday)]
+
+        let results = Array(rule.recurrences(of: start).prefix(3))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 854960400.0), // 1997-02-03T09:00:00-0000
+            Date(timeIntervalSince1970: 886410000.0), // 1998-02-02T09:00:00-0000
+            Date(timeIntervalSince1970: 917859600.0), // 1999-02-01T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func yearlyRecurrenceWithOrdinalWeekdayMissingInSomeYears() {
+        // Only years that start on a Monday, or leap years that start on a Sunday, have a 53rd Monday
+        let start = Date(timeIntervalSince1970: 1704067200.0) // 2024-01-01T00:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly)
+        rule.weekdays = [.nth(53, .monday)]
+
+        let results = Array(rule.recurrences(of: start).prefix(2))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 1735516800.0), // 2024-12-30T00:00:00-0000
+            Date(timeIntervalSince1970: 1893369600.0), // 2029-12-31T00:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func yearlyRecurrenceWithOrdinalWeekdaysIgnoresWeekNumbering() {
+        // With some of these settings, 1999-01-01 falls in the last week of 1998, and 1998-12-28 falls in the first week of 1999
+        let start = Date(timeIntervalSince1970: 883612800.0) // 1998-01-01T00:00:00-0000
+        let end   = Date(timeIntervalSince1970: 946684800.0) // 2000-01-01T00:00:00-0000
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 883699200.0), // 1998-01-02T00:00:00-0000
+            Date(timeIntervalSince1970: 914803200.0), // 1998-12-28T00:00:00-0000
+            Date(timeIntervalSince1970: 915148800.0), // 1999-01-01T00:00:00-0000
+            Date(timeIntervalSince1970: 946252800.0), // 1999-12-27T00:00:00-0000
+        ]
+
+        for firstWeekday in 1...7 {
+            for minimumDaysInFirstWeek in [1, 4, 7] {
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = .gmt
+                calendar.firstWeekday = firstWeekday
+                calendar.minimumDaysInFirstWeek = minimumDaysInFirstWeek
+
+                var rule = Calendar.RecurrenceRule(calendar: calendar, frequency: .yearly)
+                rule.weekdays = [.nth(1, .friday), .nth(-1, .monday)]
+
+                let results = Array(rule.recurrences(of: start, in: start..<end))
+                #expect(results == expectedResults, "firstWeekday=\(firstWeekday), minimumDaysInFirstWeek=\(minimumDaysInFirstWeek)")
+            }
+        }
+    }
+
     @Test func yearlyRecurrenceDayOfYearExpansionStrictMatching() {
         let startDate = Date(timeIntervalSince1970: 1709164800.0) // 2024-02-29T00:00:00-0000
         
