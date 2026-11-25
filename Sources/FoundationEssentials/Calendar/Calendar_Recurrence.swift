@@ -414,6 +414,7 @@ extension Calendar {
                     componentCombinations.daysOfMonth = nil
                     if recurrence.frequency == .yearly, monthAction != .expand {
                         componentCombinations.months = nil
+                        componentCombinations.weekdayParentComponent = .year
                     }
                 } else if recurrence.frequency == .weekly || weekAction == .expand {
                    if let weekdayIdx = components.weekday, let weekday = Locale.Weekday(weekdayIdx) {
@@ -661,6 +662,8 @@ extension Calendar {
         var weeksOfYear: Set<Int>? = nil
         var months: Set<RecurrenceRule.Month>? = nil
         var weekdays: Set<RecurrenceRule.Weekday>? = nil
+        /// The period in which `.nth` weekdays are counted: `.year` or `.month`
+        var weekdayParentComponent: Calendar.Component = .month
         var hours: Set<Int>? = nil
         var minutes: Set<Int>? = nil
         var seconds: Set<Int>? = nil
@@ -675,7 +678,7 @@ extension Calendar {
         /// Returns a copy of this combination with out-of-range values removed.
         /// Returns `nil` if the combination is effectively empty.
         func validate(withCalendar calendar: Calendar) -> _DateComponentCombinations? {
-            var new = _DateComponentCombinations()
+            var new = _DateComponentCombinations(weekdayParentComponent: weekdayParentComponent)
             var hasValue = false
             if let daysOfMonth {
                 let validated = filterUnit(daysOfMonth, for: .day, withCalendar: calendar, allowsNegative: true)
@@ -725,7 +728,7 @@ extension Calendar {
                     case .every:
                         true
                     case .nth(let n, _):
-                        calendar.value(n > 0 ? n : -n, isValidFor: .weekdayOrdinal)
+                        calendar.value(n > 0 ? n : -n, isValidFor: weekdayParentComponent == .year ? .weekOfYear : .weekdayOrdinal)
                     }
                 }
                 if !validated.isEmpty { hasValue = true }
@@ -745,7 +748,8 @@ extension Calendar {
                 case .every:
                     return nil
                 case .nth(let n, _):
-                    if n == 0 { return nil }
+                    // `weekdayOrdinal` counts weekdays within a month, not within a year
+                    if n == 0 || c.weekdayParentComponent == .year { return nil }
                     if n < 0 {
                         guard anchor != nil else { return nil }
                         hasNegativeOrdinal = true
@@ -953,6 +957,23 @@ extension Calendar {
                 components.setValue(nil, for: weekComponent)
                 components.weekday = weekdayIdx
                 result.append(components)
+            } else if parent == .year {
+                // The first week of a year can start in the previous year, and its last week can end in the next year, so count days of the year instead of weeks
+                guard let dayOfYearRange = range(of: .day, in: .year, for: anchor) else { return nil }
+                let firstOccurrenceDayOfYear = dayOfYearRange.lowerBound + (weekdayIdx - firstWeekday + 7) % 7
+                let lastOccurrenceDayOfYear = dayOfYearRange.upperBound - 1 - (lastWeekday - weekdayIdx + 7) % 7
+                for occurence in occurences {
+                    let dayOfYear = if occurence > 0 {
+                        firstOccurrenceDayOfYear + (occurence - 1) * 7
+                    } else {
+                        lastOccurrenceDayOfYear + (occurence + 1) * 7
+                    }
+                    guard dayOfYearRange.contains(dayOfYear) else { continue }
+                    var components = DateComponents()
+                    components.dayOfYear = dayOfYear
+                    components.weekday = weekdayIdx
+                    result.append(components)
+                }
             } else {
                 lazy var firstWeek = weekRange.lowerBound + (positionInWeek(weekdayIdx) < positionInWeek(firstWeekday) ? 1 : 0)
                 lazy var lastWeek  = weekRange.upperBound - (positionInWeek(weekdayIdx) > positionInWeek(lastWeekday)  ? 1 : 0)
@@ -1104,10 +1125,12 @@ extension Calendar {
 
         if let weekdays = combinationComponents.weekdays {
             dates = try dates.flatMap { date, comps in
-                let parentComponent: Calendar.Component = .month
-                let weekdayComponents = _weekdayComponents(for: weekdays, in: parentComponent, anchor: date)
-                let dates = try weekdayComponents!.map { comps in 
+                let weekdayComponents = _weekdayComponents(for: weekdays, in: combinationComponents.weekdayParentComponent, anchor: date)
+                let dates = try weekdayComponents!.map { comps in
                     var date = date
+                    if let result = try dateAfterMatchingDayOfYear(startingAt: date, components: comps, direction: .forward) {
+                        date = result
+                    }
                     if let result = try dateAfterMatchingWeekOfYear(startingAt: date, components: comps, direction: .forward) {
                         date = result
                     }
