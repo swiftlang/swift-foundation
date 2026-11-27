@@ -558,15 +558,18 @@ private struct GregorianCalendarRecurrenceRuleTests {
         
         let results = Array(rule.recurrences(of: start, in: start..<end))
         
+        // Every result is a Tuesday, the weekday of the start date. Note that
+        // weeks 1 and 2 of 2014 and week 1 of 2015 begin in the previous
+        // calendar year (ISO week-numbering).
         let expectedResults: [Date] = [
             Date(timeIntervalSince1970: 1357048800.0), // 2013-01-01T14:00:00-0000
             Date(timeIntervalSince1970: 1357653600.0), // 2013-01-08T14:00:00-0000
-            Date(timeIntervalSince1970: 1388584800.0), // 2014-01-01T14:00:00-0000
-            Date(timeIntervalSince1970: 1389189600.0), // 2014-01-08T14:00:00-0000
-            Date(timeIntervalSince1970: 1420120800.0), // 2015-01-01T14:00:00-0000
-            Date(timeIntervalSince1970: 1420725600.0), // 2015-01-08T14:00:00-0000
-            Date(timeIntervalSince1970: 1452261600.0), // 2016-01-08T14:00:00-0000
-            Date(timeIntervalSince1970: 1452866400.0), // 2016-01-15T14:00:00-0000
+            Date(timeIntervalSince1970: 1388498400.0), // 2013-12-31T14:00:00-0000
+            Date(timeIntervalSince1970: 1389103200.0), // 2014-01-07T14:00:00-0000
+            Date(timeIntervalSince1970: 1419948000.0), // 2014-12-30T14:00:00-0000
+            Date(timeIntervalSince1970: 1420552800.0), // 2015-01-06T14:00:00-0000
+            Date(timeIntervalSince1970: 1452002400.0), // 2016-01-05T14:00:00-0000
+            Date(timeIntervalSince1970: 1452607200.0), // 2016-01-12T14:00:00-0000
         ]
         
         #expect(results == expectedResults)
@@ -585,11 +588,14 @@ private struct GregorianCalendarRecurrenceRuleTests {
         
         let results = Array(rule.recurrences(of: start, in: start..<end))
         
+        // Every result is a Monday, the weekday of the start date. The first
+        // week of 2025 and 2026 both begin in the previous calendar year.
         let expectedResults: [Date] = [
             Date(timeIntervalSince1970: 1704117600.0), // 2024-01-01T14:00:00-0000
             Date(timeIntervalSince1970: 1734962400.0), // 2024-12-23T14:00:00-0000
-            Date(timeIntervalSince1970: 1735740000.0), // 2025-01-01T14:00:00-0000
-            Date(timeIntervalSince1970: 1766584800.0), // 2025-12-24T14:00:00-0000
+            Date(timeIntervalSince1970: 1735567200.0), // 2024-12-30T14:00:00-0000
+            Date(timeIntervalSince1970: 1766412000.0), // 2025-12-22T14:00:00-0000
+            Date(timeIntervalSince1970: 1767016800.0), // 2025-12-29T14:00:00-0000
         ]
         
         #expect(results == expectedResults)
@@ -769,9 +775,10 @@ private struct GregorianCalendarRecurrenceRuleTests {
         rule.weeks = [2]
         
         var dates = rule.recurrences(of: startDate).makeIterator()
-        #expect(dates.next() == Date(timeIntervalSince1970: 1736553600.0)) // 2025-01-11T00:00:00-0000
-        #expect(dates.next() == Date(timeIntervalSince1970: 1767484800.0)) // 2026-01-04T00:00:00-0000
-        #expect(dates.next() == Date(timeIntervalSince1970: 1799020800.0)) // 2027-01-04T00:00:00-0000
+        // Every result is a Thursday, the weekday of the start date
+        #expect(dates.next() == Date(timeIntervalSince1970: 1736380800.0)) // 2025-01-09T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1767830400.0)) // 2026-01-08T00:00:00-0000
+        #expect(dates.next() == Date(timeIntervalSince1970: 1799280000.0)) // 2027-01-07T00:00:00-0000
     }
 
     @Test func weekdayFilter() {
@@ -958,5 +965,105 @@ private struct GregorianCalendarRecurrenceRuleTests {
         #expect(results.next() == Date(timeIntervalSince1970: 1287064800.0)) // 2010-10-14T14:00:00-0000
         #expect(results.next() == Date(timeIntervalSince1970: 1287151200.0)) // 2010-10-15T14:00:00-0000
         // No upper bound
+    }
+
+    @Test func monthlyRecurrenceEveryWeekdayWithInterval() {
+        // Every Tuesday, every other month (RFC 5545, RRULE:FREQ=MONTHLY;INTERVAL=2;BYDAY=TU)
+        let start = Date(timeIntervalSince1970: 873190800.0) // 1997-09-02T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly)
+        rule.interval = 2
+        rule.weekdays = [.every(.tuesday)]
+
+        let results = Array(rule.recurrences(of: start).prefix(6))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 873190800.0), // 1997-09-02T09:00:00-0000
+            Date(timeIntervalSince1970: 873795600.0), // 1997-09-09T09:00:00-0000
+            Date(timeIntervalSince1970: 874400400.0), // 1997-09-16T09:00:00-0000
+            Date(timeIntervalSince1970: 875005200.0), // 1997-09-23T09:00:00-0000
+            Date(timeIntervalSince1970: 875610000.0), // 1997-09-30T09:00:00-0000
+            Date(timeIntervalSince1970: 878634000.0), // 1997-11-04T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func monthlyRecurrenceEveryWeekdayWithSetPositions() {
+        // The last weekday of each month (RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1)
+        let start = Date(timeIntervalSince1970: 1767258000.0) // 2026-01-01T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .monthly)
+        rule.weekdays = [.every(.monday), .every(.tuesday), .every(.wednesday), .every(.thursday), .every(.friday)]
+        rule.setPositions = [-1]
+
+        let results = Array(rule.recurrences(of: start).prefix(3))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 1769763600.0), // 2026-01-30T09:00:00-0000
+            Date(timeIntervalSince1970: 1772182800.0), // 2026-02-27T09:00:00-0000
+            Date(timeIntervalSince1970: 1774947600.0), // 2026-03-31T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func yearlyRecurrenceEveryWeekdayWithMonth() {
+        // Every Thursday in March (RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=TH)
+        let start = Date(timeIntervalSince1970: 852109200.0) // 1997-01-01T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: gregorian, frequency: .yearly)
+        rule.months = [3]
+        rule.weekdays = [.every(.thursday)]
+
+        let results = Array(rule.recurrences(of: start).prefix(5))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 857638800.0), // 1997-03-06T09:00:00-0000
+            Date(timeIntervalSince1970: 858243600.0), // 1997-03-13T09:00:00-0000
+            Date(timeIntervalSince1970: 858848400.0), // 1997-03-20T09:00:00-0000
+            Date(timeIntervalSince1970: 859453200.0), // 1997-03-27T09:00:00-0000
+            Date(timeIntervalSince1970: 889088400.0), // 1998-03-05T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func yearlyRecurrenceWithWeekNumberAndWeekday() {
+        // Monday of week number 20 (RFC 5545, RRULE:FREQ=YEARLY;BYWEEKNO=20;BYDAY=MO)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+
+        let start = Date(timeIntervalSince1970: 863427600.0) // 1997-05-12T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: calendar, frequency: .yearly)
+        rule.weeks = [20]
+        rule.weekdays = [.every(.monday)]
+
+        let results = Array(rule.recurrences(of: start).prefix(3))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 863427600.0), // 1997-05-12T09:00:00-0000
+            Date(timeIntervalSince1970: 894877200.0), // 1998-05-11T09:00:00-0000
+            Date(timeIntervalSince1970: 926931600.0), // 1999-05-17T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
+    }
+
+    @Test func yearlyRecurrenceWithWeekNumberKeepsStartWeekday() {
+        // Without an explicit weekday, a yearly rule with weeks repeats on the
+        // start date's weekday in every year
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+
+        let start = Date(timeIntervalSince1970: 863427600.0) // 1997-05-12T09:00:00-0000
+
+        var rule = Calendar.RecurrenceRule(calendar: calendar, frequency: .yearly)
+        rule.weeks = [20]
+
+        let results = Array(rule.recurrences(of: start).prefix(3))
+        let expectedResults: [Date] = [
+            Date(timeIntervalSince1970: 863427600.0), // 1997-05-12T09:00:00-0000
+            Date(timeIntervalSince1970: 894877200.0), // 1998-05-11T09:00:00-0000
+            Date(timeIntervalSince1970: 926931600.0), // 1999-05-17T09:00:00-0000
+        ]
+        #expect(results == expectedResults)
     }
 }
