@@ -530,10 +530,11 @@ private struct PredicateMacroLanguageTokenTests {
             #Predicate<Object> { input in
                 do {
                     return true
-                } while true
+                }
+                while true
             }
             """,
-            diagnostics: ["4:7: Predicate body may only contain one expression"]
+            diagnostics: ["5:5: Predicate body may only contain one expression"]
         )
         
         AssertPredicateExpansion(
