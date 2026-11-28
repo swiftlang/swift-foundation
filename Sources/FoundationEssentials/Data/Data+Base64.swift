@@ -570,6 +570,10 @@ extension Base64 {
             if inIndex + 3 < inBuffer.count, inBuffer[inIndex + 3] != Self.encodePaddingCharacter {
                 a3 = inBuffer[inIndex + 3]
             }
+            if a2 == nil, let a3 {
+                // Padding can only be followed by more padding
+                throw DecodingError.invalidCharacter(a3)
+            }
 
             let x: UInt32 = d0[a0] | d1[a1] | d2[a2 ?? 65] | d3[a3 ?? 65]
             if x >= Self.badCharacter {
